@@ -93,3 +93,12 @@ export interface SwrYearlyPivotDto {
   expectedSwrMax: number;
   notes: Record<string, string>;
 }
+
+export interface SwrImportResultDto {
+  success: boolean;          // ✅ NEW
+  recordsCreated: number;     // ✅ Renamed from successfulInserts
+  recordsUpdated: number;     // ✅ NEW
+  channelsCreated: number;    // ✅ NEW
+  errors: string[];
+  message: string;            // ✅ Auto-generated from backend
+}

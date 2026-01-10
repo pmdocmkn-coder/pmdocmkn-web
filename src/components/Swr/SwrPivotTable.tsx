@@ -30,7 +30,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
-import { Search, Download, FileSpreadsheet, RefreshCw } from "lucide-react";
+import { Search, Download, FileSpreadsheet, RefreshCw, ChevronLeft, ChevronRight } from "lucide-react";
 import { swrSignalApi } from "../../services/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -106,8 +106,8 @@ interface PivotData {
   channelName: string;
   siteName: string;
   siteType: string;
-  monthlyVswr: Record<string, number | null>;
   monthlyFpwr: Record<string, number | null>;
+  monthlyVswr: Record<string, number | null>;
   expectedSwrMax: number;
   notes: Record<string, string>;
 }
@@ -122,18 +122,22 @@ const SwrPivotTable: React.FC = () => {
   const [sites, setSites] = useState<string[]>([]);
   const { toast } = useToast();
 
-  // ✅ NEW: Hover state for tooltip
+  // ✅ NEW: Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 16;
+
+  // ✅ NEW: Hover state for both VSWR and PWR
   const [hoveredCell, setHoveredCell] = useState<{
     rowIdx: number;
     colIdx: number;
+    type: 'fpwr' | 'vswr';
     channelName: string;
     month: string;
-    vswr: number | null;
     fpwr: number | null;
+    vswr: number | null;
     note?: string;
   } | null>(null);
 
-  // ✅ NEW: Note editing modal
   const [isNoteModalOpen, setIsNoteModalOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<{
     channelName: string;
@@ -183,6 +187,7 @@ const SwrPivotTable: React.FC = () => {
       );
       console.log("✅ Pivot data received:", response);
       setPivotData(response || []);
+      setCurrentPage(1); // Reset to first page
     } catch (error) {
       console.error("❌ Error fetching pivot data:", error);
       setPivotData([]);
@@ -226,6 +231,7 @@ const SwrPivotTable: React.FC = () => {
     }
   };
 
+  // ✅ Filter data
   const filteredData = pivotData.filter((item) => {
     const matchesSearch =
       item.channelName.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -234,6 +240,13 @@ const SwrPivotTable: React.FC = () => {
       selectedType === "all" || item.siteType === selectedType;
     return matchesSearch && matchesType;
   });
+
+  // ✅ Pagination
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const paginatedData = filteredData.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   const generatePieChartData = () => {
     const statusCount = { good: 0, warning: 0, critical: 0 };
@@ -265,7 +278,6 @@ const SwrPivotTable: React.FC = () => {
     });
   };
 
-  // ✅ NEW: Open note modal
   const openNoteModal = (
     channelName: string,
     month: string,
@@ -276,7 +288,6 @@ const SwrPivotTable: React.FC = () => {
     setIsNoteModalOpen(true);
   };
 
-  // ✅ NEW: Save note (client-side only for now)
   const saveNote = () => {
     if (!editingNote) return;
 
@@ -350,11 +361,17 @@ const SwrPivotTable: React.FC = () => {
             <Input
               placeholder="Search channel or site..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setCurrentPage(1);
+              }}
               className="pl-10"
             />
           </div>
-          <Select value={selectedSite} onValueChange={setSelectedSite}>
+          <Select value={selectedSite} onValueChange={(v) => {
+            setSelectedSite(v);
+            setCurrentPage(1);
+          }}>
             <SelectTrigger>
               <SelectValue placeholder="Filter Site" />
             </SelectTrigger>
@@ -367,7 +384,10 @@ const SwrPivotTable: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
-          <Select value={selectedType} onValueChange={setSelectedType}>
+          <Select value={selectedType} onValueChange={(v) => {
+            setSelectedType(v);
+            setCurrentPage(1);
+          }}>
             <SelectTrigger>
               <SelectValue placeholder="Site Type" />
             </SelectTrigger>
@@ -493,7 +513,7 @@ const SwrPivotTable: React.FC = () => {
         </Card>
       </div>
 
-      {/* ✅ UPDATED: Pivot Table with Notes */}
+      {/* ✅ IMPROVED: Pivot Table with Pagination & Dual Hover */}
       <Card className="shadow-sm border-indigo-100">
         <CardContent className="p-0 overflow-x-auto">
           <table className="w-full border-collapse text-sm">
@@ -531,14 +551,14 @@ const SwrPivotTable: React.FC = () => {
                 {months.map((m) => (
                   <React.Fragment key={m}>
                     <th className="p-1 border-l border-white/10">VSWR</th>
-                    <th className="p-1 border-l border-white/10">PWR</th>
+                    <th className="p-1 border-l border-white/10">VPWR</th>
                   </React.Fragment>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {filteredData.length > 0 ? (
-                filteredData.map((row, rowIdx) => (
+              {paginatedData.length > 0 ? (
+                paginatedData.map((row, rowIdx) => (
                   <tr
                     key={rowIdx}
                     className="hover:bg-indigo-50/30 border-b transition-colors"
@@ -550,21 +570,23 @@ const SwrPivotTable: React.FC = () => {
                     <td className="p-4 italic text-gray-400">{row.siteType}</td>
                     {months.map((m, monthIdx) => {
                       const key = formatMonthKey(m);
-                      const vswr = row.monthlyVswr[key];
                       const fpwr = row.monthlyFpwr[key];
+                      const vswr = row.monthlyVswr[key];
                       const note = row.notes?.[key];
+                      
                       return (
                         <React.Fragment key={m}>
-                          {/* VSWR Cell */}
+                          {/* ✅ VSWR Cell with Hover */}
                           <td
                             onMouseEnter={() =>
                               setHoveredCell({
                                 rowIdx,
                                 colIdx: monthIdx * 2,
+                                type: 'vswr',
                                 channelName: row.channelName,
                                 month: key,
-                                vswr,
                                 fpwr,
+                                vswr,
                                 note,
                               })
                             }
@@ -586,9 +608,10 @@ const SwrPivotTable: React.FC = () => {
                               "-"
                             )}
 
-                            {/* ✅ Hover Tooltip */}
+                            {/* Tooltip for VSWR */}
                             {hoveredCell?.rowIdx === rowIdx &&
-                              hoveredCell?.colIdx === monthIdx * 2 && (
+                              hoveredCell?.colIdx === monthIdx * 2 &&
+                              hoveredCell?.type === 'vswr' && (
                                 <div
                                   className={`absolute left-1/2 transform -translate-x-1/2 ${
                                     rowIdx < 3
@@ -612,16 +635,6 @@ const SwrPivotTable: React.FC = () => {
                                         {m} {selectedYear}
                                       </p>
                                     </div>
-                                    {vswr && (
-                                      <div className="mb-2">
-                                        <p className="text-xs text-gray-400">
-                                          VSWR
-                                        </p>
-                                        <p className="text-lg font-bold">
-                                          {vswr.toFixed(2)}
-                                        </p>
-                                      </div>
-                                    )}
                                     {fpwr && (
                                       <div className="mb-2">
                                         <p className="text-xs text-gray-400">
@@ -629,6 +642,16 @@ const SwrPivotTable: React.FC = () => {
                                         </p>
                                         <p className="text-lg font-bold">
                                           {fpwr.toFixed(1)}W
+                                        </p>
+                                      </div>
+                                    )}
+                                    {vswr && (
+                                      <div className="mb-2">
+                                        <p className="text-xs text-gray-400">
+                                          VSWR
+                                        </p>
+                                        <p className="text-lg font-bold">
+                                          {vswr.toFixed(2)}
                                         </p>
                                       </div>
                                     )}
@@ -657,13 +680,97 @@ const SwrPivotTable: React.FC = () => {
                               )}
                           </td>
 
-                          {/* FPWR Cell */}
+                          {/* ✅ FPWR Cell with Hover */}
                           <td
-                            className={`p-2 text-center border-l border-indigo-50 font-mono ${getFpwrTextColor(
+                            onMouseEnter={() =>
+                              setHoveredCell({
+                                rowIdx,
+                                colIdx: monthIdx * 2 + 1,
+                                type: 'fpwr',
+                                channelName: row.channelName,
+                                month: key,
+                                fpwr,
+                                vswr,
+                                note,
+                              })
+                            }
+                            onMouseLeave={() => setHoveredCell(null)}
+                            className={`p-2 text-center border-l border-indigo-50 font-mono relative cursor-pointer ${getFpwrTextColor(
                               fpwr
                             )} ${getFpwrColor(fpwr)}`}
                           >
                             {fpwr ? fpwr.toFixed(1) : "-"}
+
+                            {/* Tooltip for FPWR */}
+                            {hoveredCell?.rowIdx === rowIdx &&
+                              hoveredCell?.colIdx === monthIdx * 2 + 1 &&
+                              hoveredCell?.type === 'fpwr' && (
+                                <div
+                                  className={`absolute left-1/2 transform -translate-x-1/2 ${
+                                    rowIdx < 3
+                                      ? "top-full mt-2"
+                                      : "bottom-full mb-2"
+                                  } w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50`}
+                                >
+                                  <div className="relative">
+                                    <div
+                                      className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${
+                                        rowIdx < 3
+                                          ? "-top-2 border-b-8 border-b-gray-900"
+                                          : "-bottom-2 border-t-8 border-t-gray-900"
+                                      }`}
+                                    />
+                                    <div className="mb-2">
+                                      <h4 className="font-bold">
+                                        {row.channelName}
+                                      </h4>
+                                      <p className="text-gray-300 text-xs">
+                                        {m} {selectedYear}
+                                      </p>
+                                    </div>
+                                    {fpwr && (
+                                      <div className="mb-2">
+                                        <p className="text-xs text-gray-400">
+                                          FPWR
+                                        </p>
+                                        <p className="text-lg font-bold">
+                                          {fpwr.toFixed(1)}W
+                                        </p>
+                                      </div>
+                                    )}
+                                    {vswr && (
+                                      <div className="mb-2">
+                                        <p className="text-xs text-gray-400">
+                                          VSWR
+                                        </p>
+                                        <p className="text-lg font-bold">
+                                          {vswr.toFixed(2)}
+                                        </p>
+                                      </div>
+                                    )}
+                                    {note && (
+                                      <div className="mb-3 p-2 bg-yellow-900/30 rounded">
+                                        <p className="font-semibold">
+                                          📝 Catatan:
+                                        </p>
+                                        <p className="text-sm">{note}</p>
+                                      </div>
+                                    )}
+                                    <button
+                                      onClick={() =>
+                                        openNoteModal(
+                                          row.channelName,
+                                          key,
+                                          note
+                                        )
+                                      }
+                                      className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                                    >
+                                      {note ? "✏️ Edit Note" : "📝 Add Note"}
+                                    </button>
+                                  </div>
+                                </div>
+                              )}
                           </td>
                         </React.Fragment>
                       );
@@ -683,9 +790,36 @@ const SwrPivotTable: React.FC = () => {
             </tbody>
           </table>
         </CardContent>
+
+        {/* ✅ NEW: Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-between items-center p-4 border-t">
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage <= 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              <ChevronLeft className="h-4 w-4 mr-1" />
+              Previous
+            </Button>
+            <span className="text-sm text-gray-600">
+              Page {currentPage} of {totalPages} ({filteredData.length} total)
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={currentPage >= totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              Next
+              <ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </div>
+        )}
       </Card>
 
-      {/* ✅ Note Modal */}
+      {/* Note Modal */}
       <Dialog open={isNoteModalOpen} onOpenChange={setIsNoteModalOpen}>
         <DialogContent>
           <DialogHeader>

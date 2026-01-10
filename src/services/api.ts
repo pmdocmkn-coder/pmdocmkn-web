@@ -24,6 +24,7 @@ const getBaseURL = () => {
     return import.meta.env.VITE_API_URL || "http://localhost:5116";
   }
   return import.meta.env.VITE_API_URL || "https://api.mknops.web.id";
+  
 };
 // ✅ DEFAULT API INSTANCE (60 second timeout)
 export const api = axios.create({
@@ -996,7 +997,7 @@ export const swrSignalApi = {
       console.log("📤 Importing Excel file:", file.name);
 
       const formData = new FormData();
-      formData.append("excelFile", file);
+      formData.append("excelFile", file); // ✅ Match backend parameter name
 
       const response = await api.post(
         "/api/swr-signal/import-pivot-excel",
@@ -1011,16 +1012,10 @@ export const swrSignalApi = {
 
       console.log("✅ Import Excel Response:", response.data);
 
-      // Backend returns: { statusCode, message, data: SwrImportResultDto }
-      const result = response.data.data;
-
-      return {
-        totalRowsProcessed: result.totalRowsProcessed,
-        successfulInserts: result.successfulInserts,
-        failedRows: result.failedRows,
-        errors: result.errors || [],
-        message: result.message,
-      };
+      // ✅ Backend returns: { statusCode, message, data: SwrImportResultDto }
+      // Just return the data directly - no mapping needed!
+      return response.data.data;
+      
     } catch (error: any) {
       console.error("❌ Import Excel Error:", error);
 

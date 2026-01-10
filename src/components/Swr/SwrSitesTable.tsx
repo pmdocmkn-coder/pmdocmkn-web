@@ -1,6 +1,22 @@
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Edit2, Trash2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableHeader,
+  TableRow,
+  TableHead,
+  TableBody,
+  TableCell,
+} from "@/components/ui/table";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Edit2, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
 import { SwrSiteListDto } from "@/types/swr";
 
 interface Props {
@@ -16,73 +32,201 @@ export default function SwrSitesTable({
   onEdit,
   onDelete,
 }: Props) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedType, setSelectedType] = useState<string>("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const sitesPerPage = 10;
+
+  // Filter sites
+  const getFilteredSites = () => {
+    let filtered = sites;
+
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter(
+        (site) =>
+          site.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          site.location?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    // Type filter
+    if (selectedType !== "all") {
+      filtered = filtered.filter((site) => site.type === selectedType);
+    }
+
+    return filtered;
+  };
+
+  // Pagination
+  const getPaginatedSites = () => {
+    const filtered = getFilteredSites();
+    const start = (currentPage - 1) * sitesPerPage;
+    const end = start + sitesPerPage;
+    return filtered.slice(start, end);
+  };
+
+  const totalPages = Math.ceil(getFilteredSites().length / sitesPerPage);
+
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-40">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-      </div>
-    );
-  }
-
-  if (sites.length === 0) {
-    return (
-      <div className="text-center py-12 bg-purple-900/20 rounded-lg border border-purple-500/20">
-        <p className="text-purple-200">
-          No sites found. Create your first site to get started.
-        </p>
+      <div className="flex justify-center items-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
+        <span className="ml-3 text-gray-700">Loading sites...</span>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      {sites.map((site) => (
-        <div
-          key={site.id}
-          className="bg-gradient-to-br from-purple-900/30 to-purple-800/20 border border-purple-500/30 rounded-lg p-4 hover:border-purple-400/50 transition"
+    <div className="space-y-4">
+      {/* Search & Filter Bar */}
+      <div className="flex flex-col md:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="Search sites by name or location..."
+            value={searchTerm}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="pl-10 bg-white border-gray-300 text-gray-900 placeholder:text-gray-400"
+          />
+        </div>
+
+        <Select
+          value={selectedType}
+          onValueChange={(v) => {
+            setSelectedType(v);
+            setCurrentPage(1);
+          }}
         >
-          <div className="mb-4">
-            <h3 className="text-lg font-semibold text-white mb-1">
-              {site.name}
-            </h3>
-            <div className="space-y-1">
-              <p className="text-sm text-purple-300">
-                <span className="font-medium">Type:</span> {site.type}
-              </p>
-              {site.location && (
-                <p className="text-sm text-purple-300">
-                  <span className="font-medium">Location:</span> {site.location}
-                </p>
-              )}
-              <p className="text-sm text-purple-400">
-                <span className="font-medium">Channels:</span>{" "}
-                {site.channelCount}
-              </p>
-            </div>
+          <SelectTrigger className="w-full md:w-[200px] bg-white border-gray-300 text-gray-900">
+            <SelectValue placeholder="Filter by Type" />
+          </SelectTrigger>
+          <SelectContent className="bg-white border-gray-200">
+            <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+              All Types
+            </SelectItem>
+            <SelectItem value="Trunking" className="text-gray-900 hover:bg-gray-50">
+              Trunking
+            </SelectItem>
+            <SelectItem value="Conventional" className="text-gray-900 hover:bg-gray-50">
+              Conventional
+            </SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table */}
+      {getPaginatedSites().length > 0 ? (
+        <>
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-b border-gray-200 hover:bg-transparent">
+                  <TableHead className="text-gray-700 font-semibold">No</TableHead>
+                  <TableHead className="text-gray-700 font-semibold">Site Name</TableHead>
+                  <TableHead className="text-gray-700 font-semibold">Type</TableHead>
+                  <TableHead className="text-gray-700 font-semibold">Location</TableHead>
+                  <TableHead className="text-gray-700 font-semibold">Channels</TableHead>
+                  <TableHead className="text-gray-700 font-semibold text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {getPaginatedSites().map((site, idx) => (
+                  <TableRow
+                    key={site.id}
+                    className="border-b border-gray-100 hover:bg-gray-50"
+                  >
+                    <TableCell className="text-gray-600">
+                      {(currentPage - 1) * sitesPerPage + idx + 1}
+                    </TableCell>
+                    <TableCell className="text-gray-900 font-semibold">
+                      {site.name}
+                    </TableCell>
+                    <TableCell>
+                      <span
+                        className={`px-2 py-1 rounded text-xs font-medium ${
+                          site.type === "Trunking"
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-green-100 text-green-700"
+                        }`}
+                      >
+                        {site.type}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      {site.location || "-"}
+                    </TableCell>
+                    <TableCell className="text-gray-600">
+                      <span className="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-sm font-medium">
+                        {site.channelCount} channel{site.channelCount !== 1 ? "s" : ""}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => onEdit(site)}
+                          className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => onDelete(site.id)}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </div>
 
-          <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => onEdit(site)}
-              className="flex-1 border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
-            >
-              <Edit2 className="w-4 h-4 mr-1" />
-              Edit
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={() => onDelete(site.id)}
-              className="flex-1"
-            >
-              <Trash2 className="w-4 h-4 mr-1" />
-              Delete
-            </Button>
-          </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex justify-between items-center">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
+                onClick={() => setCurrentPage((p) => p - 1)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <span className="text-sm text-gray-600">
+                Page {currentPage} of {totalPages}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
+                onClick={() => setCurrentPage((p) => p + 1)}
+                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+          <p className="text-gray-600">
+            {searchTerm || selectedType !== "all"
+              ? "No sites match your filters."
+              : "No sites found. Create your first site to get started."}
+          </p>
         </div>
-      ))}
+      )}
     </div>
   );
 }
