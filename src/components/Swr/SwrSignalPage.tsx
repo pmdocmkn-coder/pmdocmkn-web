@@ -20,6 +20,7 @@ import SwrChannelsTable from "./SwrChannelsTable";
 import SwrSiteDialog from "./SwrSiteDialog";
 import SwrChannelDialog from "./SwrChannelDialog";
 import SwrPivotTable from "./SwrPivotTable";
+import SwrHistoryTab from "@/components/Swr/SwrHistoryTab";
 import { SwrSiteListDto, SwrChannelListDto, SwrImportResultDto } from "@/types/swr";
 import {
   Dialog,
@@ -310,6 +311,9 @@ export default function SwrSignalPage() {
       <Tabs defaultValue="analytics" className="w-full">
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <TabsList className="flex flex-wrap gap-3 bg-transparent border-0 p-0 h-auto">
+            <TabsTrigger value="history">
+              📋 History Records
+            </TabsTrigger>
             <TabsTrigger
               value="analytics"
               className="px-4 py-2 rounded-lg font-medium transition-colors border-0 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
@@ -339,6 +343,10 @@ export default function SwrSignalPage() {
         {/* Analytics Tab - Full width with spacing */}
         <TabsContent value="analytics" className="mt-0 outline-none">
           <SwrPivotTable />
+        </TabsContent>
+
+        <TabsContent value="history">
+          <SwrHistoryTab />
         </TabsContent>
 
         {/* Sites Tab */}
