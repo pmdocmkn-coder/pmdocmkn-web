@@ -786,280 +786,123 @@ export const userApi = {
 // ============================================
 
 export const swrSignalApi = {
-  // SITES
+  // ==================== SITES ====================
+  
   getSites: async () => {
-    try {
-      const response = await api.get("/api/swr-signal/sites");
-      console.log("✅ Get Sites Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Get Sites Error:", error);
-      throw new Error(error.response?.data?.message || "Failed to fetch sites");
-    }
+    const response = await api.get("/api/swr-signal/sites");
+    return response.data.data;
   },
 
   createSite: async (data: any) => {
-    try {
-      const response = await api.post("/api/swr-signal/sites", data);
-      console.log("✅ Create Site Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Create Site Error:", error);
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to create site";
-      throw new Error(message);
-    }
+    const response = await api.post("/api/swr-signal/sites", data);
+    return response.data.data;
   },
 
   updateSite: async (data: any) => {
-    try {
-      const response = await api.put("/api/swr-signal/sites", data);
-      console.log("✅ Update Site Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Update Site Error:", error);
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to update site";
-      throw new Error(message);
-    }
+    const response = await api.put("/api/swr-signal/sites", data);
+    return response.data.data;
   },
 
   deleteSite: async (id: number) => {
-    try {
-      console.log("🗑️ Deleting site ID:", id);
-      const response = await api.delete(`/api/swr-signal/sites/${id}`);
-      console.log("✅ Delete Site Response:", response.data);
-
-      // Backend returns: { statusCode: 200, message: "Site berhasil dihapus", data: {}, meta: null }
-      if (response.data.statusCode === 200) {
-        return { success: true, message: response.data.message };
-      }
-
-      throw new Error("Delete failed");
-    } catch (error: any) {
-      console.error("❌ Delete Site Error:", error);
-
-      // Handle specific error cases
-      if (error.response?.status === 404) {
-        throw new Error("Site not found");
-      }
-
-      if (error.response?.status === 400) {
-        const message =
-          error.response?.data?.data?.message ||
-          error.response?.data?.message ||
-          "Cannot delete site with existing channels";
-        throw new Error(message);
-      }
-
-      if (error.response?.status === 403) {
-        throw new Error("You don't have permission to delete sites");
-      }
-
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to delete site";
-      throw new Error(message);
-    }
+    await api.delete(`/api/swr-signal/sites/${id}`);
   },
 
-  // CHANNELS
+  // ==================== CHANNELS ====================
+  
   getChannels: async () => {
-    try {
-      const response = await api.get("/api/swr-signal/channels");
-      console.log("✅ Get Channels Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Get Channels Error:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch channels"
-      );
-    }
+    const response = await api.get("/api/swr-signal/channels");
+    return response.data.data;
   },
 
   createChannel: async (data: any) => {
-    try {
-      const response = await api.post("/api/swr-signal/channels", data);
-      console.log("✅ Create Channel Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Create Channel Error:", error);
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to create channel";
-      throw new Error(message);
-    }
+    const response = await api.post("/api/swr-signal/channels", data);
+    return response.data.data;
   },
 
   updateChannel: async (data: any) => {
-    try {
-      const response = await api.put("/api/swr-signal/channels", data);
-      console.log("✅ Update Channel Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Update Channel Error:", error);
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to update channel";
-      throw new Error(message);
-    }
+    const response = await api.put("/api/swr-signal/channels", data);
+    return response.data.data;
   },
 
   deleteChannel: async (id: number) => {
-    try {
-      console.log("🗑️ Deleting channel ID:", id);
-      const response = await api.delete(`/api/swr-signal/channels/${id}`);
-      console.log("✅ Delete Channel Response:", response.data);
-
-      // Backend returns: { statusCode: 200, message: "Channel berhasil dihapus", data: {}, meta: null }
-      if (response.data.statusCode === 200) {
-        return { success: true, message: response.data.message };
-      }
-
-      throw new Error("Delete failed");
-    } catch (error: any) {
-      console.error("❌ Delete Channel Error:", error);
-
-      // Handle specific error cases
-      if (error.response?.status === 404) {
-        throw new Error("Channel not found");
-      }
-
-      if (error.response?.status === 403) {
-        throw new Error("You don't have permission to delete channels");
-      }
-
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to delete channel";
-      throw new Error(message);
-    }
+    await api.delete(`/api/swr-signal/channels/${id}`);
   },
 
-  // HISTORY & ANALYTICS
+  // ==================== HISTORIES (NEW!) ====================
+  
+  getHistories: async (query: any) => {
+    const response = await api.get("/api/swr-signal/histories", {
+      params: query,
+    });
+    // Backend returns PagedResultDto<SwrHistoryItemDto>
+    return response.data;
+  },
+
+  getHistoryById: async (id: number) => {
+    const response = await api.get(`/api/swr-signal/histories/${id}`);
+    return response.data.data;
+  },
+
+  createHistory: async (data: any) => {
+    const response = await api.post("/api/swr-signal/histories", data);
+    return response.data.data;
+  },
+
+  updateHistory: async (id: number, data: any) => {
+    const response = await api.put(`/api/swr-signal/histories/${id}`, data);
+    return response.data.data;
+  },
+
+  deleteHistory: async (id: number) => {
+    await api.delete(`/api/swr-signal/histories/${id}`);
+  },
+
+  // ==================== ANALYTICS ====================
+  
   getMonthly: async (year: number, month: number) => {
-    try {
-      const response = await api.get(
-        `/api/swr-signal/monthly?year=${year}&month=${month}`
-      );
-      console.log("✅ Get Monthly Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Get Monthly Error:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch monthly data"
-      );
-    }
+    const response = await api.get("/api/swr-signal/monthly", {
+      params: { year, month },
+    });
+    return response.data.data;
   },
 
   getYearly: async (year: number) => {
-    try {
-      const response = await api.get(`/api/swr-signal/yearly?year=${year}`);
-      console.log("✅ Get Yearly Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Get Yearly Error:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch yearly data"
-      );
-    }
+    const response = await api.get("/api/swr-signal/yearly", {
+      params: { year },
+    });
+    return response.data.data;
   },
 
   getYearlyPivot: async (year: number, site?: string) => {
-    try {
-      const url = site
-        ? `/api/swr-signal/yearly-pivot?year=${year}&site=${encodeURIComponent(
-            site
-          )}`
-        : `/api/swr-signal/yearly-pivot?year=${year}`;
-      const response = await api.get(url);
-      console.log("✅ Get Yearly Pivot Response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
-      console.error("❌ Get Yearly Pivot Error:", error);
-      throw new Error(
-        error.response?.data?.message || "Failed to fetch pivot data"
-      );
-    }
+    const response = await api.get("/api/swr-signal/yearly-pivot", {
+      params: { year, site },
+    });
+    return response.data.data;
   },
 
-  // IMPORT & EXPORT
+  // ==================== IMPORT & EXPORT ====================
+  
   importExcel: async (file: File) => {
-    try {
-      console.log("📤 Importing Excel file:", file.name);
+    const formData = new FormData();
+    formData.append("excelFile", file);
 
-      const formData = new FormData();
-      formData.append("excelFile", file); // ✅ Match backend parameter name
-
-      const response = await api.post(
-        "/api/swr-signal/import-pivot-excel",
-        formData,
-        {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
-          timeout: 120000, // 2 minutes for large files
-        }
-      );
-
-      console.log("✅ Import Excel Response:", response.data);
-
-      // ✅ Backend returns: { statusCode, message, data: SwrImportResultDto }
-      // Just return the data directly - no mapping needed!
-      return response.data.data;
-      
-    } catch (error: any) {
-      console.error("❌ Import Excel Error:", error);
-
-      if (error.code === "ECONNABORTED") {
-        throw new Error(
-          "Upload timeout - File too large or connection is slow"
-        );
+    const response = await api.post(
+      "/api/swr-signal/import-pivot-excel",
+      formData,
+      {
+        headers: { "Content-Type": "multipart/form-data" },
+        timeout: 120000,
       }
-
-      const message =
-        error.response?.data?.data?.message ||
-        error.response?.data?.message ||
-        "Failed to import Excel file";
-      throw new Error(message);
-    }
+    );
+    return response.data.data;
   },
 
   exportYearlyExcel: async (year: number, site?: string) => {
-    try {
-      console.log("📥 Exporting Excel:", { year, site });
+    const url = site
+      ? `/api/swr-signal/export-yearly-excel?year=${year}&site=${encodeURIComponent(site)}`
+      : `/api/swr-signal/export-yearly-excel?year=${year}`;
 
-      const url = site
-        ? `/api/swr-signal/export-yearly-excel?year=${year}&site=${encodeURIComponent(
-            site
-          )}`
-        : `/api/swr-signal/export-yearly-excel?year=${year}`;
-
-      const response = await api.get(url, {
-        responseType: "blob",
-        timeout: 60000, // 1 minute timeout
-      });
-
-      console.log("✅ Export Excel Response received");
-      return response.data;
-    } catch (error: any) {
-      console.error("❌ Export Excel Error:", error);
-      throw new Error("Failed to export Excel file");
-    }
-  },
-
-  // Download template for import
-  downloadImportTemplate: () => {
-    // This will be a client-side generated template
-    console.log("📥 Download import template requested");
-    // Implementation in separate function below
+    const response = await api.get(url, { responseType: "blob" });
+    return response.data;
   },
 };

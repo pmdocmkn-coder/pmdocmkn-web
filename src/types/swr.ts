@@ -46,6 +46,56 @@ export interface SwrChannelUpdateDto {
   expectedPwrMax: number;
 }
 
+// HISTORIES (✅ ADDED)
+export interface SwrHistoryItemDto {
+  id: number;
+  swrChannelId: number;
+  channelName: string;
+  siteName: string;
+  siteType: string;
+  date: string; // ISO date string
+  fpwr?: number | null;
+  vswr: number;
+  notes?: string;
+  status: SwrOperationalStatus;
+  no?: number; // For table numbering
+}
+
+export interface SwrHistoryCreateDto {
+  swrChannelId: number;
+  date: string; // ISO date string
+  fpwr?: number | null;
+  vswr: number;
+  notes?: string;
+  status?: string; // "Active", "Dismantled", "Removed", "Obstacle"
+}
+
+export interface SwrHistoryUpdateDto {
+  fpwr?: number | null;
+  vswr: number;
+  notes?: string;
+  status?: string;
+}
+
+export interface SwrHistoryQueryDto {
+  page: number;
+  pageSize: number;
+  swrChannelId?: number;
+  swrSiteId?: number;
+  siteType?: string;
+  search?: string;
+  sortBy?: string;
+  sortDir?: string;
+  filtersJson?: string;
+}
+
+export enum SwrOperationalStatus {
+  Active = 0,
+  Dismantled = 1,
+  Removed = 2,
+  Obstacle = 3
+}
+
 export interface SwrMonthlyHistoryResponseDto {
   period: string;
   data: SwrSiteMonthlyDto[];
