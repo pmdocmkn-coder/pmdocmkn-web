@@ -245,10 +245,10 @@ export default function SwrHistoryTab() {
         return;
       }
 
-      if (formData.vswr < 1.0 || formData.vswr > 3.0) {
+      if (formData.vswr < 1.0 || formData.vswr > 4.0) {
         toast({
           title: "Validation Error",
-          description: "VSWR harus antara 1.0 hingga 3.0",
+          description: "VSWR harus antara 1.0 hingga 4.0",
           variant: "destructive",
         });
         return;
