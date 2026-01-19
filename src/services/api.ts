@@ -17,6 +17,7 @@ import {
   RolePermissionMatrix,
 } from "../types/permission";
 import { number } from "framer-motion";
+import { SwrNoteUpdateDto } from "@/types/swr";
 
 // Determine base URL based on environment
 const getBaseURL = () => {
@@ -782,7 +783,7 @@ export const userApi = {
 };
 
 // ============================================
-// SWR SIGNAL API - FIXED VERSION
+// SWR SIGNAL API
 // ============================================
 
 export const swrSignalApi = {
@@ -828,13 +829,12 @@ export const swrSignalApi = {
     await api.delete(`/api/swr-signal/channels/${id}`);
   },
 
-  // ==================== HISTORIES (NEW!) ====================
+  // ==================== HISTORIES ====================
   
   getHistories: async (query: any) => {
     const response = await api.get("/api/swr-signal/histories", {
       params: query,
     });
-    // Backend returns PagedResultDto<SwrHistoryItemDto>
     return response.data;
   },
 
@@ -844,14 +844,25 @@ export const swrSignalApi = {
   },
 
   createHistory: async (data: any) => {
+    console.log('📤 Creating history:', data);
     const response = await api.post("/api/swr-signal/histories", data);
+    console.log('📥 Create history response:', response.data);
     return response.data.data;
   },
 
   updateHistory: async (id: number, data: any) => {
+  console.log('📤 Updating history:', { id, data });
+  try {
     const response = await api.put(`/api/swr-signal/histories/${id}`, data);
+    console.log('📥 Update history response:', response.data);
     return response.data.data;
-  },
+  } catch (error: any) {
+    console.error('❌ Update history error:', error);
+    console.error('❌ Error response data:', error.response?.data);
+    console.error('❌ Error response status:', error.response?.status);
+    throw error;
+  }
+},
 
   deleteHistory: async (id: number) => {
     await api.delete(`/api/swr-signal/histories/${id}`);
@@ -873,11 +884,11 @@ export const swrSignalApi = {
     return response.data.data;
   },
 
-  getYearlyPivot: async (year: number, site?: string) => {
+  getYearlyPivot: async (year: number, site?: string): Promise<any[]> => {
     const response = await api.get("/api/swr-signal/yearly-pivot", {
-      params: { year, site },
+      params: { year, site }
     });
-    return response.data.data;
+    return response.data.data || [];
   },
 
   // ==================== IMPORT & EXPORT ====================
@@ -905,4 +916,12 @@ export const swrSignalApi = {
     const response = await api.get(url, { responseType: "blob" });
     return response.data;
   },
+
+  updateNote: async (dto: SwrNoteUpdateDto): Promise<void> => {
+    const response = await api.put("/api/swr-signal/notes", dto);
+    return response.data;
+  },
+
+
+
 };

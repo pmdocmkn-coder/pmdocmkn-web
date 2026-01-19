@@ -20,14 +20,16 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "@/hooks/use-toast";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 import {
   ChevronsLeft,
   ChevronLeft,
   ChevronRight,
   ChevronsRight,
   Search,
+  X,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SwrHistoryItemDto {
   id: number;
@@ -59,6 +61,132 @@ interface SwrSiteListDto {
   type: string;
 }
 
+// Searchable Channel Select Component
+const SearchableChannelSelect = ({ 
+  value, 
+  onChange, 
+  channels,
+  disabled = false 
+}: { 
+  value: string; 
+  onChange: (value: string) => void; 
+  channels: SwrChannelListDto[];
+  disabled?: boolean;
+}) => {
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+  const [filteredChannels, setFilteredChannels] = useState<SwrChannelListDto[]>([]);
+
+  useEffect(() => {
+    if (searchQuery.trim() === "") {
+      setFilteredChannels(channels.slice(0, 50)); // Limit to 50 items for performance
+    } else {
+      const query = searchQuery.toLowerCase();
+      const filtered = channels.filter(
+        (channel) =>
+          channel.channelName.toLowerCase().includes(query) ||
+          channel.swrSiteName.toLowerCase().includes(query) ||
+          channel.swrSiteType.toLowerCase().includes(query)
+      );
+      setFilteredChannels(filtered.slice(0, 50));
+    }
+  }, [searchQuery, channels]);
+
+  const getChannelDisplay = (channel: SwrChannelListDto) => {
+    return `${channel.channelName} - ${channel.swrSiteName} (${channel.swrSiteType})`;
+  };
+
+  const selectedChannel = channels.find(ch => ch.id.toString() === value);
+
+  return (
+    <div className="relative">
+      <div
+        className={cn(
+          "flex items-center justify-between w-full px-3 py-2.5 border rounded-md text-sm cursor-pointer hover:bg-gray-50 transition-colors",
+          disabled ? "bg-gray-100 cursor-not-allowed text-gray-500" : "bg-white",
+          selectedChannel ? "text-gray-900" : "text-gray-500"
+        )}
+        onClick={() => !disabled && setIsOpen(true)}
+      >
+        <span className="truncate">
+          {selectedChannel ? getChannelDisplay(selectedChannel) : "Cari atau pilih channel..."}
+        </span>
+        <Search className="w-4 h-4 text-gray-400 flex-shrink-0" />
+      </div>
+
+      {isOpen && !disabled && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setIsOpen(false)}
+          />
+          <div className="absolute z-20 mt-1 w-full border rounded-md bg-white shadow-lg max-h-80 overflow-hidden">
+            {/* Search Input */}
+            <div className="p-3 border-b bg-gray-50">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Cari channel, site, atau tipe..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 pr-9"
+                  autoFocus
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Channel List */}
+            <div className="overflow-y-auto max-h-60">
+              {channels.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  Tidak ada channel tersedia
+                </div>
+              ) : filteredChannels.length === 0 ? (
+                <div className="p-4 text-center text-gray-500">
+                  {searchQuery
+                    ? "Tidak ada channel yang cocok"
+                    : "Memuat channel..."}
+                </div>
+              ) : (
+                <div className="py-1">
+                  {filteredChannels.map((channel) => (
+                    <div
+                      key={channel.id}
+                      className={cn(
+                        "px-4 py-3 cursor-pointer hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0",
+                        value === channel.id.toString() &&
+                          "bg-blue-50 text-blue-700 font-medium"
+                      )}
+                      onClick={() => {
+                        onChange(channel.id.toString());
+                        setIsOpen(false);
+                        setSearchQuery("");
+                      }}
+                    >
+                      <div className="font-medium">{channel.channelName}</div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {channel.swrSiteName} • {channel.swrSiteType}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+};
+
 export default function SwrHistoryTab() {
   // ==================== STATE ====================
   const [histories, setHistories] = useState<SwrHistoryItemDto[]>([]);
@@ -78,17 +206,17 @@ export default function SwrHistoryTab() {
   const [selectedSite, setSelectedSite] = useState<string>("all");
   const [selectedType, setSelectedType] = useState<string>("all");
 
-  // Modal
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit">("create");
   const [currentHistory, setCurrentHistory] = useState<SwrHistoryItemDto | null>(null);
 
   // Form data
   const [formData, setFormData] = useState({
-    swrChannelId: 0,
-    date: "",
-    fpwr: null as number | null,
-    vswr: 1.0,
+    swrChannelId: "",
+    date: format(new Date(), "yyyy-MM-dd"), // Format string untuk input date
+    fpwr: "",
+    vswr: "",
     notes: "",
     status: "Active",
   });
@@ -142,13 +270,6 @@ export default function SwrHistoryTab() {
 
       const result = await swrSignalApi.getHistories(query);
 
-      console.log("✅ Histories loaded:", {
-        dataCount: result.data?.length,
-        page: result.page,
-        totalPages: result.totalPages,
-        totalCount: result.totalCount,
-      });
-
       // ✅ PERBAIKAN: Handle both nested meta.pagination and flat structure
       let pageData, totalPagesData, totalCountData;
 
@@ -169,12 +290,6 @@ export default function SwrHistoryTab() {
       setTotalCount(totalCountData);
       setCurrentPage(pageData);
 
-      console.log("✅ State updated:", {
-        historiesCount: result.data?.length || 0,
-        currentPage: pageData,
-        totalPages: totalPagesData,
-        totalCount: totalCountData,
-      });
     } catch (error: any) {
       console.error("❌ Error fetching histories:", error);
       toast({
@@ -197,21 +312,25 @@ export default function SwrHistoryTab() {
     if (mode === "edit" && history) {
       setCurrentHistory(history);
       const statusString = getStatusString(history.status);
+      
+      // Format date untuk input type="date" (yyyy-MM-dd)
+      const formattedDate = format(new Date(history.date), "yyyy-MM-dd");
+      
       setFormData({
-        swrChannelId: history.swrChannelId,
-        date: format(new Date(history.date), "yyyy-MM-dd"),
-        fpwr: history.fpwr || null,
-        vswr: history.vswr || 1.0,
+        swrChannelId: history.swrChannelId.toString(),
+        date: formattedDate,
+        fpwr: history.fpwr !== null && history.fpwr !== undefined ? history.fpwr.toString() : "",
+        vswr: history.vswr ? history.vswr.toString() : "1.0",
         notes: history.notes || "",
         status: statusString,
       });
     } else {
       setCurrentHistory(null);
       setFormData({
-        swrChannelId: 0,
+        swrChannelId: "",
         date: format(new Date(), "yyyy-MM-dd"),
-        fpwr: null,
-        vswr: 1.0,
+        fpwr: "",
+        vswr: "",
         notes: "",
         status: "Active",
       });
@@ -219,24 +338,89 @@ export default function SwrHistoryTab() {
     setIsModalOpen(true);
   };
 
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCurrentHistory(null);
+    setFormData({
+      swrChannelId: "",
+      date: format(new Date(), "yyyy-MM-dd"),
+      fpwr: "",
+      vswr: "",
+      notes: "",
+      status: "Active",
+    });
+  };
+
   // ==================== CRUD OPERATIONS ====================
 
   const handleSubmit = async () => {
     try {
-      if (formData.status !== "Active" && !formData.notes?.trim()) {
+      // Validation
+      if (modalMode === "create" && !formData.swrChannelId) {
         toast({
           title: "Validation Error",
-          description: "Catatan wajib diisi untuk status non-Active",
+          description: "Please select a channel",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (!formData.date) {
+        toast({
+          title: "Validation Error",
+          description: "Please select a date",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (formData.status === "Active") {
+        if (!formData.vswr.trim()) {
+          toast({
+            title: "Validation Error",
+            description: "VSWR is required for Active status",
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        const vswrValue = parseFloat(formData.vswr);
+        if (isNaN(vswrValue) || vswrValue < 1.0 || vswrValue > 4.0) {
+          toast({
+            title: "Validation Error",
+            description: "VSWR must be between 1.0 and 4.0",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        if (formData.fpwr.trim()) {
+          const fpwrValue = parseFloat(formData.fpwr);
+          if (isNaN(fpwrValue) || fpwrValue < 0 || fpwrValue > 200) {
+            toast({
+              title: "Validation Error",
+              description: "FPWR must be between 0 and 200",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+      }
+
+      if (formData.status !== "Active" && !formData.notes.trim()) {
+        toast({
+          title: "Validation Error",
+          description: "Notes are required for non-Active status",
           variant: "destructive",
         });
         return;
       }
 
       const selectedChannelData = channels.find(
-        (c) => c.id === formData.swrChannelId
+        (c) => c.id.toString() === formData.swrChannelId
       );
 
-      if (!selectedChannelData) {
+      if (modalMode === "create" && !selectedChannelData) {
         toast({
           title: "Validation Error",
           description: "Please select a valid channel",
@@ -245,34 +429,24 @@ export default function SwrHistoryTab() {
         return;
       }
 
-      if (formData.vswr < 1.0 || formData.vswr > 4.0) {
-        toast({
-          title: "Validation Error",
-          description: "VSWR harus antara 1.0 hingga 4.0",
-          variant: "destructive",
-        });
-        return;
-      }
-
-      if (selectedChannelData.swrSiteType === "Trunking" && formData.fpwr !== null) {
-        if (formData.fpwr < 0 || formData.fpwr > 200) {
-          toast({
-            title: "Validation Error",
-            description: "FPWR harus antara 0 hingga 200",
-            variant: "destructive",
-          });
-          return;
-        }
-      }
-
       const payload: any = {
-        swrChannelId: formData.swrChannelId,
         date: formData.date,
-        fpwr: formData.status === "Active" ? formData.fpwr : null,
-        vswr: formData.status === "Active" ? formData.vswr : 1.0,
-        notes: formData.notes || null,
+        notes: formData.notes.trim() || null,
         status: formData.status,
       };
+
+      if (modalMode === "create") {
+        payload.swrChannelId = parseInt(formData.swrChannelId);
+      }
+
+      // Handle FPWR and VSWR based on status
+      if (formData.status === "Active") {
+        payload.vswr = formData.vswr ? parseFloat(formData.vswr) : 1.0;
+        payload.fpwr = formData.fpwr ? parseFloat(formData.fpwr) : null;
+      } else {
+        payload.vswr = 1.0;
+        payload.fpwr = null;
+      }
 
       console.log("💾 Saving history:", payload);
 
@@ -296,7 +470,7 @@ export default function SwrHistoryTab() {
         });
       }
 
-      setIsModalOpen(false);
+      closeModal();
       fetchHistories();
     } catch (error: any) {
       console.error("❌ Error saving history:", error);
@@ -344,13 +518,13 @@ export default function SwrHistoryTab() {
   const getStatusDisplay = (status: number | string) => {
     const statusString = getStatusString(status);
     const colors: Record<string, string> = {
-      Active: "bg-green-100 text-green-800",
-      Dismantled: "bg-red-100 text-red-800",
-      Removed: "bg-gray-100 text-gray-800",
-      Obstacle: "bg-yellow-100 text-yellow-800",
+      Active: "bg-green-100 text-green-800 border border-green-200",
+      Dismantled: "bg-red-100 text-red-800 border border-red-200",
+      Removed: "bg-gray-100 text-gray-800 border border-gray-200",
+      Obstacle: "bg-yellow-100 text-yellow-800 border border-yellow-200",
     };
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${colors[statusString] || colors.Active}`}>
+      <span className={`px-3 py-1 rounded-full text-xs font-medium ${colors[statusString] || colors.Active}`}>
         {statusString}
       </span>
     );
@@ -365,25 +539,33 @@ export default function SwrHistoryTab() {
   // ==================== RENDER ====================
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle>SWR Signal History</CardTitle>
-            <Button onClick={() => openModal("create")}>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div>
+              <CardTitle className="text-xl">SWR Signal History</CardTitle>
+              <p className="text-sm text-gray-500 mt-1">
+                Total {totalCount} records • Page {currentPage} of {totalPages}
+              </p>
+            </div>
+            <Button 
+              onClick={() => openModal("create")}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
               <span className="mr-2">+</span>
-              Add Record
+              Add New Record
             </Button>
           </div>
         </CardHeader>
 
         <CardContent>
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <Input
-                placeholder="Search..."
+                placeholder="Search channel, site, or notes..."
                 value={searchTerm}
                 onChange={(e) => {
                   setSearchTerm(e.target.value);
@@ -453,65 +635,84 @@ export default function SwrHistoryTab() {
 
           {/* Table */}
           {isLoading ? (
-            <div className="flex justify-center items-center h-64">
+            <div className="flex flex-col items-center justify-center h-64">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-3">Loading...</span>
+              <span className="ml-3 mt-3 text-gray-600">Loading history data...</span>
             </div>
           ) : histories.length > 0 ? (
             <div className="space-y-4">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto border rounded-lg">
                 <table className="w-full border-collapse">
-                  <thead className="bg-gray-100">
+                  <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                     <tr>
-                      <th className="border p-2 text-left">No</th>
-                      <th className="border p-2 text-left">Date</th>
-                      <th className="border p-2 text-left">Channel</th>
-                      <th className="border p-2 text-left">Site</th>
-                      <th className="border p-2 text-left">Type</th>
-                      <th className="border p-2 text-right">FPWR (W)</th>
-                      <th className="border p-2 text-right">VSWR</th>
-                      <th className="border p-2 text-center">Status</th>
-                      <th className="border p-2 text-left">Notes</th>
-                      <th className="border p-2 text-center">Actions</th>
+                      <th className="border p-3 text-left font-medium">No</th>
+                      <th className="border p-3 text-left font-medium">Date</th>
+                      <th className="border p-3 text-left font-medium">Channel</th>
+                      <th className="border p-3 text-left font-medium">Site</th>
+                      <th className="border p-3 text-left font-medium">Type</th>
+                      <th className="border p-3 text-right font-medium">FPWR (W)</th>
+                      <th className="border p-3 text-right font-medium">VSWR</th>
+                      <th className="border p-3 text-center font-medium">Status</th>
+                      <th className="border p-3 text-left font-medium">Notes</th>
+                      <th className="border p-3 text-center font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {histories.map((history, idx) => (
-                      <tr key={history.id} className="hover:bg-gray-50">
-                        <td className="border p-2">{(currentPage - 1) * pageSize + idx + 1}</td>
-                        <td className="border p-2">
-                          {format(new Date(history.date), "dd/MM/yyyy")}
+                      <tr key={history.id} className="hover:bg-gray-50 border-b last:border-b-0">
+                        <td className="border p-3 text-gray-600">
+                          {(currentPage - 1) * pageSize + idx + 1}
                         </td>
-                        <td className="border p-2 font-semibold">{history.channelName}</td>
-                        <td className="border p-2">{history.siteName}</td>
-                        <td className="border p-2">
-                          <span className={`px-2 py-1 rounded text-xs ${
-                            history.siteType === "Trunking" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"
+                        <td className="border p-3">
+                          <div className="font-medium">
+                            {format(new Date(history.date), "dd/MM/yyyy")}
+                          </div>
+                        </td>
+                        <td className="border p-3">
+                          <div className="font-semibold text-blue-700">
+                            {history.channelName}
+                          </div>
+                        </td>
+                        <td className="border p-3">
+                          <div className="font-medium">{history.siteName}</div>
+                        </td>
+                        <td className="border p-3">
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            history.siteType === "Trunking" 
+                              ? "bg-purple-100 text-purple-700 border border-purple-200" 
+                              : "bg-green-100 text-green-700 border border-green-200"
                           }`}>
                             {history.siteType}
                           </span>
                         </td>
-                        <td className="border p-2 text-right font-mono">
+                        <td className="border p-3 text-right font-mono">
                           {history.fpwr !== null && history.fpwr !== undefined
-                            ? history.fpwr.toFixed(1)
-                            : "-"}
+                            ? `${history.fpwr.toFixed(1)} W`
+                            : <span className="text-gray-400">-</span>}
                         </td>
-                        <td className={`border p-2 text-right font-mono ${getVswrColor(history.vswr)}`}>
+                        <td className={`border p-3 text-right font-mono font-semibold ${getVswrColor(history.vswr)}`}>
                           {history.vswr.toFixed(2)}
                         </td>
-                        <td className="border p-2 text-center">
+                        <td className="border p-3 text-center">
                           {getStatusDisplay(history.status)}
                         </td>
-                        <td className="border p-2 max-w-xs truncate text-sm text-gray-600">
-                          {history.notes || "-"}
+                        <td className="border p-3 max-w-xs text-sm text-gray-600">
+                          {history.notes ? (
+                            <div className="truncate" title={history.notes}>
+                              {history.notes}
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 italic">-</span>
+                          )}
                         </td>
-                        <td className="border p-2">
+                        <td className="border p-3">
                           <div className="flex gap-2 justify-center">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => openModal("edit", history)}
-                              className="p-1"
+                              className="p-1.5 h-8 w-8 bg-blue-50 text-blue-600 hover:bg-blue-100 hover:text-blue-700"
+                              title="Edit"
                             >
                               ✏️
                             </Button>
@@ -519,7 +720,8 @@ export default function SwrHistoryTab() {
                               variant="ghost"
                               size="sm"
                               onClick={() => handleDelete(history.id)}
-                              className="p-1 text-red-600 hover:text-red-700"
+                              className="p-1.5 h-8 w-8 bg-red-50 text-red-600 hover:bg-red-100 hover:text-red-700"
+                              title="Delete"
                             >
                               🗑️
                             </Button>
@@ -531,10 +733,16 @@ export default function SwrHistoryTab() {
                 </table>
               </div>
 
-              {/* ✅ PAGINATION - Enhanced like NEC */}
+              {/* ✅ PAGINATION */}
               {totalPages > 1 && (
-                <div className="flex justify-between items-center pt-4 border-t">
-                  <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t gap-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                    {Math.min(currentPage * pageSize, totalCount)} of{" "}
+                    {totalCount} entries
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
                     {/* First Page Button */}
                     <Button
                       variant="outline"
@@ -542,9 +750,9 @@ export default function SwrHistoryTab() {
                       disabled={currentPage <= 1 || isLoading}
                       onClick={() => setCurrentPage(1)}
                       title="First Page"
+                      className="h-9 w-9 p-0"
                     >
-                      <ChevronsLeft className="h-4 w-4 mr-1" />
-                      First
+                      <ChevronsLeft className="h-4 w-4" />
                     </Button>
 
                     {/* Previous Button */}
@@ -554,23 +762,19 @@ export default function SwrHistoryTab() {
                       disabled={currentPage <= 1 || isLoading}
                       onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                       title="Previous Page"
+                      className="h-9 px-3"
                     >
                       <ChevronLeft className="h-4 w-4 mr-1" />
-                      Previous
+                      Prev
                     </Button>
-                  </div>
 
-                  {/* Page Info */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">
-                      Page {currentPage} of {totalPages}
-                    </span>
-                    <span className="text-xs text-gray-400">
-                      ({totalCount} total records)
-                    </span>
-                  </div>
+                    {/* Page Number */}
+                    <div className="flex items-center gap-1 mx-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Page {currentPage} of {totalPages}
+                      </span>
+                    </div>
 
-                  <div className="flex gap-2">
                     {/* Next Button */}
                     <Button
                       variant="outline"
@@ -578,6 +782,7 @@ export default function SwrHistoryTab() {
                       disabled={currentPage >= totalPages || isLoading}
                       onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                       title="Next Page"
+                      className="h-9 px-3"
                     >
                       Next
                       <ChevronRight className="h-4 w-4 ml-1" />
@@ -590,9 +795,9 @@ export default function SwrHistoryTab() {
                       disabled={currentPage >= totalPages || isLoading}
                       onClick={() => setCurrentPage(totalPages)}
                       title="Last Page"
+                      className="h-9 w-9 p-0"
                     >
-                      Last
-                      <ChevronsRight className="h-4 w-4 ml-1" />
+                      <ChevronsRight className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
@@ -600,15 +805,23 @@ export default function SwrHistoryTab() {
             </div>
           ) : (
             <Alert>
-              <AlertDescription className="text-center py-8">
+              <AlertDescription className="text-center py-12">
                 <div className="flex flex-col items-center justify-center">
-                  <Search className="h-12 w-12 text-gray-400 mb-2" />
-                  <p className="text-lg font-medium">No records found</p>
-                  <p className="text-gray-600 mt-1">
-                    {searchTerm || selectedChannel !== "all" || selectedSite !== "all"
-                      ? "Try adjusting your filters"
-                      : "Click 'Add Record' to create your first entry"}
+                  <Search className="h-16 w-16 text-gray-300 mb-4" />
+                  <p className="text-lg font-semibold text-gray-700">No records found</p>
+                  <p className="text-gray-500 mt-2 max-w-md">
+                    {searchTerm || selectedChannel !== "all" || selectedSite !== "all" || selectedType !== "all"
+                      ? "Try adjusting your search filters or clear them to see all records"
+                      : "Start by adding your first SWR history record"}
                   </p>
+                  {!searchTerm && selectedChannel === "all" && selectedSite === "all" && selectedType === "all" && (
+                    <Button 
+                      onClick={() => openModal("create")} 
+                      className="mt-4 bg-blue-600 hover:bg-blue-700"
+                    >
+                      Add First Record
+                    </Button>
+                  )}
                 </div>
               </AlertDescription>
             </Alert>
@@ -620,36 +833,40 @@ export default function SwrHistoryTab() {
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl">
               {modalMode === "create" ? "Add SWR History" : "Edit SWR History"}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="space-y-4 py-4">
-            <div>
-              <Label htmlFor="channel">Channel *</Label>
-              <Select
-                value={formData.swrChannelId.toString()}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, swrChannelId: parseInt(value) })
-                }
-                disabled={modalMode === "edit"}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select Channel" />
-                </SelectTrigger>
-                <SelectContent>
-                  {channels.map((ch) => (
-                    <SelectItem key={ch.id} value={ch.id.toString()}>
-                      {ch.channelName} - {ch.swrSiteName} ({ch.swrSiteType})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <div className="space-y-6 py-4">
+            {/* Channel Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="channel" className="text-sm font-semibold">
+                Channel {modalMode === "create" && <span className="text-red-500">*</span>}
+              </Label>
+              {modalMode === "create" ? (
+                <SearchableChannelSelect
+                  value={formData.swrChannelId}
+                  onChange={(value) =>
+                    setFormData({ ...formData, swrChannelId: value })
+                  }
+                  channels={channels}
+                />
+              ) : (
+                <div className="p-3 bg-gray-50 rounded-md border">
+                  <div className="font-semibold text-blue-700">{currentHistory?.channelName}</div>
+                  <div className="text-sm text-gray-600 mt-0.5">
+                    {currentHistory?.siteName} • {currentHistory?.siteType}
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div>
-              <Label htmlFor="date">Date *</Label>
+            {/* Date Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="date" className="text-sm font-semibold">
+                Date <span className="text-red-500">*</span>
+              </Label>
               <Input
                 id="date"
                 type="date"
@@ -657,72 +874,80 @@ export default function SwrHistoryTab() {
                 onChange={(e) =>
                   setFormData({ ...formData, date: e.target.value })
                 }
+                className="h-11"
                 disabled={modalMode === "edit"}
               />
             </div>
 
-            <div>
-              <Label htmlFor="fpwr">
-                FPWR (Watt)
-                {formData.status !== "Active" && (
-                  <span className="text-xs text-gray-500 ml-2">
-                    (Auto-null for non-active status)
+            {/* FPWR and VSWR */}
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="fpwr" className="text-sm font-semibold">
+                  FPWR (W)
+                  {formData.status === "Active" && <span className="text-xs text-gray-500 ml-2">Optional</span>}
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="fpwr"
+                    type="number"
+                    min="0"
+                    max="200"
+                    placeholder="100 W"
+                    value={formData.fpwr}
+                    onChange={(e) =>
+                      setFormData({ ...formData, fpwr: e.target.value })
+                    }
+                    disabled={formData.status !== "Active"}
+                    className="h-11 pr-10"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">
+                    W
                   </span>
+                </div>
+                {formData.status !== "Active" && (
+                  <p className="text-xs text-gray-500">
+                    FPWR will be set to null for non-Active status
+                  </p>
                 )}
-              </Label>
-              <Input
-                id="fpwr"
-                type="number"
-                step="0.1"
-                min="0"
-                max="200"
-                value={formData.fpwr || ""}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    fpwr: e.target.value ? parseFloat(e.target.value) : null,
-                  })
-                }
-                disabled={formData.status !== "Active"}
-                placeholder="Optional for Trunking type"
-              />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="vswr" className="text-sm font-semibold">
+                  VSWR 
+                  {formData.status === "Active" && <span className="text-red-500">*</span>}
+                </Label>
+                <Input
+                  id="vswr"
+                  type="number"
+                  step="0.01"
+                  min="1.0"
+                  max="4.0"
+                  placeholder="1.0"
+                  value={formData.vswr}
+                  onChange={(e) =>
+                    setFormData({ ...formData, vswr: e.target.value })
+                  }
+                  disabled={formData.status !== "Active"}
+                  className="h-11"
+                />
+                {formData.status !== "Active" && (
+                  <p className="text-xs text-gray-500">
+                    VSWR will be set to 1.0 for non-Active status
+                  </p>
+                )}
+              </div>
             </div>
 
-            <div>
-              <Label htmlFor="vswr">
-                VSWR *
-                {formData.status !== "Active" && (
-                  <span className="text-xs text-gray-500 ml-2">
-                    (Auto 1.0 for non-active)
-                  </span>
-                )}
-              </Label>
-              <Input
-                id="vswr"
-                type="number"
-                step="0.01"
-                min="1.0"
-                max="3.0"
-                value={formData.vswr}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    vswr: parseFloat(e.target.value) || 1.0,
-                  })
-                }
-                disabled={formData.status !== "Active"}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="status">Operational Status</Label>
+            {/* Status */}
+            <div className="space-y-2">
+              <Label htmlFor="status" className="text-sm font-semibold">Operational Status</Label>
               <Select
                 value={formData.status}
                 onValueChange={(value) =>
                   setFormData({ ...formData, status: value })
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-11">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -734,24 +959,28 @@ export default function SwrHistoryTab() {
               </Select>
             </div>
 
-            <div>
-              <Label htmlFor="notes">
+            {/* Notes */}
+            <div className="space-y-2">
+              <Label htmlFor="notes" className="text-sm font-semibold">
                 Notes
-                {formData.status !== "Active" && (
-                  <span className="text-red-500 ml-1">*</span>
-                )}
+                {formData.status !== "Active" && <span className="text-red-500 ml-1">*</span>}
               </Label>
               <textarea
                 id="notes"
-                className="w-full p-2 border rounded-md min-h-[80px]"
+                className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[100px] resize-none text-sm"
                 value={formData.notes}
                 onChange={(e) =>
                   setFormData({ ...formData, notes: e.target.value })
                 }
-                placeholder="Required for non-Active status (e.g., Channel dismantled, obstacle detected)"
+                placeholder={
+                  formData.status !== "Active"
+                    ? "Required for non-Active status (e.g., Channel dismantled, obstacle detected, maintenance notes...)"
+                    : "Optional notes for this record"
+                }
+                rows={4}
               />
               {formData.status !== "Active" && (
-                <p className="text-xs text-red-500 mt-1">
+                <p className="text-xs text-red-500">
                   ⚠️ Notes are mandatory for non-Active status
                 </p>
               )}
@@ -761,12 +990,22 @@ export default function SwrHistoryTab() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsModalOpen(false)}
+              onClick={closeModal}
+              disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button onClick={handleSubmit}>
-              {modalMode === "create" ? "Create" : "Update"}
+            <Button 
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoading 
+                ? "Saving..." 
+                : modalMode === "create" 
+                  ? "Create Record" 
+                  : "Update Record"
+              }
             </Button>
           </DialogFooter>
         </DialogContent>

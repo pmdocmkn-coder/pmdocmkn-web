@@ -79,8 +79,8 @@ export default function SwrChannelDialog({
     }
 
     const swrMax = parseFloat(expectedSwrMax);
-    if (isNaN(swrMax) || swrMax < 1.0 || swrMax > 3.0) {
-      setError("Expected SWR Max must be between 1.0 and 3.0");
+    if (isNaN(swrMax) || swrMax < 1.0 || swrMax > 4.0) {
+      setError("Expected SWR Max must be between 1.0 and 4.0");
       return false;
     }
 
@@ -208,13 +208,13 @@ export default function SwrChannelDialog({
 
           <div className="space-y-2">
             <Label htmlFor="expectedSwrMax" className="text-purple-200">
-              Expected SWR Max (1.0 - 3.0) *
+              Expected SWR Max (1.0 - 4.0) *
             </Label>
             <Input
               id="expectedSwrMax"
               type="number"
               min="1.0"
-              max="3.0"
+              max="4.0"
               step="0.1"
               value={expectedSwrMax}
               onChange={(e) => setExpectedSwrMax(e.target.value)}
