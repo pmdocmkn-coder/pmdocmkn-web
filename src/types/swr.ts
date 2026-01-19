@@ -46,7 +46,7 @@ export interface SwrChannelUpdateDto {
   expectedPwrMax: number;
 }
 
-// HISTORIES (✅ ADDED)
+// HISTORIES
 export interface SwrHistoryItemDto {
   id: number;
   swrChannelId: number;
@@ -57,7 +57,7 @@ export interface SwrHistoryItemDto {
   fpwr?: number | null;
   vswr: number;
   notes?: string;
-  status: SwrOperationalStatus;
+  status: SwrOperationalStatus | string; // ✅ Support both number and string
   no?: number; // For table numbering
 }
 
@@ -134,6 +134,7 @@ export interface SwrChannelYearlyDto {
   warnings: string[];
 }
 
+// ✅ FIXED: Added historyIds field
 export interface SwrYearlyPivotDto {
   channelName: string;
   siteName: string;
@@ -142,13 +143,23 @@ export interface SwrYearlyPivotDto {
   monthlyVswr: Record<string, number | null>;
   expectedSwrMax: number;
   notes: Record<string, string>;
+  historyIds: Record<string, number | undefined>; // Key: "Jan-26", Value: historyId
 }
 
+// ✅ FIXED: Aligned with backend response structure
 export interface SwrImportResultDto {
-  success: boolean;          // ✅ NEW
-  recordsCreated: number;     // ✅ Renamed from successfulInserts
-  recordsUpdated: number;     // ✅ NEW
-  channelsCreated: number;    // ✅ NEW
+  success: boolean;
+  recordsCreated: number;
+  recordsUpdated: number;
+  channelsCreated: number;
   errors: string[];
-  message: string;            // ✅ Auto-generated from backend
+  message: string;
+}
+
+export interface SwrNoteUpdateDto {
+  channelName: string;
+  siteName: string;
+  year: number;
+  month: string;
+  note: string;
 }
