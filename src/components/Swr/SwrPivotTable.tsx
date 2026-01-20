@@ -29,6 +29,7 @@ import {
   PieChart,
   Pie,
   Cell,
+  Legend,
 } from "recharts";
 import {
   Search,
@@ -189,9 +190,9 @@ const SwrPivotTable: React.FC = () => {
     try {
       const siteParam = selectedSites.length === 1 ? selectedSites[0] : undefined;
       const response = await swrSignalApi.getYearlyPivot(selectedYear, siteParam);
-      
+
       // Load saved notes from localStorage untuk backup
-      const dataWithNotes = (response || []).map((item: PivotData) => {
+      const dataWithNotes = (response || []).map((item: any) => {
         const localKey = `swr-notes-${selectedYear}-${item.channelName}`;
         try {
           const localNotes = JSON.parse(localStorage.getItem(localKey) || '{}');
@@ -203,7 +204,7 @@ const SwrPivotTable: React.FC = () => {
           return item;
         }
       });
-      
+
       setPivotData(dataWithNotes);
       setCurrentPage(1);
     } catch (error) {
@@ -233,7 +234,7 @@ const SwrPivotTable: React.FC = () => {
       document.body.appendChild(link);
       link.click();
       link.remove();
-      toast({ 
+      toast({
         title: "Export Berhasil",
         description: `Data tahun ${selectedYear} berhasil diexport`,
       });
@@ -261,27 +262,28 @@ const SwrPivotTable: React.FC = () => {
     currentPage * itemsPerPage
   );
 
-  // 🎯 GRAFIK 1: Data untuk Line Chart VSWR
+  // 🎯 GRAFIK 1: Data untuk Line Chart VSWR - TAMPILKAN SEMUA CHANNEL DI HALAMAN
   const prepareLineChartData = () => {
     const chartData = months.map((month) => {
       const monthKey = formatMonthKey(month);
       const dataPoint: any = { month };
-      
-      paginatedData.slice(0, 6).forEach((link, idx) => {
+
+      // TAMPILKAN SEMUA CHANNEL DI HALAMAN, BUKAN HANYA 6 PERTAMA
+      paginatedData.forEach((link) => {
         const value = link.monthlyVswr[monthKey];
         dataPoint[link.channelName] = value !== null && value !== undefined ? value : null;
       });
-      
+
       return dataPoint;
     });
-    
+
     return chartData;
   };
 
   // 🎯 GRAFIK 2: Pie Chart untuk distribusi status
   const generatePieChartData = () => {
     const statusCount = { good: 0, warning: 0, critical: 0, no_data: 0 };
-    
+
     paginatedData.forEach((link) => {
       Object.values(link.monthlyVswr).forEach((value) => {
         const status = getSwrStatus(value);
@@ -298,16 +300,16 @@ const SwrPivotTable: React.FC = () => {
   };
 
   const openNoteModal = (
-    channelName: string, 
-    month: string, 
-    currentNote?: string, 
+    channelName: string,
+    month: string,
+    currentNote?: string,
     historyId?: number,
     siteName?: string
   ) => {
-    setEditingNote({ 
-      channelName, 
-      month, 
-      currentNote, 
+    setEditingNote({
+      channelName,
+      month,
+      currentNote,
       historyId,
       siteName: siteName || ""
     });
@@ -320,13 +322,13 @@ const SwrPivotTable: React.FC = () => {
     if (!editingNote) return;
 
     const isDeletingNote = !noteText.trim();
-    
+
     // Konfirmasi hapus catatan
     if (isDeletingNote && editingNote.currentNote) {
       const confirmed = window.confirm(
         `Apakah Anda yakin ingin menghapus catatan untuk ${editingNote.channelName} - ${editingNote.month}?\n\n"${editingNote.currentNote}"`
       );
-      
+
       if (!confirmed) {
         return;
       }
@@ -340,32 +342,32 @@ const SwrPivotTable: React.FC = () => {
       }
 
       const channels = await swrSignalApi.getChannels();
-      const channel = channels.find((c: any) => 
-        c.channelName === editingNote.channelName && 
+      const channel = channels.find((c: any) =>
+        c.channelName === editingNote.channelName &&
         c.swrSiteName === (editingNote.siteName || channelData.siteName)
       );
 
       const monthKey = editingNote.month;
       const fpwrValue = channelData?.monthlyFpwr?.[monthKey];
       const vswrValue = channelData?.monthlyVswr?.[monthKey];
-      
-      const hasTechnicalData = 
+
+      const hasTechnicalData =
         (fpwrValue !== undefined && fpwrValue !== null) ||
         (vswrValue !== undefined && vswrValue !== null);
 
-      let successMessage = isDeletingNote 
-        ? "Catatan berhasil dihapus" 
-        : editingNote.currentNote 
+      let successMessage = isDeletingNote
+        ? "Catatan berhasil dihapus"
+        : editingNote.currentNote
           ? "Catatan berhasil diperbarui"
           : "Catatan berhasil disimpan";
-      
+
       let newHistoryId = editingNote.historyId;
 
       // Logic untuk backend jika ada channel
       if (channel && channel.id) {
         const [monthStr, yearStr] = editingNote.month.split('-');
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", 
-                          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+          "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
         const monthIndex = monthNames.indexOf(monthStr);
         const year = 2000 + parseInt(yearStr);
         const recordDate = new Date(year, monthIndex, 15);
@@ -391,17 +393,17 @@ const SwrPivotTable: React.FC = () => {
             notes: isDeletingNote ? "" : noteText.trim(),
             status: existingHistory.status || "Active"
           };
-          
+
           if (fpwrValue !== undefined && fpwrValue !== null) updateData.fpwr = fpwrValue;
           if (vswrValue !== undefined && vswrValue !== null) {
             updateData.vswr = vswrValue >= 1.0 ? vswrValue : 1.0;
           } else if (existingHistory.vswr !== undefined) {
             updateData.vswr = existingHistory.vswr;
           }
-          
+
           await swrSignalApi.updateHistory(existingHistory.id, updateData);
           newHistoryId = existingHistory.id;
-          
+
         } else if (hasTechnicalData && !isDeletingNote) {
           // Create new history only if we have a note
           const historyData: any = {
@@ -410,17 +412,17 @@ const SwrPivotTable: React.FC = () => {
             notes: noteText.trim(),
             status: "Active"
           };
-          
+
           if (fpwrValue !== undefined && fpwrValue !== null) {
             historyData.fpwr = fpwrValue;
           }
-          
+
           if (vswrValue !== undefined && vswrValue !== null) {
             historyData.vswr = vswrValue >= 1.0 ? vswrValue : 1.0;
           } else {
             historyData.vswr = 1.0;
           }
-          
+
           const newHistory = await swrSignalApi.createHistory(historyData);
           newHistoryId = newHistory.id;
         }
@@ -431,31 +433,31 @@ const SwrPivotTable: React.FC = () => {
         prev.map((link) => {
           if (link.channelName === editingNote.channelName) {
             const updatedNotes = { ...link.notes };
-            
+
             if (isDeletingNote) {
               delete updatedNotes[editingNote.month];
             } else {
               updatedNotes[editingNote.month] = noteText.trim();
             }
-            
+
             const updatedHistoryIds = { ...link.historyIds };
             if (isDeletingNote) {
               delete updatedHistoryIds[editingNote.month];
             } else if (newHistoryId) {
               updatedHistoryIds[editingNote.month] = newHistoryId;
             }
-            
+
             // Update localStorage
             const localKey = `swr-notes-${selectedYear}-${editingNote.channelName}`;
             try {
               const existingLocal = JSON.parse(localStorage.getItem(localKey) || '{}');
-              
+
               if (isDeletingNote) {
                 delete existingLocal[editingNote.month];
               } else {
                 existingLocal[editingNote.month] = noteText.trim();
               }
-              
+
               if (Object.keys(existingLocal).length === 0) {
                 localStorage.removeItem(localKey);
               } else {
@@ -464,7 +466,7 @@ const SwrPivotTable: React.FC = () => {
             } catch (error) {
               console.warn("Failed to update localStorage:", error);
             }
-            
+
             return {
               ...link,
               notes: updatedNotes,
@@ -483,14 +485,14 @@ const SwrPivotTable: React.FC = () => {
       setIsNoteModalOpen(false);
       setEditingNote(null);
       setNoteText("");
-      
+
     } catch (error: any) {
       console.error("❌ Error saving/deleting note:", error);
-      
-      let errorMessage = isDeletingNote 
-        ? "Gagal menghapus catatan" 
+
+      let errorMessage = isDeletingNote
+        ? "Gagal menghapus catatan"
         : "Gagal menyimpan catatan";
-      
+
       if (error.response?.data) {
         const backendError = error.response.data;
         if (backendError.message) {
@@ -502,7 +504,7 @@ const SwrPivotTable: React.FC = () => {
       } else if (error.message) {
         errorMessage = error.message;
       }
-      
+
       toast({
         title: "Error",
         description: errorMessage,
@@ -519,10 +521,11 @@ const SwrPivotTable: React.FC = () => {
 
   const lineChartData = prepareLineChartData();
   const pieChartData = generatePieChartData();
-  
+
   const COLORS = [
     "#3b82f6", "#ef4444", "#10b981", "#f59e0b", "#8b5cf6", "#06b6d4",
     "#ec4899", "#14b8a6", "#f97316", "#6366f1", "#84cc16", "#a855f7",
+    "#3b82f6", "#ef4444", "#10b981", "#f59e0b", // Duplicate untuk lebih banyak channel
   ];
 
   const toggleSiteSelection = (siteName: string) => {
@@ -572,7 +575,7 @@ const SwrPivotTable: React.FC = () => {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
@@ -595,8 +598,8 @@ const SwrPivotTable: React.FC = () => {
                 className="w-full flex items-center justify-between px-3 py-2 bg-white border border-gray-300 rounded-md hover:bg-gray-50 text-sm"
               >
                 <span className="text-gray-900">
-                  {selectedSites.length === 0 
-                    ? "Semua Site" 
+                  {selectedSites.length === 0
+                    ? "Semua Site"
                     : `${selectedSites.length} site terpilih`
                   }
                 </span>
@@ -627,8 +630,8 @@ const SwrPivotTable: React.FC = () => {
 
               {showMultiSelect && (
                 <>
-                  <div 
-                    className="fixed inset-0 z-10" 
+                  <div
+                    className="fixed inset-0 z-10"
                     onClick={() => setShowMultiSelect(false)}
                   />
                   <div className="absolute z-20 mt-1 w-full max-h-60 overflow-y-auto border rounded-md bg-white shadow-lg">
@@ -646,8 +649,8 @@ const SwrPivotTable: React.FC = () => {
                     </div>
                     <div className="p-2 space-y-1">
                       {sites.map((site) => (
-                        <label 
-                          key={site} 
+                        <label
+                          key={site}
                           className="flex items-center gap-2 p-2 hover:bg-gray-100 rounded cursor-pointer text-sm"
                         >
                           <input
@@ -696,52 +699,69 @@ const SwrPivotTable: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* 🎯 BAGIAN GRAFIK */}
+      {/* 🎯 BAGIAN GRAFIK - PERBAIKAN: SEMUA CHANNEL DI HALAMAN */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Grafik 1: Line Chart Trend VSWR */}
         <Card className="lg:col-span-2">
           <CardHeader className="pb-3">
-            <div className="flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-blue-600" />
-              <CardTitle className="text-base">Trend VSWR per Channel</CardTitle>
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                <BarChart3 className="w-5 h-5 text-blue-600" />
+                <CardTitle className="text-base">Trend VSWR per Channel</CardTitle>
+                <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
+                  {paginatedData.length} channels
+                </span>
+              </div>
+              <div className="text-sm text-gray-600">
+                Menampilkan {paginatedData.length} channel dari halaman {currentPage}
+              </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px]">
+            <div className="h-[350px]">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={lineChartData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis 
-                    dataKey="month" 
-                    tick={{ fontSize: 12 }}
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <YAxis 
-                    domain={[1, 3]} 
-                    tick={{ fontSize: 12 }}
+                  <YAxis
+                    domain={[1, 3]}
+                    tick={{ fontSize: 11 }}
                     axisLine={false}
                     tickLine={false}
                   />
-                  <RechartsTooltip 
-                    formatter={(value: any) => {
-                      if (value === null || value === undefined) return ["No Data", ""];
-                      return [`${value.toFixed(2)}`, "VSWR"];
+                  <RechartsTooltip
+                    formatter={(value: any, name: any) => {
+                      if (value === null || value === undefined) return ["No Data", name];
+                      return [`${value.toFixed(2)}`, name];
                     }}
                     labelFormatter={(label) => `Bulan: ${label}`}
+                    contentStyle={{
+                      backgroundColor: 'white',
+                      border: '1px solid #e0e0e0',
+                      borderRadius: '6px',
+                      fontSize: '12px'
+                    }}
                   />
-                  <ReferenceLine 
-                    y={1.5} 
-                    stroke="#10b981" 
-                    strokeDasharray="3 3" 
+                  <ReferenceLine
+                    y={1.5}
+                    stroke="#10b981"
+                    strokeDasharray="3 3"
+                    strokeWidth={1}
                   />
-                  <ReferenceLine 
-                    y={2.0} 
-                    stroke="#ef4444" 
-                    strokeDasharray="3 3" 
+                  <ReferenceLine
+                    y={2.0}
+                    stroke="#ef4444"
+                    strokeDasharray="3 3"
+                    strokeWidth={1}
                   />
-                  
-                  {paginatedData.slice(0, 6).map((link, idx) => (
+
+                  {/* TAMPILKAN SEMUA CHANNEL DI HALAMAN */}
+                  {paginatedData.map((link, idx) => (
                     <Line
                       key={link.channelName}
                       type="monotone"
@@ -756,20 +776,27 @@ const SwrPivotTable: React.FC = () => {
                 </LineChart>
               </ResponsiveContainer>
             </div>
-            
-            <div className="mt-4 border rounded-lg p-3 bg-gray-50">
-              <div className="flex flex-wrap gap-3">
-                {paginatedData.slice(0, 6).map((link, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs">
-                    <div 
-                      className="w-4 h-0.5" 
-                      style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                    />
-                    <span className="truncate max-w-[120px]">{link.channelName}</span>
-                  </div>
-                ))}
+
+            {/* Legenda untuk semua channel */}
+            {paginatedData.length > 0 && (
+              <div className="mt-4 border rounded-lg p-3 bg-gray-50">
+                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                  {paginatedData.map((link, idx) => (
+                    <div key={idx} className="flex items-center gap-2 text-xs bg-white px-2 py-1.5 rounded border">
+                      <div
+                        className="w-3 h-0.5"
+                        style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                      />
+                      <span className="truncate max-w-[120px] font-medium">{link.channelName}</span>
+                      <span className="text-[10px] text-gray-500">({link.siteType.charAt(0)})</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                  Menampilkan {paginatedData.length} channel sesuai filter dan halaman
+                </p>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -799,22 +826,22 @@ const SwrPivotTable: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={entry.fill} />
                     ))}
                   </Pie>
-                  <RechartsTooltip 
+                  <RechartsTooltip
                     formatter={(value: any, name: any) => [
-                      value, 
+                      value,
                       `${name} Data`
                     ]}
                   />
                 </PieChart>
               </ResponsiveContainer>
             </div>
-            
+
             <div className="grid grid-cols-2 gap-3 mt-4">
               {pieChartData.map((item, idx) => (
                 <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
                   <div className="flex items-center gap-2">
-                    <div 
-                      className="w-3 h-3 rounded" 
+                    <div
+                      className="w-3 h-3 rounded"
                       style={{ backgroundColor: item.fill }}
                     />
                     <span className="text-sm font-medium">{item.name}</span>
@@ -823,6 +850,9 @@ const SwrPivotTable: React.FC = () => {
                 </div>
               ))}
             </div>
+            <p className="text-xs text-gray-500 mt-3 text-center">
+              Data dari {paginatedData.length} channel di halaman ini
+            </p>
           </CardContent>
         </Card>
       </div>
@@ -836,7 +866,7 @@ const SwrPivotTable: React.FC = () => {
                 <th className="p-4 text-left border-b border-white/20 sticky left-0 bg-blue-600 z-20" rowSpan={2}>
                   Channel
                 </th>
-            
+
                 <th className="p-4 text-left border-b border-white/20" rowSpan={2}>Type</th>
                 {months.map((m) => (
                   <th key={m} className="p-2 text-center border-b border-white/20 min-w-[140px]" colSpan={2}>
@@ -853,7 +883,7 @@ const SwrPivotTable: React.FC = () => {
                 ))}
               </tr>
             </thead>
-            
+
             <tbody>
               {isLoading ? (
                 <tr>
@@ -867,10 +897,10 @@ const SwrPivotTable: React.FC = () => {
               ) : paginatedData.length > 0 ? (
                 paginatedData.map((row, rowIdx) => {
                   const hasAnyNote = Object.values(row.notes || {}).some(note => note?.trim());
-                  
+
                   return (
-                    <tr 
-                      key={rowIdx} 
+                    <tr
+                      key={rowIdx}
                       className={`hover:bg-blue-50/50 border-b transition-colors ${hasAnyNote ? 'bg-blue-50/30' : ''}`}
                     >
                       <td className="p-4 font-bold sticky left-0 bg-white border-r border-blue-100 z-10">
@@ -885,17 +915,16 @@ const SwrPivotTable: React.FC = () => {
                         </div>
                       </td>
 
-                      
+
                       <td className="p-4 italic text-gray-400">
-                        <span className={`px-2 py-1 rounded text-xs ${
-                          row.siteType === 'Trunking' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : 'bg-green-100 text-green-800'
-                        }`}>
+                        <span className={`px-2 py-1 rounded text-xs ${row.siteType === 'Trunking'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-green-100 text-green-800'
+                          }`}>
                           {row.siteType}
                         </span>
                       </td>
-                      
+
                       {months.map((m, monthIdx) => {
                         const key = formatMonthKey(m);
                         const fpwr = row.monthlyFpwr[key];
@@ -904,21 +933,21 @@ const SwrPivotTable: React.FC = () => {
                         const historyId = row.historyIds?.[key];
                         const hasNote = shouldShowNoteIcon(note);
                         const isDataPresent = vswr !== null || fpwr !== null;
-                        
+
                         return (
                           <React.Fragment key={m}>
                             {/* VSWR Cell */}
                             <td
-                              onMouseEnter={() => setHoveredCell({ 
-                                rowIdx, 
-                                colIdx: monthIdx * 2, 
-                                type: 'vswr', 
-                                channelName: row.channelName, 
-                                month: key, 
-                                fpwr, 
-                                vswr, 
-                                note, 
-                                historyId 
+                              onMouseEnter={() => setHoveredCell({
+                                rowIdx,
+                                colIdx: monthIdx * 2,
+                                type: 'vswr',
+                                channelName: row.channelName,
+                                month: key,
+                                fpwr,
+                                vswr,
+                                note,
+                                historyId
                               })}
                               onMouseLeave={() => setHoveredCell(null)}
                               className={`p-3 text-center border-l border-blue-50 font-mono font-medium relative cursor-pointer group ${getSwrTextColor(vswr)} ${getSwrColor(vswr)}`}
@@ -950,16 +979,15 @@ const SwrPivotTable: React.FC = () => {
                                 <div className={`absolute left-1/2 transform -translate-x-1/2 ${rowIdx < 3 ? "top-full mt-2" : "bottom-full mb-2"} w-80 p-4 bg-gray-900 text-white text-xs rounded-lg shadow-2xl z-50 border border-gray-700`}>
                                   <div className="relative">
                                     {/* Arrow */}
-                                    <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${
-                                      rowIdx < 3 ? "-top-2 border-b-8 border-b-gray-900" : "-bottom-2 border-t-8 border-t-gray-900"
-                                    }`} />
-                                    
+                                    <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${rowIdx < 3 ? "-top-2 border-b-8 border-b-gray-900" : "-bottom-2 border-t-8 border-t-gray-900"
+                                      }`} />
+
                                     {/* Header */}
                                     <div className="mb-3 border-b border-gray-700 pb-2">
                                       <h4 className="font-bold text-sm">{row.channelName}</h4>
                                       <p className="text-gray-300 text-xs">{row.siteName} • {m} {selectedYear}</p>
                                     </div>
-                                    
+
                                     {/* Technical Data Grid */}
                                     <div className="grid grid-cols-2 gap-3 mb-4">
                                       {vswr !== null && vswr !== undefined && (
@@ -973,7 +1001,7 @@ const SwrPivotTable: React.FC = () => {
                                           </div>
                                         </div>
                                       )}
-                                      
+
                                       {fpwr !== null && fpwr !== undefined && (
                                         <div className="bg-gray-800/50 p-3 rounded">
                                           <p className="text-xs text-gray-400 mb-1">FPWR</p>
@@ -986,7 +1014,7 @@ const SwrPivotTable: React.FC = () => {
                                         </div>
                                       )}
                                     </div>
-                                    
+
                                     {/* Notes Section - SEPERTI DI NEC */}
                                     {note && (
                                       <div className="mb-4 p-3 bg-yellow-900/20 rounded border border-yellow-700/30">
@@ -1001,19 +1029,19 @@ const SwrPivotTable: React.FC = () => {
                                         </div>
                                       </div>
                                     )}
-                                    
+
                                     {/* Action Button */}
-                                    <button 
+                                    <button
                                       onClick={(e) => {
                                         e.stopPropagation();
                                         openNoteModal(
-                                          row.channelName, 
-                                          key, 
-                                          note, 
+                                          row.channelName,
+                                          key,
+                                          note,
                                           historyId,
                                           row.siteName
                                         );
-                                      }} 
+                                      }}
                                       className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
                                     >
                                       {note ? (
@@ -1035,16 +1063,16 @@ const SwrPivotTable: React.FC = () => {
 
                             {/* FPWR Cell */}
                             <td
-                              onMouseEnter={() => setHoveredCell({ 
-                                rowIdx, 
-                                colIdx: monthIdx * 2 + 1, 
-                                type: 'fpwr', 
-                                channelName: row.channelName, 
-                                month: key, 
-                                fpwr, 
-                                vswr, 
-                                note, 
-                                historyId 
+                              onMouseEnter={() => setHoveredCell({
+                                rowIdx,
+                                colIdx: monthIdx * 2 + 1,
+                                type: 'fpwr',
+                                channelName: row.channelName,
+                                month: key,
+                                fpwr,
+                                vswr,
+                                note,
+                                historyId
                               })}
                               onMouseLeave={() => setHoveredCell(null)}
                               className={`p-3 text-center border-l border-blue-50 font-mono relative cursor-pointer ${getFpwrTextColor(fpwr)} ${getFpwrColor(fpwr)}`}
@@ -1095,7 +1123,7 @@ const SwrPivotTable: React.FC = () => {
             </tbody>
           </table>
         </CardContent>
-        
+
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex justify-between items-center p-4 border-t">
@@ -1103,10 +1131,10 @@ const SwrPivotTable: React.FC = () => {
               Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredData.length)} dari {filteredData.length} channel
             </div>
             <div className="flex items-center gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={currentPage <= 1} 
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
               >
                 <ChevronLeft className="h-4 w-4 mr-1" />
@@ -1124,7 +1152,7 @@ const SwrPivotTable: React.FC = () => {
                   } else {
                     pageNum = currentPage - 2 + i;
                   }
-                  
+
                   return (
                     <Button
                       key={pageNum}
@@ -1138,10 +1166,10 @@ const SwrPivotTable: React.FC = () => {
                   );
                 })}
               </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                disabled={currentPage >= totalPages} 
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
               >
                 Berikutnya
@@ -1195,14 +1223,14 @@ const SwrPivotTable: React.FC = () => {
               {editingNote?.currentNote ? "Edit Catatan" : "Tambah Catatan"}
             </DialogTitle>
           </DialogHeader>
-          
+
           {editingNote && (
             <div className="space-y-4 py-2">
               <div className="space-y-2">
                 <Label className="text-xs text-gray-500">Channel</Label>
                 <p className="text-sm font-semibold bg-blue-50 p-2 rounded">{editingNote.channelName}</p>
               </div>
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs text-gray-500">Site</Label>
@@ -1213,13 +1241,13 @@ const SwrPivotTable: React.FC = () => {
                   <p className="text-sm font-semibold bg-gray-50 p-2 rounded">{editingNote.month}</p>
                 </div>
               </div>
-              
+
               <div className="space-y-2">
                 <Label htmlFor="note">Catatan / Keterangan</Label>
                 <textarea
                   id="note"
                   className="w-full p-3 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 min-h-[120px] resize-none"
-                  placeholder={editingNote.currentNote 
+                  placeholder={editingNote.currentNote
                     ? "Kosongkan untuk menghapus catatan, atau edit di sini..."
                     : "Contoh: Maintenance antenna, Perpindahan lokasi, Equipment replacement, dll"
                   }
@@ -1229,7 +1257,7 @@ const SwrPivotTable: React.FC = () => {
                   autoFocus
                 />
                 <p className="text-xs text-gray-500">
-                  {editingNote.currentNote 
+                  {editingNote.currentNote
                     ? "Kosongkan textarea untuk menghapus catatan yang ada"
                     : "Catatan akan disimpan dan muncul di tooltip saat hover"
                   }
@@ -1237,24 +1265,23 @@ const SwrPivotTable: React.FC = () => {
               </div>
             </div>
           )}
-          
+
           <DialogFooter className="gap-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setIsNoteModalOpen(false)} 
+            <Button
+              variant="outline"
+              onClick={() => setIsNoteModalOpen(false)}
               disabled={isSaving}
               className="flex-1"
             >
               Batal
             </Button>
-            <Button 
-              onClick={saveNote} 
+            <Button
+              onClick={saveNote}
               disabled={isSaving}
-              className={`flex-1 ${
-                editingNote?.currentNote && !noteText.trim() 
-                  ? 'bg-red-600 hover:bg-red-700' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              }`}
+              className={`flex-1 ${editingNote?.currentNote && !noteText.trim()
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-blue-600 hover:bg-blue-700'
+                }`}
             >
               {isSaving ? (
                 <>

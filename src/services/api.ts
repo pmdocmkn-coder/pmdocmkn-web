@@ -17,7 +17,7 @@ import {
   RolePermissionMatrix,
 } from "../types/permission";
 import { number } from "framer-motion";
-import { SwrNoteUpdateDto } from "@/types/swr";
+import { MonthlyDataDto, SwrNoteUpdateDto, SwrYearlyPivotDto, SwrYearlySummaryDto, YearlySummaryDto } from "@/types/swr";
 
 // Determine base URL based on environment
 const getBaseURL = () => {
@@ -25,7 +25,7 @@ const getBaseURL = () => {
     return import.meta.env.VITE_API_URL || "http://localhost:5116";
   }
   return import.meta.env.VITE_API_URL || "https://api.mknops.web.id";
-  
+
 };
 // ✅ DEFAULT API INSTANCE (60 second timeout)
 export const api = axios.create({
@@ -788,7 +788,7 @@ export const userApi = {
 
 export const swrSignalApi = {
   // ==================== SITES ====================
-  
+
   getSites: async () => {
     const response = await api.get("/api/swr-signal/sites");
     return response.data.data;
@@ -809,7 +809,7 @@ export const swrSignalApi = {
   },
 
   // ==================== CHANNELS ====================
-  
+
   getChannels: async () => {
     const response = await api.get("/api/swr-signal/channels");
     return response.data.data;
@@ -830,12 +830,12 @@ export const swrSignalApi = {
   },
 
   // ==================== HISTORIES ====================
-  
+
   getHistories: async (query: any) => {
     const response = await api.get("/api/swr-signal/histories", {
       params: query,
     });
-    return response.data;
+    return response.data.data;
   },
 
   getHistoryById: async (id: number) => {
@@ -851,25 +851,16 @@ export const swrSignalApi = {
   },
 
   updateHistory: async (id: number, data: any) => {
-  console.log('📤 Updating history:', { id, data });
-  try {
     const response = await api.put(`/api/swr-signal/histories/${id}`, data);
-    console.log('📥 Update history response:', response.data);
-    return response.data.data;
-  } catch (error: any) {
-    console.error('❌ Update history error:', error);
-    console.error('❌ Error response data:', error.response?.data);
-    console.error('❌ Error response status:', error.response?.status);
-    throw error;
-  }
-},
+    return response.data.data; // ✅ Konsisten dengan yang lain
+  },
 
   deleteHistory: async (id: number) => {
     await api.delete(`/api/swr-signal/histories/${id}`);
   },
 
   // ==================== ANALYTICS ====================
-  
+
   getMonthly: async (year: number, month: number) => {
     const response = await api.get("/api/swr-signal/monthly", {
       params: { year, month },
@@ -877,22 +868,22 @@ export const swrSignalApi = {
     return response.data.data;
   },
 
-  getYearly: async (year: number) => {
+  getYearly: async (year: number): Promise<YearlySummaryDto> => {
     const response = await api.get("/api/swr-signal/yearly", {
       params: { year },
     });
-    return response.data.data;
+    return response.data.data; // ✅ Kembalikan langsung response.data
   },
 
-  getYearlyPivot: async (year: number, site?: string): Promise<any[]> => {
+  getYearlyPivot: async (year: number, site?: string): Promise<SwrYearlyPivotDto[]> => {
     const response = await api.get("/api/swr-signal/yearly-pivot", {
       params: { year, site }
     });
-    return response.data.data || [];
+    return response.data.data; // ✅ Kembalikan langsung response.data
   },
 
   // ==================== IMPORT & EXPORT ====================
-  
+
   importExcel: async (file: File) => {
     const formData = new FormData();
     formData.append("excelFile", file);
@@ -914,14 +905,36 @@ export const swrSignalApi = {
       : `/api/swr-signal/export-yearly-excel?year=${year}`;
 
     const response = await api.get(url, { responseType: "blob" });
-    return response.data;
+    return response.data.data;
   },
 
-  updateNote: async (dto: SwrNoteUpdateDto): Promise<void> => {
-    const response = await api.put("/api/swr-signal/notes", dto);
-    return response.data;
+  // updateNote: async (dto: SwrNoteUpdateDto): Promise<void> => {
+  //   const response = await api.put("/api/swr-signal/notes", dto);
+  //   return response.data;
+  // },
+
+  // Analisis tahunan
+  getYearlySummary: async (params?: {
+    year: number;
+    site?: string;
+    type?: string
+  }): Promise<YearlySummaryDto> => {
+    const response = await api.get('/swr/swr-signal/Yearly', { params });
+    return response.data.data;
   },
 
 
+  exportYearlyReport: async (params: {
+    year: number;
+    format: 'pdf' | 'excel' | 'csv';
+    site?: string;
+    type?: string;
+  }): Promise<Blob> => {
+    const response = await api.get('/swr/export-yearly-report', {
+      params,
+      responseType: 'blob'
+    });
+    return response.data.data;
+  },
 
 };

@@ -1,5 +1,4 @@
 // SWR Signal Types
-
 export interface SwrSiteListDto {
   id: number;
   name: string;
@@ -117,7 +116,7 @@ export interface SwrChannelMonthlyDto {
 
 export interface SwrYearlySummaryDto {
   year: number;
-  sites: SwrSiteYearlyDto[];
+  sites?: SwrSiteYearlyDto[]; // ✅ Jadikan optional
 }
 
 export interface SwrSiteYearlyDto {
@@ -142,8 +141,7 @@ export interface SwrYearlyPivotDto {
   monthlyFpwr: Record<string, number | null>;
   monthlyVswr: Record<string, number | null>;
   expectedSwrMax: number;
-  notes: Record<string, string>;
-  historyIds: Record<string, number | undefined>; // Key: "Jan-26", Value: historyId
+  notes?: Record<string, string>; // ✅ Jadikan optional
 }
 
 // ✅ FIXED: Aligned with backend response structure
@@ -162,4 +160,65 @@ export interface SwrNoteUpdateDto {
   year: number;
   month: string;
   note: string;
+}
+
+export interface YearlySummaryDto {
+  year: number;
+  totalChannels: number;
+  totalDataPoints: number;
+  averageVswr: number;
+  goodPercentage: number;
+  warningPercentage: number;
+  criticalPercentage: number;
+  noDataPercentage: number;
+  monthlyAverages: Array<{
+    month: string;
+    avgVswr: number;
+    goodCount: number;
+    warningCount: number;
+    criticalCount: number;
+    noDataCount: number;
+  }>;
+  sitePerformance: Array<{
+    siteName: string;
+    siteType: string;
+    totalChannels: number;
+    avgVswr: number;
+    goodPercentage: number;
+    worstChannel: string;
+    worstVswr: number;
+    status: string;
+  }>;
+  channelPerformance: Array<{
+    channelName: string;
+    siteName: string;
+    avgVswr: number;
+    worstMonth: string;
+    worstValue: number;
+    status: string;
+    trend: 'improving' | 'stable' | 'deteriorating';
+  }>;
+  alerts: Array<{
+    type: 'critical' | 'warning' | 'info';
+    message: string;
+    channelName?: string;
+    month?: string;
+    value?: number;
+  }>;
+}
+
+export interface MonthlyDataDto {
+  month: string;
+  year: number;
+  sites: Array<{
+    siteName: string;
+    siteType: string;
+    channels: Array<{
+      channelName: string;
+      vswr: number | null;
+      fpwr: number | null;
+      status: string;
+      notes?: string;
+    }>;
+  }>;
 }
