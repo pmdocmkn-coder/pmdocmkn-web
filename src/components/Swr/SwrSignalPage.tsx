@@ -12,6 +12,8 @@ import {
   AlertCircle,
   CheckCircle2,
   XCircle,
+  FileSpreadsheet,
+  FileSpreadsheetIcon,
 } from "lucide-react";
 import { swrSignalApi } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
@@ -30,7 +32,9 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import SwrYearlyDashboard from "./SwrYearlyDashboard";
 
 export default function SwrSignalPage() {
   const [sites, setSites] = useState<SwrSiteListDto[]>([]);
@@ -48,17 +52,28 @@ export default function SwrSignalPage() {
     useState<SwrChannelListDto | null>(null);
   const { toast } = useToast();
 
-  const loadSites = async () => {
+  const loadInitialData = async () => {
     try {
       setLoading(true);
-      const data = await swrSignalApi.getSites();
-      setSites(data);
-      console.log("✅ Sites loaded:", data.length);
+      console.log("📡 Fetching initial SWR data...");
+
+      const [sitesData, channelsData] = await Promise.all([
+        swrSignalApi.getSites(),
+        swrSignalApi.getChannels(),
+      ]);
+
+      setSites(sitesData || []);
+      setChannels(channelsData || []);
+
+      console.log("✅ Data loaded:", {
+        sites: sitesData?.length || 0,
+        channels: channelsData?.length || 0
+      });
     } catch (error: any) {
-      console.error("❌ Error loading sites:", error);
+      console.error("❌ Error loading initial SWR data:", error);
       toast({
-        title: "Error Loading Sites",
-        description: error.message || "Failed to load sites",
+        title: "Error Loading Data",
+        description: error.message || "Failed to load sites or channels",
         variant: "destructive",
       });
     } finally {
@@ -66,97 +81,79 @@ export default function SwrSignalPage() {
     }
   };
 
-  const loadChannels = async () => {
-    try {
-      const data = await swrSignalApi.getChannels();
-      setChannels(data);
-      console.log("✅ Channels loaded:", data.length);
-    } catch (error: any) {
-      console.error("❌ Error loading channels:", error);
-      toast({
-        title: "Error Loading Channels",
-        description: error.message || "Failed to load channels",
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
-    loadSites();
-    loadChannels();
+    loadInitialData();
   }, []);
 
   const handleImport = async () => {
-  if (!importFile) {
-    toast({
-      title: "No File Selected",
-      description: "Please select an Excel file to import",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  try {
-    setImporting(true);
-    setImportResult(null);
-
-    console.log("📤 Starting import:", importFile.name);
-
-    // ✅ Backend already returns SwrImportResultDto format
-    const result = await swrSignalApi.importExcel(importFile);
-    
-    console.log("✅ Import completed:", result);
-
-    setImportResult(result);
-
-    // ✅ Check success flag
-    if (result.success && result.errors.length === 0) {
+    if (!importFile) {
       toast({
-        title: "Import Successful",
-        description: result.message,
-      });
-      setShowImportModal(false);
-      setImportFile(null);
-      loadSites();
-      loadChannels();
-    } else if (result.errors.length > 0) {
-      toast({
-        title: "Import Completed with Errors",
-        description: `${result.recordsCreated} created, ${result.recordsUpdated} updated, ${result.errors.length} errors`,
+        title: "No File Selected",
+        description: "Please select an Excel file to import",
         variant: "destructive",
       });
-    } else {
-      toast({
-        title: "Import Successful",
-        description: result.message,
-      });
-      setShowImportModal(false);
-      setImportFile(null);
-      loadSites();
-      loadChannels();
+      return;
     }
-  } catch (error: any) {
-    console.error("❌ Import error:", error);
-    toast({
-      title: "Import Failed",
-      description: error.message,
-      variant: "destructive",
-    });
-  } finally {
-    setImporting(false);
-  }
-};
+
+    try {
+      setImporting(true);
+      setImportResult(null);
+
+      console.log("📤 Starting import:", importFile.name);
+
+      // ✅ Backend already returns SwrImportResultDto format
+      const result = await swrSignalApi.importExcel(importFile);
+
+      console.log("✅ Import completed:", result);
+
+      setImportResult(result);
+
+      // ✅ Check success flag
+      if (result.success && result.errors.length === 0) {
+        toast({
+          title: "Import Successful",
+          description: result.message,
+        });
+        setShowImportModal(false);
+        setImportFile(null);
+        loadInitialData();
+      } else if (result.errors.length > 0) {
+        toast({
+          title: "Import Completed with Errors",
+          description: `${result.recordsCreated} created, ${result.recordsUpdated} updated, ${result.errors.length} errors`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Import Successful",
+          description: result.message,
+        });
+        setShowImportModal(false);
+        setImportFile(null);
+        loadInitialData();
+      }
+    } catch (error: any) {
+      console.error("❌ Import error:", error);
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setImporting(false);
+    }
+  };
 
   const handleSiteSaved = () => {
     setEditingSite(null);
     setShowSiteDialog(false);
-    loadSites();
+    loadInitialData();
   };
 
   const handleChannelSaved = () => {
     setEditingChannel(null);
     setShowChannelDialog(false);
-    loadChannels();
+    loadInitialData();
   };
 
   const handleEditSite = (site: SwrSiteListDto) => {
@@ -175,9 +172,9 @@ export default function SwrSignalPage() {
 
     const confirmed = window.confirm(
       `Are you sure you want to delete "${site.name}"?\n\n` +
-        (site.channelCount > 0
-          ? `⚠️ This site has ${site.channelCount} channel(s). Delete will fail if channels exist.`
-          : "This action cannot be undone.")
+      (site.channelCount > 0
+        ? `⚠️ This site has ${site.channelCount} channel(s). Delete will fail if channels exist.`
+        : "This action cannot be undone.")
     );
 
     if (!confirmed) return;
@@ -192,7 +189,7 @@ export default function SwrSignalPage() {
         description: `Site "${site.name}" deleted successfully`,
       });
 
-      loadSites();
+      loadInitialData();
     } catch (error: any) {
       console.error("❌ Delete site error:", error);
 
@@ -210,8 +207,8 @@ export default function SwrSignalPage() {
 
     const confirmed = window.confirm(
       `Are you sure you want to delete "${channel.channelName}" from ${channel.swrSiteName}?\n\n` +
-        "⚠️ This will also delete all history records for this channel.\n" +
-        "This action cannot be undone."
+      "⚠️ This will also delete all history records for this channel.\n" +
+      "This action cannot be undone."
     );
 
     if (!confirmed) return;
@@ -226,7 +223,7 @@ export default function SwrSignalPage() {
         description: `Channel "${channel.channelName}" deleted successfully`,
       });
 
-      loadChannels();
+      loadInitialData();
     } catch (error: any) {
       console.error("❌ Delete channel error:", error);
 
@@ -323,11 +320,19 @@ export default function SwrSignalPage() {
             </TabsTrigger>
 
             <TabsTrigger
+              value="yearly-dashboard"
+              className="px-4 py-2 rounded-lg font-medium transition-colors border-0 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+            >
+              <FileSpreadsheetIcon className="w-4 h-4 mr-2" />
+              Yearly Dashboard
+            </TabsTrigger>
+
+            <TabsTrigger
               value="sites"
               className="px-4 py-2 rounded-lg font-medium transition-colors border-0 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               <LayoutGrid className="w-4 h-4 mr-2" />
-              Sites ({sites.length})
+              Sites ({loading ? <Skeleton className="h-4 w-4 inline-block" /> : sites.length})
             </TabsTrigger>
 
             <TabsTrigger
@@ -335,7 +340,7 @@ export default function SwrSignalPage() {
               className="px-4 py-2 rounded-lg font-medium transition-colors border-0 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               <List className="w-4 h-4 mr-2" />
-              Channels ({channels.length})
+              Channels ({loading ? <Skeleton className="h-4 w-4 inline-block" /> : channels.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -343,6 +348,10 @@ export default function SwrSignalPage() {
         {/* Analytics Tab - Full width with spacing */}
         <TabsContent value="analytics" className="mt-0 outline-none">
           <SwrPivotTable />
+        </TabsContent>
+
+        <TabsContent value="yearly-dashboard" className="mt-0 outline-none">
+          <SwrYearlyDashboard />
         </TabsContent>
 
         <TabsContent value="history">
@@ -356,7 +365,7 @@ export default function SwrSignalPage() {
               <h2 className="text-xl font-semibold text-gray-900">All Sites</h2>
               <Button
                 variant="outline"
-                onClick={() => loadSites()}
+                onClick={() => loadInitialData()}
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -379,7 +388,7 @@ export default function SwrSignalPage() {
               <h2 className="text-xl font-semibold text-gray-900">All Channels</h2>
               <Button
                 variant="outline"
-                onClick={() => loadChannels()}
+                onClick={() => loadInitialData()}
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -413,142 +422,142 @@ export default function SwrSignalPage() {
 
       {/* Import Instructions Modal */}
       <Dialog open={showImportInstructions} onOpenChange={setShowImportInstructions}>
-  <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
-    <DialogHeader>
-      <DialogTitle className="text-2xl">📥 Excel Import Guide</DialogTitle>
-      <DialogDescription>
-        Complete guide for importing SWR data in the new grouped-by-site format
-      </DialogDescription>
-    </DialogHeader>
+        <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">📥 Excel Import Guide</DialogTitle>
+            <DialogDescription>
+              Complete guide for importing SWR data in the new grouped-by-site format
+            </DialogDescription>
+          </DialogHeader>
 
-    <div className="space-y-6 py-4">
-      {/* Format Overview */}
-      <Alert className="border-blue-200 bg-blue-50">
-        <AlertCircle className="h-4 w-4 text-blue-600" />
-        <AlertTitle className="text-blue-900">New Format: Grouped by Site</AlertTitle>
-        <AlertDescription className="text-blue-800">
-          Data is now organized by site, with each site having its own header and table section.
-        </AlertDescription>
-      </Alert>
+          <div className="space-y-6 py-4">
+            {/* Format Overview */}
+            <Alert className="border-blue-200 bg-blue-50">
+              <AlertCircle className="h-4 w-4 text-blue-600" />
+              <AlertTitle className="text-blue-900">New Format: Grouped by Site</AlertTitle>
+              <AlertDescription className="text-blue-800">
+                Data is now organized by site, with each site having its own header and table section.
+              </AlertDescription>
+            </Alert>
 
-      {/* Structure */}
-      <div className="space-y-3">
-        <h3 className="font-bold text-lg">📋 File Structure</h3>
-        <div className="bg-gray-50 p-4 rounded-lg border space-y-2 font-mono text-xs">
-          <div className="bg-blue-600 text-white px-2 py-1 rounded">
-            [SITE NAME] ← Merged header
-          </div>
-          <div className="bg-blue-500 text-white px-2 py-1 rounded">
-            No | Name Channel | Jan-25 | Feb-25 | Mar-25...
-          </div>
-          <div className="bg-blue-400 text-white px-2 py-1 rounded">
-            [empty] | [empty] | VSWR FPWR | VSWR FPWR...
-          </div>
-          <div className="bg-white px-2 py-1 rounded border">
-            1 | Channel 006 | 1.1 | 68 | 1.1 | 67...
-          </div>
-          <div className="h-2 border-b-2 border-dashed"></div>
-          <div className="bg-blue-600 text-white px-2 py-1 rounded">
-            [NEXT SITE NAME]
-          </div>
-        </div>
-      </div>
+            {/* Structure */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-lg">📋 File Structure</h3>
+              <div className="bg-gray-50 p-4 rounded-lg border space-y-2 font-mono text-xs">
+                <div className="bg-blue-600 text-white px-2 py-1 rounded">
+                  [SITE NAME] ← Merged header
+                </div>
+                <div className="bg-blue-500 text-white px-2 py-1 rounded">
+                  No | Name Channel | Jan-25 | Feb-25 | Mar-25...
+                </div>
+                <div className="bg-blue-400 text-white px-2 py-1 rounded">
+                  [empty] | [empty] | VSWR FPWR | VSWR FPWR...
+                </div>
+                <div className="bg-white px-2 py-1 rounded border">
+                  1 | Channel 006 | 1.1 | 68 | 1.1 | 67...
+                </div>
+                <div className="h-2 border-b-2 border-dashed"></div>
+                <div className="bg-blue-600 text-white px-2 py-1 rounded">
+                  [NEXT SITE NAME]
+                </div>
+              </div>
+            </div>
 
-      {/* Header Format */}
-      <div className="space-y-3">
-        <h3 className="font-bold text-lg">📝 Header Format (3 Rows per Site)</h3>
-        <ul className="space-y-2 text-sm list-disc pl-5">
-          <li><strong>Row 1:</strong> Site name merged across all columns</li>
-          <li><strong>Row 2:</strong> "No" | "Name Channel" | Month headers (Jan-25, Feb-25...) merged 2 cols each</li>
-          <li><strong>Row 3:</strong> Sub-headers alternating "VSWR" | "FPWR" under each month</li>
-        </ul>
-      </div>
+            {/* Header Format */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-lg">📝 Header Format (3 Rows per Site)</h3>
+              <ul className="space-y-2 text-sm list-disc pl-5">
+                <li><strong>Row 1:</strong> Site name merged across all columns</li>
+                <li><strong>Row 2:</strong> "No" | "Name Channel" | Month headers (Jan-25, Feb-25...) merged 2 cols each</li>
+                <li><strong>Row 3:</strong> Sub-headers alternating "VSWR" | "FPWR" under each month</li>
+              </ul>
+            </div>
 
-      {/* Data Requirements */}
-      <div className="space-y-3">
-        <h3 className="font-bold text-lg">✅ Data Requirements</h3>
-        <div className="grid md:grid-cols-2 gap-4">
-          <div className="border rounded-lg p-3 bg-green-50">
-            <h4 className="font-semibold text-sm text-green-700 mb-2">Required</h4>
-            <ul className="text-xs space-y-1 list-disc pl-4">
-              <li>Site must exist in database</li>
-              <li>Month format: Jan-25, Feb-25, etc.</li>
-              <li>VSWR: 1.0 - 3.0</li>
-              <li>Column order: VSWR then FPWR</li>
-            </ul>
-          </div>
-          <div className="border rounded-lg p-3 bg-blue-50">
-            <h4 className="font-semibold text-sm text-blue-700 mb-2">Optional</h4>
-            <ul className="text-xs space-y-1 list-disc pl-4">
-              <li>FPWR: 0 - 200 (can be empty)</li>
-              <li>Channels auto-created if missing</li>
-              <li>Empty rows are skipped</li>
-              <li>Notes not supported in import</li>
-            </ul>
-          </div>
-        </div>
-      </div>
+            {/* Data Requirements */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-lg">✅ Data Requirements</h3>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="border rounded-lg p-3 bg-green-50">
+                  <h4 className="font-semibold text-sm text-green-700 mb-2">Required</h4>
+                  <ul className="text-xs space-y-1 list-disc pl-4">
+                    <li>Site must exist in database</li>
+                    <li>Month format: Jan-25, Feb-25, etc.</li>
+                    <li>VSWR: 1.0 - 4.0</li>
+                    <li>Column order: VSWR then FPWR</li>
+                  </ul>
+                </div>
+                <div className="border rounded-lg p-3 bg-blue-50">
+                  <h4 className="font-semibold text-sm text-blue-700 mb-2">Optional</h4>
+                  <ul className="text-xs space-y-1 list-disc pl-4">
+                    <li>FPWR: 0 - 200 (can be empty)</li>
+                    <li>Channels auto-created if missing</li>
+                    <li>Empty rows are skipped</li>
+                    <li>Notes not supported in import</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
 
-      {/* Import Behavior */}
-      <div className="space-y-3">
-        <h3 className="font-bold text-lg">🔄 Import Behavior</h3>
-        <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2 text-sm">
-          <div className="flex items-start gap-2">
-            <span className="text-green-600 font-bold">✓</span>
-            <div><strong>New Records:</strong> Created if channel + month doesn't exist</div>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-blue-600 font-bold">↻</span>
-            <div><strong>Existing Records:</strong> Updated with new values</div>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-purple-600 font-bold">+</span>
-            <div><strong>Auto-Create Channels:</strong> New channels created with default thresholds (VSWR: 1.5, PWR: 100W)</div>
-          </div>
-        </div>
-      </div>
+            {/* Import Behavior */}
+            <div className="space-y-3">
+              <h3 className="font-bold text-lg">🔄 Import Behavior</h3>
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 space-y-2 text-sm">
+                <div className="flex items-start gap-2">
+                  <span className="text-green-600 font-bold">✓</span>
+                  <div><strong>New Records:</strong> Created if channel + month doesn't exist</div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-blue-600 font-bold">↻</span>
+                  <div><strong>Existing Records:</strong> Updated with new values</div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-purple-600 font-bold">+</span>
+                  <div><strong>Auto-Create Channels:</strong> New channels created with default thresholds (VSWR: 1.5, PWR: 100W)</div>
+                </div>
+              </div>
+            </div>
 
-      {/* Quick Reference */}
-      <div className="bg-gray-900 text-gray-100 p-4 rounded-lg">
-        <h4 className="font-bold text-sm text-yellow-400 mb-3">⚡ Quick Reference</h4>
-        <div className="grid grid-cols-2 gap-4 text-xs">
-          <div>
-            <div className="text-gray-400">Columns per month:</div>
-            <div className="font-mono">2 (VSWR + FPWR)</div>
+            {/* Quick Reference */}
+            <div className="bg-gray-900 text-gray-100 p-4 rounded-lg">
+              <h4 className="font-bold text-sm text-yellow-400 mb-3">⚡ Quick Reference</h4>
+              <div className="grid grid-cols-2 gap-4 text-xs">
+                <div>
+                  <div className="text-gray-400">Columns per month:</div>
+                  <div className="font-mono">2 (VSWR + FPWR)</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Total columns:</div>
+                  <div className="font-mono">2 + (12 × 2) = 26</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Header rows per site:</div>
+                  <div className="font-mono">3 rows</div>
+                </div>
+                <div>
+                  <div className="text-gray-400">Site separation:</div>
+                  <div className="font-mono">1 empty row</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div>
-            <div className="text-gray-400">Total columns:</div>
-            <div className="font-mono">2 + (12 × 2) = 26</div>
-          </div>
-          <div>
-            <div className="text-gray-400">Header rows per site:</div>
-            <div className="font-mono">3 rows</div>
-          </div>
-          <div>
-            <div className="text-gray-400">Site separation:</div>
-            <div className="font-mono">1 empty row</div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <DialogFooter className="gap-2">
-      <Button variant="outline" onClick={() => setShowImportInstructions(false)}>
-        Close
-      </Button>
-      <Button 
-        onClick={() => {
-          setShowImportInstructions(false);
-          setShowImportModal(true);
-        }} 
-        className="bg-green-600 hover:bg-green-700"
-      >
-        <Upload className="w-4 h-4 mr-2" />
-        Start Import
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowImportInstructions(false)}>
+              Close
+            </Button>
+            <Button
+              onClick={() => {
+                setShowImportInstructions(false);
+                setShowImportModal(true);
+              }}
+              className="bg-green-600 hover:bg-green-700"
+            >
+              <Upload className="w-4 h-4 mr-2" />
+              Start Import
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Import Modal */}
       <Dialog open={showImportModal} onOpenChange={setShowImportModal}>
@@ -618,7 +627,7 @@ export default function SwrSignalPage() {
                         </div>
                       )}
                     </div>
-                    
+
                     {importResult.errors && importResult.errors.length > 0 && (
                       <div className="mt-3 pt-3 border-t">
                         <p className="font-semibold text-xs mb-1">
@@ -648,7 +657,7 @@ export default function SwrSignalPage() {
                   Ensure all channels exist in the database before importing
                 </li>
                 <li>Use the correct date format (MMM-yy)</li>
-                <li>VSWR values should be between 1.0 and 3.0</li>
+                <li>VSWR values should be between 1.0 and 4.0</li>
                 <li>Check the Import Guide for detailed instructions</li>
               </ul>
             </div>
