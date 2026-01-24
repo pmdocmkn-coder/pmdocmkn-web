@@ -42,6 +42,10 @@ import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
 import { swrSignalApi } from "@/services/api";
 import {
+  SwrYearlyPivotDto,
+  SwrSiteListDto,
+} from "@/types/swr";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -93,17 +97,7 @@ import {
   FileSpreadsheet,
 } from "lucide-react";
 
-// Types - Gak perlu diubah karena backend udah ngasih dalam format yang sama
-interface SwrYearlyPivotDto {
-  channelName: string;
-  siteName: string;
-  siteType: string;
-  monthlyFpwr: Record<string, number | null>;
-  monthlyVswr: Record<string, number | null>;
-  expectedSwrMax: number;
-  notes: Record<string, string>;
-}
-
+// Types - Using centralized types from @/types/swr
 interface SwrYearlySummaryDto {
   year: number;
   sites: SwrSiteYearlyDto[];
@@ -121,14 +115,6 @@ interface SwrChannelYearlyDto {
   yearlyAvgFpwr: number | null;
   yearlyAvgVswr: number;
   warnings: string[];
-}
-
-interface SwrSiteListDto {
-  id: number;
-  name: string;
-  location: string;
-  type: string;
-  channelCount: number;
 }
 
 // Color schemes
@@ -185,8 +171,11 @@ const getVswrStatusIcon = (value: number | null, expectedMax: number = 1.5) => {
 const SwrYearlyDashboard: React.FC = () => {
   // State management
   const [selectedYear, setSelectedYear] = useState<number>(new Date().getFullYear());
-  const [selectedSite, setSelectedSite] = useState<string>("all");
+  const [selectedSites, setSelectedSites] = useState<string[]>([]);
+  const [siteSearchTerm, setSiteSearchTerm] = useState<string>("");
+  const [isSiteSelectOpen, setIsSiteSelectOpen] = useState<boolean>(false);
   const [sites, setSites] = useState<SwrSiteListDto[]>([]);
+  const [availableYears, setAvailableYears] = useState<number[]>([]);
   const [pivotData, setPivotData] = useState<SwrYearlyPivotDto[]>([]);
   const [yearlySummary, setYearlySummary] = useState<SwrYearlySummaryDto | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -211,11 +200,16 @@ const SwrYearlyDashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
 
-  // Available years
-  const availableYears = useMemo(() => {
-    const currentYear = new Date().getFullYear();
-    return Array.from({ length: 5 }, (_, i) => currentYear - i);
-  }, []);
+  // Filtered sites for site selector
+  const filteredSites = useMemo(() => {
+    if (!siteSearchTerm) return sites;
+    const term = siteSearchTerm.toLowerCase();
+    return sites.filter(site =>
+      site.name.toLowerCase().includes(term) ||
+      site.type.toLowerCase().includes(term) ||
+      (site.location && site.location.toLowerCase().includes(term))
+    );
+  }, [sites, siteSearchTerm]);
 
   // ============================================
   // FETCH DATA - SUDAH SESUAI DENGAN CONTROLLER
@@ -226,7 +220,7 @@ const SwrYearlyDashboard: React.FC = () => {
 
     try {
       console.group("📡 Fetching Dashboard Data");
-      console.log("Year:", selectedYear, "Site:", selectedSite === "all" ? "All Sites" : selectedSite);
+      console.log("Year:", selectedYear, "Sites:", selectedSites.length === 0 ? "All Sites" : selectedSites);
 
       // 1. Fetch Sites dengan error handling yang lebih baik
       console.log("1. Fetching sites...");
@@ -269,41 +263,137 @@ const SwrYearlyDashboard: React.FC = () => {
 
       setSites(sitesData);
 
-      // 2. Fetch Pivot Data dengan error handling
-      console.log("2. Fetching pivot data...");
-      let pivotDataArray: SwrYearlyPivotDto[] = [];
-      try {
-        const pivotResponse = await swrSignalApi.getYearlyPivot(
-          selectedYear,
-          selectedSite === "all" ? undefined : selectedSite
-        );
+      // ✅ PERBAIKAN UTAMA: Deteksi tahun yang tersedia dengan mencoba fetch beberapa tahun
+      // Backend API hanya mengembalikan data untuk tahun yang diminta, jadi kita perlu probe setiap tahun
+      console.log("2. Detecting available years by probing...");
+      const currentYear = new Date().getFullYear();
+      const yearsToCheck = [currentYear - 2, currentYear - 1, currentYear, currentYear + 1]; // Dynamic range
+      const availableYearsSet = new Set<number>();
+      let pivotDataForSelectedYear: SwrYearlyPivotDto[] = [];
 
-        // ✅ PERBAIKAN: Handle berbagai struktur respons
-        if (pivotResponse && typeof pivotResponse === 'object') {
-          // Coba semua kemungkinan properti yang mungkin berisi data
-          if (Array.isArray(pivotResponse)) {
-            pivotDataArray = pivotResponse as SwrYearlyPivotDto[];
-          } else if ((pivotResponse as any).data && Array.isArray((pivotResponse as any).data)) {
-            pivotDataArray = (pivotResponse as any).data as SwrYearlyPivotDto[];
-          } else if ((pivotResponse as any).items && Array.isArray((pivotResponse as any).items)) {
-            pivotDataArray = (pivotResponse as any).items as SwrYearlyPivotDto[];
-          } else if ((pivotResponse as any).result && Array.isArray((pivotResponse as any).result)) {
-            pivotDataArray = (pivotResponse as any).result as SwrYearlyPivotDto[];
+      for (const yearToCheck of yearsToCheck) {
+        try {
+          console.log(`   Checking year ${yearToCheck}...`);
+          const yearData = await swrSignalApi.getYearlyPivot(yearToCheck, undefined);
+
+          // Handle berbagai struktur respons
+          let yearDataArray: SwrYearlyPivotDto[] = [];
+          if (Array.isArray(yearData)) {
+            yearDataArray = yearData;
+          } else if ((yearData as any)?.data && Array.isArray((yearData as any).data)) {
+            yearDataArray = (yearData as any).data;
           }
-          // Fallback: coba ambil properti array pertama
-          else {
-            const arrayProps = Object.values(pivotResponse).filter(val => Array.isArray(val));
-            if (arrayProps.length > 0) {
-              pivotDataArray = arrayProps[0] as SwrYearlyPivotDto[];
+
+          // Cek apakah ada data yang valid untuk tahun ini
+          if (yearDataArray.length > 0) {
+            const hasValidData = yearDataArray.some(item => {
+              const monthKeys = Object.keys(item.monthlyVswr || {});
+              return monthKeys.length > 0;
+            });
+
+            if (hasValidData) {
+              availableYearsSet.add(yearToCheck);
+              console.log(`   ✅ Year ${yearToCheck} has data (${yearDataArray.length} channels)`);
+
+              // Simpan data untuk tahun yang dipilih
+              if (yearToCheck === selectedYear) {
+                pivotDataForSelectedYear = yearDataArray;
+              }
+            } else {
+              console.log(`   ⚠️ Year ${yearToCheck} has no valid data`);
             }
+          } else {
+            console.log(`   ℹ️ Year ${yearToCheck} is empty`);
           }
+        } catch (error: any) {
+          console.log(`   ℹ️ Year ${yearToCheck} not available: ${error.message}`);
         }
-
-        console.log(`✅ Pivot data loaded: ${pivotDataArray.length} channels`);
-      } catch (pivotError: any) {
-        console.error("❌ Error loading pivot data:", pivotError);
-        pivotDataArray = [];
       }
+
+      // Set available years
+      if (availableYearsSet.size > 0) {
+        const sortedYears = Array.from(availableYearsSet).sort((a, b) => b - a);
+        setAvailableYears(sortedYears);
+        console.log(`📅 Available years detected: ${sortedYears.join(', ')}`);
+      } else {
+        setAvailableYears([currentYear]);
+        console.log(`📅 No years with data found, defaulting to current year: ${currentYear}`);
+      }
+
+      // 3. Gunakan data yang sudah di-fetch atau fetch ulang jika belum ada
+      let pivotDataArray: SwrYearlyPivotDto[] = pivotDataForSelectedYear;
+
+      if (pivotDataArray.length === 0 && availableYearsSet.has(selectedYear)) {
+        console.log(`3. Fetching data for selected year ${selectedYear}...`);
+        try {
+          const pivotResponse = await swrSignalApi.getYearlyPivot(selectedYear, undefined);
+
+          if (Array.isArray(pivotResponse)) {
+            pivotDataArray = pivotResponse;
+          } else if ((pivotResponse as any)?.data && Array.isArray((pivotResponse as any).data)) {
+            pivotDataArray = (pivotResponse as any).data;
+          }
+
+          console.log(`✅ Pivot data loaded: ${pivotDataArray.length} channels`);
+        } catch (pivotError: any) {
+          console.error("❌ Error loading pivot data:", pivotError);
+          pivotDataArray = [];
+        }
+      } else if (pivotDataArray.length > 0) {
+        console.log(`✅ Using cached pivot data: ${pivotDataArray.length} channels`);
+      }
+
+      // Filter by selected sites if any
+      if (selectedSites.length > 0 && sitesData.length > 0) {
+        const selectedSiteIds = selectedSites.map(id => parseInt(id));
+        const selectedSiteNames = sitesData
+          .filter(s => selectedSiteIds.includes(s.id))
+          .map(s => s.name);
+        pivotDataArray = pivotDataArray.filter(item =>
+          selectedSiteNames.includes(item.siteName)
+        );
+      }
+
+      // ✅ PERBAIKAN: Filter data berdasarkan tahun yang dipilih
+      // Backend mungkin mengembalikan semua data, jadi kita filter di client-side
+      const yearSuffix = selectedYear.toString().slice(-2); // "26" untuk 2026
+      pivotDataArray = pivotDataArray.map(channel => {
+        // Filter monthlyVswr dan monthlyFpwr hanya untuk tahun yang dipilih
+        const filteredMonthlyVswr: Record<string, number | null> = {};
+        const filteredMonthlyFpwr: Record<string, number | null> = {};
+        const filteredNotes: Record<string, string> = {};
+
+        Object.entries(channel.monthlyVswr || {}).forEach(([key, value]) => {
+          if (key.endsWith(`-${yearSuffix}`)) {
+            filteredMonthlyVswr[key] = value;
+          }
+        });
+
+        Object.entries(channel.monthlyFpwr || {}).forEach(([key, value]) => {
+          if (key.endsWith(`-${yearSuffix}`)) {
+            filteredMonthlyFpwr[key] = value;
+          }
+        });
+
+        Object.entries(channel.notes || {}).forEach(([key, value]) => {
+          if (key.endsWith(`-${yearSuffix}`)) {
+            filteredNotes[key] = value;
+          }
+        });
+
+        return {
+          ...channel,
+          monthlyVswr: filteredMonthlyVswr,
+          monthlyFpwr: filteredMonthlyFpwr,
+          notes: filteredNotes,
+        };
+      });
+
+      // Filter out channels yang tidak punya data untuk tahun yang dipilih
+      pivotDataArray = pivotDataArray.filter(channel => {
+        const hasData = Object.keys(channel.monthlyVswr || {}).length > 0;
+        return hasData;
+      });
 
       setPivotData(pivotDataArray);
 
@@ -322,7 +412,7 @@ const SwrYearlyDashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedYear, selectedSite]);
+  }, [selectedYear, selectedSites]);
 
   // Initial fetch
   useEffect(() => {
@@ -555,7 +645,7 @@ const SwrYearlyDashboard: React.FC = () => {
   const handleExport = async () => {
     setIsExporting(true);
     try {
-      await swrSignalApi.exportYearlyExcel(selectedYear, selectedSite === "all" ? undefined : selectedSite);
+      await swrSignalApi.exportYearlyExcel(selectedYear, undefined);
       toast({
         title: "Export Successful",
         description: `Yearly report for ${selectedYear} has been exported`,
@@ -569,6 +659,24 @@ const SwrYearlyDashboard: React.FC = () => {
       });
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const handleToggleSite = (siteId: string) => {
+    setSelectedSites(prev => {
+      if (prev.includes(siteId)) {
+        return prev.filter(id => id !== siteId);
+      } else {
+        return [...prev, siteId];
+      }
+    });
+  };
+
+  const handleSelectAllSites = () => {
+    if (selectedSites.length === sites.length) {
+      setSelectedSites([]);
+    } else {
+      setSelectedSites(sites.map(s => s.id.toString()));
     }
   };
 
@@ -815,41 +923,85 @@ const SwrYearlyDashboard: React.FC = () => {
     return (
       <Card className="col-span-2">
         <CardHeader>
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div>
-              <CardTitle>Yearly Pivot Data</CardTitle>
-              <CardDescription>
-                Showing {paginatedData.length} of {filteredData.length} channels
-              </CardDescription>
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+              <div>
+                <CardTitle>Yearly Pivot Data</CardTitle>
+                <CardDescription>
+                  Showing {paginatedData.length} of {filteredData.length} channels
+                </CardDescription>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Input
-                placeholder="Search channels..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-48"
-              />
+
+            {/* Filter Controls */}
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Search channels, sites..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm">
                     <Filter className="w-4 h-4 mr-2" />
-                    Filter
+                    Filters
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuLabel>Metrics</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Display Options</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setShowHeatmap(!showHeatmap)}>
+                    {showHeatmap ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+                    Color Coding
+                    {showHeatmap && <CheckCircle className="w-4 h-4 ml-auto text-green-600" />}
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setVisibleMetrics(prev => ({ ...prev, notes: !prev.notes }))}>
-                    {visibleMetrics.notes ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                    {visibleMetrics.notes ? 'Hide Notes' : 'Show Notes'}
+                    {visibleMetrics.notes ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+                    Show Notes
+                    {visibleMetrics.notes && <CheckCircle className="w-4 h-4 ml-auto text-green-600" />}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuLabel>View Options</DropdownMenuLabel>
-                  <DropdownMenuItem onClick={() => setShowHeatmap(!showHeatmap)}>
-                    {showHeatmap ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
-                    {showHeatmap ? 'Hide Heatmap' : 'Show Heatmap'}
-                  </DropdownMenuItem>
+                  <DropdownMenuLabel>Threshold</DropdownMenuLabel>
+                  <div className="px-2 py-2">
+                    <div className="flex items-center gap-2">
+                      <Input
+                        type="number"
+                        step="0.1"
+                        min="1.0"
+                        max="4.0"
+                        value={threshold}
+                        onChange={(e) => setThreshold(parseFloat(e.target.value))}
+                        className="h-8"
+                      />
+                    </div>
+                  </div>
                 </DropdownMenuContent>
               </DropdownMenu>
+
+              <Button
+                variant={showHeatmap ? "default" : "outline"}
+                size="sm"
+                onClick={() => setShowHeatmap(!showHeatmap)}
+              >
+                {showHeatmap ? <Eye className="w-4 h-4 mr-2" /> : <EyeOff className="w-4 h-4 mr-2" />}
+                Heatmap
+              </Button>
+
+              {searchTerm && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setSearchTerm('')}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Clear
+                </Button>
+              )}
             </div>
           </div>
         </CardHeader>
@@ -862,126 +1014,132 @@ const SwrYearlyDashboard: React.FC = () => {
             </div>
           ) : (
             <>
-              <ScrollArea className="h-[600px]">
-                <table className="w-full border-collapse">
-                  <thead className="sticky top-0 bg-white z-10">
-                    <tr className="border-b">
-                      <th className="text-left p-3 font-semibold sticky left-0 bg-white z-20 min-w-[200px]">
-                        <button
-                          onClick={() => handleSort('channelName')}
-                          className="flex items-center gap-1 hover:text-blue-600"
-                        >
-                          Channel
-                          {sortConfig.key === 'channelName' && (
-                            <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                          )}
-                        </button>
-                      </th>
-                      <th className="text-left p-3 font-semibold min-w-[150px]">
-                        <button
-                          onClick={() => handleSort('siteName')}
-                          className="flex items-center gap-1 hover:text-blue-600"
-                        >
-                          Site
-                          {sortConfig.key === 'siteName' && (
-                            <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
-                          )}
-                        </button>
-                      </th>
-                      {monthKeys.map(month => (
-                        <th key={month} className="text-center p-3 font-semibold min-w-[100px]">
-                          {month}
+              {/* Dual-direction scrollable container with native scrolling */}
+              <div className="border rounded-lg overflow-hidden">
+                <div
+                  className="overflow-auto h-[600px] relative [&::-webkit-scrollbar]:w-2 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-gray-100 [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:hover:bg-gray-400"
+                  style={{ scrollbarWidth: 'thin', scrollbarColor: '#d1d5db #f3f4f6' }}
+                >
+                  <table className="w-full border-collapse min-w-max">
+                    <thead className="sticky top-0 bg-white z-10 shadow-sm">
+                      <tr className="border-b">
+                        <th className="text-left p-3 font-semibold sticky left-0 bg-white z-20 min-w-[200px] border-r">
+                          <button
+                            onClick={() => handleSort('channelName')}
+                            className="flex items-center gap-1 hover:text-blue-600"
+                          >
+                            Channel
+                            {sortConfig.key === 'channelName' && (
+                              <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                            )}
+                          </button>
                         </th>
-                      ))}
-                      <th className="text-center p-3 font-semibold min-w-[100px]">Avg</th>
-                      <th className="text-center p-3 font-semibold min-w-[100px]">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {paginatedData.map((row, rowIndex) => {
-                      const validVswrValues = monthKeys
-                        .map(key => row.monthlyVswr?.[key])
-                        .filter(v => v !== null && v !== undefined && v > 0) as number[];
-                      const avgVswr = validVswrValues.length > 0
-                        ? validVswrValues.reduce((a, b) => a + b) / validVswrValues.length
-                        : null;
+                        <th className="text-left p-3 font-semibold min-w-[150px] border-r">
+                          <button
+                            onClick={() => handleSort('siteName')}
+                            className="flex items-center gap-1 hover:text-blue-600"
+                          >
+                            Site
+                            {sortConfig.key === 'siteName' && (
+                              <span>{sortConfig.direction === 'asc' ? '↑' : '↓'}</span>
+                            )}
+                          </button>
+                        </th>
+                        {monthKeys.map(month => (
+                          <th key={month} className="text-center p-3 font-semibold min-w-[100px] border-r">
+                            {month}
+                          </th>
+                        ))}
+                        <th className="text-center p-3 font-semibold min-w-[100px] border-r bg-blue-50">Avg</th>
+                        <th className="text-center p-3 font-semibold min-w-[100px] bg-blue-50">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {paginatedData.map((row, rowIndex) => {
+                        const validVswrValues = monthKeys
+                          .map(key => row.monthlyVswr?.[key])
+                          .filter(v => v !== null && v !== undefined && v > 0) as number[];
+                        const avgVswr = validVswrValues.length > 0
+                          ? validVswrValues.reduce((a, b) => a + b) / validVswrValues.length
+                          : null;
 
-                      return (
-                        <tr key={rowIndex} className="border-b hover:bg-gray-50">
-                          <td className="p-3 sticky left-0 bg-white z-10">
-                            <div className="font-medium">{row.channelName}</div>
-                            <div className="text-xs text-gray-500">{row.siteType}</div>
-                          </td>
-                          <td className="p-3">
-                            <div className="font-medium">{row.siteName}</div>
-                          </td>
-                          {monthKeys.map((monthKey, monthIndex) => {
-                            const vswr = row.monthlyVswr?.[monthKey];
-                            const note = row.notes?.[monthKey];
-                            const hasNote = !!note;
+                        return (
+                          <tr key={rowIndex} className="border-b hover:bg-gray-50 transition-colors">
+                            <td className="p-3 sticky left-0 bg-white z-10 border-r">
+                              <div className="font-medium">{row.channelName}</div>
+                              <div className="text-xs text-gray-500">{row.siteType}</div>
+                            </td>
+                            <td className="p-3 border-r">
+                              <div className="font-medium">{row.siteName}</div>
+                            </td>
+                            {monthKeys.map((monthKey, monthIndex) => {
+                              const vswr = row.monthlyVswr?.[monthKey];
+                              const note = row.notes?.[monthKey];
+                              const hasNote = !!note;
 
-                            return (
-                              <td key={monthIndex} className="p-2 text-center">
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <div className={`
-                                        p-2 rounded transition-all duration-200 cursor-pointer
-                                        ${showHeatmap ? getVswrColor(vswr, row.expectedSwrMax) : 'bg-transparent'}
-                                        ${hasNote ? 'ring-1 ring-yellow-400' : ''}
-                                      `}>
-                                        <div className="font-mono font-bold">
-                                          {vswr !== null && vswr !== undefined && vswr > 0
-                                            ? vswr.toFixed(1)
-                                            : '-'}
-                                        </div>
-                                        {hasNote && visibleMetrics.notes && (
-                                          <div className="text-xs text-yellow-600">📝</div>
-                                        )}
-                                      </div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <div className="text-sm">
-                                        <div className="font-bold">{row.channelName}</div>
-                                        <div className="text-xs text-gray-500">
-                                          {monthKey}
-                                        </div>
-                                        <div className="mt-2 font-mono">
-                                          VSWR: {vswr !== null && vswr !== undefined && vswr > 0
-                                            ? vswr.toFixed(2)
-                                            : 'No Data'}
-                                        </div>
-                                        {hasNote && (
-                                          <div className="mt-2 p-2 bg-yellow-50 rounded text-xs">
-                                            📝 {note}
+                              return (
+                                <td key={monthIndex} className="p-2 text-center border-r">
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <div className={`
+                                            p-2 rounded transition-all duration-200 cursor-pointer
+                                            ${showHeatmap ? getVswrColor(vswr, row.expectedSwrMax) : 'bg-transparent'}
+                                            ${hasNote ? 'ring-1 ring-yellow-400' : ''}
+                                          `}>
+                                          <div className="font-mono font-bold">
+                                            {vswr !== null && vswr !== undefined && vswr > 0
+                                              ? vswr.toFixed(1)
+                                              : '-'}
                                           </div>
-                                        )}
-                                      </div>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              </td>
-                            );
-                          })}
-                          <td className="p-3 text-center">
-                            <div className={`
-                              p-2 rounded font-mono font-bold
-                              ${getVswrColor(avgVswr, row.expectedSwrMax)}
-                            `}>
-                              {avgVswr !== null ? avgVswr.toFixed(2) : '-'}
-                            </div>
-                          </td>
-                          <td className="p-3 text-center">
-                            <div className="flex justify-center">
-                              {getVswrStatusIcon(avgVswr, row.expectedSwrMax)}
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </ScrollArea>
+                                          {hasNote && visibleMetrics.notes && (
+                                            <div className="text-xs text-yellow-600">📝</div>
+                                          )}
+                                        </div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <div className="text-sm">
+                                          <div className="font-bold">{row.channelName}</div>
+                                          <div className="text-xs text-gray-500">
+                                            {monthKey}
+                                          </div>
+                                          <div className="mt-2 font-mono">
+                                            VSWR: {vswr !== null && vswr !== undefined && vswr > 0
+                                              ? vswr.toFixed(2)
+                                              : 'No Data'}
+                                          </div>
+                                          {hasNote && (
+                                            <div className="mt-2 p-2 bg-yellow-50 rounded text-xs">
+                                              📝 {note}
+                                            </div>
+                                          )}
+                                        </div>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                </td>
+                              );
+                            })}
+                            <td className="p-3 text-center border-r bg-blue-50/50">
+                              <div className={`
+                                  p-2 rounded font-mono font-bold
+                                  ${getVswrColor(avgVswr, row.expectedSwrMax)}
+                                `}>
+                                {avgVswr !== null ? avgVswr.toFixed(2) : '-'}
+                              </div>
+                            </td>
+                            <td className="p-3 text-center bg-blue-50/50">
+                              <div className="flex justify-center">
+                                {getVswrStatusIcon(avgVswr, row.expectedSwrMax)}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
 
               {filteredData.length > pageSize && (
                 <div className="flex items-center justify-between border-t pt-4 mt-4">
@@ -1047,7 +1205,7 @@ const SwrYearlyDashboard: React.FC = () => {
             </>
           )}
         </CardContent>
-      </Card>
+      </Card >
     );
   };
 
@@ -1231,19 +1389,157 @@ const SwrYearlyDashboard: React.FC = () => {
             </SelectContent>
           </Select>
 
-          <Select value={selectedSite} onValueChange={setSelectedSite}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="All Sites" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Sites</SelectItem>
-              {sites.map(site => (
-                <SelectItem key={site.id} value={site.id.toString()}>
-                  {site.name} ({site.type})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <DropdownMenu open={isSiteSelectOpen} onOpenChange={setIsSiteSelectOpen}>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="w-64 justify-start">
+                <Layers className="w-4 h-4 mr-2" />
+                {selectedSites.length === 0
+                  ? 'All Sites'
+                  : `${selectedSites.length} Site${selectedSites.length > 1 ? 's' : ''} Selected`}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-96" align="end">
+              <div className="p-3 space-y-3">
+                {/* Search Input */}
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2 top-2.5 w-4 h-4 text-gray-500" />
+                    <Input
+                      placeholder="Search sites..."
+                      value={siteSearchTerm}
+                      onChange={(e) => setSiteSearchTerm(e.target.value)}
+                      className="h-9 pl-8"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  {siteSearchTerm && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSiteSearchTerm('')}
+                      className="h-9 px-2"
+                    >
+                      <XCircle className="w-4 h-4" />
+                    </Button>
+                  )}
+                </div>
+                <DropdownMenuSeparator />
+                {/* Selection Controls */}
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-sm font-medium text-gray-700">
+                    {selectedSites.length} of {sites.length} selected
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSelectAllSites();
+                    }}
+                    className="h-7 text-xs"
+                  >
+                    {selectedSites.length === sites.length ? (
+                      <>
+                        <XCircle className="w-3 h-3 mr-1" />
+                        Clear All
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle className="w-3 h-3 mr-1" />
+                        Select All
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <DropdownMenuSeparator />
+                {/* Site List */}
+                <ScrollArea className="h-[350px]">
+                  <div className="space-y-1">
+                    {filteredSites.length === 0 ? (
+                      <div className="text-center text-sm text-gray-500 py-8">
+                        <Info className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+                        <p>No sites found</p>
+                        {siteSearchTerm && (
+                          <p className="text-xs mt-1">Try a different search term</p>
+                        )}
+                      </div>
+                    ) : (
+                      filteredSites.map(site => {
+                        const isSelected = selectedSites.includes(site.id.toString());
+                        return (
+                          <div
+                            key={site.id}
+                            className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors ${isSelected
+                              ? 'bg-blue-50 hover:bg-blue-100'
+                              : 'hover:bg-gray-100'
+                              }`}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleToggleSite(site.id.toString());
+                            }}
+                          >
+                            <div className={`w-5 h-5 border-2 rounded flex items-center justify-center flex-shrink-0 transition-colors ${isSelected
+                              ? 'bg-blue-500 border-blue-500'
+                              : 'border-gray-300'
+                              }`}>
+                              {isSelected && (
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-medium text-sm text-gray-900 truncate">
+                                {site.name}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-0.5 flex items-center gap-2">
+                                <span className="truncate">{site.type}</span>
+                                {site.location && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="truncate">{site.location}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <Badge
+                              variant="secondary"
+                              className="text-xs flex-shrink-0"
+                            >
+                              {site.channelCount} ch
+                            </Badge>
+                          </div>
+                        );
+                      })
+                    )}
+                  </div>
+                </ScrollArea>
+                {selectedSites.length > 0 && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setSelectedSites([])}
+                        className="flex-1 h-9"
+                      >
+                        Clear
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => {
+                          setIsSiteSelectOpen(false);
+                          fetchData();
+                        }}
+                        className="flex-1 h-9"
+                      >
+                        Apply
+                      </Button>
+                    </div>
+                  </>
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

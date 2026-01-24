@@ -56,7 +56,8 @@ export interface SwrHistoryItemDto {
   fpwr?: number | null;
   vswr: number;
   notes?: string;
-  status: SwrOperationalStatus | string; // ✅ Support both number and string
+  status: SwrOperationalStatus | number; // ✅ Support enum dan number
+  statusString?: string; // ✅ Tambahkan untuk display
   no?: number; // For table numbering
 }
 
@@ -64,7 +65,7 @@ export interface SwrHistoryCreateDto {
   swrChannelId: number;
   date: string; // ISO date string
   fpwr?: number | null;
-  vswr: number;
+  vswr?: number | null; // ✅ Optional sesuai backend
   notes?: string;
   status?: string; // "Active", "Dismantled", "Removed", "Obstacle"
 }
@@ -221,4 +222,22 @@ export interface MonthlyDataDto {
       notes?: string;
     }>;
   }>;
+}
+
+export interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface PaginationMeta {
+  pagination: PaginationInfo;
+}
+
+export interface PagedResultDto<T> {
+  data: T[];
+  meta: PaginationMeta;
 }

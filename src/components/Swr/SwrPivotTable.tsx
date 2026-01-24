@@ -226,14 +226,7 @@ const SwrPivotTable: React.FC = () => {
   const handleExport = async () => {
     try {
       const siteParam = selectedSites.length === 1 ? selectedSites[0] : undefined;
-      const blob = await swrSignalApi.exportYearlyExcel(selectedYear, siteParam);
-      const url = window.URL.createObjectURL(new Blob([blob]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `SWR_Report_${selectedYear}_${selectedSites.length === 1 ? selectedSites[0] : "All"}.xlsx`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await swrSignalApi.exportYearlyExcel(selectedYear, siteParam);
       toast({
         title: "Export Berhasil",
         description: `Data tahun ${selectedYear} berhasil diexport`,

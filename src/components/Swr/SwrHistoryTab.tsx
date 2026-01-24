@@ -62,14 +62,14 @@ interface SwrSiteListDto {
 }
 
 // Searchable Channel Select Component
-const SearchableChannelSelect = ({ 
-  value, 
-  onChange, 
+const SearchableChannelSelect = ({
+  value,
+  onChange,
   channels,
-  disabled = false 
-}: { 
-  value: string; 
-  onChange: (value: string) => void; 
+  disabled = false
+}: {
+  value: string;
+  onChange: (value: string) => void;
   channels: SwrChannelListDto[];
   disabled?: boolean;
 }) => {
@@ -163,7 +163,7 @@ const SearchableChannelSelect = ({
                       className={cn(
                         "px-4 py-3 cursor-pointer hover:bg-blue-50 text-sm border-b border-gray-100 last:border-b-0",
                         value === channel.id.toString() &&
-                          "bg-blue-50 text-blue-700 font-medium"
+                        "bg-blue-50 text-blue-700 font-medium"
                       )}
                       onClick={() => {
                         onChange(channel.id.toString());
@@ -222,7 +222,7 @@ export default function SwrHistoryTab() {
   });
 
   // ==================== LIFECYCLE ====================
-  
+
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -268,35 +268,46 @@ export default function SwrHistoryTab() {
 
       console.log("📡 Fetching histories with query:", query);
 
-      const result = await swrSignalApi.getHistories(query);
+      const response = await swrSignalApi.getHistories(query);
 
-      // ✅ PERBAIKAN: Handle both nested meta.pagination and flat structure
-      let pageData, totalPagesData, totalCountData;
+      console.log("📥 API Response:", response);
+      console.log("📊 Data count:", response.data?.length);
+      console.log("📄 Pagination:", response.meta?.pagination);
 
-      if (result.meta && result.meta.pagination) {
-        // Struktur dengan nested meta
-        pageData = result.meta.pagination.page || 1;
-        totalPagesData = result.meta.pagination.totalPages || 1;
-        totalCountData = result.meta.pagination.totalCount || 0;
+      // ✅ Extract data dari PagedResultDto
+      const historiesData = response.data || [];
+      const pagination = response.meta?.pagination;
+
+      setHistories(historiesData);
+
+      if (pagination) {
+        setCurrentPage(pagination.page);
+        setTotalPages(pagination.totalPages);
+        setTotalCount(pagination.totalCount);
+
+        console.log("✅ State updated:", {
+          historiesCount: historiesData.length,
+          page: pagination.page,
+          totalPages: pagination.totalPages,
+          totalCount: pagination.totalCount
+        });
       } else {
-        // Fallback: struktur flat
-        pageData = result.page || 1;
-        totalPagesData = result.totalPages || 1;
-        totalCountData = result.totalCount || 0;
+        console.warn("⚠️ No pagination info in response");
+        setCurrentPage(1);
+        setTotalPages(1);
+        setTotalCount(historiesData.length);
       }
-
-      setHistories(result.data || []);
-      setTotalPages(totalPagesData);
-      setTotalCount(totalCountData);
-      setCurrentPage(pageData);
 
     } catch (error: any) {
       console.error("❌ Error fetching histories:", error);
+      console.error("Error details:", error.response?.data);
+
       toast({
         title: "Error",
-        description: error.message || "Failed to load history data",
+        description: error.response?.data?.message || error.message || "Failed to load history data",
         variant: "destructive",
       });
+
       setHistories([]);
       setTotalPages(1);
       setTotalCount(0);
@@ -312,10 +323,10 @@ export default function SwrHistoryTab() {
     if (mode === "edit" && history) {
       setCurrentHistory(history);
       const statusString = getStatusString(history.status);
-      
+
       // Format date untuk input type="date" (yyyy-MM-dd)
       const formattedDate = format(new Date(history.date), "yyyy-MM-dd");
-      
+
       setFormData({
         swrChannelId: history.swrChannelId.toString(),
         date: formattedDate,
@@ -383,7 +394,7 @@ export default function SwrHistoryTab() {
           });
           return;
         }
-        
+
         const vswrValue = parseFloat(formData.vswr);
         if (isNaN(vswrValue) || vswrValue < 1.0 || vswrValue > 4.0) {
           toast({
@@ -549,7 +560,7 @@ export default function SwrHistoryTab() {
                 Total {totalCount} records • Page {currentPage} of {totalPages}
               </p>
             </div>
-            <Button 
+            <Button
               onClick={() => openModal("create")}
               className="bg-blue-600 hover:bg-blue-700"
             >
@@ -677,11 +688,10 @@ export default function SwrHistoryTab() {
                           <div className="font-medium">{history.siteName}</div>
                         </td>
                         <td className="border p-3">
-                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${
-                            history.siteType === "Trunking" 
-                              ? "bg-purple-100 text-purple-700 border border-purple-200" 
-                              : "bg-green-100 text-green-700 border border-green-200"
-                          }`}>
+                          <span className={`px-3 py-1 rounded-full text-xs font-medium ${history.siteType === "Trunking"
+                            ? "bg-purple-100 text-purple-700 border border-purple-200"
+                            : "bg-green-100 text-green-700 border border-green-200"
+                            }`}>
                             {history.siteType}
                           </span>
                         </td>
@@ -741,7 +751,7 @@ export default function SwrHistoryTab() {
                     {Math.min(currentPage * pageSize, totalCount)} of{" "}
                     {totalCount} entries
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     {/* First Page Button */}
                     <Button
@@ -815,8 +825,8 @@ export default function SwrHistoryTab() {
                       : "Start by adding your first SWR history record"}
                   </p>
                   {!searchTerm && selectedChannel === "all" && selectedSite === "all" && selectedType === "all" && (
-                    <Button 
-                      onClick={() => openModal("create")} 
+                    <Button
+                      onClick={() => openModal("create")}
                       className="mt-4 bg-blue-600 hover:bg-blue-700"
                     >
                       Add First Record
@@ -913,7 +923,7 @@ export default function SwrHistoryTab() {
 
               <div className="space-y-2">
                 <Label htmlFor="vswr" className="text-sm font-semibold">
-                  VSWR 
+                  VSWR
                   {formData.status === "Active" && <span className="text-red-500">*</span>}
                 </Label>
                 <Input
@@ -995,15 +1005,15 @@ export default function SwrHistoryTab() {
             >
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleSubmit}
               disabled={isLoading}
               className="bg-blue-600 hover:bg-blue-700"
             >
-              {isLoading 
-                ? "Saving..." 
-                : modalMode === "create" 
-                  ? "Create Record" 
+              {isLoading
+                ? "Saving..."
+                : modalMode === "create"
+                  ? "Create Record"
                   : "Update Record"
               }
             </Button>

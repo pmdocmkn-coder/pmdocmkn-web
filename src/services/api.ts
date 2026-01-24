@@ -17,7 +17,7 @@ import {
   RolePermissionMatrix,
 } from "../types/permission";
 import { number } from "framer-motion";
-import { MonthlyDataDto, SwrNoteUpdateDto, SwrYearlyPivotDto, SwrYearlySummaryDto, YearlySummaryDto } from "@/types/swr";
+import { MonthlyDataDto, PagedResultDto, SwrHistoryItemDto, SwrNoteUpdateDto, SwrYearlyPivotDto, SwrYearlySummaryDto, YearlySummaryDto } from "@/types/swr";
 
 // Determine base URL based on environment
 const getBaseURL = () => {
@@ -831,11 +831,22 @@ export const swrSignalApi = {
 
   // ==================== HISTORIES ====================
 
-  getHistories: async (query: any) => {
-    const response = await api.get("/api/swr-signal/histories", {
-      params: query,
-    });
-    return response.data.data;
+  getHistories: async (query: any): Promise<PagedResultDto<SwrHistoryItemDto>> => {
+    try {
+      console.log("📡 API: Fetching SWR histories", query);
+
+      const response = await api.get("/api/swr-signal/histories", {
+        params: query,
+      });
+
+      console.log("📥 API Response:", response.data);
+
+      // Backend return structure: { data: [...], meta: { pagination: {...} } }
+      return response.data;
+    } catch (error: any) {
+      console.error("❌ API Error:", error);
+      throw error;
+    }
   },
 
   getHistoryById: async (id: number) => {
@@ -900,12 +911,29 @@ export const swrSignalApi = {
   },
 
   exportYearlyExcel: async (year: number, site?: string) => {
-    const url = site
-      ? `/api/swr-signal/export-yearly-excel?year=${year}&site=${encodeURIComponent(site)}`
-      : `/api/swr-signal/export-yearly-excel?year=${year}`;
+    const params: any = { year };
+    if (site) params.site = site;
 
-    const response = await api.get(url, { responseType: "blob" });
-    return response.data.data;
+    const response = await api.get("/api/swr-signal/export-yearly-excel", {
+      params,
+      responseType: "blob",
+    });
+
+    // ✅ Trigger download
+    const blob = new Blob([response.data], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const filename = site
+      ? `SWR_Yearly_${year}_${site}.xlsx`
+      : `SWR_Yearly_${year}.xlsx`;
+    link.setAttribute("download", filename);
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
   },
 
   // updateNote: async (dto: SwrNoteUpdateDto): Promise<void> => {
