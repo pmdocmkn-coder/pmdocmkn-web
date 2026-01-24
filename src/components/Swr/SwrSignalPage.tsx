@@ -32,6 +32,7 @@ import {
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import SwrYearlyDashboard from "./SwrYearlyDashboard";
 
@@ -51,17 +52,28 @@ export default function SwrSignalPage() {
     useState<SwrChannelListDto | null>(null);
   const { toast } = useToast();
 
-  const loadSites = async () => {
+  const loadInitialData = async () => {
     try {
       setLoading(true);
-      const data = await swrSignalApi.getSites();
-      setSites(data);
-      console.log("✅ Sites loaded:", data.length);
+      console.log("📡 Fetching initial SWR data...");
+
+      const [sitesData, channelsData] = await Promise.all([
+        swrSignalApi.getSites(),
+        swrSignalApi.getChannels(),
+      ]);
+
+      setSites(sitesData || []);
+      setChannels(channelsData || []);
+
+      console.log("✅ Data loaded:", {
+        sites: sitesData?.length || 0,
+        channels: channelsData?.length || 0
+      });
     } catch (error: any) {
-      console.error("❌ Error loading sites:", error);
+      console.error("❌ Error loading initial SWR data:", error);
       toast({
-        title: "Error Loading Sites",
-        description: error.message || "Failed to load sites",
+        title: "Error Loading Data",
+        description: error.message || "Failed to load sites or channels",
         variant: "destructive",
       });
     } finally {
@@ -69,24 +81,8 @@ export default function SwrSignalPage() {
     }
   };
 
-  const loadChannels = async () => {
-    try {
-      const data = await swrSignalApi.getChannels();
-      setChannels(data);
-      console.log("✅ Channels loaded:", data.length);
-    } catch (error: any) {
-      console.error("❌ Error loading channels:", error);
-      toast({
-        title: "Error Loading Channels",
-        description: error.message || "Failed to load channels",
-        variant: "destructive",
-      });
-    }
-  };
-
   useEffect(() => {
-    loadSites();
-    loadChannels();
+    loadInitialData();
   }, []);
 
   const handleImport = async () => {
@@ -120,8 +116,7 @@ export default function SwrSignalPage() {
         });
         setShowImportModal(false);
         setImportFile(null);
-        loadSites();
-        loadChannels();
+        loadInitialData();
       } else if (result.errors.length > 0) {
         toast({
           title: "Import Completed with Errors",
@@ -135,8 +130,7 @@ export default function SwrSignalPage() {
         });
         setShowImportModal(false);
         setImportFile(null);
-        loadSites();
-        loadChannels();
+        loadInitialData();
       }
     } catch (error: any) {
       console.error("❌ Import error:", error);
@@ -153,13 +147,13 @@ export default function SwrSignalPage() {
   const handleSiteSaved = () => {
     setEditingSite(null);
     setShowSiteDialog(false);
-    loadSites();
+    loadInitialData();
   };
 
   const handleChannelSaved = () => {
     setEditingChannel(null);
     setShowChannelDialog(false);
-    loadChannels();
+    loadInitialData();
   };
 
   const handleEditSite = (site: SwrSiteListDto) => {
@@ -195,7 +189,7 @@ export default function SwrSignalPage() {
         description: `Site "${site.name}" deleted successfully`,
       });
 
-      loadSites();
+      loadInitialData();
     } catch (error: any) {
       console.error("❌ Delete site error:", error);
 
@@ -229,7 +223,7 @@ export default function SwrSignalPage() {
         description: `Channel "${channel.channelName}" deleted successfully`,
       });
 
-      loadChannels();
+      loadInitialData();
     } catch (error: any) {
       console.error("❌ Delete channel error:", error);
 
@@ -338,7 +332,7 @@ export default function SwrSignalPage() {
               className="px-4 py-2 rounded-lg font-medium transition-colors border-0 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               <LayoutGrid className="w-4 h-4 mr-2" />
-              Sites ({sites.length})
+              Sites ({loading ? <Skeleton className="h-4 w-4 inline-block" /> : sites.length})
             </TabsTrigger>
 
             <TabsTrigger
@@ -346,7 +340,7 @@ export default function SwrSignalPage() {
               className="px-4 py-2 rounded-lg font-medium transition-colors border-0 data-[state=active]:bg-blue-100 data-[state=active]:text-blue-700 data-[state=active]:shadow-none text-gray-600 hover:text-gray-900 hover:bg-gray-100"
             >
               <List className="w-4 h-4 mr-2" />
-              Channels ({channels.length})
+              Channels ({loading ? <Skeleton className="h-4 w-4 inline-block" /> : channels.length})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -371,7 +365,7 @@ export default function SwrSignalPage() {
               <h2 className="text-xl font-semibold text-gray-900">All Sites</h2>
               <Button
                 variant="outline"
-                onClick={() => loadSites()}
+                onClick={() => loadInitialData()}
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />
@@ -394,7 +388,7 @@ export default function SwrSignalPage() {
               <h2 className="text-xl font-semibold text-gray-900">All Channels</h2>
               <Button
                 variant="outline"
-                onClick={() => loadChannels()}
+                onClick={() => loadInitialData()}
                 className="border-gray-300 text-gray-700 hover:bg-gray-50"
               >
                 <RefreshCw className="w-4 h-4 mr-2" />

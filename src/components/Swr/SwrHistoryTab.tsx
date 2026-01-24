@@ -19,6 +19,7 @@ import {
   SelectItem,
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { format, parse } from "date-fns";
 import {
@@ -28,6 +29,7 @@ import {
   ChevronsRight,
   Search,
   X,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -192,7 +194,8 @@ export default function SwrHistoryTab() {
   const [histories, setHistories] = useState<SwrHistoryItemDto[]>([]);
   const [channels, setChannels] = useState<SwrChannelListDto[]>([]);
   const [sites, setSites] = useState<SwrSiteListDto[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -252,7 +255,13 @@ export default function SwrHistoryTab() {
   };
 
   const fetchHistories = async () => {
-    setIsLoading(true);
+    // Only show full skeleton on initial load when there's no data yet
+    if (!hasLoadedOnce && histories.length === 0) {
+      setIsLoading(true);
+    } else {
+      // Subtle loading (header spin/opacity) for subsequent fetches
+      setIsLoading(true);
+    }
     try {
       const query: any = {
         page: currentPage,
@@ -297,7 +306,7 @@ export default function SwrHistoryTab() {
         setTotalPages(1);
         setTotalCount(historiesData.length);
       }
-
+      if (!hasLoadedOnce) setHasLoadedOnce(true);
     } catch (error: any) {
       console.error("❌ Error fetching histories:", error);
       console.error("Error details:", error.response?.data);
@@ -575,102 +584,143 @@ export default function SwrHistoryTab() {
           <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search channel, site, or notes..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-10"
-              />
+              {!hasLoadedOnce && isLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Input
+                  placeholder="Search channel, site, or notes..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-10 h-10"
+                />
+              )}
             </div>
 
-            <Select
-              value={selectedSite}
-              onValueChange={(v) => {
-                setSelectedSite(v);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by Site" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Sites</SelectItem>
-                {sites.map((site) => (
-                  <SelectItem key={site.id} value={site.id.toString()}>
-                    {site.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!hasLoadedOnce && isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select
+                value={selectedSite}
+                onValueChange={(v) => {
+                  setSelectedSite(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Filter by Site" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Sites</SelectItem>
+                  {sites.map((site) => (
+                    <SelectItem key={site.id} value={site.id.toString()}>
+                      {site.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
 
-            <Select
-              value={selectedType}
-              onValueChange={(v) => {
-                setSelectedType(v);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by Type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Types</SelectItem>
-                <SelectItem value="Trunking">Trunking</SelectItem>
-                <SelectItem value="Conventional">Conventional</SelectItem>
-              </SelectContent>
-            </Select>
+            {!hasLoadedOnce && isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select
+                value={selectedType}
+                onValueChange={(v) => {
+                  setSelectedType(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Filter by Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="Trunking">Trunking</SelectItem>
+                  <SelectItem value="Conventional">Conventional</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
 
-            <Select
-              value={selectedChannel}
-              onValueChange={(v) => {
-                setSelectedChannel(v);
-                setCurrentPage(1);
-              }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Filter by Channel" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Channels</SelectItem>
-                {channels.map((ch) => (
-                  <SelectItem key={ch.id} value={ch.id.toString()}>
-                    {ch.channelName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {!hasLoadedOnce && isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <Select
+                value={selectedChannel}
+                onValueChange={(v) => {
+                  setSelectedChannel(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder="Filter by Channel" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Channels</SelectItem>
+                  {channels.map((ch) => (
+                    <SelectItem key={ch.id} value={ch.id.toString()}>
+                      {ch.channelName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
           </div>
 
           {/* Table */}
-          {isLoading ? (
-            <div className="flex flex-col items-center justify-center h-64">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <span className="ml-3 mt-3 text-gray-600">Loading history data...</span>
-            </div>
-          ) : histories.length > 0 ? (
-            <div className="space-y-4">
-              <div className="overflow-x-auto border rounded-lg">
-                <table className="w-full border-collapse">
-                  <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
-                    <tr>
-                      <th className="border p-3 text-left font-medium">No</th>
-                      <th className="border p-3 text-left font-medium">Date</th>
-                      <th className="border p-3 text-left font-medium">Channel</th>
-                      <th className="border p-3 text-left font-medium">Site</th>
-                      <th className="border p-3 text-left font-medium">Type</th>
-                      <th className="border p-3 text-right font-medium">FPWR (W)</th>
-                      <th className="border p-3 text-right font-medium">VSWR</th>
-                      <th className="border p-3 text-center font-medium">Status</th>
-                      <th className="border p-3 text-left font-medium">Notes</th>
-                      <th className="border p-3 text-center font-medium">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {histories.map((history, idx) => (
-                      <tr key={history.id} className="hover:bg-gray-50 border-b last:border-b-0">
+          <div className="space-y-4">
+            <div className="overflow-x-auto border rounded-lg">
+              <table className="w-full border-collapse">
+                <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white sticky top-0 z-10">
+                  <tr>
+                    <th className="border p-3 text-left font-medium">No</th>
+                    <th className="border p-3 text-left font-medium">Date</th>
+                    <th className="border p-3 text-left font-medium">Channel</th>
+                    <th className="border p-3 text-left font-medium">Site</th>
+                    <th className="border p-3 text-left font-medium">Type</th>
+                    <th className="border p-3 text-right font-medium">FPWR (W)</th>
+                    <th className="border p-3 text-right font-medium">VSWR</th>
+                    <th className="border p-3 text-center font-medium">Status</th>
+                    <th className="border p-3 text-left font-medium">
+                      <div className="flex items-center justify-between">
+                        Notes
+                        {isLoading && histories.length > 0 && (
+                          <RefreshCw className="w-3 h-3 animate-spin text-blue-200" />
+                        )}
+                      </div>
+                    </th>
+                    <th className="border p-3 text-center font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {!hasLoadedOnce && isLoading ? (
+                    [...Array(pageSize)].map((_, i) => (
+                      <tr key={i} className="border-b">
+                        <td className="border p-3"><Skeleton className="h-4 w-4" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-20" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-24" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-20" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-16" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-12 ml-auto" /></td>
+                        <td className="border p-3 text-center"><Skeleton className="h-6 w-16 mx-auto rounded-full" /></td>
+                        <td className="border p-3"><Skeleton className="h-4 w-32" /></td>
+                        <td className="border p-3">
+                          <div className="flex gap-2 justify-center">
+                            <Skeleton className="h-8 w-8" />
+                            <Skeleton className="h-8 w-8" />
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : histories.length > 0 ? (
+                    histories.map((history, idx) => (
+                      <tr key={history.id} className={cn(
+                        "hover:bg-gray-50 border-b last:border-b-0 transition-opacity duration-200",
+                        isLoading && "opacity-50 pointer-events-none"
+                      )}>
                         <td className="border p-3 text-gray-600">
                           {(currentPage - 1) * pageSize + idx + 1}
                         </td>
@@ -738,104 +788,117 @@ export default function SwrHistoryTab() {
                           </div>
                         </td>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* ✅ PAGINATION */}
-              {totalPages > 1 && (
-                <div className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t gap-4">
-                  <div className="text-sm text-gray-600">
-                    Showing {(currentPage - 1) * pageSize + 1} to{" "}
-                    {Math.min(currentPage * pageSize, totalCount)} of{" "}
-                    {totalCount} entries
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {/* First Page Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage <= 1 || isLoading}
-                      onClick={() => setCurrentPage(1)}
-                      title="First Page"
-                      className="h-9 w-9 p-0"
-                    >
-                      <ChevronsLeft className="h-4 w-4" />
-                    </Button>
-
-                    {/* Previous Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage <= 1 || isLoading}
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                      title="Previous Page"
-                      className="h-9 px-3"
-                    >
-                      <ChevronLeft className="h-4 w-4 mr-1" />
-                      Prev
-                    </Button>
-
-                    {/* Page Number */}
-                    <div className="flex items-center gap-1 mx-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Page {currentPage} of {totalPages}
-                      </span>
-                    </div>
-
-                    {/* Next Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage >= totalPages || isLoading}
-                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                      title="Next Page"
-                      className="h-9 px-3"
-                    >
-                      Next
-                      <ChevronRight className="h-4 w-4 ml-1" />
-                    </Button>
-
-                    {/* Last Page Button */}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      disabled={currentPage >= totalPages || isLoading}
-                      onClick={() => setCurrentPage(totalPages)}
-                      title="Last Page"
-                      className="h-9 w-9 p-0"
-                    >
-                      <ChevronsRight className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-            </div>
-          ) : (
-            <Alert>
-              <AlertDescription className="text-center py-12">
-                <div className="flex flex-col items-center justify-center">
-                  <Search className="h-16 w-16 text-gray-300 mb-4" />
-                  <p className="text-lg font-semibold text-gray-700">No records found</p>
-                  <p className="text-gray-500 mt-2 max-w-md">
-                    {searchTerm || selectedChannel !== "all" || selectedSite !== "all" || selectedType !== "all"
-                      ? "Try adjusting your search filters or clear them to see all records"
-                      : "Start by adding your first SWR history record"}
-                  </p>
-                  {!searchTerm && selectedChannel === "all" && selectedSite === "all" && selectedType === "all" && (
-                    <Button
-                      onClick={() => openModal("create")}
-                      className="mt-4 bg-blue-600 hover:bg-blue-700"
-                    >
-                      Add First Record
-                    </Button>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={10} className="p-0">
+                        <Alert className="border-0 rounded-none bg-transparent">
+                          <AlertDescription className="text-center py-12">
+                            <div className="flex flex-col items-center justify-center">
+                              {isLoading ? (
+                                <RefreshCw className="h-16 w-16 text-blue-400 mb-4 animate-spin opacity-50" />
+                              ) : (
+                                <Search className="h-16 w-16 text-gray-300 mb-4" />
+                              )}
+                              <p className="text-lg font-semibold text-gray-700">
+                                {isLoading ? "Mencari data..." : "No records found"}
+                              </p>
+                              <p className="text-gray-500 mt-2 max-w-md">
+                                {isLoading
+                                  ? "Mohon tunggu sebentar, sistem sedang memproses permintaan Anda"
+                                  : searchTerm || selectedChannel !== "all" || selectedSite !== "all" || selectedType !== "all"
+                                    ? "Try adjusting your search filters or clear them to see all records"
+                                    : "Start by adding your first SWR history record"
+                                }
+                              </p>
+                              {!isLoading && !searchTerm && selectedChannel === "all" && selectedSite === "all" && selectedType === "all" && (
+                                <Button
+                                  onClick={() => openModal("create")}
+                                  className="mt-4 bg-blue-600 hover:bg-blue-700"
+                                >
+                                  Add First Record
+                                </Button>
+                              )}
+                            </div>
+                          </AlertDescription>
+                        </Alert>
+                      </td>
+                    </tr>
                   )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* ✅ PAGINATION */}
+            {totalPages > 1 && !isLoading && (
+              <div className="flex flex-col sm:flex-row justify-between items-center pt-4 border-t gap-4">
+                <div className="text-sm text-gray-600">
+                  Showing {(currentPage - 1) * pageSize + 1} to{" "}
+                  {Math.min(currentPage * pageSize, totalCount)} of{" "}
+                  {totalCount} entries
                 </div>
-              </AlertDescription>
-            </Alert>
-          )}
+
+                <div className="flex items-center gap-2">
+                  {/* First Page Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage <= 1 || isLoading}
+                    onClick={() => setCurrentPage(1)}
+                    title="First Page"
+                    className="h-9 w-9 p-0"
+                  >
+                    <ChevronsLeft className="h-4 w-4" />
+                  </Button>
+
+                  {/* Previous Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage <= 1 || isLoading}
+                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    title="Previous Page"
+                    className="h-9 px-3"
+                  >
+                    <ChevronLeft className="h-4 w-4 mr-1" />
+                    Prev
+                  </Button>
+
+                  {/* Page Number */}
+                  <div className="flex items-center gap-1 mx-2">
+                    <span className="text-sm font-medium text-gray-700">
+                      Page {currentPage} of {totalPages}
+                    </span>
+                  </div>
+
+                  {/* Next Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages || isLoading}
+                    onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                    title="Next Page"
+                    className="h-9 px-3"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4 ml-1" />
+                  </Button>
+
+                  {/* Last Page Button */}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={currentPage >= totalPages || isLoading}
+                    onClick={() => setCurrentPage(totalPages)}
+                    title="Last Page"
+                    className="h-9 w-9 p-0"
+                  >
+                    <ChevronsRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
         </CardContent>
       </Card>
 
@@ -1020,6 +1083,6 @@ export default function SwrHistoryTab() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </div >
   );
 }

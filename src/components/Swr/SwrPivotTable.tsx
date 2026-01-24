@@ -49,6 +49,7 @@ import {
   Clock,
 } from "lucide-react";
 import { swrSignalApi } from "../../services/api";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 
 const SWR_THRESHOLDS = {
@@ -133,12 +134,13 @@ interface PivotData {
 const SwrPivotTable: React.FC = () => {
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [pivotData, setPivotData] = useState<PivotData[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedSites, setSelectedSites] = useState<string[]>([]);
   const [selectedType, setSelectedType] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
   const [sites, setSites] = useState<string[]>([]);
   const [showMultiSelect, setShowMultiSelect] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -188,8 +190,8 @@ const SwrPivotTable: React.FC = () => {
   const fetchYearlyData = async () => {
     setIsLoading(true);
     try {
-      const siteParam = selectedSites.length === 1 ? selectedSites[0] : undefined;
-      const response = await swrSignalApi.getYearlyPivot(selectedYear, siteParam);
+      // ✅ Always fetch ALL sites for the year to enable instant client-side filtering
+      const response = await swrSignalApi.getYearlyPivot(selectedYear, undefined);
 
       // Load saved notes from localStorage untuk backup
       const dataWithNotes = (response || []).map((item: any) => {
@@ -221,10 +223,12 @@ const SwrPivotTable: React.FC = () => {
 
   useEffect(() => {
     fetchYearlyData();
-  }, [selectedYear, selectedSites]);
+  }, [selectedYear]); // 🚀 Removed selectedSites from dependencies
 
   const handleExport = async () => {
     try {
+      setIsExporting(true);
+      // Export still uses the exact selection for the file size
       const siteParam = selectedSites.length === 1 ? selectedSites[0] : undefined;
       await swrSignalApi.exportYearlyExcel(selectedYear, siteParam);
       toast({
@@ -237,6 +241,8 @@ const SwrPivotTable: React.FC = () => {
         description: error.message || "Gagal mengekspor data",
         variant: "destructive",
       });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -561,9 +567,20 @@ const SwrPivotTable: React.FC = () => {
               </Button>
               <Button
                 onClick={handleExport}
-                className="bg-green-600 hover:bg-green-700"
+                disabled={isExporting}
+                className="bg-green-600 hover:bg-green-700 min-w-[140px]"
               >
-                <FileSpreadsheet className="w-4 h-4 mr-2" /> Export Excel
+                {isExporting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <FileSpreadsheet className="w-4 h-4 mr-2" />
+                    Export Excel
+                  </>
+                )}
               </Button>
             </div>
           </div>
@@ -702,76 +719,80 @@ const SwrPivotTable: React.FC = () => {
                 <BarChart3 className="w-5 h-5 text-blue-600" />
                 <CardTitle className="text-base">Trend VSWR per Channel</CardTitle>
                 <span className="text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded">
-                  {paginatedData.length} channels
+                  {isLoading ? <Skeleton className="h-3 w-8 inline-block" /> : paginatedData.length} channels
                 </span>
               </div>
               <div className="text-sm text-gray-600">
-                Menampilkan {paginatedData.length} channel dari halaman {currentPage}
+                {isLoading ? <Skeleton className="h-4 w-48" /> : `Menampilkan ${paginatedData.length} channel dari halaman ${currentPage}`}
               </div>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[350px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={lineChartData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                  <XAxis
-                    dataKey="month"
-                    tick={{ fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    domain={[1, 3]}
-                    tick={{ fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <RechartsTooltip
-                    formatter={(value: any, name: any) => {
-                      if (value === null || value === undefined) return ["No Data", name];
-                      return [`${value.toFixed(2)}`, name];
-                    }}
-                    labelFormatter={(label) => `Bulan: ${label}`}
-                    contentStyle={{
-                      backgroundColor: 'white',
-                      border: '1px solid #e0e0e0',
-                      borderRadius: '6px',
-                      fontSize: '12px'
-                    }}
-                  />
-                  <ReferenceLine
-                    y={1.5}
-                    stroke="#10b981"
-                    strokeDasharray="3 3"
-                    strokeWidth={1}
-                  />
-                  <ReferenceLine
-                    y={2.0}
-                    stroke="#ef4444"
-                    strokeDasharray="3 3"
-                    strokeWidth={1}
-                  />
-
-                  {/* TAMPILKAN SEMUA CHANNEL DI HALAMAN */}
-                  {paginatedData.map((link, idx) => (
-                    <Line
-                      key={link.channelName}
-                      type="monotone"
-                      dataKey={link.channelName}
-                      stroke={COLORS[idx % COLORS.length]}
-                      strokeWidth={2}
-                      dot={{ r: 3 }}
-                      activeDot={{ r: 5 }}
-                      connectNulls={true}
+            {isLoading ? (
+              <Skeleton className="h-[350px] w-full" />
+            ) : (
+              <div className="h-[350px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={lineChartData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
+                    <XAxis
+                      dataKey="month"
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
                     />
-                  ))}
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+                    <YAxis
+                      domain={[1, 3]}
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <RechartsTooltip
+                      formatter={(value: any, name: any) => {
+                        if (value === null || value === undefined) return ["No Data", name];
+                        return [`${value.toFixed(2)}`, name];
+                      }}
+                      labelFormatter={(label) => `Bulan: ${label}`}
+                      contentStyle={{
+                        backgroundColor: 'white',
+                        border: '1px solid #e0e0e0',
+                        borderRadius: '6px',
+                        fontSize: '12px'
+                      }}
+                    />
+                    <ReferenceLine
+                      y={1.5}
+                      stroke="#10b981"
+                      strokeDasharray="3 3"
+                      strokeWidth={1}
+                    />
+                    <ReferenceLine
+                      y={2.0}
+                      stroke="#ef4444"
+                      strokeDasharray="3 3"
+                      strokeWidth={1}
+                    />
+
+                    {/* TAMPILKAN SEMUA CHANNEL DI HALAMAN */}
+                    {paginatedData.map((link, idx) => (
+                      <Line
+                        key={link.channelName}
+                        type="monotone"
+                        dataKey={link.channelName}
+                        stroke={COLORS[idx % COLORS.length]}
+                        strokeWidth={2}
+                        dot={{ r: 3 }}
+                        activeDot={{ r: 5 }}
+                        connectNulls={true}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
             {/* Legenda untuk semua channel */}
-            {paginatedData.length > 0 && (
+            {!isLoading && paginatedData.length > 0 && (
               <div className="mt-4 border rounded-lg p-3 bg-gray-50">
                 <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
                   {paginatedData.map((link, idx) => (
@@ -790,6 +811,7 @@ const SwrPivotTable: React.FC = () => {
                 </p>
               </div>
             )}
+            {isLoading && <Skeleton className="h-10 w-full mt-4" />}
           </CardContent>
         </Card>
 
@@ -802,50 +824,63 @@ const SwrPivotTable: React.FC = () => {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
-                    paddingAngle={2}
-                    dataKey="value"
-                    label={(entry) => `${entry.name}: ${entry.value}`}
-                  >
-                    {pieChartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <RechartsTooltip
-                    formatter={(value: any, name: any) => [
-                      value,
-                      `${name} Data`
-                    ]}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3 mt-4">
-              {pieChartData.map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
-                  <div className="flex items-center gap-2">
-                    <div
-                      className="w-3 h-3 rounded"
-                      style={{ backgroundColor: item.fill }}
-                    />
-                    <span className="text-sm font-medium">{item.name}</span>
-                  </div>
-                  <span className="font-bold">{item.value}</span>
+            {isLoading ? (
+              <div className="space-y-4">
+                <Skeleton className="h-[250px] w-full rounded-full" />
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-10 w-full" />
+                  ))}
                 </div>
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 mt-3 text-center">
-              Data dari {paginatedData.length} channel di halaman ini
-            </p>
+              </div>
+            ) : (
+              <>
+                <div className="h-[250px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={pieChartData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={2}
+                        dataKey="value"
+                        label={(entry) => `${entry.name}: ${entry.value}`}
+                      >
+                        {pieChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.fill} />
+                        ))}
+                      </Pie>
+                      <RechartsTooltip
+                        formatter={(value: any, name: any) => [
+                          value,
+                          `${name} Data`
+                        ]}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  {pieChartData.map((item, idx) => (
+                    <div key={idx} className="flex items-center justify-between p-2 bg-gray-50 rounded">
+                      <div className="flex items-center gap-2">
+                        <div
+                          className="w-3 h-3 rounded"
+                          style={{ backgroundColor: item.fill }}
+                        />
+                        <span className="text-sm font-medium">{item.name}</span>
+                      </div>
+                      <span className="font-bold">{item.value}</span>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-3 text-center">
+                  Data dari {paginatedData.length} channel di halaman ini
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -879,14 +914,26 @@ const SwrPivotTable: React.FC = () => {
 
             <tbody>
               {isLoading ? (
-                <tr>
-                  <td colSpan={months.length * 2 + 3} className="p-12 text-center">
-                    <div className="flex flex-col items-center justify-center">
-                      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-3"></div>
-                      <p className="text-gray-500">Memuat data...</p>
-                    </div>
-                  </td>
-                </tr>
+                [...Array(8)].map((_, i) => (
+                  <tr key={i} className="border-b">
+                    <td className="p-4 sticky left-0 bg-white z-10 border-r border-blue-50">
+                      <Skeleton className="h-4 w-32" />
+                    </td>
+                    <td className="p-4">
+                      <Skeleton className="h-4 w-16" />
+                    </td>
+                    {months.map((m) => (
+                      <React.Fragment key={m}>
+                        <td className="p-3 border-l border-blue-50">
+                          <Skeleton className="h-6 w-10 mx-auto" />
+                        </td>
+                        <td className="p-3 border-l border-blue-50">
+                          <Skeleton className="h-6 w-10 mx-auto" />
+                        </td>
+                      </React.Fragment>
+                    ))}
+                  </tr>
+                ))
               ) : paginatedData.length > 0 ? (
                 paginatedData.map((row, rowIdx) => {
                   const hasAnyNote = Object.values(row.notes || {}).some(note => note?.trim());

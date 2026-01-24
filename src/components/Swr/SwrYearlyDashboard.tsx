@@ -199,6 +199,26 @@ const SwrYearlyDashboard: React.FC = () => {
   const [threshold, setThreshold] = useState<number>(1.5);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
+  const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('swr_acknowledged_alerts');
+      return saved ? JSON.parse(saved) : [];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    localStorage.setItem('swr_acknowledged_alerts', JSON.stringify(acknowledgedAlerts));
+  }, [acknowledgedAlerts]);
+
+
+  const toggleAlertAcknowledgment = (alertId: string) => {
+    setAcknowledgedAlerts(prev =>
+      prev.includes(alertId)
+        ? prev.filter(id => id !== alertId)
+        : [...prev, alertId]
+    );
+  };
 
   // Filtered sites for site selector
   const filteredSites = useMemo(() => {
@@ -364,19 +384,19 @@ const SwrYearlyDashboard: React.FC = () => {
         const filteredNotes: Record<string, string> = {};
 
         Object.entries(channel.monthlyVswr || {}).forEach(([key, value]) => {
-          if (key.endsWith(`-${yearSuffix}`)) {
+          if (key.endsWith(`-${yearSuffix}`) || key.endsWith(`-${selectedYear}`)) {
             filteredMonthlyVswr[key] = value;
           }
         });
 
         Object.entries(channel.monthlyFpwr || {}).forEach(([key, value]) => {
-          if (key.endsWith(`-${yearSuffix}`)) {
+          if (key.endsWith(`-${yearSuffix}`) || key.endsWith(`-${selectedYear}`)) {
             filteredMonthlyFpwr[key] = value;
           }
         });
 
         Object.entries(channel.notes || {}).forEach(([key, value]) => {
-          if (key.endsWith(`-${yearSuffix}`)) {
+          if (key.endsWith(`-${yearSuffix}`) || key.endsWith(`-${selectedYear}`)) {
             filteredNotes[key] = value;
           }
         });
@@ -412,7 +432,7 @@ const SwrYearlyDashboard: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [selectedYear, selectedSites]);
+  }, [selectedYear]); // 🚀 Removed selectedSites
 
   // Initial fetch
   useEffect(() => {
@@ -921,8 +941,8 @@ const SwrYearlyDashboard: React.FC = () => {
     const monthKeys = MONTHS.map(month => `${month}-${selectedYear.toString().slice(-2)}`);
 
     return (
-      <Card className="col-span-2">
-        <CardHeader>
+      <Card className="col-span-2 shadow-none border-none print:shadow-none print:border-none">
+        <CardHeader className="print:hidden">
           <div className="flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div>
@@ -1073,8 +1093,11 @@ const SwrYearlyDashboard: React.FC = () => {
                               <div className="font-medium">{row.siteName}</div>
                             </td>
                             {monthKeys.map((monthKey, monthIndex) => {
-                              const vswr = row.monthlyVswr?.[monthKey];
-                              const note = row.notes?.[monthKey];
+                              const monthPrefix = MONTHS[monthIndex];
+                              const dataKey = Object.keys(row.monthlyVswr || {}).find(k => k.startsWith(monthPrefix));
+                              const vswr = dataKey ? row.monthlyVswr[dataKey] : null;
+                              const noteKey = Object.keys(row.notes || {}).find(k => k.startsWith(monthPrefix));
+                              const note = (noteKey && row.notes) ? row.notes[noteKey] : undefined;
                               const hasNote = !!note;
 
                               return (
@@ -1213,6 +1236,7 @@ const SwrYearlyDashboard: React.FC = () => {
     if (!pivotData.length) return null;
 
     const alerts: Array<{
+      id: string;
       type: 'critical' | 'warning' | 'info' | 'danger';
       message: string;
       channel: string;
@@ -1225,9 +1249,11 @@ const SwrYearlyDashboard: React.FC = () => {
         if (vswr !== null && vswr !== undefined && vswr > 0) {
           const status = getVswrStatus(vswr, channel.expectedSwrMax);
           const month = monthKey.split('-')[0];
+          const alertId = `${channel.channelName}-${monthKey}`;
 
           if (status === 'danger') {
             alerts.push({
+              id: alertId,
               type: 'danger',
               message: `Critical VSWR detected`,
               channel: channel.channelName,
@@ -1236,6 +1262,7 @@ const SwrYearlyDashboard: React.FC = () => {
             });
           } else if (status === 'critical') {
             alerts.push({
+              id: alertId,
               type: 'critical',
               message: `High VSWR warning`,
               channel: channel.channelName,
@@ -1259,40 +1286,66 @@ const SwrYearlyDashboard: React.FC = () => {
       );
     }
 
+    const unacknowledgedCount = alerts.filter(a => !acknowledgedAlerts.includes(a.id)).length;
+
     return (
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-600">
             <AlertCircle className="w-5 h-5" />
-            Alerts ({alerts.length})
+            Alerts ({unacknowledgedCount})
           </CardTitle>
         </CardHeader>
         <CardContent>
           <ScrollArea className="h-[200px]">
             <div className="space-y-3">
-              {alerts.slice(0, 10).map((alert, index) => (
-                <Alert key={index} className={
-                  alert.type === 'danger'
-                    ? "border-red-200 bg-red-50"
-                    : "border-orange-200 bg-orange-50"
-                }>
-                  <AlertTriangle className={
-                    alert.type === 'danger'
-                      ? "w-4 h-4 text-red-600"
-                      : "w-4 h-4 text-orange-600"
-                  } />
-                  <AlertTitle>{alert.message}</AlertTitle>
-                  <AlertDescription className="text-sm">
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="font-medium">{alert.channel}</span>
-                      <span className="text-gray-600">•</span>
-                      <span>{alert.month}</span>
-                      <span className="text-gray-600">•</span>
-                      <span className="font-bold">VSWR: {alert.value.toFixed(2)}</span>
+              {alerts.slice(0, 10).map((alert, index) => {
+                const isAcknowledged = acknowledgedAlerts.includes(alert.id);
+                return (
+                  <Alert
+                    key={index}
+                    className={`
+                      ${alert.type === 'danger' ? "border-red-200 bg-red-50" : "border-orange-200 bg-orange-50"}
+                      ${isAcknowledged ? "opacity-60 grayscale-[0.5]" : ""}
+                      transition-all duration-200
+                    `}
+                  >
+                    <div className="flex items-start gap-3 w-full">
+                      <div
+                        className="mt-1 cursor-pointer hover:text-blue-600 transition-colors"
+                        onClick={() => toggleAlertAcknowledgment(alert.id)}
+                      >
+                        {isAcknowledged ? (
+                          <CheckCircle className="w-5 h-5 text-green-600" />
+                        ) : (
+                          <div className="w-5 h-5 border-2 border-gray-300 rounded hover:border-blue-500" />
+                        )}
+                      </div>
+
+                      <div className="flex-1">
+                        <AlertTriangle className={
+                          alert.type === 'danger'
+                            ? "w-4 h-4 text-red-600 mb-1"
+                            : "w-4 h-4 text-orange-600 mb-1"
+                        } />
+                        <AlertTitle className={isAcknowledged ? "line-through text-gray-500" : ""}>
+                          {alert.message}
+                          {isAcknowledged && <span className="ml-2 text-xs font-normal text-green-600">(Tolerated)</span>}
+                        </AlertTitle>
+                        <AlertDescription className="text-sm">
+                          <div className={`flex items-center gap-2 mt-1 ${isAcknowledged ? "text-gray-400" : ""}`}>
+                            <span className="font-medium">{alert.channel}</span>
+                            <span className="text-gray-600">•</span>
+                            <span>{alert.month}</span>
+                            <span className="text-gray-600">•</span>
+                            <span className="font-bold">VSWR: {alert.value.toFixed(2)}</span>
+                          </div>
+                        </AlertDescription>
+                      </div>
                     </div>
-                  </AlertDescription>
-                </Alert>
-              ))}
+                  </Alert>
+                );
+              })}
             </div>
           </ScrollArea>
           {alerts.length > 10 && (
@@ -1543,9 +1596,18 @@ const SwrYearlyDashboard: React.FC = () => {
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={isExporting}>
-                <Download className="w-4 h-4 mr-2" />
-                Export
+              <Button variant="outline" disabled={isExporting} className="min-w-[120px]">
+                {isExporting ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Exporting...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4 mr-2" />
+                    Export
+                  </>
+                )}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent>
@@ -1619,33 +1681,52 @@ const SwrYearlyDashboard: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Site Distribution</CardTitle>
+                <CardDescription>Channel count by site</CardDescription>
               </CardHeader>
               <CardContent>
                 {sites.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <PieChart>
-                      <Pie
-                        data={sites.map(site => ({
-                          name: site.name,
-                          value: site.channelCount,
-                        }))}
-                        cx="50%"
-                        cy="50%"
-                        labelLine={false}
-                        label={({ name, percent }) =>
-                          `${name}: ${((percent ?? 0) * 100).toFixed(0)}%`
-                        }
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                      >
-                        {sites.map((_, index) => (
-                          <Cell key={`cell-${index}`} fill={Object.values(COLOR_SCHEMES)[index % 6]} />
-                        ))}
-                      </Pie>
-                      <RechartsTooltip />
-                    </PieChart>
-                  </ResponsiveContainer>
+                  <ScrollArea className="h-[300px] pr-4">
+                    <div style={{ height: Math.max(300, sites.length * 40) }}>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={sites.map(site => ({
+                            name: site.name,
+                            value: site.channelCount,
+                          })).sort((a, b) => b.value - a.value)}
+                          layout="vertical"
+                          margin={{ left: 80, right: 20 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                          <XAxis type="number" hide />
+                          <YAxis
+                            dataKey="name"
+                            type="category"
+                            width={80}
+                            tick={{ fontSize: 12 }}
+                          />
+                          <RechartsTooltip
+                            cursor={{ fill: 'transparent' }}
+                            formatter={(value: number | undefined) => [
+                              value !== undefined ? `${value} Channels` : '-',
+                              "Total"
+                            ]}
+                          />
+                          <Bar
+                            dataKey="value"
+                            radius={[0, 4, 4, 0]}
+                            barSize={20}
+                          >
+                            {sites.map((_, index) => (
+                              <Cell
+                                key={`cell-${index}`}
+                                fill={Object.values(COLOR_SCHEMES)[index % Object.values(COLOR_SCHEMES).length]}
+                              />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </ScrollArea>
                 ) : (
                   <div className="flex items-center justify-center h-64 text-gray-500">
                     No site data available
@@ -1706,6 +1787,121 @@ const SwrYearlyDashboard: React.FC = () => {
           </div>
         </TabsContent>
       </Tabs>
+
+      {/* 🖨️ PRINT ONLY SECTION */}
+      <div className="hidden print:block print-report-container print:m-0 print:p-0">
+        <div className="mb-8 border-b-2 border-gray-900 pb-4 flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900 uppercase tracking-tighter">SWR Signal Yearly Report</h1>
+            <p className="text-lg text-gray-700 mt-1">Year {selectedYear} • Created on {new Date().toLocaleDateString('id-ID')}</p>
+          </div>
+          <div className="text-right text-sm text-gray-500">
+            {selectedSites.length > 0 ? `${selectedSites.length} Sites Selected` : "All Sites"}
+          </div>
+        </div>
+
+        {/* Summary for Print */}
+        <div className="grid grid-cols-4 gap-4 mb-8">
+          <div className="p-4 border border-gray-300 rounded">
+            <p className="text-xs font-bold text-gray-500 uppercase">Total Channels</p>
+            <p className="text-2xl font-bold">{statistics.totalChannels}</p>
+          </div>
+          <div className="p-4 border border-gray-300 rounded">
+            <p className="text-xs font-bold text-gray-500 uppercase">Avg VSWR</p>
+            <p className="text-2xl font-bold">{statistics.averageVswr.toFixed(2)}</p>
+          </div>
+          <div className="p-4 border border-gray-300 rounded">
+            <p className="text-xs font-bold text-gray-500 uppercase">Good Status</p>
+            <p className="text-2xl font-bold text-green-700">{statistics.goodPercentage.toFixed(1)}%</p>
+          </div>
+          <div className="p-4 border border-gray-300 rounded">
+            <p className="text-xs font-bold text-gray-500 uppercase">Threshold</p>
+            <p className="text-2xl font-bold">{threshold}</p>
+          </div>
+        </div>
+
+        <table className="w-full border-collapse border border-gray-400 text-[10px]">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-400 p-2 text-left">Channel</th>
+              <th className="border border-gray-400 p-2 text-left">Site</th>
+              {MONTHS.map(m => (
+                <th key={m} className="border border-gray-400 p-1 text-center min-w-[35px]">{m}</th>
+              ))}
+              <th className="border border-gray-400 p-2 text-center bg-gray-200">AVG</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filteredData.map((row, idx) => {
+              const validVswrValues = MONTHS
+                .map(m => row.monthlyVswr?.[`${m}-${selectedYear.toString().slice(-2)}`])
+                .filter(v => v !== null && v !== undefined && v > 0) as number[];
+              const avgVswr = validVswrValues.length > 0
+                ? validVswrValues.reduce((a, b) => a + b) / validVswrValues.length
+                : null;
+
+              return (
+                <tr key={idx} className="break-inside-avoid">
+                  <td className="border border-gray-400 p-2 font-bold">{row.channelName}</td>
+                  <td className="border border-gray-400 p-2">{row.siteName}</td>
+                  {MONTHS.map(m => {
+                    const dataKey = Object.keys(row.monthlyVswr || {}).find(k => k.startsWith(m));
+                    const vswr = dataKey ? row.monthlyVswr[dataKey] : null;
+                    const isBad = vswr && vswr >= threshold;
+                    return (
+                      <td key={m} className={`border border-gray-400 p-1 text-center font-mono ${isBad ? 'bg-gray-200 font-black underline' : ''}`}>
+                        {vswr !== null && vswr !== undefined && vswr > 0 ? vswr.toFixed(1) : '-'}
+                      </td>
+                    );
+                  })}
+                  <td className={`border border-gray-400 p-2 text-center font-bold bg-gray-50 ${(avgVswr || 0) >= threshold ? 'bg-gray-300' : ''}`}>
+                    {avgVswr !== null ? avgVswr.toFixed(2) : '-'}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+
+        <div className="mt-8 pt-4 border-t border-gray-300 text-[10px] text-gray-500 flex justify-between">
+          <div>SWR SIGNAL MONITORING SYSTEM • REPORT ID: {selectedYear}-{Date.now().toString().slice(-6)}</div>
+          <div>Halaman 1 / 1 (Otomatis menyesuaikan saat cetak)</div>
+        </div>
+      </div>
+
+      <style dangerouslySetInnerHTML={{
+        __html: `
+        @media print {
+          @page {
+            size: landscape;
+            margin: 15mm;
+          }
+          /* Hide everything by default */
+          body * {
+            visibility: hidden;
+            overflow: visible !important;
+          }
+          /* Show the print section and its children */
+          .print-report-container, .print-report-container * {
+            visibility: visible;
+          }
+          /* Position the print section at the top */
+          .print-report-container {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            display: block !important;
+            background: white !important;
+          }
+          /* Ensure no other containers interfere */
+          #root, main, .app-container {
+            padding: 0 !important;
+            margin: 0 !important;
+            border: none !important;
+          }
+        }
+      `}} />
     </div>
   );
 };
