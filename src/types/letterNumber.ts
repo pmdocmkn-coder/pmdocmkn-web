@@ -116,6 +116,7 @@ export interface DocumentTypeList {
     id: number;
     code: string;
     name: string;
+    description?: string;
     isActive: boolean;
 }
 

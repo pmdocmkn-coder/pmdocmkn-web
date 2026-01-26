@@ -246,14 +246,22 @@ export default function LetterNumberPage() {
 
     const openEditDialog = (letter: LetterNumberList) => {
         setSelectedLetter(letter);
+
+        // Parse status string to enum number
+        let statusValue = LetterStatus.Draft; // default
+        if (letter.status) {
+            const statusKey = letter.status as keyof typeof LetterStatus;
+            statusValue = LetterStatus[statusKey] ?? LetterStatus.Draft;
+        }
+
         setFormData({
             companyId: 0,
             documentTypeId: 0,
             letterDate: "",
-            subject: letter.subject,
-            recipient: letter.recipient,
-            attachmentUrl: "",
-            status: LetterStatus[letter.status as keyof typeof LetterStatus],
+            subject: letter.subject || "",
+            recipient: letter.recipient || "",
+            attachmentUrl: "", // Will be populated if letter has one
+            status: statusValue,
         });
         setIsEditDialogOpen(true);
     };
