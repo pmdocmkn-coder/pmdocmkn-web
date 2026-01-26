@@ -22,6 +22,9 @@ import InspeksiKPCPage from "./components/InspeksiKPCPage";
 import NecHistoryPage from "./components/NEC/NecHistoryPage";
 import NecTowerLinkManagement from "./components/NEC/NecTowerLinkManagement";
 import SwrSignalPage from "./components/Swr/SwrSignalPage";
+import LetterNumberPage from "./components/LetterNumberPage";
+import CompanyPage from "./components/CompanyPage";
+import DocumentTypePage from "./components/DocumentTypePage";
 import { Toaster } from "./components/ui/toaster";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
@@ -41,6 +44,7 @@ function hasPermission(permission: string): boolean {
 function getDefaultRoute(): string {
   // Priority order based on permission availability
   if (hasPermission("dashboard.view")) return "/dashboard";
+  if (hasPermission("letter-number.view")) return "/letter-numbers";
   if (hasPermission("inspeksi.temuan-kpc.view")) return "/inspeksi-kpc";
   if (hasPermission("docs.view")) return "/docs";
   if (hasPermission("callrecord.view")) return "/callrecords";
@@ -188,6 +192,34 @@ function AppContent() {
           <Route path="/nec-management" element={<NecTowerLinkManagement />} />
 
           <Route path="/swr-signal" element={<SwrSignalPage />} />
+
+          {/* ✅ LETTER NUMBERING ROUTES */}
+          <Route
+            path="/letter-numbers"
+            element={
+              <PermissionGuard permission="letter-number.view">
+                <LetterNumberPage />
+              </PermissionGuard>
+            }
+          />
+
+          <Route
+            path="/companies"
+            element={
+              <PermissionGuard permission="letter-number.view">
+                <CompanyPage />
+              </PermissionGuard>
+            }
+          />
+
+          <Route
+            path="/document-types"
+            element={
+              <PermissionGuard permission="letter-number.view">
+                <DocumentTypePage />
+              </PermissionGuard>
+            }
+          />
 
           <Route
             path="/settings"

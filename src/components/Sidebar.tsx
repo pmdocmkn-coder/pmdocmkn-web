@@ -19,6 +19,9 @@ import {
   ChevronLeft,
   ChevronRight,
   Radio,
+  FileText,
+  Building2,
+  FileType,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -96,6 +99,30 @@ const navItems: NavItem[] = [
   },
 ];
 
+const letterNumberMenu: NavItem[] = [
+  {
+    name: "Letter Numbers",
+    path: "/letter-numbers",
+    icon: FileText,
+    id: "letter-numbers",
+    permission: "letter-number.view",
+  },
+  {
+    name: "Companies",
+    path: "/companies",
+    icon: Building2,
+    id: "companies",
+    permission: "letter-number.view",
+  },
+  {
+    name: "Document Types",
+    path: "/document-types",
+    icon: FileType,
+    id: "document-types",
+    permission: "letter-number.view",
+  },
+];
+
 const callRecordsMenu: NavItem[] = [
   {
     name: "View Records",
@@ -131,11 +158,15 @@ export default function Sidebar({
   const { user, logout } = useAuth();
   const location = useLocation();
   const [isCallRecordsOpen, setIsCallRecordsOpen] = useState(true);
+  const [isLetterNumberOpen, setIsLetterNumberOpen] = useState(true);
 
   const filteredNavItems = navItems.filter(
     (item) => item.forAll || !item.permission || hasPermission(item.permission)
   );
   const filteredCallRecords = callRecordsMenu.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
+  const filteredLetterNumbers = letterNumberMenu.filter(
     (item) => !item.permission || hasPermission(item.permission)
   );
 
@@ -156,18 +187,15 @@ export default function Sidebar({
           onClick?.();
         }}
         title={isCollapsed ? item.name : ""}
-        className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 group relative ${
-          isCollapsed ? "justify-center p-3 mx-2" : "space-x-3 px-4 py-3 mx-2"
-        } ${
-          isActive
+        className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 group relative ${isCollapsed ? "justify-center p-3 mx-2" : "space-x-3 px-4 py-3 mx-2"
+          } ${isActive
             ? "bg-white text-indigo-900 shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
             : "text-white/70 hover:bg-white/10 hover:text-white"
-        }`}
+          }`}
       >
         <Icon
-          className={`${
-            isCollapsed ? "w-6 h-6" : "w-5 h-5"
-          } flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}
+          className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"
+            } flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}
         />
         {!isCollapsed && <span className="truncate">{item.name}</span>}
       </Link>
@@ -178,9 +206,8 @@ export default function Sidebar({
     <div className={`flex flex-col h-full py-6`}>
       {/* Logo Section */}
       <div
-        className={`flex items-center mb-10 px-6 ${
-          isCollapsed && !isMobile ? "justify-center" : "justify-start"
-        }`}
+        className={`flex items-center mb-10 px-6 ${isCollapsed && !isMobile ? "justify-center" : "justify-start"
+          }`}
       >
         <div className="flex items-center space-x-3 overflow-visible">
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
@@ -214,9 +241,8 @@ export default function Sidebar({
                 >
                   <span>Call Records</span>
                   <ChevronDown
-                    className={`w-4 h-4 transition-transform ${
-                      isCallRecordsOpen ? "rotate-180" : ""
-                    }`}
+                    className={`w-4 h-4 transition-transform ${isCallRecordsOpen ? "rotate-180" : ""
+                      }`}
                   />
                 </button>
                 <AnimatePresence>
@@ -228,6 +254,45 @@ export default function Sidebar({
                       className="overflow-hidden space-y-1 mt-1"
                     >
                       {filteredCallRecords.map((item) => (
+                        <NavLink
+                          key={item.id}
+                          item={item}
+                          onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                        />
+                      ))}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            ) : (
+              <div className="h-px bg-white/10 my-4 mx-2" />
+            )}
+          </div>
+        )}
+
+        {filteredLetterNumbers.length > 0 && (
+          <div className="mt-6">
+            {!isCollapsed || isMobile ? (
+              <>
+                <button
+                  onClick={() => setIsLetterNumberOpen(!isLetterNumberOpen)}
+                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                >
+                  <span>Letter Numbering</span>
+                  <ChevronDown
+                    className={`w-4 h-4 transition-transform ${isLetterNumberOpen ? "rotate-180" : ""
+                      }`}
+                  />
+                </button>
+                <AnimatePresence>
+                  {isLetterNumberOpen && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden space-y-1 mt-1"
+                    >
+                      {filteredLetterNumbers.map((item) => (
                         <NavLink
                           key={item.id}
                           item={item}
@@ -261,9 +326,8 @@ export default function Sidebar({
 
       {/* Footer / User */}
       <div
-        className={`mt-auto pt-6 border-t border-white/10 ${
-          isCollapsed && !isMobile ? "items-center" : ""
-        }`}
+        className={`mt-auto pt-6 border-t border-white/10 ${isCollapsed && !isMobile ? "items-center" : ""
+          }`}
       >
         <Link
           to="/profile"
@@ -272,9 +336,8 @@ export default function Sidebar({
             isMobile && setIsMobileMenuOpen(false);
           }}
           title={isCollapsed ? user?.fullName : ""}
-          className={`flex items-center rounded-xl hover:bg-white/10 transition-all group ${
-            isCollapsed && !isMobile ? "justify-center p-2" : "space-x-3 p-3"
-          }`}
+          className={`flex items-center rounded-xl hover:bg-white/10 transition-all group ${isCollapsed && !isMobile ? "justify-center p-2" : "space-x-3 p-3"
+            }`}
         >
           {user?.photoUrl ? (
             <img
@@ -304,16 +367,14 @@ export default function Sidebar({
             window.location.href = "/";
           }}
           title={isCollapsed ? "Logout" : ""}
-          className={`w-full flex items-center mt-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all ${
-            isCollapsed && !isMobile
+          className={`w-full flex items-center mt-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all ${isCollapsed && !isMobile
               ? "justify-center p-3"
               : "space-x-3 px-4 py-3"
-          }`}
+            }`}
         >
           <LogOut
-            className={`${
-              isCollapsed && !isMobile ? "w-6 h-6" : "w-5 h-5"
-            } flex-shrink-0`}
+            className={`${isCollapsed && !isMobile ? "w-6 h-6" : "w-5 h-5"
+              } flex-shrink-0`}
           />
           {(!isCollapsed || isMobile) && <span>Logout</span>}
         </button>
@@ -325,9 +386,8 @@ export default function Sidebar({
     <>
       {/* Desktop Sidebar */}
       <aside
-        className={`hidden md:flex flex-col h-screen sticky top-0 bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl border-r border-white/10 transition-all duration-300 ${
-          isCollapsed ? "w-20" : "w-72"
-        }`}
+        className={`hidden md:flex flex-col h-screen sticky top-0 bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl border-r border-white/10 transition-all duration-300 ${isCollapsed ? "w-20" : "w-72"
+          }`}
       >
         {SidebarContent(false)}
       </aside>
