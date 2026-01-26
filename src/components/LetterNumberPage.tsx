@@ -54,6 +54,7 @@ export default function LetterNumberPage() {
     const [selectedCompany, setSelectedCompany] = useState<number | undefined>();
     const [selectedDocType, setSelectedDocType] = useState<number | undefined>();
     const [selectedStatus, setSelectedStatus] = useState<number | undefined>();
+    const [isCreating, setIsCreating] = useState(false);
 
     // Pagination
     const [currentPage, setCurrentPage] = useState(1);
@@ -96,9 +97,9 @@ export default function LetterNumberPage() {
                 status: selectedStatus,
             });
 
-            setLetters(result.data);
-            setTotalCount(result.meta.pagination.totalCount);
-            setTotalPages(result.meta.pagination.totalPages);
+            setLetters(result.data || []);
+            setTotalCount(result.meta?.pagination?.totalCount || 0);
+            setTotalPages(result.meta?.pagination?.totalPages || 0);
         } catch (error: any) {
             toast({
                 title: "Error",
@@ -129,21 +130,64 @@ export default function LetterNumberPage() {
     };
 
     const handleCreate = async () => {
+        if (!formData.companyId || formData.companyId <= 0) {
+            toast({
+                title: "Validation Error",
+                description: "Please select a company",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!formData.documentTypeId || formData.documentTypeId <= 0) {
+            toast({
+                title: "Validation Error",
+                description: "Please select a document type",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!formData.subject.trim()) {
+            toast({
+                title: "Validation Error",
+                description: "Subject is required",
+                variant: "destructive",
+            });
+            return;
+        }
+
+        if (!formData.recipient.trim()) {
+            toast({
+                title: "Validation Error",
+                description: "Recipient is required",
+                variant: "destructive",
+            });
+            return;
+        }
+
         try {
+            setIsCreating(true);
             await letterNumberApi.create(formData);
             toast({
                 title: "Success",
-                description: "Letter number created successfully",
+                description: "Letter number generated successfully",
             });
             setIsCreateDialogOpen(false);
             resetForm();
             loadLetters();
         } catch (error: any) {
+            console.error("Create error:", error);
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || (typeof errorData === 'string' ? errorData : null) || error.message || "Failed to create letter number";
+
             toast({
-                title: "Error",
-                description: error.response?.data?.message || "Failed to create letter number",
+                title: "Error Generating Letter Number",
+                description: message,
                 variant: "destructive",
             });
+        } finally {
+            setIsCreating(false);
         }
     };
 
@@ -167,9 +211,12 @@ export default function LetterNumberPage() {
             resetForm();
             loadLetters();
         } catch (error: any) {
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || error.message || "Failed to update letter number";
+
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "Failed to update letter number",
+                description: message,
                 variant: "destructive",
             });
         }
@@ -186,9 +233,12 @@ export default function LetterNumberPage() {
             });
             loadLetters();
         } catch (error: any) {
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || error.message || "Failed to delete letter number";
+
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "Failed to delete letter number",
+                description: message,
                 variant: "destructive",
             });
         }
@@ -254,14 +304,14 @@ export default function LetterNumberPage() {
 
                     {/* Company Filter */}
                     <Select
-                        value={selectedCompany?.toString()}
-                        onValueChange={(value) => setSelectedCompany(value ? parseInt(value) : undefined)}
+                        value={selectedCompany?.toString() || "all"}
+                        onValueChange={(value) => setSelectedCompany(value === "all" ? undefined : parseInt(value))}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="All Companies" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All Companies</SelectItem>
+                            <SelectItem value="all">All Companies</SelectItem>
                             {companies.map((company) => (
                                 <SelectItem key={company.id} value={company.id.toString()}>
                                     {company.name}
@@ -272,14 +322,14 @@ export default function LetterNumberPage() {
 
                     {/* Document Type Filter */}
                     <Select
-                        value={selectedDocType?.toString()}
-                        onValueChange={(value) => setSelectedDocType(value ? parseInt(value) : undefined)}
+                        value={selectedDocType?.toString() || "all"}
+                        onValueChange={(value) => setSelectedDocType(value === "all" ? undefined : parseInt(value))}
                     >
                         <SelectTrigger>
                             <SelectValue placeholder="All Types" />
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="">All Types</SelectItem>
+                            <SelectItem value="all">All Types</SelectItem>
                             {documentTypes.map((type) => (
                                 <SelectItem key={type.id} value={type.id.toString()}>
                                     {type.name}
@@ -371,10 +421,12 @@ export default function LetterNumberPage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span
-                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${LetterStatusColors[LetterStatus[letter.status as keyof typeof LetterStatus]]
+                                                className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${letter.status && (LetterStatusColors as any)[LetterStatus[letter.status as any]]
+                                                    ? (LetterStatusColors as any)[LetterStatus[letter.status as any]]
+                                                    : (LetterStatusColors as any)[letter.status] || "bg-gray-100 text-gray-800"
                                                     }`}
                                             >
-                                                {letter.status}
+                                                {letter.status || "Unknown"}
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -443,12 +495,12 @@ export default function LetterNumberPage() {
                                     >
                                         Previous
                                     </Button>
-                                    {[...Array(totalPages)].map((_, i) => (
+                                    {Number.isFinite(totalPages) && totalPages > 0 && [...Array(totalPages)].map((_, i) => (
                                         <Button
                                             key={i + 1}
                                             onClick={() => setCurrentPage(i + 1)}
                                             variant={currentPage === i + 1 ? "default" : "outline"}
-                                            className="rounded-none"
+                                            className="rounded-none font-medium"
                                         >
                                             {i + 1}
                                         </Button>
@@ -577,8 +629,19 @@ export default function LetterNumberPage() {
                         <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                             Cancel
                         </Button>
-                        <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700">
-                            Create Letter Number
+                        <Button
+                            onClick={handleCreate}
+                            className="bg-indigo-600 hover:bg-indigo-700"
+                            disabled={isCreating}
+                        >
+                            {isCreating ? (
+                                <>
+                                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                    Creating...
+                                </>
+                            ) : (
+                                "Create Letter Number"
+                            )}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

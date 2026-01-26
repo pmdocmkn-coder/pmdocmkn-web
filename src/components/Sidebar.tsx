@@ -105,21 +105,21 @@ const letterNumberMenu: NavItem[] = [
     path: "/letter-numbers",
     icon: FileText,
     id: "letter-numbers",
-    permission: "letter-number.view",
+    permission: "letter.view",
   },
   {
     name: "Companies",
     path: "/companies",
     icon: Building2,
     id: "companies",
-    permission: "letter-number.view",
+    permission: "letter.view",
   },
   {
     name: "Document Types",
     path: "/document-types",
     icon: FileType,
     id: "document-types",
-    permission: "letter-number.view",
+    permission: "letter.view",
   },
 ];
 
@@ -368,8 +368,8 @@ export default function Sidebar({
           }}
           title={isCollapsed ? "Logout" : ""}
           className={`w-full flex items-center mt-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all ${isCollapsed && !isMobile
-              ? "justify-center p-3"
-              : "space-x-3 px-4 py-3"
+            ? "justify-center p-3"
+            : "space-x-3 px-4 py-3"
             }`}
         >
           <LogOut

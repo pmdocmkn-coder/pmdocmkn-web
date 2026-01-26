@@ -25,6 +25,7 @@ import SwrSignalPage from "./components/Swr/SwrSignalPage";
 import LetterNumberPage from "./components/LetterNumberPage";
 import CompanyPage from "./components/CompanyPage";
 import DocumentTypePage from "./components/DocumentTypePage";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/toaster";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
@@ -44,7 +45,7 @@ function hasPermission(permission: string): boolean {
 function getDefaultRoute(): string {
   // Priority order based on permission availability
   if (hasPermission("dashboard.view")) return "/dashboard";
-  if (hasPermission("letter-number.view")) return "/letter-numbers";
+  if (hasPermission("letter.view")) return "/letter-numbers";
   if (hasPermission("inspeksi.temuan-kpc.view")) return "/inspeksi-kpc";
   if (hasPermission("docs.view")) return "/docs";
   if (hasPermission("callrecord.view")) return "/callrecords";
@@ -105,7 +106,7 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState("dashboard");
 
   return (
-    <>
+    <ErrorBoundary>
       <Layout activeTab={activeTab} setActiveTab={setActiveTab}>
         <Routes>
           <Route path="/" element={<DefaultRoute />} />
@@ -197,7 +198,7 @@ function AppContent() {
           <Route
             path="/letter-numbers"
             element={
-              <PermissionGuard permission="letter-number.view">
+              <PermissionGuard permission="letter.view">
                 <LetterNumberPage />
               </PermissionGuard>
             }
@@ -206,7 +207,7 @@ function AppContent() {
           <Route
             path="/companies"
             element={
-              <PermissionGuard permission="letter-number.view">
+              <PermissionGuard permission="letter.view">
                 <CompanyPage />
               </PermissionGuard>
             }
@@ -215,7 +216,7 @@ function AppContent() {
           <Route
             path="/document-types"
             element={
-              <PermissionGuard permission="letter-number.view">
+              <PermissionGuard permission="letter.view">
                 <DocumentTypePage />
               </PermissionGuard>
             }
@@ -238,7 +239,7 @@ function AppContent() {
         </Routes>
       </Layout>
       <Toaster />
-    </>
+    </ErrorBoundary>
   );
 }
 

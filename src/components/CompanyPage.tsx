@@ -81,9 +81,12 @@ export default function CompanyPage() {
             resetForm();
             loadCompanies();
         } catch (error: any) {
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || error.message || "Failed to create company";
+
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "Failed to create company",
+                description: message,
                 variant: "destructive",
             });
         }
@@ -108,9 +111,12 @@ export default function CompanyPage() {
             resetForm();
             loadCompanies();
         } catch (error: any) {
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || error.message || "Failed to update company";
+
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "Failed to update company",
+                description: message,
                 variant: "destructive",
             });
         }

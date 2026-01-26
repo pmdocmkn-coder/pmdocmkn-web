@@ -82,9 +82,12 @@ export default function DocumentTypePage() {
             resetForm();
             loadDocumentTypes();
         } catch (error: any) {
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || error.message || "Failed to create document type";
+
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "Failed to create document type",
+                description: message,
                 variant: "destructive",
             });
         }
@@ -109,9 +112,12 @@ export default function DocumentTypePage() {
             resetForm();
             loadDocumentTypes();
         } catch (error: any) {
+            const errorData = error.response?.data;
+            const message = errorData?.message || errorData?.data?.message || error.message || "Failed to update document type";
+
             toast({
                 title: "Error",
-                description: error.response?.data?.message || "Failed to update document type",
+                description: message,
                 variant: "destructive",
             });
         }
