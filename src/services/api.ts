@@ -7,6 +7,8 @@ import {
   CallRecordsResponse,
   FleetStatisticType,
   FleetStatisticsDto,
+  UniqueCalledDetailDto,
+  UniqueCallerDetailDto,
 } from "../types/callRecord";
 import {
   CreatePermissionRequest,
@@ -608,18 +610,25 @@ export const callRecordApi = {
   },
 
   getFleetStatistics: async (
-    date?: string,
+    startDate?: string,
+    endDate?: string,
     top: number = 10,
-    type?: FleetStatisticType
+    type?: FleetStatisticType,
+    sortOrder: string = "DESC",
+    callerSearch?: string,
+    calledSearch?: string
   ): Promise<FleetStatisticsDto> => {
     try {
-      console.log("📡 API Call: getFleetStatistics", { date, top, type });
+      console.log("📡 API Call: getFleetStatistics", { startDate, endDate, top, type, sortOrder, callerSearch, calledSearch });
 
-      const params: any = { top };
-      if (date) params.date = date;
+      const params: any = { top, sortOrder };
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
       if (type && type !== FleetStatisticType.All) {
         params.type = type;
       }
+      if (callerSearch) params.callerSearch = callerSearch;
+      if (calledSearch) params.calledSearch = calledSearch;
 
       const response = await api.get("/api/call-records/fleet-statistics", {
         params,
@@ -631,6 +640,58 @@ export const callRecordApi = {
       console.error("❌ Error loading fleet statistics:", error);
       const errorMessage = error.response?.data?.message || error.message;
       throw new Error(`Failed to load fleet statistics: ${errorMessage}`);
+    }
+  },
+
+  // New: Get unique callers for a specific called fleet (for detail popup)
+  getUniqueCallersForFleet: async (
+    calledFleet: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<UniqueCallerDetailDto[]> => {
+    try {
+      console.log("📡 API Call: getUniqueCallersForFleet", { calledFleet, startDate, endDate });
+
+      const params: any = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const response = await api.get(`/api/call-records/fleet-statistics/callers/${encodeURIComponent(calledFleet)}`, {
+        params,
+      });
+      console.log("📊 Unique Callers Data:", response.data);
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error("❌ Error loading unique callers:", error);
+      const errorMessage = error.response?.data?.message || error.message;
+      throw new Error(`Failed to load unique callers: ${errorMessage}`);
+    }
+  },
+
+  // New: Get unique called fleets for a specific caller (for detail popup)
+  getUniqueCalledFleetsForCaller: async (
+    callerFleet: string,
+    startDate?: string,
+    endDate?: string
+  ): Promise<UniqueCalledDetailDto[]> => {
+    try {
+      console.log("📡 API Call: getUniqueCalledFleetsForCaller", { callerFleet, startDate, endDate });
+
+      const params: any = {};
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+
+      const response = await api.get(`/api/call-records/fleet-statistics/called/${encodeURIComponent(callerFleet)}`, {
+        params,
+      });
+      console.log("📊 Unique Called Fleets Data:", response.data);
+
+      return response.data.data;
+    } catch (error: any) {
+      console.error("❌ Error loading unique called fleets:", error);
+      const errorMessage = error.response?.data?.message || error.message;
+      throw new Error(`Failed to load unique called fleets: ${errorMessage}`);
     }
   },
 };

@@ -70,6 +70,22 @@ export enum FleetStatisticType {
   Called = "Called",
 }
 
+// New: Detail DTO for unique callers (used in detail popup)
+export interface UniqueCallerDetailDto {
+  callerFleet: string;
+  callCount: number;
+  totalDurationSeconds: number;
+  totalDurationFormatted: string;
+}
+
+// New: Detail DTO for unique called fleets (used in detail popup)
+export interface UniqueCalledDetailDto {
+  calledFleet: string;
+  callCount: number;
+  totalDurationSeconds: number;
+  totalDurationFormatted: string;
+}
+
 export interface TopCallerFleetDto {
   rank: number;
   callerFleet: string;
@@ -78,6 +94,7 @@ export interface TopCallerFleetDto {
   totalDurationFormatted: string;
   averageDurationSeconds: number;
   averageDurationFormatted: string;
+  uniqueCalledFleets: number; // New: how many fleets this caller called
 }
 
 export interface TopCalledFleetDto {
@@ -101,3 +118,4 @@ export interface FleetStatisticsDto {
   totalUniqueCallers: number;
   totalUniqueCalledFleets: number;
 }
+
