@@ -83,10 +83,10 @@ const FleetStatisticsPage: React.FC = () => {
 
   // New state for enhancements
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+  const [sortBy, setSortBy] = useState<'calls' | 'unique'>('calls');
   const [callerSearch, setCallerSearch] = useState('');
   const [calledSearch, setCalledSearch] = useState('');
 
-  // Detail modal state
   const [detailModal, setDetailModal] = useState<{
     isOpen: boolean;
     type: 'caller' | 'called';
@@ -95,22 +95,28 @@ const FleetStatisticsPage: React.FC = () => {
     isLoading: boolean;
   }>({ isOpen: false, type: 'caller', fleet: '', data: [], isLoading: false });
 
+  // Modal search and sort states
+  const [modalSearch, setModalSearch] = useState('');
+  const [modalSortField, setModalSortField] = useState<'calls' | 'duration'>('calls');
+  const [modalSortOrder, setModalSortOrder] = useState<'ASC' | 'DESC'>('DESC');
+
   useEffect(() => {
     loadFleetStatistics();
-  }, [startDate, endDate, topCount, statisticType, sortOrder]);
+  }, [startDate, endDate, topCount, statisticType, sortOrder, sortBy]);
 
   const loadFleetStatistics = async () => {
     setError(null);
     setIsLoading(true);
 
     try {
-      console.log('🔄 Loading fleet statistics...', { startDate, endDate, topCount, statisticType, sortOrder, callerSearch, calledSearch });
+      console.log('🔄 Loading fleet statistics...', { startDate, endDate, topCount, statisticType, sortOrder, sortBy, callerSearch, calledSearch });
       const data = await callRecordApi.getFleetStatistics(
         startDate,
         endDate,
         topCount,
         statisticType,
         sortOrder,
+        sortBy,
         callerSearch || undefined,
         calledSearch || undefined
       );
@@ -127,6 +133,9 @@ const FleetStatisticsPage: React.FC = () => {
   // Load unique callers detail for a called fleet
   const loadUniqueCallersDetail = async (calledFleet: string) => {
     setDetailModal(prev => ({ ...prev, isOpen: true, type: 'caller', fleet: calledFleet, isLoading: true, data: [] }));
+    setModalSearch('');
+    setModalSortField('calls');
+    setModalSortOrder('DESC');
     try {
       const data = await callRecordApi.getUniqueCallersForFleet(calledFleet, startDate, endDate);
       setDetailModal(prev => ({ ...prev, data, isLoading: false }));
@@ -346,7 +355,44 @@ const FleetStatisticsPage: React.FC = () => {
                     </motion.button>
                   </div>
                   <p className="text-xs text-gray-500">
-                    {sortOrder === 'DESC' ? 'Highest calls first' : 'Lowest calls first'}
+                    {sortOrder === 'DESC' ? 'Highest values first' : 'Lowest values first'}
+                  </p>
+                </div>
+
+                {/* Sort By */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 flex items-center">
+                    <TrendingUp className="w-4 h-4 mr-2 text-orange-500" />
+                    Sort By
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSortBy('calls')}
+                      className={`px-3 py-3 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${sortBy === 'calls'
+                        ? 'bg-orange-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                        }`}
+                    >
+                      <Phone className="w-4 h-4" />
+                      <span>Calls</span>
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => setSortBy('unique')}
+                      className={`px-3 py-3 text-sm font-medium rounded-lg transition-all flex items-center justify-center gap-1 ${sortBy === 'unique'
+                        ? 'bg-orange-600 text-white shadow-md'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300'
+                        }`}
+                    >
+                      <Users className="w-4 h-4" />
+                      <span>Unique</span>
+                    </motion.button>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {sortBy === 'calls' ? 'Sort by Total Calls' : 'Sort by Unique Callers'}
                   </p>
                 </div>
 
@@ -856,48 +902,130 @@ const FleetStatisticsPage: React.FC = () => {
                     <span className="ml-3 text-gray-600">Loading details...</span>
                   </div>
                 ) : detailModal.data.length > 0 ? (
-                  <table className="min-w-full divide-y divide-gray-200">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                          {detailModal.type === 'caller' ? 'Caller Fleet' : 'Called Fleet'}
-                        </th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total Calls</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Duration</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {detailModal.data.map((item, index) => (
-                        <motion.tr
-                          key={detailModal.type === 'caller'
-                            ? (item as UniqueCallerDetailDto).callerFleet
-                            : (item as UniqueCalledDetailDto).calledFleet}
-                          initial={{ opacity: 0, x: -20 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          transition={{ delay: index * 0.03 }}
-                          className="hover:bg-gray-50"
+                  <>
+                    {/* Search and Sort Controls */}
+                    <div className="mb-4 flex flex-wrap items-center gap-3">
+                      <div className="relative flex-1 min-w-[200px]">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                          type="text"
+                          value={modalSearch}
+                          onChange={(e) => setModalSearch(e.target.value)}
+                          placeholder="Search fleet ID..."
+                          className="w-full pl-9 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                        />
+                        {modalSearch && (
+                          <button
+                            onClick={() => setModalSearch('')}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-gray-500">Sort:</span>
+                        <button
+                          onClick={() => setModalSortField('calls')}
+                          className={`px-2 py-1 text-xs rounded ${modalSortField === 'calls' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}
                         >
-                          <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-                          <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                            {detailModal.type === 'caller'
-                              ? (item as UniqueCallerDetailDto).callerFleet
-                              : (item as UniqueCalledDetailDto).calledFleet}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-900 font-mono">
-                            {detailModal.type === 'caller'
-                              ? (item as UniqueCallerDetailDto).callCount.toLocaleString()
-                              : (item as UniqueCalledDetailDto).callCount.toLocaleString()}
-                          </td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {detailModal.type === 'caller'
-                              ? (item as UniqueCallerDetailDto).totalDurationFormatted
-                              : (item as UniqueCalledDetailDto).totalDurationFormatted}
-                          </td>
-                        </motion.tr>
-                      ))}
-                    </tbody>
-                  </table>
+                          Calls
+                        </button>
+                        <button
+                          onClick={() => setModalSortField('duration')}
+                          className={`px-2 py-1 text-xs rounded ${modalSortField === 'duration' ? 'bg-purple-600 text-white' : 'bg-gray-100 text-gray-600'}`}
+                        >
+                          Duration
+                        </button>
+                        <button
+                          onClick={() => setModalSortOrder(modalSortOrder === 'ASC' ? 'DESC' : 'ASC')}
+                          className="px-2 py-1 text-xs rounded bg-gray-100 text-gray-600 hover:bg-gray-200"
+                        >
+                          {modalSortOrder === 'DESC' ? <ArrowDown className="w-3 h-3" /> : <ArrowUp className="w-3 h-3" />}
+                        </button>
+                      </div>
+                    </div>
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                            {detailModal.type === 'caller' ? 'Caller Fleet' : 'Called Fleet'}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                            onClick={() => { setModalSortField('calls'); setModalSortOrder(modalSortField === 'calls' && modalSortOrder === 'DESC' ? 'ASC' : 'DESC'); }}
+                          >
+                            Total Calls {modalSortField === 'calls' && (modalSortOrder === 'DESC' ? '↓' : '↑')}
+                          </th>
+                          <th
+                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                            onClick={() => { setModalSortField('duration'); setModalSortOrder(modalSortField === 'duration' && modalSortOrder === 'DESC' ? 'ASC' : 'DESC'); }}
+                          >
+                            Duration {modalSortField === 'duration' && (modalSortOrder === 'DESC' ? '↓' : '↑')}
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {/* Filter and sort data client-side */}
+                        {(() => {
+                          let filteredData = [...detailModal.data];
+
+                          // Apply search filter
+                          if (modalSearch) {
+                            filteredData = filteredData.filter(item => {
+                              const fleet = detailModal.type === 'caller'
+                                ? (item as UniqueCallerDetailDto).callerFleet
+                                : (item as UniqueCalledDetailDto).calledFleet;
+                              return fleet.toLowerCase().includes(modalSearch.toLowerCase());
+                            });
+                          }
+
+                          // Apply sort
+                          filteredData.sort((a, b) => {
+                            let aVal, bVal;
+                            if (modalSortField === 'calls') {
+                              aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).callCount : (a as UniqueCalledDetailDto).callCount;
+                              bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).callCount : (b as UniqueCalledDetailDto).callCount;
+                            } else {
+                              aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).totalDurationSeconds : (a as UniqueCalledDetailDto).totalDurationSeconds;
+                              bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).totalDurationSeconds : (b as UniqueCalledDetailDto).totalDurationSeconds;
+                            }
+                            return modalSortOrder === 'DESC' ? bVal - aVal : aVal - bVal;
+                          });
+
+                          return filteredData.map((item, index) => (
+                            <motion.tr
+                              key={detailModal.type === 'caller'
+                                ? (item as UniqueCallerDetailDto).callerFleet
+                                : (item as UniqueCalledDetailDto).calledFleet}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: index * 0.02 }}
+                              className="hover:bg-gray-50"
+                            >
+                              <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                {detailModal.type === 'caller'
+                                  ? (item as UniqueCallerDetailDto).callerFleet
+                                  : (item as UniqueCalledDetailDto).calledFleet}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900 font-mono">
+                                {detailModal.type === 'caller'
+                                  ? (item as UniqueCallerDetailDto).callCount.toLocaleString()
+                                  : (item as UniqueCalledDetailDto).callCount.toLocaleString()}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-600">
+                                {detailModal.type === 'caller'
+                                  ? (item as UniqueCallerDetailDto).totalDurationFormatted
+                                  : (item as UniqueCalledDetailDto).totalDurationFormatted}
+                              </td>
+                            </motion.tr>
+                          ));
+                        })()}
+                      </tbody>
+                    </table>
+                  </>
                 ) : (
                   <div className="text-center py-8 text-gray-500">
                     <Users className="w-12 h-12 mx-auto mb-3 text-gray-300" />

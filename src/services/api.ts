@@ -615,13 +615,14 @@ export const callRecordApi = {
     top: number = 10,
     type?: FleetStatisticType,
     sortOrder: string = "DESC",
+    sortBy: string = "calls",
     callerSearch?: string,
     calledSearch?: string
   ): Promise<FleetStatisticsDto> => {
     try {
-      console.log("📡 API Call: getFleetStatistics", { startDate, endDate, top, type, sortOrder, callerSearch, calledSearch });
+      console.log("📡 API Call: getFleetStatistics", { startDate, endDate, top, type, sortOrder, sortBy, callerSearch, calledSearch });
 
-      const params: any = { top, sortOrder };
+      const params: any = { top, sortOrder, sortBy };
       if (startDate) params.startDate = startDate;
       if (endDate) params.endDate = endDate;
       if (type && type !== FleetStatisticType.All) {
