@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X } from 'lucide-react';
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion';
-import { callRecordApi } from '../services/api';
+import { callRecordApi, authApi } from '../services/api';
 import { FleetStatisticsDto, FleetStatisticType, TopCallerFleetDto, TopCalledFleetDto, UniqueCallerDetailDto, UniqueCalledDetailDto } from '../types/callRecord';
 
 // Animation Variants
@@ -100,9 +100,25 @@ const FleetStatisticsPage: React.FC = () => {
   const [modalSortField, setModalSortField] = useState<'calls' | 'duration'>('calls');
   const [modalSortOrder, setModalSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
+  // Permission state
+  const [canExport, setCanExport] = useState(false);
+
   useEffect(() => {
     loadFleetStatistics();
+    checkPermissions();
   }, [startDate, endDate, topCount, statisticType, sortOrder, sortBy]);
+
+  const checkPermissions = () => {
+    const permissions = authApi.getPermissions ? authApi.getPermissions() : [];
+    // Fallback if authApi doesn't have getPermissions, try localStorage directly
+    if (permissions.length === 0) {
+      const perms = localStorage.getItem("permissions");
+      const parsedPerms = perms ? JSON.parse(perms) : [];
+      setCanExport(parsedPerms.includes('callrecord.export-excel'));
+    } else {
+      setCanExport(permissions.includes('callrecord.export-excel'));
+    }
+  };
 
   const loadFleetStatistics = async () => {
     setError(null);
@@ -154,6 +170,17 @@ const FleetStatisticsPage: React.FC = () => {
     } catch (err: any) {
       console.error('❌ Error loading unique called fleets:', err);
       setDetailModal(prev => ({ ...prev, isLoading: false }));
+    }
+  };
+
+  const handleExportUniqueCallers = async () => {
+    if (!detailModal.fleet) return;
+
+    try {
+      await callRecordApi.exportUniqueCallersExcel(detailModal.fleet, startDate, endDate);
+    } catch (err) {
+      console.error('Failed to export unique callers:', err);
+      // Optional: Add toast notification here
     }
   };
 
@@ -884,15 +911,27 @@ const FleetStatisticsPage: React.FC = () => {
                       : `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`}
                   </p>
                 </div>
-                <motion.button
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.9 }}
-                  onClick={closeDetailModal}
-                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
-                >
-                  <X className="w-5 h-5" />
-                </motion.button>
-              </div>
+                <div className="flex items-center gap-2">
+                  {canExport && (
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={handleExportUniqueCallers}
+                      className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-sm"
+                    >
+                      <Download className="w-4 h-4 mr-1.5" />
+                      Export
+                    </motion.button>
+                  )}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={closeDetailModal}
+                    className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700"
+                  >
+                    <X className="w-5 h-5" />
+                  </motion.button>
+                </div>              </div>
 
               {/* Modal Body */}
               <div className="p-6 overflow-y-auto max-h-[60vh]">

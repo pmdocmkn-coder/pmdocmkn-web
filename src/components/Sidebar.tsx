@@ -22,6 +22,9 @@ import {
   FileText,
   Building2,
   FileType,
+  RadioReceiver,
+  PencilRuler,
+  Trash2,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -147,6 +150,41 @@ const callRecordsMenu: NavItem[] = [
   },
 ];
 
+const radioMenu: NavItem[] = [
+  {
+    name: "Radio Trunking",
+    path: "/radio-trunking",
+    icon: Radio,
+    id: "radio-trunking",
+    permission: "radio.view",
+    forAll: true,
+  },
+  {
+    name: "Radio Conventional",
+    path: "/radio-conventional",
+    icon: RadioReceiver,
+    id: "radio-conventional",
+    permission: "radio.view",
+    forAll: true,
+  },
+  {
+    name: "Radio Grafir",
+    path: "/radio-grafir",
+    icon: PencilRuler,
+    id: "radio-grafir",
+    permission: "radio.view",
+    forAll: true,
+  },
+  {
+    name: "Radio Scrap",
+    path: "/radio-scrap",
+    icon: Trash2,
+    id: "radio-scrap",
+    permission: "radio.view",
+    forAll: true,
+  },
+];
+
 export default function Sidebar({
   activeTab,
   setActiveTab,
@@ -169,6 +207,11 @@ export default function Sidebar({
   const filteredLetterNumbers = letterNumberMenu.filter(
     (item) => !item.permission || hasPermission(item.permission)
   );
+  const filteredRadioMenu = radioMenu.filter(
+    (item) => item.forAll || !item.permission || hasPermission(item.permission)
+  );
+
+  const [isRadioOpen, setIsRadioOpen] = useState(true);
 
   const NavLink = ({
     item,
@@ -251,13 +294,15 @@ export default function Sidebar({
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden space-y-1 mt-1"
+                      className="space-y-1 mt-1"
                     >
                       {filteredCallRecords.map((item) => (
                         <NavLink
                           key={item.id}
                           item={item}
-                          onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                          onClick={() =>
+                            isMobile && setIsMobileMenuOpen(false)
+                          }
                         />
                       ))}
                     </motion.div>
@@ -265,38 +310,43 @@ export default function Sidebar({
                 </AnimatePresence>
               </>
             ) : (
-              <div className="h-px bg-white/10 my-4 mx-2" />
+              // Collapsed state - show icons
+              filteredCallRecords.map((item) => (
+                <NavLink key={item.id} item={item} />
+              ))
             )}
           </div>
         )}
 
-        {filteredLetterNumbers.length > 0 && (
+        {filteredRadioMenu.length > 0 && (
           <div className="mt-6">
             {!isCollapsed || isMobile ? (
               <>
                 <button
-                  onClick={() => setIsLetterNumberOpen(!isLetterNumberOpen)}
+                  onClick={() => setIsRadioOpen(!isRadioOpen)}
                   className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
                 >
-                  <span>Letter Numbering</span>
+                  <span>Radio Management</span>
                   <ChevronDown
-                    className={`w-4 h-4 transition-transform ${isLetterNumberOpen ? "rotate-180" : ""
+                    className={`w-4 h-4 transition-transform ${isRadioOpen ? "rotate-180" : ""
                       }`}
                   />
                 </button>
                 <AnimatePresence>
-                  {isLetterNumberOpen && (
+                  {isRadioOpen && (
                     <motion.div
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden space-y-1 mt-1"
+                      className="space-y-1 mt-1"
                     >
-                      {filteredLetterNumbers.map((item) => (
+                      {filteredRadioMenu.map((item) => (
                         <NavLink
                           key={item.id}
                           item={item}
-                          onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                          onClick={() =>
+                            isMobile && setIsMobileMenuOpen(false)
+                          }
                         />
                       ))}
                     </motion.div>
@@ -304,25 +354,72 @@ export default function Sidebar({
                 </AnimatePresence>
               </>
             ) : (
-              <div className="h-px bg-white/10 my-4 mx-2" />
+              // Collapsed state - show icons
+              filteredRadioMenu.map((item) => (
+                <NavLink key={item.id} item={item} />
+              ))
             )}
           </div>
         )}
 
-        {hasPermission("role.view") && (
-          <div className={isCollapsed && !isMobile ? "mt-2" : "mt-6"}>
-            <NavLink
-              item={{
-                name: "Settings",
-                path: "/settings",
-                icon: Settings,
-                id: "settings",
-              }}
-              onClick={() => isMobile && setIsMobileMenuOpen(false)}
-            />
-          </div>
-        )}
-      </div>
+
+        {
+          filteredLetterNumbers.length > 0 && (
+            <div className="mt-6">
+              {!isCollapsed || isMobile ? (
+                <>
+                  <button
+                    onClick={() => setIsLetterNumberOpen(!isLetterNumberOpen)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                  >
+                    <span>Letter Numbering</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${isLetterNumberOpen ? "rotate-180" : ""
+                        }`}
+                    />
+                  </button>
+                  <AnimatePresence>
+                    {isLetterNumberOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden space-y-1 mt-1"
+                      >
+                        {filteredLetterNumbers.map((item) => (
+                          <NavLink
+                            key={item.id}
+                            item={item}
+                            onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              ) : (
+                <div className="h-px bg-white/10 my-4 mx-2" />
+              )}
+            </div>
+          )
+        }
+
+        {
+          hasPermission("role.view") && (
+            <div className={isCollapsed && !isMobile ? "mt-2" : "mt-6"}>
+              <NavLink
+                item={{
+                  name: "Settings",
+                  path: "/settings",
+                  icon: Settings,
+                  id: "settings",
+                }}
+                onClick={() => isMobile && setIsMobileMenuOpen(false)}
+              />
+            </div>
+          )
+        }
+      </div >
 
       {/* Footer / User */}
       <div
@@ -378,8 +475,8 @@ export default function Sidebar({
           />
           {(!isCollapsed || isMobile) && <span>Logout</span>}
         </button>
-      </div>
-    </div>
+      </div >
+    </div >
   );
 
   return (

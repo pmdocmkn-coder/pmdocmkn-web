@@ -695,6 +695,31 @@ export const callRecordApi = {
       throw new Error(`Failed to load unique called fleets: ${errorMessage}`);
     }
   },
+
+  exportUniqueCallersExcel: async (calledFleet: string, startDate: string, endDate: string): Promise<void> => {
+    try {
+      const response = await api.get(
+        `/api/call-records/export/unique-callers/${encodeURIComponent(calledFleet)}?startDate=${startDate}&endDate=${endDate}`,
+        {
+          responseType: "blob",
+        }
+      );
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `UniqueCallers_${calledFleet}_${startDate}_to_${endDate}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+      console.log("📤 Unique Callers Excel Export completed");
+    } catch (error: any) {
+      console.error("❌ Error exporting unique callers Excel:", error);
+      throw error;
+    }
+  },
 };
 
 // ============================================

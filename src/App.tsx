@@ -27,6 +27,10 @@ import CompanyPage from "./components/CompanyPage";
 import DocumentTypePage from "./components/DocumentTypePage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/toaster";
+import RadioTrunkingPage from "./components/Radio/RadioTrunkingPage";
+import RadioConventionalPage from "./components/Radio/RadioConventionalPage";
+import RadioGrafirPage from "./components/Radio/RadioGrafirPage";
+import RadioScrapPage from "./components/Radio/RadioScrapPage";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -193,6 +197,12 @@ function AppContent() {
           <Route path="/nec-management" element={<NecTowerLinkManagement />} />
 
           <Route path="/swr-signal" element={<SwrSignalPage />} />
+
+          {/* ✅ RADIO MANAGEMENT ROUTES */}
+          <Route path="/radio-trunking" element={<RadioTrunkingPage />} />
+          <Route path="/radio-conventional" element={<RadioConventionalPage />} />
+          <Route path="/radio-grafir" element={<RadioGrafirPage />} />
+          <Route path="/radio-scrap" element={<RadioScrapPage />} />
 
           {/* ✅ LETTER NUMBERING ROUTES */}
           <Route
