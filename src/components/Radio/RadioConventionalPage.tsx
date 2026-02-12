@@ -339,10 +339,12 @@ export default function RadioConventionalPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Unit Number</TableHead>
-                            <TableHead>Radio ID</TableHead>
-                            <TableHead>Department</TableHead>
+                            <TableHead>Dept</TableHead>
                             <TableHead>Fleet</TableHead>
+                            <TableHead>Radio ID</TableHead>
                             <TableHead>Serial Number</TableHead>
+                            <TableHead>Radio Type</TableHead>
+                            <TableHead>Frequency</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -350,7 +352,7 @@ export default function RadioConventionalPage() {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8">
+                                <TableCell colSpan={9} className="text-center py-8">
                                     <div className="flex justify-center">
                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                                     </div>
@@ -358,7 +360,7 @@ export default function RadioConventionalPage() {
                             </TableRow>
                         ) : data.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
                                     No records found
                                 </TableCell>
                             </TableRow>
@@ -366,10 +368,12 @@ export default function RadioConventionalPage() {
                             data.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.unitNumber}</TableCell>
-                                    <TableCell>{item.radioId}</TableCell>
                                     <TableCell>{item.dept || "-"}</TableCell>
                                     <TableCell>{item.fleet || "-"}</TableCell>
+                                    <TableCell>{item.radioId}</TableCell>
                                     <TableCell>{item.serialNumber || "-"}</TableCell>
+                                    <TableCell>{item.radioType || "-"}</TableCell>
+                                    <TableCell>{item.frequency || "-"}</TableCell>
                                     <TableCell>
                                         <Badge variant={item.status === "Active" ? "default" : item.status === "Repair" ? "secondary" : "destructive"}>
                                             {item.status}

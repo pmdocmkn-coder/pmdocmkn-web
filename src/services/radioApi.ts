@@ -13,31 +13,31 @@ import {
 
 export const radioTrunkingApi = {
     getAll: (params: RadioTrunkingQuery) => {
-        return api.get<PagedResult<RadioTrunking>>("/radio-trunking", { params });
+        return api.get<PagedResult<RadioTrunking>>("/api/radio-trunking", { params });
     },
 
     getById: (id: number) => {
-        return api.get<RadioTrunking>(`/radio-trunking/${id}`);
+        return api.get<RadioTrunking>(`/api/radio-trunking/${id}`);
     },
 
     create: (data: CreateRadioTrunkingDto) => {
-        return api.post<RadioTrunking>("/radio-trunking", data);
+        return api.post<RadioTrunking>("/api/radio-trunking", data);
     },
 
     update: (id: number, data: UpdateRadioTrunkingDto) => {
-        return api.put<RadioTrunking>(`/radio-trunking/${id}`, data);
+        return api.put<RadioTrunking>(`/api/radio-trunking/${id}`, data);
     },
 
     delete: (id: number) => {
-        return api.delete(`/radio-trunking/${id}`);
+        return api.delete(`/api/radio-trunking/${id}`);
     },
 
     getHistory: (id: number) => {
-        return api.get<RadioHistory[]>(`/radio-trunking/${id}/history`);
+        return api.get<RadioHistory[]>(`/api/radio-trunking/${id}/history`);
     },
 
     exportCsv: (params: RadioTrunkingQuery) => {
-        return api.get("/radio-trunking/export", {
+        return api.get("/api/radio-trunking/export", {
             params,
             responseType: "blob"
         });
@@ -46,13 +46,13 @@ export const radioTrunkingApi = {
     importCsv: (file: File) => {
         const formData = new FormData();
         formData.append("file", file);
-        return apiLongRunning.post<ImportResult>("/radio-trunking/import", formData, {
+        return apiLongRunning.post<ImportResult>("/api/radio-trunking/import", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
     },
 
     getTemplate: () => {
-        return api.get("/radio-trunking/template", { responseType: "blob" });
+        return api.get("/api/radio-trunking/template", { responseType: "blob" });
     }
 };
 
@@ -62,31 +62,31 @@ export const radioTrunkingApi = {
 
 export const radioConventionalApi = {
     getAll: (params: RadioConventionalQuery) => {
-        return api.get<PagedResult<RadioConventional>>("/radio-conventional", { params });
+        return api.get<PagedResult<RadioConventional>>("/api/radio-conventional", { params });
     },
 
     getById: (id: number) => {
-        return api.get<RadioConventional>(`/radio-conventional/${id}`);
+        return api.get<RadioConventional>(`/api/radio-conventional/${id}`);
     },
 
     create: (data: CreateRadioConventionalDto) => {
-        return api.post<RadioConventional>("/radio-conventional", data);
+        return api.post<RadioConventional>("/api/radio-conventional", data);
     },
 
     update: (id: number, data: UpdateRadioConventionalDto) => {
-        return api.put<RadioConventional>(`/radio-conventional/${id}`, data);
+        return api.put<RadioConventional>(`/api/radio-conventional/${id}`, data);
     },
 
     delete: (id: number) => {
-        return api.delete(`/radio-conventional/${id}`);
+        return api.delete(`/api/radio-conventional/${id}`);
     },
 
     getHistory: (id: number) => {
-        return api.get<RadioHistory[]>(`/radio-conventional/${id}/history`);
+        return api.get<RadioHistory[]>(`/api/radio-conventional/${id}/history`);
     },
 
     exportCsv: (params: RadioConventionalQuery) => {
-        return api.get("/radio-conventional/export", {
+        return api.get("/api/radio-conventional/export", {
             params,
             responseType: "blob"
         });
@@ -95,13 +95,13 @@ export const radioConventionalApi = {
     importCsv: (file: File) => {
         const formData = new FormData();
         formData.append("file", file);
-        return apiLongRunning.post<ImportResult>("/radio-conventional/import", formData, {
+        return apiLongRunning.post<ImportResult>("/api/radio-conventional/import", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
     },
 
     getTemplate: () => {
-        return api.get("/radio-conventional/template", { responseType: "blob" });
+        return api.get("/api/radio-conventional/template", { responseType: "blob" });
     }
 };
 
@@ -111,35 +111,35 @@ export const radioConventionalApi = {
 
 export const radioGrafirApi = {
     getAll: (params: RadioGrafirQuery) => {
-        return api.get<PagedResult<RadioGrafir>>("/radio-grafir", { params });
+        return api.get<PagedResult<RadioGrafir>>("/api/radio-grafir", { params });
     },
 
     getById: (id: number) => {
-        return api.get<RadioGrafir>(`/radio-grafir/${id}`);
+        return api.get<RadioGrafir>(`/api/radio-grafir/${id}`);
     },
 
     create: (data: CreateRadioGrafirDto) => {
-        return api.post<RadioGrafir>("/radio-grafir", data);
+        return api.post<RadioGrafir>("/api/radio-grafir", data);
     },
 
     update: (id: number, data: UpdateRadioGrafirDto) => {
-        return api.put<RadioGrafir>(`/radio-grafir/${id}`, data);
+        return api.put<RadioGrafir>(`/api/radio-grafir/${id}`, data);
     },
 
     delete: (id: number) => {
-        return api.delete(`/radio-grafir/${id}`);
+        return api.delete(`/api/radio-grafir/${id}`);
     },
 
     getLinkedTrunking: (id: number) => {
-        return api.get<RadioTrunking[]>(`/radio-grafir/${id}/trunking`);
+        return api.get<RadioTrunking | null>(`/api/radio-grafir/${id}/trunking`);
     },
 
     getLinkedConventional: (id: number) => {
-        return api.get<RadioConventional[]>(`/radio-grafir/${id}/conventional`);
+        return api.get<RadioConventional | null>(`/api/radio-grafir/${id}/conventional`);
     },
 
     exportCsv: (params: RadioGrafirQuery) => {
-        return api.get("/radio-grafir/export", {
+        return api.get("/api/radio-grafir/export", {
             params,
             responseType: "blob"
         });
@@ -148,13 +148,13 @@ export const radioGrafirApi = {
     importCsv: (file: File) => {
         const formData = new FormData();
         formData.append("file", file);
-        return apiLongRunning.post<ImportResult>("/radio-grafir/import", formData, {
+        return apiLongRunning.post<ImportResult>("/api/radio-grafir/import", formData, {
             headers: { "Content-Type": "multipart/form-data" },
         });
     },
 
     getTemplate: () => {
-        return api.get("/radio-grafir/template", { responseType: "blob" });
+        return api.get("/api/radio-grafir/template", { responseType: "blob" });
     }
 };
 
@@ -164,39 +164,39 @@ export const radioGrafirApi = {
 
 export const radioScrapApi = {
     getAll: (params: RadioScrapQuery) => {
-        return api.get<PagedResult<RadioScrap>>("/radio-scrap", { params });
+        return api.get<PagedResult<RadioScrap>>("/api/radio-scrap", { params });
     },
 
     getById: (id: number) => {
-        return api.get<RadioScrap>(`/radio-scrap/${id}`);
+        return api.get<RadioScrap>(`/api/radio-scrap/${id}`);
     },
 
     create: (data: CreateRadioScrapDto) => {
-        return api.post<RadioScrap>("/radio-scrap", data);
+        return api.post<RadioScrap>("/api/radio-scrap", data);
     },
 
     scrapFromTrunking: (id: number, data: ScrapFromRadioDto) => {
-        return api.post<RadioScrap>(`/radio-scrap/from-trunking/${id}`, data);
+        return api.post<RadioScrap>(`/api/radio-scrap/from-trunking/${id}`, data);
     },
 
     scrapFromConventional: (id: number, data: ScrapFromRadioDto) => {
-        return api.post<RadioScrap>(`/radio-scrap/from-conventional/${id}`, data);
+        return api.post<RadioScrap>(`/api/radio-scrap/from-conventional/${id}`, data);
     },
 
     update: (id: number, data: CreateRadioScrapDto) => {
-        return api.put<RadioScrap>(`/radio-scrap/${id}`, data);
+        return api.put<RadioScrap>(`/api/radio-scrap/${id}`, data);
     },
 
     delete: (id: number) => {
-        return api.delete(`/radio-scrap/${id}`);
+        return api.delete(`/api/radio-scrap/${id}`);
     },
 
     getYearlySummary: (year?: number) => {
-        return api.get<YearlyScrapSummary>("/radio-scrap/yearly-summary", { params: { year } });
+        return api.get<YearlyScrapSummary>("/api/radio-scrap/yearly-summary", { params: { year } });
     },
 
     exportCsv: (params: RadioScrapQuery) => {
-        return api.get("/radio-scrap/export", {
+        return api.get("/api/radio-scrap/export", {
             params,
             responseType: "blob"
         });

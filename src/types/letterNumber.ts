@@ -37,7 +37,7 @@ export interface LetterNumberCreate {
     subject: string;
     recipient: string;
     attachmentUrl?: string;
-    status: number; // 0=Draft, 1=Sent, 2=Archived
+    status: number; // 0=Draft, 1=Sent
 }
 
 export interface LetterNumberUpdate {
@@ -190,17 +190,14 @@ export interface ApiResponse<T> {
 export enum LetterStatus {
     Draft = 0,
     Sent = 1,
-    Archived = 2,
 }
 
 export const LetterStatusLabels = {
     [LetterStatus.Draft]: "Draft",
     [LetterStatus.Sent]: "Terkirim",
-    [LetterStatus.Archived]: "Arsip",
 };
 
 export const LetterStatusColors = {
     [LetterStatus.Draft]: "bg-yellow-100 text-yellow-800",
     [LetterStatus.Sent]: "bg-green-100 text-green-800",
-    [LetterStatus.Archived]: "bg-gray-100 text-gray-800",
 };

@@ -93,6 +93,7 @@ export default function RadioTrunkingPage() {
         initiator: "",
         firmware: "",
         channelApply: "",
+        remarks: "",
     });
 
     useEffect(() => {
@@ -201,6 +202,7 @@ export default function RadioTrunkingPage() {
             initiator: radio.initiator,
             firmware: radio.firmware,
             channelApply: radio.channelApply,
+            remarks: radio.remarks,
             grafirId: radio.grafirId,
         });
         setIsEditOpen(true);
@@ -220,6 +222,7 @@ export default function RadioTrunkingPage() {
             initiator: "",
             firmware: "",
             channelApply: "",
+            remarks: "",
         });
         setSelectedRadio(null);
     };
@@ -252,7 +255,7 @@ export default function RadioTrunkingPage() {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement("a");
             link.href = url;
-            link.setAttribute("download", `radio_trunking_${new Date().toISOString().split("T")[0]}.csv`);
+            link.setAttribute("download", `radio_trunking_${new Date().toISOString().split("T")[0]}.xlsx`);
             document.body.appendChild(link);
             link.click();
         } catch (error) {
@@ -273,10 +276,29 @@ export default function RadioTrunkingPage() {
             link.setAttribute("download", "radio_trunking_template.csv");
             document.body.appendChild(link);
             link.click();
-        } catch (error) {
+        } catch (error: any) {
+            let errorMessage = "Failed to download template";
+
+            // Try to read blob error
+            if (error.response?.data instanceof Blob) {
+                try {
+                    const text = await error.response.data.text();
+                    const result = JSON.parse(text);
+                    errorMessage = result.message || result.title || errorMessage;
+                } catch (e) {
+                    // Ignore JSON parse error
+                }
+            } else if (error.response?.data?.message) {
+                errorMessage = error.response.data.message;
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            console.error("Template download error:", error);
+
             toast({
                 title: "Error",
-                description: "Failed to download template",
+                description: errorMessage,
                 variant: "destructive",
             });
         }
@@ -352,10 +374,17 @@ export default function RadioTrunkingPage() {
                     <TableHeader>
                         <TableRow>
                             <TableHead>Unit Number</TableHead>
-                            <TableHead>Radio ID</TableHead>
-                            <TableHead>Department</TableHead>
+                            <TableHead>Dept</TableHead>
                             <TableHead>Fleet</TableHead>
+                            <TableHead>Radio ID</TableHead>
                             <TableHead>Serial Number</TableHead>
+                            <TableHead>Date Program</TableHead>
+                            <TableHead>Job Number</TableHead>
+                            <TableHead>Radio Type</TableHead>
+                            <TableHead>Firmware</TableHead>
+                            <TableHead>Remarks</TableHead>
+                            <TableHead>Channel Apply</TableHead>
+                            <TableHead>Initiator</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -363,7 +392,7 @@ export default function RadioTrunkingPage() {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8">
+                                <TableCell colSpan={14} className="text-center py-8">
                                     <div className="flex justify-center">
                                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
                                     </div>
@@ -371,7 +400,7 @@ export default function RadioTrunkingPage() {
                             </TableRow>
                         ) : data.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                                <TableCell colSpan={14} className="text-center py-8 text-muted-foreground">
                                     No records found
                                 </TableCell>
                             </TableRow>
@@ -379,10 +408,17 @@ export default function RadioTrunkingPage() {
                             data.map((item) => (
                                 <TableRow key={item.id}>
                                     <TableCell className="font-medium">{item.unitNumber}</TableCell>
-                                    <TableCell>{item.radioId}</TableCell>
                                     <TableCell>{item.dept || "-"}</TableCell>
                                     <TableCell>{item.fleet || "-"}</TableCell>
+                                    <TableCell>{item.radioId}</TableCell>
                                     <TableCell>{item.serialNumber || "-"}</TableCell>
+                                    <TableCell>{item.dateProgram ? new Date(item.dateProgram).toLocaleDateString('id-ID') : "-"}</TableCell>
+                                    <TableCell>{item.jobNumber || "-"}</TableCell>
+                                    <TableCell>{item.radioType || "-"}</TableCell>
+                                    <TableCell>{item.firmware || "-"}</TableCell>
+                                    <TableCell>{item.remarks || "-"}</TableCell>
+                                    <TableCell>{item.channelApply || "-"}</TableCell>
+                                    <TableCell>{item.initiator || "-"}</TableCell>
                                     <TableCell>
                                         <Badge variant={item.status === "Active" ? "default" : item.status === "Repair" ? "secondary" : "destructive"}>
                                             {item.status}
@@ -390,11 +426,9 @@ export default function RadioTrunkingPage() {
                                     </TableCell>
                                     <TableCell className="text-right">
                                         <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
+                                            <DropdownMenuTrigger className="h-8 w-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
+                                                <span className="sr-only">Open menu</span>
+                                                <MoreVertical className="h-4 w-4" />
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
                                                 <DropdownMenuItem onClick={() => openEditModal(item)}>
@@ -503,6 +537,22 @@ export default function RadioTrunkingPage() {
                             <label className="text-sm font-medium">Job Number</label>
                             <Input value={formData.jobNumber} onChange={(e) => setFormData({ ...formData, jobNumber: e.target.value })} />
                         </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Initiator</label>
+                            <Input value={formData.initiator} onChange={(e) => setFormData({ ...formData, initiator: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Firmware</label>
+                            <Input value={formData.firmware} onChange={(e) => setFormData({ ...formData, firmware: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Channel Apply</label>
+                            <Input value={formData.channelApply} onChange={(e) => setFormData({ ...formData, channelApply: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Remarks</label>
+                            <Input value={formData.remarks} onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} />
+                        </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsCreateOpen(false)}>Cancel</Button>
@@ -566,6 +616,22 @@ export default function RadioTrunkingPage() {
                         <div className="space-y-2">
                             <label className="text-sm font-medium">Job Number</label>
                             <Input value={formData.jobNumber} onChange={(e) => setFormData({ ...formData, jobNumber: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Initiator</label>
+                            <Input value={formData.initiator} onChange={(e) => setFormData({ ...formData, initiator: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Firmware</label>
+                            <Input value={formData.firmware} onChange={(e) => setFormData({ ...formData, firmware: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Channel Apply</label>
+                            <Input value={formData.channelApply} onChange={(e) => setFormData({ ...formData, channelApply: e.target.value })} />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Remarks</label>
+                            <Input value={formData.remarks} onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} />
                         </div>
                     </div>
                     <DialogFooter>

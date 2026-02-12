@@ -199,10 +199,26 @@ function AppContent() {
           <Route path="/swr-signal" element={<SwrSignalPage />} />
 
           {/* ✅ RADIO MANAGEMENT ROUTES */}
-          <Route path="/radio-trunking" element={<RadioTrunkingPage />} />
-          <Route path="/radio-conventional" element={<RadioConventionalPage />} />
-          <Route path="/radio-grafir" element={<RadioGrafirPage />} />
-          <Route path="/radio-scrap" element={<RadioScrapPage />} />
+          <Route path="/radio-trunking" element={
+            <PermissionGuard permission="radio.view" >
+              <RadioTrunkingPage />
+            </PermissionGuard>
+          } />
+          <Route path="/radio-conventional" element={
+            <PermissionGuard permission="radio.view" >
+              <RadioConventionalPage />
+            </PermissionGuard>
+          } />
+          <Route path="/radio-grafir" element={
+            <PermissionGuard permission="radio.view" >
+              <RadioGrafirPage />
+            </PermissionGuard>
+          } />
+          <Route path="/radio-scrap" element={
+            <PermissionGuard permission="radio.scrap.view" >
+              <RadioScrapPage />
+            </PermissionGuard>
+          } />
 
           {/* ✅ LETTER NUMBERING ROUTES */}
           <Route

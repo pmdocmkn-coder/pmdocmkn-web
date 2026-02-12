@@ -47,6 +47,7 @@ export interface RadioTrunking {
     initiator?: string;
     firmware?: string;
     channelApply?: string;
+    remarks?: string;
     grafirId?: number;
     createdAt: string;
     updatedAt?: string;
@@ -66,6 +67,7 @@ export interface CreateRadioTrunkingDto {
     initiator?: string;
     firmware?: string;
     channelApply?: string;
+    remarks?: string;
     grafirId?: number;
 }
 
