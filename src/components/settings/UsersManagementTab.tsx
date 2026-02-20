@@ -30,6 +30,42 @@ import { formatDateTimeIndonesian } from "../../utils/dateUtils";
 import { hasPermission } from "../../utils/permissionUtils";
 
 import { useAuth } from "../../contexts/AuthContext";
+import { Button } from "../ui/button";
+
+// =============================================
+// Pagination Component
+// =============================================
+function Pagination({ currentPage, totalPages, totalCount, pageSize, onPageChange }: {
+  currentPage: number;
+  totalPages: number;
+  totalCount: number;
+  pageSize: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="bg-white py-3 px-4 flex items-center justify-between">
+      <div className="flex-1 flex justify-between sm:hidden">
+        <Button onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} variant="outline">Previous</Button>
+        <Button onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} variant="outline">Next</Button>
+      </div>
+      <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+        <p className="text-sm text-gray-700">
+          Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
+          <span className="font-medium">{Math.min(currentPage * pageSize, totalCount)}</span> of{" "}
+          <span className="font-medium">{totalCount}</span> results
+        </p>
+        <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+          <Button onClick={() => onPageChange(Math.max(1, currentPage - 1))} disabled={currentPage === 1} variant="outline" className="rounded-r-none">Previous</Button>
+          {Number.isFinite(totalPages) && totalPages > 0 && [...Array(Math.min(totalPages, 5))].map((_, i) => (
+            <Button key={i + 1} onClick={() => onPageChange(i + 1)} variant={currentPage === i + 1 ? "default" : "outline"} className="rounded-none font-medium text-gray-700">{i + 1}</Button>
+          ))}
+          <Button onClick={() => onPageChange(Math.min(totalPages, currentPage + 1))} disabled={currentPage === totalPages} variant="outline" className="rounded-l-none">Next</Button>
+        </nav>
+      </div>
+    </div>
+  );
+}
 
 export default function UsersManagementTab() {
   const { user: currentUser } = useAuth(); // Ambil user yang sedang login
@@ -48,6 +84,13 @@ export default function UsersManagementTab() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, filterStatus]);
 
   useEffect(() => {
     fetchData();
@@ -238,6 +281,10 @@ export default function UsersManagementTab() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalCount = filteredUsers.length;
+  const totalPages = Math.ceil(totalCount / pageSize);
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+
   const stats = {
     total: users.length,
     active: users.filter((u) => u.isActive).length,
@@ -373,147 +420,162 @@ export default function UsersManagementTab() {
                 </td>
               </tr>
             ) : (
-              filteredUsers.map((user) => (
-                <tr key={user.userId} className="hover:bg-gray-50">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center space-x-3">
-                      {user.photoUrl ? (
-                        <img
-                          src={user.photoUrl}
-                          alt={user.fullName}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
-                        />
-                      ) : (
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm border-2 border-gray-200">
-                          {getUserInitials(user.fullName)}
-                        </div>
-                      )}
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.fullName}
-                        </p>
-                        <div className="flex items-center space-x-2 mt-1">
-                          <Mail className="w-3 h-3 text-gray-400" />
-                          <p className="text-xs text-gray-500">{user.email}</p>
-                        </div>
-                        <p className="text-xs text-gray-400 mt-1">
-                          @{user.username}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
+              paginatedUsers.map((user) => {
+                const isSuperAdminTarget = user.roleId === 1;
+                const isCurrentUserSuperAdmin = currentUser?.roleId === 1;
+                const disableActions = isSuperAdminTarget && !isCurrentUserSuperAdmin;
 
-                  <td className="px-4 py-3">
-                    <select
-                      value={user.roleId}
-                      onChange={(e) =>
-                        handleChangeRole(user.userId, parseInt(e.target.value))
-                      }
-                      disabled={!hasPermission("user.update")}
-                      className={`text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission("user.update") ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    >
-                      {roles
-                        .filter(role => {
-                          // Sembunyikan Role "Super Admin" (ID 1) jika user yang login BUKAN Super Admin
-                          if (currentUser?.roleId !== 1 && role.roleId === 1) return false;
-                          return true;
-                        })
-                        .map((role) => (
-                          <option key={role.roleId} value={role.roleId}>
-                            {role.roleName}
+                return (
+                  <tr key={user.userId} className="hover:bg-gray-50">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center space-x-3">
+                        {user.photoUrl ? (
+                          <img
+                            src={user.photoUrl}
+                            alt={user.fullName}
+                            className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
+                          />
+                        ) : (
+                          <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm border-2 border-gray-200">
+                            {getUserInitials(user.fullName)}
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">
+                            {user.fullName}
+                          </p>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <Mail className="w-3 h-3 text-gray-400" />
+                            <p className="text-xs text-gray-500">{user.email}</p>
+                          </div>
+                          <p className="text-xs text-gray-400 mt-1">
+                            @{user.username}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <select
+                        value={user.roleId}
+                        onChange={(e) =>
+                          handleChangeRole(user.userId, parseInt(e.target.value))
+                        }
+                        disabled={!hasPermission("user.update") || disableActions}
+                        className={`text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${(!hasPermission("user.update") || disableActions) ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+                      >
+                        {roles
+                          .filter(role => {
+                            // Sembunyikan Role "Super Admin" (ID 1) jika user yang login BUKAN Super Admin
+                            if (currentUser?.roleId !== 1 && role.roleId === 1) return false;
+                            return true;
+                          })
+                          .map((role) => (
+                            <option key={role.roleId} value={role.roleId}>
+                              {role.roleName}
+                            </option>
+                          ))}
+                      </select>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <select
+                        value={user.division || ""}
+                        onChange={(e) =>
+                          handleChangeDivision(user.userId, e.target.value)
+                        }
+                        disabled={!hasPermission("division.update") || disableActions}
+                        className={`text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${(!hasPermission("division.update") || disableActions) ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
+                      >
+                        <option value="">— Belum ada —</option>
+                        {divisions.filter(d => d.isActive).map((div) => (
+                          <option key={div.id} value={div.name}>
+                            {div.code} - {div.name}
                           </option>
                         ))}
-                    </select>
-                  </td>
+                      </select>
+                    </td>
 
-                  <td className="px-4 py-3">
-                    <select
-                      value={user.division || ""}
-                      onChange={(e) =>
-                        handleChangeDivision(user.userId, e.target.value)
-                      }
-                      disabled={!hasPermission("division.update")}
-                      className={`text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission("user.update") ? 'bg-gray-100 cursor-not-allowed' : ''}`}
-                    >
-                      <option value="">— Belum ada —</option>
-                      {divisions.filter(d => d.isActive).map((div) => (
-                        <option key={div.id} value={div.name}>
-                          {div.code} - {div.name}
-                        </option>
-                      ))}
-                    </select>
-                  </td>
-
-                  <td className="px-4 py-3 text-center">
-                    {user.isActive ? (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Active
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Inactive
-                      </span>
-                    )}
-                  </td>
-
-                  {/* ✅ PERBAIKAN: Gunakan formatDateTimeIndonesian */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center space-x-2 text-sm text-gray-600 whitespace-nowrap">
-                      <Clock className="w-4 h-4 flex-shrink-0 text-gray-400" />
-                      <span>{formatDateTimeIndonesian(user.lastLogin)}</span>
-                    </div>
-                  </td>
-
-                  <td className="px-4 py-3">
-                    <div className="flex items-center justify-center space-x-2">
-                      <button
-                        onClick={() => handleViewDetail(user.userId)}
-                        className="text-blue-600 hover:text-blue-800 p-1 transition-colors"
-                        title="View Details"
-                      >
-                        <Eye className="w-5 h-5" />
-                      </button>
-
-                      {hasPermission("user.update") && (
-                        user.isActive ? (
-                          <button
-                            onClick={() => handleDeactivate(user.userId)}
-                            className="text-orange-600 hover:text-orange-800 p-1 transition-colors"
-                            title="Deactivate User"
-                          >
-                            <UserX className="w-5 h-5" />
-                          </button>
-                        ) : (
-                          <button
-                            onClick={() => handleActivate(user.userId)}
-                            className="text-green-600 hover:text-green-800 p-1 transition-colors"
-                            title="Activate User"
-                          >
-                            <UserCheck className="w-5 h-5" />
-                          </button>
-                        )
+                    <td className="px-4 py-3 text-center">
+                      {user.isActive ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          <CheckCircle className="w-3 h-3 mr-1" />
+                          Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <XCircle className="w-3 h-3 mr-1" />
+                          Inactive
+                        </span>
                       )}
+                    </td>
 
-                      {hasPermission("user.delete") && (
+                    {/* ✅ PERBAIKAN: Gunakan formatDateTimeIndonesian */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center space-x-2 text-sm text-gray-600 whitespace-nowrap">
+                        <Clock className="w-4 h-4 flex-shrink-0 text-gray-400" />
+                        <span>{formatDateTimeIndonesian(user.lastLogin)}</span>
+                      </div>
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() =>
-                            handleDeleteUser(user.userId, user.fullName)
-                          }
-                          className="text-red-600 hover:text-red-800 p-1 transition-colors"
-                          title="Delete User"
+                          onClick={() => handleViewDetail(user.userId)}
+                          className="text-blue-600 hover:text-blue-800 p-1 transition-colors"
+                          title="View Details"
                         >
-                          <Trash2 className="w-5 h-5" />
+                          <Eye className="w-5 h-5" />
                         </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+
+                        {hasPermission("user.update") && !disableActions && (
+                          user.isActive ? (
+                            <button
+                              onClick={() => handleDeactivate(user.userId)}
+                              className="text-orange-600 hover:text-orange-800 p-1 transition-colors"
+                              title="Deactivate User"
+                            >
+                              <UserX className="w-5 h-5" />
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleActivate(user.userId)}
+                              className="text-green-600 hover:text-green-800 p-1 transition-colors"
+                              title="Activate User"
+                            >
+                              <UserCheck className="w-5 h-5" />
+                            </button>
+                          )
+                        )}
+
+                        {hasPermission("user.delete") && !disableActions && (
+                          <button
+                            onClick={() =>
+                              handleDeleteUser(user.userId, user.fullName)
+                            }
+                            className="text-red-600 hover:text-red-800 p-1 transition-colors"
+                            title="Delete User"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
+        <div className="border-t border-gray-200">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalCount={totalCount}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+          />
+        </div>
       </div>
 
       {/* User Detail Modal */}

@@ -833,7 +833,7 @@ export const rolePermissionApi = {
 export const userApi = {
   getAll: async (): Promise<User[]> => {
     console.log("📡 Fetching all users...");
-    const response = await api.get("/api/users");
+    const response = await api.get("/api/users?pageSize=1000"); // Limit default backend is 10
     console.log("✅ Users fetched:", response.data);
     return response.data.data;
   },
