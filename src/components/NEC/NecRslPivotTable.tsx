@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../../utils/permissionUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -670,18 +671,16 @@ const NecRslPivotTable: React.FC = () => {
                                 })
                               }
                               onMouseLeave={() => setHoveredCell(null)}
-                              className={`border px-2 py-2 text-center font-mono relative cursor-pointer ${
-                                isDataPresent
+                              className={`border px-2 py-2 text-center font-mono relative cursor-pointer ${isDataPresent
                                   ? `${getRslColor(value)} ${getRslTextColor(
-                                      value
-                                    )}`
+                                    value
+                                  )}`
                                   : "bg-gray-50"
-                              } ${
-                                hoveredCell?.rowIdx === rowIdx &&
-                                hoveredCell?.colIdx === monthIdx
+                                } ${hoveredCell?.rowIdx === rowIdx &&
+                                  hoveredCell?.colIdx === monthIdx
                                   ? "ring-2 ring-blue-500"
                                   : ""
-                              }`}
+                                }`}
                             >
                               {isDataPresent ? (
                                 <>
@@ -708,19 +707,17 @@ const NecRslPivotTable: React.FC = () => {
                               {hoveredCell?.rowIdx === rowIdx &&
                                 hoveredCell?.colIdx === monthIdx && (
                                   <div
-                                    className={`absolute left-1/2 transform -translate-x-1/2 ${
-                                      rowIdx < 3
+                                    className={`absolute left-1/2 transform -translate-x-1/2 ${rowIdx < 3
                                         ? "top-full mt-2"
                                         : "bottom-full mb-2"
-                                    } w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50`}
+                                      } w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50`}
                                   >
                                     <div className="relative">
                                       <div
-                                        className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${
-                                          rowIdx < 3
+                                        className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${rowIdx < 3
                                             ? "-top-2 border-b-8 border-b-gray-900"
                                             : "-bottom-2 border-t-8 border-t-gray-900"
-                                        }`}
+                                          }`}
                                       />
                                       <div className="mb-2">
                                         <h4 className="font-bold">
@@ -752,14 +749,16 @@ const NecRslPivotTable: React.FC = () => {
                                           <p className="text-sm">{note}</p>
                                         </div>
                                       )}
-                                      <button
-                                        onClick={() =>
-                                          openNoteModal(row.linkName, key, note)
-                                        }
-                                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
-                                      >
-                                        {note ? "✏️ Edit Note" : "📝 Add Note"}
-                                      </button>
+                                      {hasPermission('nec.update') && (
+                                        <button
+                                          onClick={() =>
+                                            openNoteModal(row.linkName, key, note)
+                                          }
+                                          className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors"
+                                        >
+                                          {note ? "✏️ Edit Note" : "📝 Add Note"}
+                                        </button>
+                                      )}
                                     </div>
                                   </div>
                                 )}

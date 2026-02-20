@@ -123,10 +123,9 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
         onClick={openFileDialog}
         className={`
           relative border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all
-          ${
-            isDragging
-              ? "border-blue-500 bg-blue-50"
-              : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
+          ${isDragging
+            ? "border-blue-500 bg-blue-50"
+            : "border-gray-300 hover:border-gray-400 hover:bg-gray-50"
           }
         `}
       >
@@ -141,14 +140,12 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
 
         <div className="flex flex-col items-center gap-3">
           <div
-            className={`p-4 rounded-full ${
-              isDragging ? "bg-blue-100" : "bg-gray-100"
-            }`}
+            className={`p-4 rounded-full ${isDragging ? "bg-blue-100" : "bg-gray-100"
+              }`}
           >
             <Upload
-              className={`w-8 h-8 ${
-                isDragging ? "text-blue-600" : "text-gray-600"
-              }`}
+              className={`w-8 h-8 ${isDragging ? "text-blue-600" : "text-gray-600"
+                }`}
             />
           </div>
 
@@ -229,11 +226,10 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
                 <img
                   src={preview}
                   alt={`Preview ${index + 1}`}
-                  className={`absolute inset-0 w-full h-full object-contain p-2 border-2 rounded-lg ${
-                    iconColor === "green"
-                      ? "border-green-300"
-                      : "border-blue-300"
-                  }`}
+                  className={`absolute inset-0 w-full h-full object-contain p-2 border-2 rounded-lg ${iconColor === "green"
+                    ? "border-green-300"
+                    : "border-blue-300"
+                    }`}
                 />
                 <button
                   type="button"
@@ -247,9 +243,8 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
                   <X className="w-3 h-3" />
                 </button>
                 <div
-                  className={`absolute bottom-2 left-2 ${
-                    iconColor === "green" ? "bg-green-600" : "bg-blue-600"
-                  } text-white text-xs px-2 py-1 rounded shadow-md`}
+                  className={`absolute bottom-2 left-2 ${iconColor === "green" ? "bg-green-600" : "bg-blue-600"
+                    } text-white text-xs px-2 py-1 rounded shadow-md`}
                 >
                   New {index + 1}
                 </div>
@@ -272,15 +267,17 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
   );
 };
 
+import { hasPermission } from "../utils/permissionUtils";
+
 export default function InspeksiKPCPage() {
   const { user } = useAuth();
 
-  // ✅ ROLE MANAGEMENT
-  const isAdmin =
-    user?.roleName === "Super Admin" || user?.roleName === "Admin";
-  const isSupvKPC = user?.roleName === "SupvKPC";
-  const canCreateEdit = isAdmin;
-  const canUpdate = isAdmin || isSupvKPC;
+  // ✅ PERMISSION MANAGEMENT
+  const canCreate = hasPermission("inspeksi.create");
+  const canUpdate = hasPermission("inspeksi.update");
+  const canDelete = hasPermission("inspeksi.delete");
+  const canRestore = hasPermission("inspeksi.restore");
+  const canExport = hasPermission("inspeksi.export");
 
   // State untuk data
   const [data, setData] = useState<TemuanKPC[]>([]);
@@ -1129,9 +1126,9 @@ export default function InspeksiKPCPage() {
         <p className="text-gray-600 mt-1">
           {showHistory
             ? "Data temuan yang sudah dihapus"
-            : canCreateEdit
-            ? "Kelola temuan inspeksi per ruang"
-            : "Update perbaikan temuan inspeksi"}
+            : canCreate
+              ? "Kelola temuan inspeksi per ruang"
+              : "Update perbaikan temuan inspeksi"}
         </p>
       </div>
 
@@ -1264,11 +1261,10 @@ export default function InspeksiKPCPage() {
           <button
             onClick={handleExportWithImages}
             disabled={exportLoading}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${
-              exportLoading
-                ? "bg-purple-400 cursor-not-allowed"
-                : "bg-purple-600 hover:bg-purple-700"
-            } text-white`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${exportLoading
+              ? "bg-purple-400 cursor-not-allowed"
+              : "bg-purple-600 hover:bg-purple-700"
+              } text-white`}
           >
             {exportLoading ? (
               <>
@@ -1288,11 +1284,10 @@ export default function InspeksiKPCPage() {
               setShowHistory(!showHistory);
               setCurrentPage(1);
             }}
-            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${
-              showHistory
-                ? "bg-orange-600 text-white hover:bg-orange-700"
-                : "bg-gray-600 text-white hover:bg-gray-700"
-            }`}
+            className={`px-4 py-2 rounded-lg flex items-center gap-2 ${showHistory
+              ? "bg-orange-600 text-white hover:bg-orange-700"
+              : "bg-gray-600 text-white hover:bg-gray-700"
+              }`}
           >
             {showHistory ? (
               <RotateCcw className="w-4 h-4" />
@@ -1307,18 +1302,18 @@ export default function InspeksiKPCPage() {
             startDate ||
             endDate ||
             searchTerm) && (
-            <button
-              onClick={clearFilters}
-              className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center gap-2"
-            >
-              <X className="w-4 h-4" />
-              Clear Filters
-            </button>
-          )}
+              <button
+                onClick={clearFilters}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </button>
+            )}
 
-          {!showHistory && canCreateEdit && (
+          {!showHistory && canCreate && (
             <button
-              onClick={openCreateModal}
+              onClick={() => openCreateModal()}
               className="ml-auto px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
@@ -1432,15 +1427,14 @@ export default function InspeksiKPCPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
-                          item.severity === "Critical"
-                            ? "bg-red-100 text-red-800"
-                            : item.severity === "High"
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${item.severity === "Critical"
+                          ? "bg-red-100 text-red-800"
+                          : item.severity === "High"
                             ? "bg-orange-100 text-orange-800"
                             : item.severity === "Medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
                       >
                         {item.severity}
                       </span>
@@ -1522,15 +1516,14 @@ export default function InspeksiKPCPage() {
                     </td>
                     <td className="px-4 py-3">
                       <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          item.status === "Closed"
-                            ? "bg-green-100 text-green-800"
-                            : item.status === "In Progress"
+                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === "Closed"
+                          ? "bg-green-100 text-green-800"
+                          : item.status === "In Progress"
                             ? "bg-blue-100 text-blue-800"
                             : item.status === "Rejected"
-                            ? "bg-red-100 text-red-800"
-                            : "bg-yellow-100 text-yellow-800"
-                        }`}
+                              ? "bg-red-100 text-red-800"
+                              : "bg-yellow-100 text-yellow-800"
+                          }`}
                       >
                         {item.status}
                       </span>
@@ -1545,21 +1538,23 @@ export default function InspeksiKPCPage() {
                       <div className="flex items-center gap-2">
                         {showHistory ? (
                           <>
-                            <button
-                              onClick={() => item.id && handleRestore(item.id)}
-                              disabled={restoringItem === item.id}
-                              className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1 text-xs font-medium disabled:opacity-50"
-                              title="Restore dari History"
-                            >
-                              {restoringItem === item.id ? (
-                                <div className="w-3 h-3 border-2 border-green-700 border-t-transparent rounded-full animate-spin"></div>
-                              ) : (
-                                <RotateCcw className="w-3 h-3" />
-                              )}
-                              Restore
-                            </button>
+                            {canRestore && (
+                              <button
+                                onClick={() => item.id && handleRestore(item.id)}
+                                disabled={restoringItem === item.id}
+                                className="px-3 py-1 bg-green-100 text-green-700 rounded-lg hover:bg-green-200 flex items-center gap-1 text-xs font-medium disabled:opacity-50"
+                                title="Restore dari History"
+                              >
+                                {restoringItem === item.id ? (
+                                  <div className="w-3 h-3 border-2 border-green-700 border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                  <RotateCcw className="w-3 h-3" />
+                                )}
+                                Restore
+                              </button>
+                            )}
 
-                            {canCreateEdit && (
+                            {canDelete && (
                               <button
                                 onClick={() =>
                                   item.id &&
@@ -1580,7 +1575,7 @@ export default function InspeksiKPCPage() {
                           </>
                         ) : (
                           <>
-                            {canCreateEdit && (
+                            {canUpdate && (
                               <button
                                 onClick={() =>
                                   item.id && openEditModal(item.id)
@@ -1606,7 +1601,7 @@ export default function InspeksiKPCPage() {
                               </button>
                             )}
 
-                            {canCreateEdit && (
+                            {canDelete && (
                               <button
                                 onClick={() => item.id && handleDelete(item.id)}
                                 disabled={deletingItem === item.id}
@@ -1701,18 +1696,17 @@ export default function InspeksiKPCPage() {
                         ⚠️ Severity
                       </span>
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
-                          data.find((d) => d.id === expandedTemuan)
-                            ?.severity === "Critical"
-                            ? "bg-red-100 text-red-800"
-                            : data.find((d) => d.id === expandedTemuan)
-                                ?.severity === "High"
+                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${data.find((d) => d.id === expandedTemuan)
+                          ?.severity === "Critical"
+                          ? "bg-red-100 text-red-800"
+                          : data.find((d) => d.id === expandedTemuan)
+                            ?.severity === "High"
                             ? "bg-orange-100 text-orange-800"
                             : data.find((d) => d.id === expandedTemuan)
-                                ?.severity === "Medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
-                        }`}
+                              ?.severity === "Medium"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
+                          }`}
                       >
                         {data.find((d) => d.id === expandedTemuan)?.severity ||
                           "-"}
@@ -1743,18 +1737,18 @@ export default function InspeksiKPCPage() {
 
                     {data.find((d) => d.id === expandedTemuan)
                       ?.kategoriTemuan && (
-                      <div className="bg-blue-50 p-3 rounded-lg col-span-2">
-                        <span className="text-xs text-gray-600 block mb-1">
-                          🏷️ Kategori
-                        </span>
-                        <span className="font-semibold text-gray-900">
-                          {
-                            data.find((d) => d.id === expandedTemuan)
-                              ?.kategoriTemuan
-                          }
-                        </span>
-                      </div>
-                    )}
+                        <div className="bg-blue-50 p-3 rounded-lg col-span-2">
+                          <span className="text-xs text-gray-600 block mb-1">
+                            🏷️ Kategori
+                          </span>
+                          <span className="font-semibold text-gray-900">
+                            {
+                              data.find((d) => d.id === expandedTemuan)
+                                ?.kategoriTemuan
+                            }
+                          </span>
+                        </div>
+                      )}
                   </div>
                 </div>
 
@@ -2240,8 +2234,8 @@ export default function InspeksiKPCPage() {
                                 }
                               >
                                 {deletingPhoto?.id === editingId &&
-                                deletingPhoto?.type === "temuan" &&
-                                deletingPhoto.index === index ? (
+                                  deletingPhoto?.type === "temuan" &&
+                                  deletingPhoto.index === index ? (
                                   <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                 ) : (
                                   <X className="w-3 h-3" />
@@ -2301,15 +2295,14 @@ export default function InspeksiKPCPage() {
                         <div>
                           <span className="text-gray-600">Severity:</span>
                           <span
-                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${
-                              form.severity === "Critical"
-                                ? "bg-red-100 text-red-800"
-                                : form.severity === "High"
+                            className={`ml-2 px-2 py-0.5 rounded text-xs font-medium ${form.severity === "Critical"
+                              ? "bg-red-100 text-red-800"
+                              : form.severity === "High"
                                 ? "bg-orange-100 text-orange-800"
                                 : form.severity === "Medium"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-green-100 text-green-800"
-                            }`}
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-green-100 text-green-800"
+                              }`}
                           >
                             {form.severity}
                           </span>
@@ -2511,8 +2504,8 @@ export default function InspeksiKPCPage() {
                                   }
                                 >
                                   {deletingPhoto?.id === editingId &&
-                                  deletingPhoto?.type === "hasil" &&
-                                  deletingPhoto.index === index ? (
+                                    deletingPhoto?.type === "hasil" &&
+                                    deletingPhoto.index === index ? (
                                     <div className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                                   ) : (
                                     <X className="w-3 h-3" />
@@ -2552,13 +2545,12 @@ export default function InspeksiKPCPage() {
                   <button
                     type="submit"
                     disabled={isSubmitting || !!deletingPhoto}
-                    className={`flex-1 px-5 py-3 text-white rounded-xl font-medium disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
-                      modalMode === "create"
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
-                        : modalMode === "edit"
+                    className={`flex-1 px-5 py-3 text-white rounded-xl font-medium disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${modalMode === "create"
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                      : modalMode === "edit"
                         ? "bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700"
                         : "bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700"
-                    }`}
+                      }`}
                     title={
                       deletingPhoto
                         ? "Tunggu hingga proses delete foto selesai"
@@ -2571,8 +2563,8 @@ export default function InspeksiKPCPage() {
                         {modalMode === "create"
                           ? "Menyimpan..."
                           : modalMode === "edit"
-                          ? "Mengupdate..."
-                          : "Mengupdate Perbaikan..."}
+                            ? "Mengupdate..."
+                            : "Mengupdate Perbaikan..."}
                       </>
                     ) : deletingPhoto ? (
                       <>
@@ -2585,8 +2577,8 @@ export default function InspeksiKPCPage() {
                         {modalMode === "create"
                           ? "Simpan Temuan"
                           : modalMode === "edit"
-                          ? "Update Detail"
-                          : "Update Perbaikan"}
+                            ? "Update Detail"
+                            : "Update Perbaikan"}
                       </>
                     )}
                   </button>
@@ -2670,11 +2662,10 @@ export default function InspeksiKPCPage() {
                     <button
                       key={index}
                       onClick={() => setCurrentImageIndex(index)}
-                      className={`flex-shrink-0 w-24 h-16 rounded-lg border-2 overflow-hidden transition-all ${
-                        index === currentImageIndex
-                          ? "border-blue-500 ring-2 ring-blue-400"
-                          : "border-gray-400 hover:border-gray-300"
-                      }`}
+                      className={`flex-shrink-0 w-24 h-16 rounded-lg border-2 overflow-hidden transition-all ${index === currentImageIndex
+                        ? "border-blue-500 ring-2 ring-blue-400"
+                        : "border-gray-400 hover:border-gray-300"
+                        }`}
                     >
                       <img
                         src={img}

@@ -23,8 +23,8 @@ import { SwrChannelListDto } from "@/types/swr";
 interface Props {
   channels: SwrChannelListDto[];
   loading: boolean;
-  onEdit: (channel: SwrChannelListDto) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (channel: SwrChannelListDto) => void;
+  onDelete?: (id: number) => void;
 }
 
 export default function SwrChannelsTable({
@@ -229,21 +229,25 @@ export default function SwrChannelsTable({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onEdit(channel)}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(channel.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {onEdit && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onEdit(channel)}
+                              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onDelete && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => onDelete(channel.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

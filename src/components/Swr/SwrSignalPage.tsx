@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../../utils/permissionUtils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import {
@@ -277,30 +278,36 @@ export default function SwrSignalPage() {
           >
             <AlertCircle className="w-4 h-4 mr-2" /> Import Guide
           </Button>
-          <Button
-            onClick={() => setShowImportModal(true)}
-            className="bg-green-600 hover:bg-green-700 text-white"
-          >
-            <Upload className="w-4 h-4 mr-2" /> Import Excel
-          </Button>
-          <Button
-            onClick={() => {
-              setEditingSite(null);
-              setShowSiteDialog(true);
-            }}
-            className="bg-indigo-600 hover:bg-indigo-700"
-          >
-            <Plus className="w-4 h-4 mr-2" /> New Site
-          </Button>
-          <Button
-            onClick={() => {
-              setEditingChannel(null);
-              setShowChannelDialog(true);
-            }}
-            className="bg-purple-600 hover:bg-purple-700"
-          >
-            <Plus className="w-4 h-4 mr-2" /> New Channel
-          </Button>
+          {hasPermission("swr.import") && (
+            <Button
+              onClick={() => setShowImportModal(true)}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              <Upload className="w-4 h-4 mr-2" /> Import Excel
+            </Button>
+          )}
+          {hasPermission("swr.create") && (
+            <Button
+              onClick={() => {
+                setEditingSite(null);
+                setShowSiteDialog(true);
+              }}
+              className="bg-indigo-600 hover:bg-indigo-700"
+            >
+              <Plus className="w-4 h-4 mr-2" /> New Site
+            </Button>
+          )}
+          {hasPermission("swr.create") && (
+            <Button
+              onClick={() => {
+                setEditingChannel(null);
+                setShowChannelDialog(true);
+              }}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Plus className="w-4 h-4 mr-2" /> New Channel
+            </Button>
+          )}
         </div>
       </div>
 
@@ -375,8 +382,8 @@ export default function SwrSignalPage() {
             <SwrSitesTable
               sites={sites}
               loading={loading}
-              onEdit={handleEditSite}
-              onDelete={handleDeleteSite}
+              onEdit={hasPermission("swr.update") ? handleEditSite : undefined}
+              onDelete={hasPermission("swr.delete") ? handleDeleteSite : undefined}
             />
           </div>
         </TabsContent>
@@ -398,8 +405,10 @@ export default function SwrSignalPage() {
             <SwrChannelsTable
               channels={channels}
               loading={loading}
-              onEdit={handleEditChannel}
-              onDelete={handleDeleteChannel}
+              onEdit
+
+              onEdit={hasPermission("swr.update") ? handleEditChannel : undefined}
+              onDelete={hasPermission("swr.delete") ? handleDeleteChannel : undefined}
             />
           </div>
         </TabsContent>

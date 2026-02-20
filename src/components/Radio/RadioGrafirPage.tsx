@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../../utils/permissionUtils";
 import {
     Table,
     TableBody,
@@ -255,31 +256,39 @@ export default function RadioGrafirPage() {
                     <p className="text-muted-foreground">Manage grafir radio assets and linking</p>
                 </div>
                 <div className="flex gap-2">
-                    <div className="relative">
-                        <input
-                            type="file"
-                            id="import-grafir"
-                            className="hidden"
-                            accept=".csv"
-                            onChange={handleImport}
-                        />
-                        <Button variant="outline" onClick={() => document.getElementById('import-grafir')?.click()}>
-                            <Upload className="w-4 h-4 mr-2" />
-                            Import CSV
+                    {hasPermission("radio.import") && (
+                        <div className="relative">
+                            <input
+                                type="file"
+                                id="import-grafir"
+                                className="hidden"
+                                accept=".csv"
+                                onChange={handleImport}
+                            />
+                            <Button variant="outline" onClick={() => document.getElementById('import-grafir')?.click()}>
+                                <Upload className="w-4 h-4 mr-2" />
+                                Import CSV
+                            </Button>
+                        </div>
+                    )}
+                    {hasPermission("radio.export") && (
+                        <Button variant="outline" onClick={handleExport}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Export
                         </Button>
-                    </div>
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
-                    <Button variant="outline" onClick={handleDownloadTemplate}>
-                        <FileDown className="w-4 h-4 mr-2" />
-                        Template
-                    </Button>
-                    <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add New
-                    </Button>
+                    )}
+                    {hasPermission("radio.import") && (
+                        <Button variant="outline" onClick={handleDownloadTemplate}>
+                            <FileDown className="w-4 h-4 mr-2" />
+                            Template
+                        </Button>
+                    )}
+                    {hasPermission("radio.create") && (
+                        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add New
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -322,7 +331,7 @@ export default function RadioGrafirPage() {
                             <TableHead>Div/Dept</TableHead>
                             <TableHead>Linked</TableHead>
                             <TableHead>Status</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            {(hasPermission("radio.update") || hasPermission("radio.delete")) && <TableHead className="text-right">Actions</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -365,26 +374,32 @@ export default function RadioGrafirPage() {
                                             {item.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openEditModal(item)}>
-                                                    <Edit2 className="mr-2 h-4 w-4" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(item.id)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                                    {(hasPermission("radio.update") || hasPermission("radio.delete")) && (
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Open menu</span>
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {hasPermission("radio.update") && (
+                                                        <DropdownMenuItem onClick={() => openEditModal(item)}>
+                                                            <Edit2 className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {hasPermission("radio.delete") && (
+                                                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(item.id)}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))
                         )}

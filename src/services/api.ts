@@ -256,6 +256,8 @@ export const authApi = {
     profileData: {
       fullName?: string;
       email?: string;
+      employeeId?: string;
+      division?: string;
     }
   ): Promise<User> => {
     console.log("📝 Updating profile for user:", userId, profileData);
@@ -275,6 +277,7 @@ export const authApi = {
     email: string;
     password: string;
     fullName: string;
+    employeeId?: string;
   }): Promise<void> => {
     console.log("📤 Sending register request:", {
       username: userData.username,
@@ -288,6 +291,7 @@ export const authApi = {
       password: userData.password,
       confirmPassword: userData.password,
       fullName: userData.fullName,
+      employeeId: userData.employeeId || undefined,
     };
 
     try {
@@ -848,6 +852,13 @@ export const userApi = {
     return response.data.data;
   },
 
+  updateUser: async (userId: number, data: Partial<User>): Promise<User> => {
+    console.log("📝 Updating user:", { userId, data });
+    const response = await api.put(`/api/users/${userId}`, data);
+    console.log("✅ User updated:", response.data);
+    return response.data.data;
+  },
+
   activateUser: async (userId: number): Promise<User> => {
     console.log("✅ Activating user:", userId);
     const response = await api.patch(`/api/users/${userId}/activate`);
@@ -1052,4 +1063,47 @@ export const swrSignalApi = {
     return response.data.data;
   },
 
+};
+
+// ============================================
+// DIVISION API
+// ============================================
+
+export const divisionApi = {
+  getAll: async (params?: {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+    isActive?: boolean;
+  }): Promise<any> => {
+    const response = await api.get("/api/divisions", { params });
+    return response.data;
+  },
+
+  getById: async (id: number): Promise<any> => {
+    const response = await api.get(`/api/divisions/${id}`);
+    return response.data.data;
+  },
+
+  create: async (data: { code: string; name: string }): Promise<any> => {
+    const response = await api.post("/api/divisions", data);
+    return response.data.data;
+  },
+
+  update: async (
+    id: number,
+    data: { name: string; isActive: boolean }
+  ): Promise<any> => {
+    const response = await api.put(`/api/divisions/${id}`, data);
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await api.delete(`/api/divisions/${id}`);
+  },
+
+  checkDebugPermissions: async (): Promise<any> => {
+    const response = await api.get("/api/divisions/debug/permissions");
+    return response.data;
+  },
 };

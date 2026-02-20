@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../utils/permissionUtils";
 import { documentTypeApi } from "../services/letterNumberApi";
 import { DocumentTypeList, DocumentTypeCreate, DocumentTypeUpdate } from "../types/letterNumber";
 import { useToast } from "../hooks/use-toast";
@@ -201,10 +202,12 @@ export default function DocumentTypePage() {
                             />
                             <Label>Show Inactive Only</Label>
                         </div>
-                        <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
-                            <Plus className="h-4 w-4 mr-2" />
-                            Add Document Type
-                        </Button>
+                        {hasPermission('letter.create') && (
+                            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Add Document Type
+                            </Button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -274,17 +277,21 @@ export default function DocumentTypePage() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div className="flex justify-end gap-2">
-                                                <Button variant="ghost" size="sm" onClick={() => openEditDialog(docType)}>
-                                                    <Edit className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={() => handleDelete(docType.id)}
-                                                    className="text-red-600 hover:text-red-700"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
+                                                {hasPermission('letter.update') && (
+                                                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(docType)}>
+                                                        <Edit className="h-4 w-4" />
+                                                    </Button>
+                                                )}
+                                                {hasPermission('letter.delete') && (
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        onClick={() => handleDelete(docType.id)}
+                                                        className="text-red-600 hover:text-red-700"
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                )}
                                             </div>
                                         </td>
                                     </tr>

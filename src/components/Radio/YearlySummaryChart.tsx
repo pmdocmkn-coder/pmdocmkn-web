@@ -34,7 +34,7 @@ const YearlySummaryChart: React.FC<YearlySummaryChartProps> = ({ data, loading }
         );
     }
 
-    if (!data) {
+    if (!data || !data.trunking || !data.conventional) {
         return (
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-[400px] flex items-center justify-center text-gray-500">
                 No data available

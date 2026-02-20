@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../../utils/permissionUtils";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1070,32 +1071,34 @@ const SwrPivotTable: React.FC = () => {
                                       </div>
                                     )}
 
-                                    {/* Action Button */}
-                                    <button
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        openNoteModal(
-                                          row.channelName,
-                                          key,
-                                          note,
-                                          historyId,
-                                          row.siteName
-                                        );
-                                      }}
-                                      className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
-                                    >
-                                      {note ? (
-                                        <>
-                                          <span className="text-xs">✏️</span>
-                                          <span>Edit Note</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <span className="text-xs">📝</span>
-                                          <span>Add Note</span>
-                                        </>
-                                      )}
-                                    </button>
+                                    {/* Action Button - hanya tampil jika punya permission */}
+                                    {hasPermission('swr.update') && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          openNoteModal(
+                                            row.channelName,
+                                            key,
+                                            note,
+                                            historyId,
+                                            row.siteName
+                                          );
+                                        }}
+                                        className="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2"
+                                      >
+                                        {note ? (
+                                          <>
+                                            <span className="text-xs">✏️</span>
+                                            <span>Edit Note</span>
+                                          </>
+                                        ) : (
+                                          <>
+                                            <span className="text-xs">📝</span>
+                                            <span>Add Note</span>
+                                          </>
+                                        )}
+                                      </button>
+                                    )}
                                   </div>
                                 </div>
                               )}

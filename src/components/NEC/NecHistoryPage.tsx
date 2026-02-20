@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { hasPermission } from "../../utils/permissionUtils";
 import NecRslPivotTable from "./NecRslPivotTable";
 import { useNavigate } from "react-router-dom";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -955,12 +956,16 @@ const NecHistoryPage: React.FC = () => {
           <Button onClick={() => navigate("/nec-management")} variant="outline">
             <Settings className="mr-2 h-4 w-4" /> Kelola Tower & Link
           </Button>
-          <Button onClick={() => setIsImportModalOpen(true)}>
-            <Upload className="mr-2 h-4 w-4" /> Impor Excel
-          </Button>
-          <Button onClick={handleExport}>
-            <Download className="mr-2 h-4 w-4" /> Ekspor Tahunan
-          </Button>
+          {hasPermission("nec.import") && (
+            <Button onClick={() => setIsImportModalOpen(true)}>
+              <Upload className="mr-2 h-4 w-4" /> Impor Excel
+            </Button>
+          )}
+          {hasPermission("nec.export") && (
+            <Button onClick={handleExport}>
+              <Download className="mr-2 h-4 w-4" /> Ekspor Tahunan
+            </Button>
+          )}
         </div>
       </div>
 
@@ -974,11 +979,10 @@ const NecHistoryPage: React.FC = () => {
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setActiveTab("history")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === "history"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "history"
                   ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+                }`}
             >
               <span className="flex items-center gap-2">
                 <span>📋</span>
@@ -993,11 +997,10 @@ const NecHistoryPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab("pivot")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === "pivot"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "pivot"
                   ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+                }`}
             >
               <span className="flex items-center gap-2">
                 <span>📊</span>
@@ -1007,11 +1010,10 @@ const NecHistoryPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab("monthly")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === "monthly"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "monthly"
                   ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+                }`}
             >
               <span className="flex items-center gap-2">
                 <span>📈</span>
@@ -1021,11 +1023,10 @@ const NecHistoryPage: React.FC = () => {
 
             <button
               onClick={() => setActiveTab("yearly")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeTab === "yearly"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "yearly"
                   ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+                }`}
             >
               <span className="flex items-center gap-2">
                 <span>📉</span>
@@ -1040,9 +1041,11 @@ const NecHistoryPage: React.FC = () => {
             <CardHeader>
               <div className="flex justify-between items-center">
                 <CardTitle>Daftar History RSL</CardTitle>
-                <Button onClick={() => openModal("create")}>
-                  <Plus className="mr-2 h-4 w-4" /> Tambah Data
-                </Button>
+                {hasPermission("nec.create") && (
+                  <Button onClick={() => openModal("create")}>
+                    <Plus className="mr-2 h-4 w-4" /> Tambah Data
+                  </Button>
+                )}
               </div>
             </CardHeader>
             <CardContent>
@@ -1114,7 +1117,7 @@ const NecHistoryPage: React.FC = () => {
                             <TableHead>Tanggal</TableHead>
                             <TableHead>Link</TableHead>
                             <TableHead>RSL</TableHead>
-                            <TableHead>Aksi</TableHead>
+                            {(hasPermission("nec.update") || hasPermission("nec.delete")) && <TableHead>Aksi</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -1168,24 +1171,30 @@ const NecHistoryPage: React.FC = () => {
                                   )}
                                 </div>
                               </TableCell>
-                              <TableCell>
-                                <div className="flex space-x-2">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => openModal("edit", history)}
-                                  >
-                                    <Edit className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => handleDelete(history.id)}
-                                  >
-                                    <Trash className="h-4 w-4" />
-                                  </Button>
-                                </div>
-                              </TableCell>
+                              {(hasPermission("nec.update") || hasPermission("nec.delete")) && (
+                                <TableCell>
+                                  <div className="flex space-x-2">
+                                    {hasPermission("nec.update") && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => openModal("edit", history)}
+                                      >
+                                        <Edit className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                    {hasPermission("nec.delete") && (
+                                      <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleDelete(history.id)}
+                                      >
+                                        <Trash className="h-4 w-4" />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))}
                         </TableBody>

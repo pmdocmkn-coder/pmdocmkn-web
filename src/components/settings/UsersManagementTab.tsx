@@ -1,7 +1,14 @@
 import React, { useState, useEffect } from "react";
-import { userApi, roleApi } from "../../services/api";
+import { userApi, roleApi, divisionApi } from "../../services/api";
 import { User } from "../../types/auth";
 import { Role } from "../../types/permission";
+
+interface DivisionItem {
+  id: number;
+  code: string;
+  name: string;
+  isActive: boolean;
+}
 import {
   Search,
   UserCheck,
@@ -16,12 +23,19 @@ import {
   Trash2,
   RefreshCw,
   Clock,
+  Building2,
 } from "lucide-react";
+
 import { formatDateTimeIndonesian } from "../../utils/dateUtils";
+import { hasPermission } from "../../utils/permissionUtils";
+
+import { useAuth } from "../../contexts/AuthContext";
 
 export default function UsersManagementTab() {
+  const { user: currentUser } = useAuth(); // Ambil user yang sedang login
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
+  const [divisions, setDivisions] = useState<DivisionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -42,28 +56,17 @@ export default function UsersManagementTab() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [usersData, rolesData] = await Promise.all([
+      const [usersData, rolesData, divisionsData] = await Promise.all([
         userApi.getAll(),
         roleApi.getAll(),
+        divisionApi.getAll({ pageSize: 100 }).then((r) => r.data || []).catch(() => []),
       ]);
 
       console.log("📊 Users data loaded:", usersData);
 
-      // ✅ TAMBAHKAN DEBUG LOG INI
-      const reUser = usersData.find((u) => u.username === "RE");
-      if (reUser) {
-        console.log("🔍 RE User Debug:");
-        console.log("  - Raw lastLogin:", reUser.lastLogin);
-        console.log("  - Type:", typeof reUser.lastLogin);
-        console.log("  - Date object:", new Date(reUser.lastLogin || ""));
-        console.log(
-          "  - Formatted:",
-          formatDateTimeIndonesian(reUser.lastLogin)
-        );
-      }
-
       setUsers(usersData);
       setRoles(rolesData);
+      setDivisions(divisionsData);
     } catch (error) {
       console.error("Error fetching data:", error);
       setMessage({ type: "error", text: "Gagal memuat data users" });
@@ -77,13 +80,15 @@ export default function UsersManagementTab() {
       setRefreshing(true);
       setMessage(null);
 
-      const [usersData, rolesData] = await Promise.all([
+      const [usersData, rolesData, divisionsData] = await Promise.all([
         userApi.getAll(),
         roleApi.getAll(),
+        divisionApi.getAll({ pageSize: 100 }).then((r) => r.data || []).catch(() => []),
       ]);
 
       setUsers(usersData);
       setRoles(rolesData);
+      setDivisions(divisionsData);
 
       setMessage({ type: "success", text: "Data berhasil diperbarui" });
       setTimeout(() => setMessage(null), 3000);
@@ -154,6 +159,20 @@ export default function UsersManagementTab() {
       setMessage({
         type: "error",
         text: error.response?.data?.message || "Gagal mengubah role",
+      });
+    }
+  };
+
+  const handleChangeDivision = async (userId: number, newDivision: string) => {
+    try {
+      await userApi.updateUser(userId, { division: newDivision || undefined });
+      setMessage({ type: "success", text: "Divisi user berhasil diubah" });
+      await fetchData();
+      setTimeout(() => setMessage(null), 3000);
+    } catch (error: any) {
+      setMessage({
+        type: "error",
+        text: error.response?.data?.message || "Gagal mengubah divisi",
       });
     }
   };
@@ -280,11 +299,10 @@ export default function UsersManagementTab() {
       {/* Message */}
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg flex items-start ${
-            message.type === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-red-50 text-red-700 border border-red-200"
-          }`}
+          className={`mb-6 p-4 rounded-lg flex items-start ${message.type === "success"
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : "bg-red-50 text-red-700 border border-red-200"
+            }`}
         >
           <p className="flex-1">{message.text}</p>
           <button
@@ -333,6 +351,9 @@ export default function UsersManagementTab() {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                 Role
               </th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                Division
+              </th>
               <th className="px-4 py-3 text-center text-xs font-semibold text-gray-600 uppercase">
                 Status
               </th>
@@ -347,7 +368,7 @@ export default function UsersManagementTab() {
           <tbody className="divide-y divide-gray-200">
             {filteredUsers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={6} className="px-4 py-8 text-center text-gray-500">
                   No users found
                 </td>
               </tr>
@@ -388,11 +409,36 @@ export default function UsersManagementTab() {
                       onChange={(e) =>
                         handleChangeRole(user.userId, parseInt(e.target.value))
                       }
-                      className="text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      disabled={!hasPermission("user.update")}
+                      className={`text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission("user.update") ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     >
-                      {roles.map((role) => (
-                        <option key={role.roleId} value={role.roleId}>
-                          {role.roleName}
+                      {roles
+                        .filter(role => {
+                          // Sembunyikan Role "Super Admin" (ID 1) jika user yang login BUKAN Super Admin
+                          if (currentUser?.roleId !== 1 && role.roleId === 1) return false;
+                          return true;
+                        })
+                        .map((role) => (
+                          <option key={role.roleId} value={role.roleId}>
+                            {role.roleName}
+                          </option>
+                        ))}
+                    </select>
+                  </td>
+
+                  <td className="px-4 py-3">
+                    <select
+                      value={user.division || ""}
+                      onChange={(e) =>
+                        handleChangeDivision(user.userId, e.target.value)
+                      }
+                      disabled={!hasPermission("division.update")}
+                      className={`text-sm px-3 py-1.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${!hasPermission("user.update") ? 'bg-gray-100 cursor-not-allowed' : ''}`}
+                    >
+                      <option value="">— Belum ada —</option>
+                      {divisions.filter(d => d.isActive).map((div) => (
+                        <option key={div.id} value={div.name}>
+                          {div.code} - {div.name}
                         </option>
                       ))}
                     </select>
@@ -429,32 +475,38 @@ export default function UsersManagementTab() {
                       >
                         <Eye className="w-5 h-5" />
                       </button>
-                      {user.isActive ? (
+
+                      {hasPermission("user.update") && (
+                        user.isActive ? (
+                          <button
+                            onClick={() => handleDeactivate(user.userId)}
+                            className="text-orange-600 hover:text-orange-800 p-1 transition-colors"
+                            title="Deactivate User"
+                          >
+                            <UserX className="w-5 h-5" />
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleActivate(user.userId)}
+                            className="text-green-600 hover:text-green-800 p-1 transition-colors"
+                            title="Activate User"
+                          >
+                            <UserCheck className="w-5 h-5" />
+                          </button>
+                        )
+                      )}
+
+                      {hasPermission("user.delete") && (
                         <button
-                          onClick={() => handleDeactivate(user.userId)}
-                          className="text-orange-600 hover:text-orange-800 p-1 transition-colors"
-                          title="Deactivate User"
+                          onClick={() =>
+                            handleDeleteUser(user.userId, user.fullName)
+                          }
+                          className="text-red-600 hover:text-red-800 p-1 transition-colors"
+                          title="Delete User"
                         >
-                          <UserX className="w-5 h-5" />
-                        </button>
-                      ) : (
-                        <button
-                          onClick={() => handleActivate(user.userId)}
-                          className="text-green-600 hover:text-green-800 p-1 transition-colors"
-                          title="Activate User"
-                        >
-                          <UserCheck className="w-5 h-5" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       )}
-                      <button
-                        onClick={() =>
-                          handleDeleteUser(user.userId, user.fullName)
-                        }
-                        className="text-red-600 hover:text-red-800 p-1 transition-colors"
-                        title="Delete User"
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
                     </div>
                   </td>
                 </tr>
@@ -537,6 +589,18 @@ export default function UsersManagementTab() {
                     <Shield className="w-4 h-4 text-gray-400 flex-shrink-0" />
                     <p className="text-gray-900 text-sm font-semibold">
                       {selectedUser.roleName}
+                    </p>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-500 mb-2">
+                    Division
+                  </label>
+                  <div className="flex items-center space-x-2 bg-gray-50 p-3 rounded-lg">
+                    <Building2 className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                    <p className="text-gray-900 text-sm font-semibold">
+                      {selectedUser.division || "Belum ditentukan"}
                     </p>
                   </div>
                 </div>

@@ -11,6 +11,7 @@ import {
   Search,
   Tag,
 } from 'lucide-react';
+import { hasPermission } from '../../utils/permissionUtils';
 
 export default function PermissionsTab() {
   const [permissions, setPermissions] = useState<Permission[]>([]);
@@ -118,9 +119,9 @@ export default function PermissionsTab() {
     (p) => {
       const matchesSearch = p.permissionName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (p.description && p.description.toLowerCase().includes(searchTerm.toLowerCase()));
-      
+
       const matchesGroup = !filterGroup || p.group === filterGroup;
-      
+
       return matchesSearch && matchesGroup;
     }
   );
@@ -152,7 +153,7 @@ export default function PermissionsTab() {
           </p>
         </div>
 
-        {!isAddingNew && (
+        {!isAddingNew && hasPermission("role.permission.create") && (
           <button
             onClick={() => setIsAddingNew(true)}
             className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center"
@@ -166,11 +167,10 @@ export default function PermissionsTab() {
       {/* Message */}
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg ${
-            message.type === 'success'
-              ? 'bg-green-50 text-green-700 border border-green-200'
-              : 'bg-red-50 text-red-700 border border-red-200'
-          }`}
+          className={`mb-6 p-4 rounded-lg ${message.type === 'success'
+            ? 'bg-green-50 text-green-700 border border-green-200'
+            : 'bg-red-50 text-red-700 border border-red-200'
+            }`}
         >
           {message.text}
         </div>
@@ -330,20 +330,24 @@ export default function PermissionsTab() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center justify-center space-x-2">
-                          <button
-                            onClick={() => handleEdit(permission)}
-                            className="text-blue-600 hover:text-blue-800 p-1"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(permission.permissionId)}
-                            className="text-red-600 hover:text-red-800 p-1"
-                            title="Delete"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          {hasPermission("role.permission.edit") && (
+                            <button
+                              onClick={() => handleEdit(permission)}
+                              className="text-blue-600 hover:text-blue-800 p-1"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          {hasPermission("role.permission.delete") && (
+                            <button
+                              onClick={() => handleDelete(permission.permissionId)}
+                              className="text-red-600 hover:text-red-800 p-1"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>

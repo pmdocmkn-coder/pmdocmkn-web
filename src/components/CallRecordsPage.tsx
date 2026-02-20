@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../utils/permissionUtils";
 import { useAuth } from "../contexts/AuthContext";
 import {
   Calendar,
@@ -53,7 +54,7 @@ interface QueryParams {
 
 const CallRecordsPage: React.FC = () => {
   const { user } = useAuth();
-  const hasFullAccess = user?.roleId === 1 || user?.roleId === 2;
+  const hasFullAccess = hasPermission("callrecord.view-any");
 
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
@@ -219,12 +220,12 @@ const CallRecordsPage: React.FC = () => {
   };
 
   // Check permissions
-  const hasDeletePermission = userPermissions.includes("callrecord.delete");
+  const hasDeletePermission = hasPermission("callrecord.delete");
   const canViewDetail =
-    userPermissions.includes("callrecord.view") ||
-    userPermissions.includes("callrecord.view-any");
-  const canExportCSV = userPermissions.includes("callrecord.export-csv");
-  const canExportExcel = userPermissions.includes("callrecord.export-excel");
+    hasPermission("callrecord.view") ||
+    hasPermission("callrecord.view-any");
+  const canExportCSV = hasPermission("callrecord.export-csv");
+  const canExportExcel = hasPermission("callrecord.export-excel");
 
   // Handler untuk search
   const handleSearch = (searchTerm: string) => {
@@ -332,12 +333,12 @@ const CallRecordsPage: React.FC = () => {
           setDebugInfo((prev) =>
             prev
               ? {
-                  ...prev,
-                  recordsCount: 0,
-                  sampleRecord: null,
-                  allRecords: [],
-                  timestamp: new Date().toISOString(),
-                }
+                ...prev,
+                recordsCount: 0,
+                sampleRecord: null,
+                allRecords: [],
+                timestamp: new Date().toISOString(),
+              }
               : null
           );
         } else {
@@ -440,13 +441,12 @@ const CallRecordsPage: React.FC = () => {
               </span>
               {userRole && (
                 <span
-                  className={`ml-2 px-2 py-1 rounded text-xs font-medium ${
-                    userRole === "Super Admin"
+                  className={`ml-2 px-2 py-1 rounded text-xs font-medium ${userRole === "Super Admin"
                       ? "bg-purple-100 text-purple-800"
                       : userRole === "Admin"
-                      ? "bg-blue-100 text-blue-800"
-                      : "bg-gray-100 text-gray-800"
-                  }`}
+                        ? "bg-blue-100 text-blue-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
                 >
                   Role: {userRole}
                 </span>
@@ -471,17 +471,16 @@ const CallRecordsPage: React.FC = () => {
                 disabled={
                   records.length === 0 || !hasDeletePermission || isLoading
                 }
-                className={`px-4 py-2 rounded-lg transition-colors flex items-center ${
-                  hasDeletePermission
+                className={`px-4 py-2 rounded-lg transition-colors flex items-center ${hasDeletePermission
                     ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     : "bg-gray-400 text-gray-200 cursor-not-allowed"
-                }`}
+                  }`}
                 title={
                   !hasDeletePermission
                     ? `Missing permission: callrecord.delete`
                     : records.length === 0
-                    ? "No records to delete"
-                    : "Delete all records for selected date"
+                      ? "No records to delete"
+                      : "Delete all records for selected date"
                 }
               >
                 <Trash2 className="w-4 h-4 mr-2" />
@@ -498,21 +497,19 @@ const CallRecordsPage: React.FC = () => {
           <div className="flex space-x-4">
             <button
               onClick={() => setActiveSection("summary")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeSection === "summary"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeSection === "summary"
                   ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+                }`}
             >
               📊 Daily Summary & Charts
             </button>
             <button
               onClick={() => setActiveSection("records")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                activeSection === "records"
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeSection === "records"
                   ? "bg-blue-100 text-blue-700 border border-blue-200"
                   : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-              }`}
+                }`}
             >
               📋 Call Records ({totalRecords.toLocaleString()})
             </button>
@@ -626,458 +623,453 @@ const CallRecordsSection: React.FC<{
   getCloseReasonDescription,
   dailySummary, // TAMBAHAN
 }) => {
-  const totalRecords = recordsResponse?.meta?.pagination?.totalCount || 0;
-  const pageSize = recordsResponse?.meta?.pagination?.pageSize || 15;
+    const totalRecords = recordsResponse?.meta?.pagination?.totalCount || 0;
+    const pageSize = recordsResponse?.meta?.pagination?.pageSize || 15;
 
-  // CALCULATE FILTERED STATS
-  const getFilteredStats = () => {
-    let total = 0;
-    let teBusy = 0;
-    let sysBusy = 0;
-    let others = 0;
+    // CALCULATE FILTERED STATS
+    const getFilteredStats = () => {
+      let total = 0;
+      let teBusy = 0;
+      let sysBusy = 0;
+      let others = 0;
 
-    // Jika tidak ada filter, gunakan total dari dailySummary
-    if (filterHour === "all" && filterReason === "all") {
-      if (dailySummary) {
-        total = dailySummary.totalQty;
-        teBusy = dailySummary.totalTEBusy;
-        sysBusy = dailySummary.totalSysBusy;
-        others = dailySummary.totalOthers;
-      }
-    } else {
-      // Ada filter aktif
-      if (dailySummary && dailySummary.hourlyData) {
-        // Filter berdasarkan Hour
-        if (filterHour !== "all" && typeof filterHour === "number") {
-          const hourData = dailySummary.hourlyData.find(
-            (h) => h.hourGroup === filterHour
-          );
-          if (hourData) {
-            total = hourData.qty;
-            teBusy = hourData.teBusy;
-            sysBusy = hourData.sysBusy;
-            others = hourData.others;
-          }
-        } else {
-          // Jika hour = all, gunakan total
+      // Jika tidak ada filter, gunakan total dari dailySummary
+      if (filterHour === "all" && filterReason === "all") {
+        if (dailySummary) {
           total = dailySummary.totalQty;
           teBusy = dailySummary.totalTEBusy;
           sysBusy = dailySummary.totalSysBusy;
           others = dailySummary.totalOthers;
         }
-
-        // Filter berdasarkan Reason
-        if (filterReason !== "all" && typeof filterReason === "number") {
-          if (filterReason === 0) {
-            // Hanya TE Busy
-            total = teBusy;
-            sysBusy = 0;
-            others = 0;
-          } else if (filterReason === 1) {
-            // Hanya System Busy
-            total = sysBusy;
-            teBusy = 0;
-            others = 0;
+      } else {
+        // Ada filter aktif
+        if (dailySummary && dailySummary.hourlyData) {
+          // Filter berdasarkan Hour
+          if (filterHour !== "all" && typeof filterHour === "number") {
+            const hourData = dailySummary.hourlyData.find(
+              (h) => h.hourGroup === filterHour
+            );
+            if (hourData) {
+              total = hourData.qty;
+              teBusy = hourData.teBusy;
+              sysBusy = hourData.sysBusy;
+              others = hourData.others;
+            }
           } else {
-            // Reason 2-10: gunakan totalRecords dari API response
-            // karena backend sudah menghitung dengan filter yang benar
-            total = totalRecords;
-            teBusy = 0;
-            sysBusy = 0;
-            others = totalRecords;
+            // Jika hour = all, gunakan total
+            total = dailySummary.totalQty;
+            teBusy = dailySummary.totalTEBusy;
+            sysBusy = dailySummary.totalSysBusy;
+            others = dailySummary.totalOthers;
+          }
+
+          // Filter berdasarkan Reason
+          if (filterReason !== "all" && typeof filterReason === "number") {
+            if (filterReason === 0) {
+              // Hanya TE Busy
+              total = teBusy;
+              sysBusy = 0;
+              others = 0;
+            } else if (filterReason === 1) {
+              // Hanya System Busy
+              total = sysBusy;
+              teBusy = 0;
+              others = 0;
+            } else {
+              // Reason 2-10: gunakan totalRecords dari API response
+              // karena backend sudah menghitung dengan filter yang benar
+              total = totalRecords;
+              teBusy = 0;
+              sysBusy = 0;
+              others = totalRecords;
+            }
           }
         }
       }
+
+      return { total, teBusy, sysBusy, others };
+    };
+
+    const filteredStats = getFilteredStats();
+
+    // Check apakah ada filter aktif
+    const isFiltered = filterHour !== "all" || filterReason !== "all";
+    const filterLabel = [];
+    if (filterHour !== "all") {
+      filterLabel.push(
+        `Hour ${filterHour.toString().padStart(2, "0")}.00-${filterHour
+          .toString()
+          .padStart(2, "0")}.59`
+      );
+    }
+    if (filterReason !== "all") {
+      filterLabel.push(getCloseReasonText(filterReason));
     }
 
-    return { total, teBusy, sysBusy, others };
-  };
-
-  const filteredStats = getFilteredStats();
-
-  // Check apakah ada filter aktif
-  const isFiltered = filterHour !== "all" || filterReason !== "all";
-  const filterLabel = [];
-  if (filterHour !== "all") {
-    filterLabel.push(
-      `Hour ${filterHour.toString().padStart(2, "0")}.00-${filterHour
-        .toString()
-        .padStart(2, "0")}.59`
-    );
-  }
-  if (filterReason !== "all") {
-    filterLabel.push(getCloseReasonText(filterReason));
-  }
-
-  return (
-    <div className="space-y-6">
-      {/* Filter Status Banner */}
-      {isFiltered && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <Filter className="w-4 h-4 text-blue-600 mr-2" />
-              <span className="text-sm font-medium text-blue-800">
-                Active Filter: {filterLabel.join(" • ")}
-              </span>
-            </div>
-            <button
-              onClick={() => {
-                onFilterHourChange("all");
-                onFilterReasonChange("all");
-              }}
-              className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Quick Stats dengan FILTERED DATA */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow">
-          <div className="text-2xl font-bold text-blue-600">
-            {filteredStats.total.toLocaleString()}
-          </div>
-          <div className="text-sm text-gray-600">Total Records</div>
-          {filterReason !== "all" &&
-            typeof filterReason === "number" &&
-            filterReason >= 2 && (
-              <div className="text-xs text-blue-600 mt-1">
-                {getCloseReasonText(filterReason)}
+    return (
+      <div className="space-y-6">
+        {/* Filter Status Banner */}
+        {isFiltered && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center">
+                <Filter className="w-4 h-4 text-blue-600 mr-2" />
+                <span className="text-sm font-medium text-blue-800">
+                  Active Filter: {filterLabel.join(" • ")}
+                </span>
               </div>
-            )}
-        </div>
-
-        <div
-          className={`bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow ${
-            filterReason !== "all" && filterReason !== 0 ? "opacity-50" : ""
-          }`}
-        >
-          <div className="text-2xl font-bold text-red-600">
-            {filteredStats.teBusy.toLocaleString()}
-          </div>
-          <div className="text-sm text-gray-600">TE Busy</div>
-          {filteredStats.total > 0 && filteredStats.teBusy > 0 && (
-            <div className="text-xs text-gray-500 mt-1">
-              ({((filteredStats.teBusy / filteredStats.total) * 100).toFixed(1)}
-              %)
+              <button
+                onClick={() => {
+                  onFilterHourChange("all");
+                  onFilterReasonChange("all");
+                }}
+                className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
+              >
+                Clear Filters
+              </button>
             </div>
-          )}
-        </div>
-
-        <div
-          className={`bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow ${
-            filterReason !== "all" && filterReason !== 1 ? "opacity-50" : ""
-          }`}
-        >
-          <div className="text-2xl font-bold text-yellow-600">
-            {filteredStats.sysBusy.toLocaleString()}
           </div>
-          <div className="text-sm text-gray-600">System Busy</div>
-          {filteredStats.total > 0 && filteredStats.sysBusy > 0 && (
-            <div className="text-xs text-gray-500 mt-1">
-              (
-              {((filteredStats.sysBusy / filteredStats.total) * 100).toFixed(1)}
-              %)
+        )}
+
+        {/* Quick Stats dengan FILTERED DATA */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow">
+            <div className="text-2xl font-bold text-blue-600">
+              {filteredStats.total.toLocaleString()}
             </div>
-          )}
-        </div>
-
-        <div
-          className={`bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow ${
-            filterReason !== "all" && filterReason < 2 ? "opacity-50" : ""
-          }`}
-        >
-          <div className="text-2xl font-bold text-green-600">
-            {filteredStats.others.toLocaleString()}
-          </div>
-          <div className="text-sm text-gray-600">
-            Others
+            <div className="text-sm text-gray-600">Total Records</div>
             {filterReason !== "all" &&
               typeof filterReason === "number" &&
               filterReason >= 2 && (
-                <span className="block text-xs text-green-600 mt-1">
-                  ({getCloseReasonText(filterReason)})
-                </span>
+                <div className="text-xs text-blue-600 mt-1">
+                  {getCloseReasonText(filterReason)}
+                </div>
               )}
           </div>
-          {filteredStats.total > 0 && filteredStats.others > 0 && (
-            <div className="text-xs text-gray-500 mt-1">
-              ({((filteredStats.others / filteredStats.total) * 100).toFixed(1)}
-              %)
+
+          <div
+            className={`bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow ${filterReason !== "all" && filterReason !== 0 ? "opacity-50" : ""
+              }`}
+          >
+            <div className="text-2xl font-bold text-red-600">
+              {filteredStats.teBusy.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-600">TE Busy</div>
+            {filteredStats.total > 0 && filteredStats.teBusy > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                ({((filteredStats.teBusy / filteredStats.total) * 100).toFixed(1)}
+                %)
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow ${filterReason !== "all" && filterReason !== 1 ? "opacity-50" : ""
+              }`}
+          >
+            <div className="text-2xl font-bold text-yellow-600">
+              {filteredStats.sysBusy.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-600">System Busy</div>
+            {filteredStats.total > 0 && filteredStats.sysBusy > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                (
+                {((filteredStats.sysBusy / filteredStats.total) * 100).toFixed(1)}
+                %)
+              </div>
+            )}
+          </div>
+
+          <div
+            className={`bg-white rounded-lg p-4 border border-gray-200 text-center hover:shadow-md transition-shadow ${filterReason !== "all" && filterReason < 2 ? "opacity-50" : ""
+              }`}
+          >
+            <div className="text-2xl font-bold text-green-600">
+              {filteredStats.others.toLocaleString()}
+            </div>
+            <div className="text-sm text-gray-600">
+              Others
+              {filterReason !== "all" &&
+                typeof filterReason === "number" &&
+                filterReason >= 2 && (
+                  <span className="block text-xs text-green-600 mt-1">
+                    ({getCloseReasonText(filterReason)})
+                  </span>
+                )}
+            </div>
+            {filteredStats.total > 0 && filteredStats.others > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                ({((filteredStats.others / filteredStats.total) * 100).toFixed(1)}
+                %)
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex-1">
+              <div className="relative max-w-md">
+                <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Search by reason, time, or description..."
+                  value={searchTerm}
+                  onChange={(e) => onSearchChange(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <button
+                onClick={onToggleFilters}
+                className="flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
+              >
+                <Filter className="w-4 h-4 mr-2" />
+                Filters
+                {showFilters ? (
+                  <ChevronUp className="w-4 h-4 ml-1" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 ml-1" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Expanded Filters */}
+          {showFilters && (
+            <div className="mt-4 pt-4 border-t border-gray-200">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Hour Filter */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Hour
+                  </label>
+                  <select
+                    value={filterHour === "all" ? "all" : filterHour}
+                    onChange={(e) =>
+                      onFilterHourChange(
+                        e.target.value === "all" ? "all" : Number(e.target.value)
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">All Hours</option>
+                    {Array.from({ length: 24 }, (_, i) => (
+                      <option key={i} value={i}>
+                        {i.toString().padStart(2, "0")}.00 -{" "}
+                        {i.toString().padStart(2, "0")}.59
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Reason Filter dengan semua 11 options */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Filter by Reason
+                  </label>
+                  <select
+                    value={filterReason === "all" ? "all" : filterReason}
+                    onChange={(e) =>
+                      onFilterReasonChange(
+                        e.target.value === "all" ? "all" : Number(e.target.value)
+                      )
+                    }
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                  >
+                    <option value="all">All Reasons</option>
+                    <option value={0}>TE Busy</option>
+                    <option value={1}>System Busy</option>
+                    <option value={2}>No Answer</option>
+                    <option value={3}>Not Found</option>
+                    <option value={4}>Complete</option>
+                    <option value={5}>Preempted</option>
+                    <option value={6}>Timeout</option>
+                    <option value={7}>Inactive</option>
+                    <option value={8}>Callback</option>
+                    <option value={9}>Unsupported Request</option>
+                    <option value={10}>Invalid Call</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Records Table */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-200">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base lg:text-lg font-semibold text-gray-900 truncate">
+                  Call Records Data
+                </h3>
+                <p className="text-xs text-gray-600 mt-1 truncate">
+                  Showing {records.length} of {totalRecords.toLocaleString()}{" "}
+                  records
+                  {searchTerm && ` • Searching for "${searchTerm}"`}
+                </p>
+              </div>
+
+              <div className="flex-shrink-0">
+                <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
+                  Page {currentPage} of {totalPages}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Container */}
+          <div className="overflow-x-auto max-w-full">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Time
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Reason Code
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
+                    Description
+                  </th>
+                  <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
+                    Hour
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center">
+                      <div className="flex justify-center items-center space-x-2">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
+                        <span className="text-gray-500 text-sm">
+                          Loading records...
+                        </span>
+                      </div>
+                    </td>
+                  </tr>
+                ) : records.length > 0 ? (
+                  records.map((record, index) => (
+                    <tr
+                      key={`${record.callRecordId}-${index}`}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-600 font-mono">
+                        {record.callTime}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 font-mono bg-gray-50 rounded text-center">
+                        {record.callCloseReason}
+                      </td>
+                      <td className="px-3 py-3 text-xs max-w-[150px]">
+                        <span
+                          className={`inline-flex px-2 py-1 rounded-full text-xs font-medium border ${record.callCloseReason === 0
+                              ? "bg-red-100 text-red-800 border-red-200"
+                              : record.callCloseReason === 1
+                                ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                                : "bg-green-100 text-green-800 border-green-200"
+                            }`}
+                        >
+                          {getCloseReasonText(record.callCloseReason)}
+                        </span>
+                        <div className="mt-1 text-gray-600 line-clamp-2">
+                          {getCloseReasonDescription(record.callCloseReason)}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 text-center">
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                          H{record.hourGroup}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center">
+                      <div className="flex flex-col items-center justify-center py-4">
+                        <Phone className="w-12 h-12 text-gray-300 mb-3" />
+                        <p className="text-sm font-medium text-gray-900 mb-1">
+                          No call records found
+                        </p>
+                        <p className="text-xs text-gray-600 text-center max-w-xs">
+                          {searchTerm ||
+                            filterReason !== "all" ||
+                            filterHour !== "all"
+                            ? "No records match your search or filter criteria."
+                            : "No data available for the selected date."}
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white px-4 py-3 border-t border-gray-200">
+              <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
+                <div className="text-xs text-gray-700 text-center xs:text-left">
+                  Showing{" "}
+                  <span className="font-medium">
+                    {(currentPage - 1) * pageSize + 1}
+                  </span>{" "}
+                  to{" "}
+                  <span className="font-medium">
+                    {Math.min(currentPage * pageSize, totalRecords)}
+                  </span>{" "}
+                  of{" "}
+                  <span className="font-medium">
+                    {totalRecords.toLocaleString()}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-center space-x-1">
+                  <button
+                    onClick={() => onPageChange(currentPage - 1)}
+                    disabled={!hasPrevious}
+                    className="p-1.5 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-3 h-3" />
+                  </button>
+
+                  <div className="flex items-center space-x-1">
+                    {[currentPage - 1, currentPage, currentPage + 1]
+                      .filter((page) => page >= 1 && page <= totalPages)
+                      .map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => onPageChange(page)}
+                          className={`px-2 py-1 border text-xs font-medium min-w-[32px] ${currentPage === page
+                              ? "border-blue-500 bg-blue-500 text-white"
+                              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                            } rounded`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                  </div>
+
+                  <button
+                    onClick={() => onPageChange(currentPage + 1)}
+                    disabled={!hasNext}
+                    className="p-1.5 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
       </div>
-
-      {/* Search and Filters */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-          <div className="flex-1">
-            <div className="relative max-w-md">
-              <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search by reason, time, or description..."
-                value={searchTerm}
-                onChange={(e) => onSearchChange(e.target.value)}
-                className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full text-sm"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-3">
-            <button
-              onClick={onToggleFilters}
-              className="flex items-center px-3 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-sm"
-            >
-              <Filter className="w-4 h-4 mr-2" />
-              Filters
-              {showFilters ? (
-                <ChevronUp className="w-4 h-4 ml-1" />
-              ) : (
-                <ChevronDown className="w-4 h-4 ml-1" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Expanded Filters */}
-        {showFilters && (
-          <div className="mt-4 pt-4 border-t border-gray-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Hour Filter */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filter by Hour
-                </label>
-                <select
-                  value={filterHour === "all" ? "all" : filterHour}
-                  onChange={(e) =>
-                    onFilterHourChange(
-                      e.target.value === "all" ? "all" : Number(e.target.value)
-                    )
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="all">All Hours</option>
-                  {Array.from({ length: 24 }, (_, i) => (
-                    <option key={i} value={i}>
-                      {i.toString().padStart(2, "0")}.00 -{" "}
-                      {i.toString().padStart(2, "0")}.59
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* Reason Filter dengan semua 11 options */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Filter by Reason
-                </label>
-                <select
-                  value={filterReason === "all" ? "all" : filterReason}
-                  onChange={(e) =>
-                    onFilterReasonChange(
-                      e.target.value === "all" ? "all" : Number(e.target.value)
-                    )
-                  }
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                >
-                  <option value="all">All Reasons</option>
-                  <option value={0}>TE Busy</option>
-                  <option value={1}>System Busy</option>
-                  <option value={2}>No Answer</option>
-                  <option value={3}>Not Found</option>
-                  <option value={4}>Complete</option>
-                  <option value={5}>Preempted</option>
-                  <option value={6}>Timeout</option>
-                  <option value={7}>Inactive</option>
-                  <option value={8}>Callback</option>
-                  <option value={9}>Unsupported Request</option>
-                  <option value={10}>Invalid Call</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Records Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base lg:text-lg font-semibold text-gray-900 truncate">
-                Call Records Data
-              </h3>
-              <p className="text-xs text-gray-600 mt-1 truncate">
-                Showing {records.length} of {totalRecords.toLocaleString()}{" "}
-                records
-                {searchTerm && ` • Searching for "${searchTerm}"`}
-              </p>
-            </div>
-
-            <div className="flex-shrink-0">
-              <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded">
-                Page {currentPage} of {totalPages}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Table Container */}
-        <div className="overflow-x-auto max-w-full">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Time
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Reason Code
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider min-w-[120px]">
-                  Description
-                </th>
-                <th className="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider whitespace-nowrap">
-                  Hour
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {isLoading ? (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center">
-                    <div className="flex justify-center items-center space-x-2">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500"></div>
-                      <span className="text-gray-500 text-sm">
-                        Loading records...
-                      </span>
-                    </div>
-                  </td>
-                </tr>
-              ) : records.length > 0 ? (
-                records.map((record, index) => (
-                  <tr
-                    key={`${record.callRecordId}-${index}`}
-                    className="hover:bg-gray-50 transition-colors"
-                  >
-                    <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-600 font-mono">
-                      {record.callTime}
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 font-mono bg-gray-50 rounded text-center">
-                      {record.callCloseReason}
-                    </td>
-                    <td className="px-3 py-3 text-xs max-w-[150px]">
-                      <span
-                        className={`inline-flex px-2 py-1 rounded-full text-xs font-medium border ${
-                          record.callCloseReason === 0
-                            ? "bg-red-100 text-red-800 border-red-200"
-                            : record.callCloseReason === 1
-                            ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                            : "bg-green-100 text-green-800 border-green-200"
-                        }`}
-                      >
-                        {getCloseReasonText(record.callCloseReason)}
-                      </span>
-                      <div className="mt-1 text-gray-600 line-clamp-2">
-                        {getCloseReasonDescription(record.callCloseReason)}
-                      </div>
-                    </td>
-                    <td className="px-3 py-3 whitespace-nowrap text-xs text-gray-900 text-center">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
-                        H{record.hourGroup}
-                      </span>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={4} className="px-4 py-8 text-center">
-                    <div className="flex flex-col items-center justify-center py-4">
-                      <Phone className="w-12 h-12 text-gray-300 mb-3" />
-                      <p className="text-sm font-medium text-gray-900 mb-1">
-                        No call records found
-                      </p>
-                      <p className="text-xs text-gray-600 text-center max-w-xs">
-                        {searchTerm ||
-                        filterReason !== "all" ||
-                        filterHour !== "all"
-                          ? "No records match your search or filter criteria."
-                          : "No data available for the selected date."}
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 border-t border-gray-200">
-            <div className="flex flex-col xs:flex-row xs:items-center xs:justify-between gap-2">
-              <div className="text-xs text-gray-700 text-center xs:text-left">
-                Showing{" "}
-                <span className="font-medium">
-                  {(currentPage - 1) * pageSize + 1}
-                </span>{" "}
-                to{" "}
-                <span className="font-medium">
-                  {Math.min(currentPage * pageSize, totalRecords)}
-                </span>{" "}
-                of{" "}
-                <span className="font-medium">
-                  {totalRecords.toLocaleString()}
-                </span>
-              </div>
-
-              <div className="flex items-center justify-center space-x-1">
-                <button
-                  onClick={() => onPageChange(currentPage - 1)}
-                  disabled={!hasPrevious}
-                  className="p-1.5 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-3 h-3" />
-                </button>
-
-                <div className="flex items-center space-x-1">
-                  {[currentPage - 1, currentPage, currentPage + 1]
-                    .filter((page) => page >= 1 && page <= totalPages)
-                    .map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => onPageChange(page)}
-                        className={`px-2 py-1 border text-xs font-medium min-w-[32px] ${
-                          currentPage === page
-                            ? "border-blue-500 bg-blue-500 text-white"
-                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
-                        } rounded`}
-                      >
-                        {page}
-                      </button>
-                    ))}
-                </div>
-
-                <button
-                  onClick={() => onPageChange(currentPage + 1)}
-                  disabled={!hasNext}
-                  className="p-1.5 border border-gray-300 rounded text-xs font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
+    );
+  };
 
 // Sub-component for Summary Section
 const SummarySection: React.FC<{
@@ -1148,27 +1140,24 @@ const SummarySection: React.FC<{
         />
         <StatCard
           title="TE Busy"
-          value={`${dailySummary.totalTEBusy.toLocaleString()} (${
-            dailySummary.avgTEBusyPercent
-          }%)`}
+          value={`${dailySummary.totalTEBusy.toLocaleString()} (${dailySummary.avgTEBusyPercent
+            }%)`}
           icon={PhoneOff}
           color="red"
           description="Terminal Equipment busy"
         />
         <StatCard
           title="System Busy"
-          value={`${dailySummary.totalSysBusy.toLocaleString()} (${
-            dailySummary.avgSysBusyPercent
-          }%)`}
+          value={`${dailySummary.totalSysBusy.toLocaleString()} (${dailySummary.avgSysBusyPercent
+            }%)`}
           icon={PhoneMissed}
           color="yellow"
           description="System capacity busy"
         />
         <StatCard
           title="Others"
-          value={`${dailySummary.totalOthers.toLocaleString()} (${
-            dailySummary.avgOthersPercent
-          }%)`}
+          value={`${dailySummary.totalOthers.toLocaleString()} (${dailySummary.avgOthersPercent
+            }%)`}
           icon={TrendingUp}
           color="green"
           description="Other call outcomes"

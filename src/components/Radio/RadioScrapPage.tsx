@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { hasPermission } from "../../utils/permissionUtils";
 import {
     Table,
     TableBody,
@@ -115,7 +116,8 @@ export default function RadioScrapPage() {
         setLoadingSummary(true);
         try {
             const response = await radioScrapApi.getYearlySummary(selectedYear);
-            setSummaryData(response.data);
+            const raw = response.data as any;
+            setSummaryData(raw.data ?? raw);
         } catch (error) {
             console.error("Failed to load summary", error);
         } finally {
@@ -230,14 +232,18 @@ export default function RadioScrapPage() {
                     <p className="text-muted-foreground">Manage scrapped radio assets</p>
                 </div>
                 <div className="flex gap-2">
-                    <Button variant="outline" onClick={handleExport}>
-                        <Download className="w-4 h-4 mr-2" />
-                        Export
-                    </Button>
-                    <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
-                        <Plus className="w-4 h-4 mr-2" />
-                        Add Manual Scrap
-                    </Button>
+                    {hasPermission("radio.scrap.export") && (
+                        <Button variant="outline" onClick={handleExport}>
+                            <Download className="w-4 h-4 mr-2" />
+                            Export
+                        </Button>
+                    )}
+                    {hasPermission("radio.scrap.create") && (
+                        <Button onClick={() => { resetForm(); setIsCreateOpen(true); }}>
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Manual Scrap
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -305,7 +311,7 @@ export default function RadioScrapPage() {
                             <TableHead>Type Radio</TableHead>
                             <TableHead>Job Number</TableHead>
                             <TableHead>Remarks</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
+                            {(hasPermission("radio.scrap.update") || hasPermission("radio.scrap.delete")) && <TableHead className="text-right">Actions</TableHead>}
                         </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -346,26 +352,32 @@ export default function RadioScrapPage() {
                                     <TableCell>{item.typeRadio || "-"}</TableCell>
                                     <TableCell>{item.jobNumber || "-"}</TableCell>
                                     <TableCell className="max-w-xs truncate" title={item.remarks}>{item.remarks || "-"}</TableCell>
-                                    <TableCell className="text-right">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" className="h-8 w-8 p-0">
-                                                    <span className="sr-only">Open menu</span>
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => openEditModal(item)}>
-                                                    <Edit2 className="mr-2 h-4 w-4" />
-                                                    Edit
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(item.id)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </TableCell>
+                                    {(hasPermission("radio.scrap.update") || hasPermission("radio.scrap.delete")) && (
+                                        <TableCell className="text-right">
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" className="h-8 w-8 p-0">
+                                                        <span className="sr-only">Open menu</span>
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="end">
+                                                    {hasPermission("radio.scrap.update") && (
+                                                        <DropdownMenuItem onClick={() => openEditModal(item)}>
+                                                            <Edit2 className="mr-2 h-4 w-4" />
+                                                            Edit
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                    {hasPermission("radio.scrap.delete") && (
+                                                        <DropdownMenuItem className="text-red-600" onClick={() => handleDelete(item.id)}>
+                                                            <Trash2 className="mr-2 h-4 w-4" />
+                                                            Delete
+                                                        </DropdownMenuItem>
+                                                    )}
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        </TableCell>
+                                    )}
                                 </TableRow>
                             ))
                         )}

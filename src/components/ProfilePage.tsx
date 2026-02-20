@@ -26,6 +26,8 @@ import {
   UserCheck,
   Check,
   X as XIcon,
+  Building2,
+  BadgeCheck,
 } from "lucide-react";
 import { formatDateTimeIndonesian, formatDetailDate } from "../utils/dateUtils";
 
@@ -106,6 +108,8 @@ export default function ProfilePage() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
+    employeeId: "",
+    division: "",
     oldPassword: "",
     newPassword: "",
     confirmPassword: "",
@@ -181,6 +185,8 @@ export default function ProfilePage() {
       setFormData({
         fullName: currentUser.fullName || "",
         email: currentUser.email || "",
+        employeeId: currentUser.employeeId || "",
+        division: currentUser.division || "",
         oldPassword: "",
         newPassword: "",
         confirmPassword: "",
@@ -306,11 +312,13 @@ export default function ProfilePage() {
       // Update profile information
       if (
         formData.fullName !== currentUser.fullName ||
-        formData.email !== currentUser.email
+        formData.email !== currentUser.email ||
+        formData.employeeId !== (currentUser.employeeId || "")
       ) {
         await authApi.updateProfile(currentUser.userId, {
           fullName: formData.fullName,
           email: formData.email,
+          employeeId: formData.employeeId || undefined,
         });
         hasChanges = true;
       }
@@ -359,6 +367,8 @@ export default function ProfilePage() {
         setFormData({
           fullName: currentUser.fullName || "",
           email: currentUser.email || "",
+          employeeId: currentUser.employeeId || "",
+          division: currentUser.division || "",
           oldPassword: "",
           newPassword: "",
           confirmPassword: "",
@@ -509,16 +519,14 @@ export default function ProfilePage() {
               initial={{ opacity: 0, y: -20, scale: 0.95 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.95 }}
-              className={`mb-8 p-5 rounded-2xl flex items-center gap-4 shadow-lg border-l-4 ${
-                message.type === "success"
-                  ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-l-green-500"
-                  : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-l-red-500"
-              }`}
+              className={`mb-8 p-5 rounded-2xl flex items-center gap-4 shadow-lg border-l-4 ${message.type === "success"
+                ? "bg-gradient-to-r from-green-50 to-emerald-50 text-green-800 border-l-green-500"
+                : "bg-gradient-to-r from-red-50 to-rose-50 text-red-800 border-l-red-500"
+                }`}
             >
               <div
-                className={`p-2 rounded-full ${
-                  message.type === "success" ? "bg-green-100" : "bg-red-100"
-                }`}
+                className={`p-2 rounded-full ${message.type === "success" ? "bg-green-100" : "bg-red-100"
+                  }`}
               >
                 {message.type === "success" ? (
                   <CheckCircle className="w-6 h-6" />
@@ -757,6 +765,51 @@ export default function ProfilePage() {
                     </div>
                   </div>
 
+                  {/* Employee Details */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    {/* Employee ID */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        ID Karyawan (NIP)
+                      </label>
+                      <div className="relative">
+                        <BadgeCheck className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.employeeId}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              employeeId: e.target.value,
+                            })
+                          }
+                          className="w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-white"
+                          placeholder="Contoh: EMP-2026-001"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Division - Read Only (diatur oleh Admin) */}
+                    <div className="space-y-2">
+                      <label className="block text-sm font-semibold text-gray-700">
+                        Divisi
+                      </label>
+                      <div className="relative">
+                        <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                        <input
+                          type="text"
+                          value={formData.division || "Belum ditentukan"}
+                          readOnly
+                          disabled
+                          className="w-full pl-12 pr-4 py-3.5 border border-gray-200 rounded-xl bg-gray-100 text-gray-500 cursor-not-allowed"
+                        />
+                      </div>
+                      <p className="text-xs text-gray-400 italic">
+                        Divisi ditentukan oleh Admin melalui User Management
+                      </p>
+                    </div>
+                  </div>
+
                   {/* Password Change Section */}
                   <motion.div
                     className="bg-gradient-to-r from-gray-50 to-blue-50 rounded-2xl p-6 border border-gray-200"
@@ -853,13 +906,12 @@ export default function ProfilePage() {
                                       newPassword: e.target.value,
                                     })
                                   }
-                                  className={`w-full pl-12 pr-14 py-3.5 border rounded-xl focus:ring-2 focus:border-transparent transition-all duration-200 bg-white ${
-                                    formData.newPassword
-                                      ? passwordValidation.isValid
-                                        ? "border-green-500 focus:ring-green-500"
-                                        : "border-orange-500 focus:ring-orange-500"
-                                      : "border-gray-300 focus:ring-blue-500"
-                                  }`}
+                                  className={`w-full pl-12 pr-14 py-3.5 border rounded-xl focus:ring-2 focus:border-transparent transition-all duration-200 bg-white ${formData.newPassword
+                                    ? passwordValidation.isValid
+                                      ? "border-green-500 focus:ring-green-500"
+                                      : "border-orange-500 focus:ring-orange-500"
+                                    : "border-gray-300 focus:ring-blue-500"
+                                    }`}
                                   placeholder="Minimal 8 karakter"
                                   required
                                 />
@@ -895,15 +947,14 @@ export default function ProfilePage() {
                                         Kekuatan Password:
                                       </span>
                                       <span
-                                        className={`font-bold ${
-                                          passwordValidation.strength <= 40
-                                            ? "text-red-600"
-                                            : passwordValidation.strength <= 60
+                                        className={`font-bold ${passwordValidation.strength <= 40
+                                          ? "text-red-600"
+                                          : passwordValidation.strength <= 60
                                             ? "text-orange-600"
                                             : passwordValidation.strength <= 80
-                                            ? "text-yellow-600"
-                                            : "text-green-600"
-                                        }`}
+                                              ? "text-yellow-600"
+                                              : "text-green-600"
+                                          }`}
                                       >
                                         {getStrengthText(
                                           passwordValidation.strength
@@ -929,12 +980,11 @@ export default function ProfilePage() {
                                     </p>
                                     <div className="grid grid-cols-1 gap-2 text-sm">
                                       <div
-                                        className={`flex items-center gap-2 ${
-                                          passwordValidation.requirements
-                                            .minLength
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        }`}
+                                        className={`flex items-center gap-2 ${passwordValidation.requirements
+                                          .minLength
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                          }`}
                                       >
                                         {passwordValidation.requirements
                                           .minLength ? (
@@ -945,12 +995,11 @@ export default function ProfilePage() {
                                         <span>Minimal 8 karakter</span>
                                       </div>
                                       <div
-                                        className={`flex items-center gap-2 ${
-                                          passwordValidation.requirements
-                                            .upperCase
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        }`}
+                                        className={`flex items-center gap-2 ${passwordValidation.requirements
+                                          .upperCase
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                          }`}
                                       >
                                         {passwordValidation.requirements
                                           .upperCase ? (
@@ -961,12 +1010,11 @@ export default function ProfilePage() {
                                         <span>Huruf besar (A-Z)</span>
                                       </div>
                                       <div
-                                        className={`flex items-center gap-2 ${
-                                          passwordValidation.requirements
-                                            .lowerCase
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        }`}
+                                        className={`flex items-center gap-2 ${passwordValidation.requirements
+                                          .lowerCase
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                          }`}
                                       >
                                         {passwordValidation.requirements
                                           .lowerCase ? (
@@ -977,12 +1025,11 @@ export default function ProfilePage() {
                                         <span>Huruf kecil (a-z)</span>
                                       </div>
                                       <div
-                                        className={`flex items-center gap-2 ${
-                                          passwordValidation.requirements
-                                            .numbers
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        }`}
+                                        className={`flex items-center gap-2 ${passwordValidation.requirements
+                                          .numbers
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                          }`}
                                       >
                                         {passwordValidation.requirements
                                           .numbers ? (
@@ -993,12 +1040,11 @@ export default function ProfilePage() {
                                         <span>Angka (0-9)</span>
                                       </div>
                                       <div
-                                        className={`flex items-center gap-2 ${
-                                          passwordValidation.requirements
-                                            .specialChar
-                                            ? "text-green-600"
-                                            : "text-red-600"
-                                        }`}
+                                        className={`flex items-center gap-2 ${passwordValidation.requirements
+                                          .specialChar
+                                          ? "text-green-600"
+                                          : "text-red-600"
+                                          }`}
                                       >
                                         {passwordValidation.requirements
                                           .specialChar ? (
@@ -1032,13 +1078,12 @@ export default function ProfilePage() {
                                       confirmPassword: e.target.value,
                                     })
                                   }
-                                  className={`w-full pl-12 pr-14 py-3.5 border rounded-xl focus:ring-2 focus:border-transparent transition-all duration-200 bg-white ${
-                                    formData.confirmPassword
-                                      ? confirmPasswordMatch
-                                        ? "border-green-500 focus:ring-green-500"
-                                        : "border-red-500 focus:ring-red-500"
-                                      : "border-gray-300 focus:ring-blue-500"
-                                  }`}
+                                  className={`w-full pl-12 pr-14 py-3.5 border rounded-xl focus:ring-2 focus:border-transparent transition-all duration-200 bg-white ${formData.confirmPassword
+                                    ? confirmPasswordMatch
+                                      ? "border-green-500 focus:ring-green-500"
+                                      : "border-red-500 focus:ring-red-500"
+                                    : "border-gray-300 focus:ring-blue-500"
+                                    }`}
                                   placeholder="Ketik ulang password baru"
                                   required
                                 />
@@ -1065,11 +1110,10 @@ export default function ProfilePage() {
                                 <motion.div
                                   initial={{ opacity: 0, scale: 0.95 }}
                                   animate={{ opacity: 1, scale: 1 }}
-                                  className={`flex items-center gap-2 text-sm ${
-                                    confirmPasswordMatch
-                                      ? "text-green-600"
-                                      : "text-red-600"
-                                  }`}
+                                  className={`flex items-center gap-2 text-sm ${confirmPasswordMatch
+                                    ? "text-green-600"
+                                    : "text-red-600"
+                                    }`}
                                 >
                                   {confirmPasswordMatch ? (
                                     <Check className="w-4 h-4" />
@@ -1116,6 +1160,56 @@ export default function ProfilePage() {
               </motion.div>
             )}
           </AnimatePresence>
+
+          {/* Employee Details Section */}
+          <div className="px-6 sm:px-8 pb-6 border-t border-gray-100 pt-8">
+            <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-3">
+              <BadgeCheck className="w-6 h-6 text-blue-600" />
+              Detail Karyawan
+            </h3>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <motion.div
+                className="bg-gradient-to-br from-slate-50 to-blue-50 rounded-2xl p-6 border border-slate-200"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-blue-100 rounded-xl">
+                    <Building2 className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      Divisi
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg">
+                      {currentUser.division || "Belum diisi"}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="bg-gradient-to-br from-slate-50 to-indigo-50 rounded-2xl p-6 border border-slate-200"
+                whileHover={{ scale: 1.02 }}
+                transition={{ type: "spring", stiffness: 300 }}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="p-3 bg-indigo-100 rounded-xl">
+                    <BadgeCheck className="w-6 h-6 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                      ID Karyawan (NIP)
+                    </p>
+                    <p className="text-gray-900 font-bold text-lg">
+                      {currentUser.employeeId || "Belum diisi"}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+          </div>
 
           {/* Account Information Section */}
           <div className="px-6 sm:px-8 pb-8 border-t border-gray-100 pt-8">

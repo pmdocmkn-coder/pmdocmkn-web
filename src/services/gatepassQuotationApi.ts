@@ -48,6 +48,16 @@ export const gatepassApi = {
     delete: async (id: number): Promise<void> => {
         await api.delete(`/api/gatepasses/${id}`);
     },
+
+    sign: async (id: number): Promise<GatepassResponse> => {
+        const response = await api.post(`/api/gatepasses/${id}/sign`);
+        return response.data.data;
+    },
+
+    verify: async (token: string): Promise<{ verified: boolean; gatepass: GatepassResponse }> => {
+        const response = await api.get(`/api/verify/gatepass/${token}`);
+        return response.data.data;
+    },
 };
 
 // ============================================

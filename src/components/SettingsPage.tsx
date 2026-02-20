@@ -7,49 +7,78 @@ import {
   Users,
   Key,
   UserCog,
+  Building2,
+  ScrollText,
 } from 'lucide-react';
 import PermissionsTab from './settings/PermissionsTab';
 import RolesTab from './settings/RolesTab';
 import RolePermissionsTab from './settings/RolePermissionsTab';
 import UsersManagementTab from './settings/UsersManagementTab';
+import DivisionsTab from './settings/DivisionsTab';
+import ActivityLogTab from './settings/ActivityLogTab';
+import { hasPermission } from '../utils/permissionUtils';
 
-type TabType = 'permissions' | 'roles' | 'role-permissions' | 'users';
+type TabType = 'permissions' | 'roles' | 'role-permissions' | 'users' | 'divisions' | 'activity-logs';
 
 export default function SettingsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('permissions');
 
-  // Only Super Admin can access this page
-  if (user?.roleName !== 'Super Admin') {
+  // ✅ CEK PERMISSION HALAMAN
+  if (!hasPermission("setting.menu")) {
     return <Navigate to="/dashboard" replace />;
   }
 
+  // ✅ FILTER TABS BASED ON PERMISSION
   const tabs = [
     {
       id: 'permissions' as TabType,
       name: 'Permissions',
       icon: Key,
       description: 'Kelola daftar permission',
+      permission: 'role.permission.view',
     },
     {
       id: 'roles' as TabType,
       name: 'Roles',
       icon: Shield,
       description: 'Kelola role pengguna',
+      permission: 'role.view',
     },
     {
       id: 'role-permissions' as TabType,
       name: 'Role Permissions',
       icon: UserCog,
       description: 'Atur permission untuk setiap role',
+      permission: 'role.permission.view',
     },
     {
       id: 'users' as TabType,
       name: 'User Management',
       icon: Users,
       description: 'Kelola pengguna dan aktivasi akun',
+      permission: 'user.view',
     },
-  ];
+    {
+      id: 'divisions' as TabType,
+      name: 'Divisions',
+      icon: Building2,
+      description: 'Kelola data divisi',
+      permission: 'division.view',
+    },
+    {
+      id: 'activity-logs' as TabType,
+      name: 'Audit Logs',
+      icon: ScrollText,
+      description: 'Riwayat aktivitas pengguna',
+      permission: 'system.audit.view', // Pastikan permission ini ada di database/seeder
+    },
+  ].filter(tab => hasPermission(tab.permission));
+
+  // ✅ REDIRECT IF ACTIVE TAB IS NOT ALLOWED
+  if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {
+    setActiveTab(tabs[0].id);
+  }
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -61,6 +90,10 @@ export default function SettingsPage() {
         return <RolePermissionsTab />;
       case 'users':
         return <UsersManagementTab />;
+      case 'divisions':
+        return <DivisionsTab />;
+      case 'activity-logs':
+        return <ActivityLogTab />;
       default:
         return <PermissionsTab />;
     }
@@ -88,11 +121,10 @@ export default function SettingsPage() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center p-4 border-b sm:border-b-0 sm:border-r border-gray-200 transition-colors ${
-                    isActive
-                      ? 'bg-blue-50 text-blue-600'
-                      : 'text-gray-600 hover:bg-gray-50'
-                  }`}
+                  className={`flex items-center p-4 border-b sm:border-b-0 sm:border-r border-gray-200 transition-colors ${isActive
+                    ? 'bg-blue-50 text-blue-600'
+                    : 'text-gray-600 hover:bg-gray-50'
+                    }`}
                 >
                   <Icon className="w-5 h-5 mr-3 flex-shrink-0" />
                   <div className="text-left">

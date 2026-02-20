@@ -31,6 +31,7 @@ import RadioTrunkingPage from "./components/Radio/RadioTrunkingPage";
 import RadioConventionalPage from "./components/Radio/RadioConventionalPage";
 import RadioGrafirPage from "./components/Radio/RadioGrafirPage";
 import RadioScrapPage from "./components/Radio/RadioScrapPage";
+import VerifyPage from "./components/VerifyPage";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -49,10 +50,10 @@ function hasPermission(permission: string): boolean {
 function getDefaultRoute(): string {
   // Priority order based on permission availability
   if (hasPermission("dashboard.view")) return "/dashboard";
-  if (hasPermission("letter.view")) return "/letter-numbers";
-  if (hasPermission("inspeksi.temuan-kpc.view")) return "/inspeksi-kpc";
+  if (hasPermission("letter.menu")) return "/letter-numbers";
+  if (hasPermission("inspeksi.menu")) return "/inspeksi-kpc";
   if (hasPermission("docs.view")) return "/docs";
-  if (hasPermission("callrecord.view")) return "/callrecords";
+  if (hasPermission("call.record.menu")) return "/callrecords";
 
   // Fallback: kalau tidak ada permission apapun, ke profile
   return "/profile";
@@ -128,7 +129,7 @@ function AppContent() {
           <Route
             path="/inspeksi-kpc"
             element={
-              <PermissionGuard permission="inspeksi.temuan-kpc.view">
+              <PermissionGuard permission="inspeksi.menu">
                 <InspeksiKPCPage />
               </PermissionGuard>
             }
@@ -146,7 +147,7 @@ function AppContent() {
           <Route
             path="/callrecords"
             element={
-              <PermissionGuard permission="callrecord.view">
+              <PermissionGuard permission="call.record.menu">
                 <CallRecordsPage />
               </PermissionGuard>
             }
@@ -179,7 +180,7 @@ function AppContent() {
           <Route
             path="/fleet-statistics"
             element={
-              <PermissionGuard permission="callrecord.view">
+              <PermissionGuard permission="fleet.menu">
                 <FleetStatisticsPage />
               </PermissionGuard>
             }
@@ -188,7 +189,7 @@ function AppContent() {
           <Route
             path="/nec-history"
             element={
-              <PermissionGuard permission="nec.signal.view">
+              <PermissionGuard permission="nec.histori.menu">
                 <NecHistoryPage />
               </PermissionGuard>
             }
@@ -251,7 +252,7 @@ function AppContent() {
           <Route
             path="/settings"
             element={
-              <PermissionGuard permission="role.view">
+              <PermissionGuard permission="setting.menu">
                 <SettingsPage />
               </PermissionGuard>
             }
@@ -290,6 +291,7 @@ function AppRoutes() {
         path="/register"
         element={!user ? <Register /> : <Navigate to="/dashboard" replace />}
       />
+      <Route path="/verify/gatepass/:token" element={<VerifyPage />} />
       <Route
         path="/*"
         element={user ? <AppContent /> : <Navigate to="/" replace />}

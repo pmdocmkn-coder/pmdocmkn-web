@@ -23,8 +23,8 @@ import { SwrSiteListDto } from "@/types/swr";
 interface Props {
   sites: SwrSiteListDto[];
   loading: boolean;
-  onEdit: (site: SwrSiteListDto) => void;
-  onDelete: (id: number) => void;
+  onEdit?: (site: SwrSiteListDto) => void;
+  onDelete?: (id: number) => void;
 }
 
 export default function SwrSitesTable({
@@ -184,21 +184,25 @@ export default function SwrSitesTable({
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => onEdit(site)}
-                            className="border-gray-300 text-gray-700 hover:bg-gray-50"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="destructive"
-                            onClick={() => onDelete(site.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
+                          {onEdit && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => onEdit(site)}
+                              className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </Button>
+                          )}
+                          {onDelete && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => onDelete(site.id)}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

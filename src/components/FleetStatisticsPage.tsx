@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X } from 'lucide-react';
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion';
-import { callRecordApi, authApi } from '../services/api';
+import { callRecordApi } from '../services/api';
+import { hasPermission } from '../utils/permissionUtils';
 import { FleetStatisticsDto, FleetStatisticType, TopCallerFleetDto, TopCalledFleetDto, UniqueCallerDetailDto, UniqueCalledDetailDto } from '../types/callRecord';
 
 // Animation Variants
@@ -100,25 +101,12 @@ const FleetStatisticsPage: React.FC = () => {
   const [modalSortField, setModalSortField] = useState<'calls' | 'duration'>('calls');
   const [modalSortOrder, setModalSortOrder] = useState<'ASC' | 'DESC'>('DESC');
 
-  // Permission state
-  const [canExport, setCanExport] = useState(false);
+  // Permission check
+  const canExport = hasPermission("callrecord.export-excel");
 
   useEffect(() => {
     loadFleetStatistics();
-    checkPermissions();
   }, [startDate, endDate, topCount, statisticType, sortOrder, sortBy]);
-
-  const checkPermissions = () => {
-    const permissions = authApi.getPermissions ? authApi.getPermissions() : [];
-    // Fallback if authApi doesn't have getPermissions, try localStorage directly
-    if (permissions.length === 0) {
-      const perms = localStorage.getItem("permissions");
-      const parsedPerms = perms ? JSON.parse(perms) : [];
-      setCanExport(parsedPerms.includes('callrecord.export-excel'));
-    } else {
-      setCanExport(permissions.includes('callrecord.export-excel'));
-    }
-  };
 
   const loadFleetStatistics = async () => {
     setError(null);

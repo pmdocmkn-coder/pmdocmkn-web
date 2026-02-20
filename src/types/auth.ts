@@ -15,6 +15,8 @@ export interface User {
   createdAt?: string;
   photoUrl?: string;
   permissions?: string[];
+  employeeId?: string;
+  division?: string;
 }
 
 export interface LoginResponse {

@@ -16,6 +16,7 @@ import {
   Shield,
   Check,
   X as XIcon,
+  BadgeCheck,
 } from "lucide-react";
 import { authApi } from "../services/api";
 
@@ -24,6 +25,7 @@ const Register: React.FC = () => {
     username: "",
     email: "",
     fullName: "",
+    employeeId: "",
     password: "",
     confirmPassword: "",
   });
@@ -74,45 +76,45 @@ const Register: React.FC = () => {
       setError("Username harus diisi");
       return false;
     }
-  
+
     // ✅ FIX: konsisten dengan pesan error
     if (formData.username.length < 2) {
       setError("Username minimal 2 karakter");
       return false;
     }
-  
+
     if (!formData.email.trim()) {
       setError("Email harus diisi");
       return false;
     }
-  
+
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
       setError("Format email tidak valid");
       return false;
     }
-  
+
     if (!formData.fullName.trim()) {
       setError("Nama lengkap harus diisi");
       return false;
     }
-  
+
     if (!formData.password) {
       setError("Password harus diisi");
       return false;
     }
-  
+
     const isPasswordValid = Object.values(passwordStrength).every((val) => val);
     if (!isPasswordValid) {
       setError("Password belum memenuhi semua kriteria keamanan");
       return false;
     }
-  
+
     if (formData.password !== formData.confirmPassword) {
       setError("Konfirmasi password tidak cocok");
       return false;
     }
-  
+
     return true;
   };
 
@@ -138,6 +140,7 @@ const Register: React.FC = () => {
         email: formData.email.trim(),
         fullName: formData.fullName.trim(),
         password: formData.password,
+        employeeId: formData.employeeId.trim() || undefined,
       });
 
       setSuccess(
@@ -149,6 +152,7 @@ const Register: React.FC = () => {
         username: "",
         email: "",
         fullName: "",
+        employeeId: "",
         password: "",
         confirmPassword: "",
       });
@@ -446,6 +450,28 @@ const Register: React.FC = () => {
                 </div>
               </div>
 
+              {/* Employee ID (NIP) Field - Optional */}
+              <div className="group">
+                <label className="block text-sm font-medium text-blue-100 mb-2 group-focus-within:text-blue-300 transition-colors">
+                  ID Karyawan (NIP)
+                  <span className="text-blue-300/50 text-xs ml-1">(opsional)</span>
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                    <BadgeCheck className="h-5 w-5 text-blue-300/60 group-focus-within:text-blue-400 transition-colors" />
+                  </div>
+                  <input
+                    type="text"
+                    name="employeeId"
+                    value={formData.employeeId}
+                    onChange={handleChange}
+                    className="w-full pl-11 pr-4 py-3 bg-white/10 border border-white/20 text-white placeholder-blue-200/50 rounded-xl focus:ring-2 focus:ring-purple-500/50 focus:border-purple-500/50 backdrop-blur-lg transition-all duration-300 hover:bg-white/15 focus:bg-white/20"
+                    placeholder="Masukkan NIP (jika ada)"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+
               {/* Password Field */}
               <div className="group">
                 <label className="block text-sm font-medium text-blue-100 mb-2 group-focus-within:text-blue-300 transition-colors">
@@ -491,13 +517,12 @@ const Register: React.FC = () => {
                         Password Strength
                       </span>
                       <span
-                        className={`text-xs font-medium ${
-                          getPasswordStrengthText() === "Strong"
+                        className={`text-xs font-medium ${getPasswordStrengthText() === "Strong"
                             ? "text-green-400"
                             : getPasswordStrengthText() === "Medium"
-                            ? "text-yellow-400"
-                            : "text-red-400"
-                        }`}
+                              ? "text-yellow-400"
+                              : "text-red-400"
+                          }`}
                       >
                         {getPasswordStrengthText()}
                       </span>
@@ -506,13 +531,12 @@ const Register: React.FC = () => {
                       <motion.div
                         initial={{ width: 0 }}
                         animate={{
-                          width: `${
-                            (Object.values(passwordStrength).filter(
-                              (val) => val
-                            ).length /
+                          width: `${(Object.values(passwordStrength).filter(
+                            (val) => val
+                          ).length /
                               5) *
                             100
-                          }%`,
+                            }%`,
                         }}
                         className={`h-full ${getPasswordStrengthColor()} transition-all duration-300`}
                       />
@@ -544,13 +568,12 @@ const Register: React.FC = () => {
                             <XIcon className="w-4 h-4 text-red-400 flex-shrink-0" />
                           )}
                           <span
-                            className={`text-xs ${
-                              passwordStrength[
+                            className={`text-xs ${passwordStrength[
                                 req.key as keyof typeof passwordStrength
                               ]
                                 ? "text-green-300"
                                 : "text-blue-200/50"
-                            }`}
+                              }`}
                           >
                             {req.text}
                           </span>

@@ -76,29 +76,28 @@ const navItems: NavItem[] = [
     path: "/inspeksi-kpc",
     icon: ClipboardList,
     id: "inspeksi-kpc",
-    permission: "inspeksi.temuan-kpc.view",
+    permission: "inspeksi.menu",
   },
   {
     name: "Fleet Statistics",
     path: "/fleet-statistics",
     icon: TrendingUp,
     id: "fleet-statistics",
-    permission: "callrecord.view",
+    permission: "fleet.menu",
   },
   {
     name: "NEC History",
     path: "/nec-history",
     icon: TrendingUp,
     id: "nec-history",
-    permission: "nec.signal.view",
+    permission: "nec.histori.menu",
   },
   {
     name: "SWR Signal",
     path: "/swr-signal",
     icon: Radio,
     id: "swr-signal",
-    permission: "swr-signal.view",
-    forAll: true, // Temporarily show to all users for testing
+    permission: "swr.signal.menu",
   },
 ];
 
@@ -115,14 +114,14 @@ const letterNumberMenu: NavItem[] = [
     path: "/companies",
     icon: Building2,
     id: "companies",
-    permission: "letter.view",
+    permission: "companies.view",
   },
   {
     name: "Document Types",
     path: "/document-types",
     icon: FileType,
     id: "document-types",
-    permission: "letter.view",
+    permission: "document.type.menu",
   },
 ];
 
@@ -274,97 +273,99 @@ export default function Sidebar({
           />
         ))}
 
-        {filteredCallRecords.length > 0 && (
-          <div className="mt-6">
-            {!isCollapsed || isMobile ? (
-              <>
-                <button
-                  onClick={() => setIsCallRecordsOpen(!isCallRecordsOpen)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
-                >
-                  <span>Call Records</span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${isCallRecordsOpen ? "rotate-180" : ""
-                      }`}
-                  />
-                </button>
-                <AnimatePresence>
-                  {isCallRecordsOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="space-y-1 mt-1"
-                    >
-                      {filteredCallRecords.map((item) => (
-                        <NavLink
-                          key={item.id}
-                          item={item}
-                          onClick={() =>
-                            isMobile && setIsMobileMenuOpen(false)
-                          }
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </>
-            ) : (
-              // Collapsed state - show icons
-              filteredCallRecords.map((item) => (
-                <NavLink key={item.id} item={item} />
-              ))
-            )}
-          </div>
-        )}
+        {
+          hasPermission("call.record.menu") && filteredCallRecords.length > 0 && (
+            <div className="mt-6">
+              {!isCollapsed || isMobile ? (
+                <>
+                  <button
+                    onClick={() => setIsCallRecordsOpen(!isCallRecordsOpen)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                  >
+                    <span>Call Records</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${isCallRecordsOpen ? "rotate-180" : ""
+                        }`}
+                    />
+                  </button>
+                  <AnimatePresence>
+                    {isCallRecordsOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="space-y-1 mt-1"
+                      >
+                        {filteredCallRecords.map((item) => (
+                          <NavLink
+                            key={item.id}
+                            item={item}
+                            onClick={() =>
+                              isMobile && setIsMobileMenuOpen(false)
+                            }
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              ) : (
+                // Collapsed state - show icons
+                filteredCallRecords.map((item) => (
+                  <NavLink key={item.id} item={item} />
+                ))
+              )}
+            </div>
+          )}
 
-        {filteredRadioMenu.length > 0 && (
-          <div className="mt-6">
-            {!isCollapsed || isMobile ? (
-              <>
-                <button
-                  onClick={() => setIsRadioOpen(!isRadioOpen)}
-                  className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
-                >
-                  <span>Radio Management</span>
-                  <ChevronDown
-                    className={`w-4 h-4 transition-transform ${isRadioOpen ? "rotate-180" : ""
-                      }`}
-                  />
-                </button>
-                <AnimatePresence>
-                  {isRadioOpen && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: "auto", opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="space-y-1 mt-1"
-                    >
-                      {filteredRadioMenu.map((item) => (
-                        <NavLink
-                          key={item.id}
-                          item={item}
-                          onClick={() =>
-                            isMobile && setIsMobileMenuOpen(false)
-                          }
-                        />
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </>
-            ) : (
-              // Collapsed state - show icons
-              filteredRadioMenu.map((item) => (
-                <NavLink key={item.id} item={item} />
-              ))
-            )}
-          </div>
-        )}
+        {
+          hasPermission("radio.management.menu") && filteredRadioMenu.length > 0 && (
+            <div className="mt-6">
+              {!isCollapsed || isMobile ? (
+                <>
+                  <button
+                    onClick={() => setIsRadioOpen(!isRadioOpen)}
+                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                  >
+                    <span>Radio Management</span>
+                    <ChevronDown
+                      className={`w-4 h-4 transition-transform ${isRadioOpen ? "rotate-180" : ""
+                        }`}
+                    />
+                  </button>
+                  <AnimatePresence>
+                    {isRadioOpen && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: "auto", opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="space-y-1 mt-1"
+                      >
+                        {filteredRadioMenu.map((item) => (
+                          <NavLink
+                            key={item.id}
+                            item={item}
+                            onClick={() =>
+                              isMobile && setIsMobileMenuOpen(false)
+                            }
+                          />
+                        ))}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              ) : (
+                // Collapsed state - show icons
+                filteredRadioMenu.map((item) => (
+                  <NavLink key={item.id} item={item} />
+                ))
+              )}
+            </div>
+          )}
 
 
         {
-          filteredLetterNumbers.length > 0 && (
+          hasPermission("letter.menu") && filteredLetterNumbers.length > 0 && (
             <div className="mt-6">
               {!isCollapsed || isMobile ? (
                 <>
@@ -405,7 +406,7 @@ export default function Sidebar({
         }
 
         {
-          hasPermission("role.view") && (
+          hasPermission("setting.menu") && (
             <div className={isCollapsed && !isMobile ? "mt-2" : "mt-6"}>
               <NavLink
                 item={{

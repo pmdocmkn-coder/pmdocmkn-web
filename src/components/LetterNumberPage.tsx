@@ -21,6 +21,8 @@ import {
     StatusColors,
 } from "../types/gatepassQuotation";
 import { useToast } from "../hooks/use-toast";
+import { useAuth } from "../contexts/AuthContext";
+import { hasPermission } from "../utils/permissionUtils";
 import {
     FileText,
     Plus,
@@ -29,6 +31,9 @@ import {
     Trash2,
     Truck,
     Receipt,
+    CheckCircle,
+    ChevronDown,
+    ChevronRight,
 } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -277,9 +282,9 @@ function LetterTab() {
                             {documentTypes.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
-                    <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
+                    {hasPermission("letter.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-indigo-600 hover:bg-indigo-700">
                         <Plus className="h-4 w-4 mr-2" />Buat Surat
-                    </Button>
+                    </Button>}
                 </div>
             </div>
 
@@ -296,14 +301,15 @@ function LetterTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipe</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembuat</th>
+                                {(hasPermission("letter.update") || hasPermission("letter.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={8} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div></td></tr>
+                                <tr><td colSpan={9} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div></td></tr>
                             ) : letters.length === 0 ? (
-                                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Tidak ada data surat</td></tr>
+                                <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-500">Tidak ada data surat</td></tr>
                             ) : letters.map((letter) => (
                                 <tr key={letter.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{letter.formattedNumber}</td>
@@ -313,14 +319,17 @@ function LetterTab() {
                                     <td className="px-6 py-4 text-sm text-gray-500">{letter.companyCode}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500">{letter.documentTypeCode}</td>
                                     <td className="px-6 py-4"><StatusBadge status={letter.status} /></td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>
-                                            {(
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                            )}
-                                        </div>
-                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{letter.createdByName || "-"}</td>
+                                    {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>}
+                                                {hasPermission("letter.delete") && (
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -442,6 +451,8 @@ function GatepassTab() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<GatepassList | null>(null);
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+    const [expandedItemDetails, setExpandedItemDetails] = useState<Record<number, any[]>>({});
 
     const [formData, setFormData] = useState<GatepassCreate>({
         destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0],
@@ -450,6 +461,7 @@ function GatepassTab() {
 
     const [editFormData, setEditFormData] = useState<GatepassUpdate>({
         destination: "", picName: "", picContact: "", notes: "", status: 0,
+        items: [{ itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }],
     });
 
     useEffect(() => { loadItems(); }, [currentPage, searchTerm]);
@@ -519,10 +531,70 @@ function GatepassTab() {
         }
     };
 
-    const openEditDialog = (item: GatepassList) => {
+    const openEditDialog = async (item: GatepassList) => {
         setSelectedItem(item);
-        setEditFormData({ destination: item.destination, picName: item.picName, picContact: item.picContact || "", notes: "", status: item.status === "Sent" ? 1 : 0 });
+        try {
+            const detail = await gatepassApi.getById(item.id);
+            setEditFormData({
+                destination: detail.destination,
+                picName: detail.picName,
+                picContact: detail.picContact || "",
+                notes: detail.notes || "",
+                status: detail.status === "Sent" ? 1 : 0,
+                items: detail.items.map(i => ({
+                    itemName: i.itemName,
+                    quantity: i.quantity,
+                    unit: i.unit || "unit",
+                    description: i.description || "",
+                    serialNumber: i.serialNumber || "",
+                })),
+            });
+        } catch {
+            setEditFormData({ destination: item.destination, picName: item.picName, picContact: item.picContact || "", notes: "", status: item.status === "Sent" ? 1 : 0, items: [] });
+        }
         setIsEditDialogOpen(true);
+    };
+
+    const addEditItem = () => {
+        setEditFormData({ ...editFormData, items: [...(editFormData.items || []), { itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }] });
+    };
+
+    const removeEditItem = (index: number) => {
+        if (!editFormData.items || editFormData.items.length <= 1) return;
+        setEditFormData({ ...editFormData, items: editFormData.items.filter((_, i) => i !== index) });
+    };
+
+    const updateEditItem = (index: number, field: keyof GatepassItemCreate, value: any) => {
+        const updated = [...(editFormData.items || [])];
+        (updated[index] as any)[field] = value;
+        setEditFormData({ ...editFormData, items: updated });
+    };
+
+    const handleSign = async (id: number) => {
+        if (!confirm("Apakah Anda yakin ingin menandatangani gatepass ini? Tanda tangan tidak dapat dibatalkan.")) return;
+        try {
+            await gatepassApi.sign(id);
+            toast({ title: "Success", description: "Gatepass berhasil ditandatangani" });
+            loadItems();
+        } catch (error: any) {
+            toast({ title: "Error", description: error.response?.data?.message || error.message, variant: "destructive" });
+        }
+    };
+
+    const toggleExpandRow = async (id: number) => {
+        const next = new Set(expandedRows);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+            if (!expandedItemDetails[id]) {
+                try {
+                    const detail = await gatepassApi.getById(id);
+                    setExpandedItemDetails(prev => ({ ...prev, [id]: detail.items }));
+                } catch (e) { console.error(e); }
+            }
+        }
+        setExpandedRows(next);
     };
 
     const resetForm = () => {
@@ -540,9 +612,9 @@ function GatepassTab() {
                             <Input placeholder="Cari gatepass..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                         </div>
                     </div>
-                    <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
+                    {hasPermission("gatepass.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-emerald-600 hover:bg-emerald-700">
                         <Plus className="h-4 w-4 mr-2" />Buat Gatepass
-                    </Button>
+                    </Button>}
                 </div>
             </div>
 
@@ -557,7 +629,7 @@ function GatepassTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PIC</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -566,22 +638,74 @@ function GatepassTab() {
                             ) : items.length === 0 ? (
                                 <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Tidak ada data gatepass</td></tr>
                             ) : items.map((item) => (
-                                <tr key={item.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.formattedNumber}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(item.gatepassDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">{item.destination}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{item.picName}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{item.itemCount} item(s)</td>
-                                    <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>
-                                            {(
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                            )}
-                                        </div>
-                                    </td>
-                                </tr>
+                                <React.Fragment key={item.id}>
+                                    <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpandRow(item.id)}>
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.formattedNumber}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(item.gatepassDate).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-900">{item.destination}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">{item.picName}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                            <span className="flex items-center gap-1">
+                                                {expandedRows.has(item.id) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+                                                {item.itemCount} item(s)
+                                            </span>
+                                        </td>
+                                        <td className="px-6 py-4">
+                                            <div className="flex items-center gap-2">
+                                                <StatusBadge status={item.status} />
+                                                {item.isSigned && <span title="Sudah ditandatangani"><CheckCircle className="h-4 w-4 text-green-600" /></span>}
+                                            </div>
+                                        </td>
+                                        {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
+                                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                                <div className="flex justify-end gap-1">
+                                                    {!item.isSigned && (
+                                                        <Button variant="ghost" size="sm" onClick={() => handleSign(item.id)} className="text-blue-600 hover:text-blue-700" title="Tanda Tangani">
+                                                            <CheckCircle className="h-4 w-4" />
+                                                        </Button>
+                                                    )}
+                                                    {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                                    {hasPermission("gatepass.delete") && <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>}
+                                                </div>
+                                            </td>
+                                        )}
+                                    </tr>
+                                    {expandedRows.has(item.id) && (
+                                        <tr className="bg-emerald-50">
+                                            <td colSpan={7} className="px-6 py-3">
+                                                {expandedItemDetails[item.id] ? (
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Detail Barang</p>
+                                                        <table className="w-full text-sm">
+                                                            <thead>
+                                                                <tr className="text-xs text-gray-500">
+                                                                    <th className="text-left py-1">Nama Barang</th>
+                                                                    <th className="text-left py-1">Qty</th>
+                                                                    <th className="text-left py-1">Unit</th>
+                                                                    <th className="text-left py-1">Serial Number</th>
+                                                                    <th className="text-left py-1">Deskripsi</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {expandedItemDetails[item.id].map((detail: any, i: number) => (
+                                                                    <tr key={i} className="border-t border-emerald-100">
+                                                                        <td className="py-1">{detail.itemName}</td>
+                                                                        <td className="py-1">{detail.quantity}</td>
+                                                                        <td className="py-1">{detail.unit}</td>
+                                                                        <td className="py-1 text-gray-500">{detail.serialNumber || "-"}</td>
+                                                                        <td className="py-1 text-gray-500">{detail.description || "-"}</td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center text-gray-400 py-2">Memuat detail...</div>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    )}
+                                </React.Fragment>
                             ))}
                         </tbody>
                     </table>
@@ -617,9 +741,21 @@ function GatepassTab() {
                                 <Input value={formData.picContact || ""} onChange={(e) => setFormData({ ...formData, picContact: e.target.value })} placeholder="No. HP / Email" />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Catatan</Label>
-                            <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Catatan</Label>
+                                <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Status</Label>
+                                <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">Draft</SelectItem>
+                                        <SelectItem value="1">Sent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
 
                         {/* Items */}
@@ -662,7 +798,7 @@ function GatepassTab() {
 
             {/* Edit Gatepass Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[600px]">
+                <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Edit Gatepass</DialogTitle>
                         <DialogDescription>Update detail gatepass.</DialogDescription>
@@ -682,19 +818,50 @@ function GatepassTab() {
                                 <Input value={editFormData.picContact || ""} onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })} />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Catatan</Label>
-                            <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Catatan</Label>
+                                <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Status</Label>
+                                <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">Draft</SelectItem>
+                                        <SelectItem value="1">Sent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
+
+                        {/* Items */}
                         <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">Draft</SelectItem>
-                                    <SelectItem value="1">Sent</SelectItem>
-                                </SelectContent>
-                            </Select>
+                            <div className="flex items-center justify-between">
+                                <Label className="text-base font-semibold">Daftar Barang</Label>
+                                <Button type="button" variant="outline" size="sm" onClick={addEditItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
+                            </div>
+                            {(editFormData.items || []).map((item, index) => (
+                                <div key={index} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <div className="col-span-4">
+                                        <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateEditItem(index, "itemName", e.target.value)} />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateEditItem(index, "quantity", parseInt(e.target.value) || 1)} />
+                                    </div>
+                                    <div className="col-span-2">
+                                        <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateEditItem(index, "unit", e.target.value)} />
+                                    </div>
+                                    <div className="col-span-3">
+                                        <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateEditItem(index, "serialNumber", e.target.value)} />
+                                    </div>
+                                    <div className="col-span-1 flex items-center">
+                                        {(editFormData.items || []).length > 1 && (
+                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeEditItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
                         </div>
                     </div>
                     <DialogFooter>
@@ -712,6 +879,8 @@ function GatepassTab() {
 // =============================================
 function QuotationTab() {
     const { toast } = useToast();
+    const { user } = useAuth();
+    const isAdmin = user?.roleName === "Super Admin" || user?.roleName === "Admin";
     const [items, setItems] = useState<QuotationList[]>([]);
     const [companies, setCompanies] = useState<CompanyList[]>([]);
     const [loading, setLoading] = useState(false);
@@ -729,7 +898,7 @@ function QuotationTab() {
         customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 0,
     });
     const [editFormData, setEditFormData] = useState<QuotationUpdate>({
-        description: "", notes: "", status: 0,
+        description: "", notes: "", status: 0, customerId: 0, quotationDate: "",
     });
 
     useEffect(() => { loadItems(); loadCompanies(); }, [currentPage, searchTerm]);
@@ -789,9 +958,24 @@ function QuotationTab() {
         }
     };
 
-    const openEditDialog = (item: QuotationList) => {
+    const openEditDialog = async (item: QuotationList) => {
         setSelectedItem(item);
-        setEditFormData({ description: item.description, notes: "", status: item.status === "Sent" ? 1 : 0 });
+        try {
+            const detail = await quotationApi.getById(item.id);
+            setEditFormData({
+                description: detail.description,
+                notes: detail.notes || "",
+                status: detail.status === "Sent" ? 1 : 0,
+                customerId: detail.customerId,
+                quotationDate: detail.quotationDate ? new Date(detail.quotationDate).toISOString().split("T")[0] : "",
+            });
+        } catch {
+            setEditFormData({
+                description: item.description,
+                notes: "",
+                status: item.status === "Sent" ? 1 : 0,
+            });
+        }
         setIsEditDialogOpen(true);
     };
 
@@ -810,9 +994,9 @@ function QuotationTab() {
                             <Input placeholder="Cari quotation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                         </div>
                     </div>
-                    <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-violet-600 hover:bg-violet-700">
+                    {hasPermission("quotation.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-violet-600 hover:bg-violet-700">
                         <Plus className="h-4 w-4 mr-2" />Buat Quotation
-                    </Button>
+                    </Button>}
                 </div>
             </div>
 
@@ -826,14 +1010,15 @@ function QuotationTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deskripsi</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembuat</th>
+                                {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={6} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div></td></tr>
+                                <tr><td colSpan={7} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div></td></tr>
                             ) : items.length === 0 ? (
-                                <tr><td colSpan={6} className="px-6 py-12 text-center text-gray-500">Tidak ada data quotation</td></tr>
+                                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Tidak ada data quotation</td></tr>
                             ) : items.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50">
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.formattedNumber}</td>
@@ -841,14 +1026,17 @@ function QuotationTab() {
                                     <td className="px-6 py-4 text-sm text-gray-900">{item.customerName}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{item.description}</td>
                                     <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>
-                                            {(
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                            )}
-                                        </div>
-                                    </td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">{item.createdByName || "-"}</td>
+                                    {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
+                                        <td className="px-6 py-4 text-right">
+                                            <div className="flex justify-end gap-2">
+                                                {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                                {hasPermission("quotation.delete") && (
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                                )}
+                                            </div>
+                                        </td>
+                                    )}
                                 </tr>
                             ))}
                         </tbody>
@@ -906,6 +1094,23 @@ function QuotationTab() {
                         <DialogDescription>Update detail quotation.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Customer</Label>
+                                <Select value={(editFormData.customerId || 0).toString()} onValueChange={(v) => setEditFormData({ ...editFormData, customerId: parseInt(v) })}>
+                                    <SelectTrigger><SelectValue placeholder="Pilih customer" /></SelectTrigger>
+                                    <SelectContent>
+                                        {companies.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            {isAdmin && (
+                                <div className="space-y-2">
+                                    <Label>Tanggal</Label>
+                                    <Input type="date" value={editFormData.quotationDate || ""} onChange={(e) => setEditFormData({ ...editFormData, quotationDate: e.target.value })} />
+                                </div>
+                            )}
+                        </div>
                         <div className="space-y-2">
                             <Label>Deskripsi *</Label>
                             <Input value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} />

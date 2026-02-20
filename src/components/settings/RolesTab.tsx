@@ -13,7 +13,7 @@ import {
   Users,
   Key,
 } from "lucide-react";
-import { permission } from "process";
+import { hasPermission } from "../../utils/permissionUtils";
 
 export default function RolesTab() {
   const [roles, setRoles] = useState<Role[]>([]);
@@ -160,7 +160,7 @@ export default function RolesTab() {
           </p>
         </div>
 
-        {!isAddingNew && (
+        {!isAddingNew && hasPermission("role.create") && (
           <button
             onClick={() => setIsAddingNew(true)}
             className="mt-4 sm:mt-0 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition inline-flex items-center"
@@ -174,11 +174,10 @@ export default function RolesTab() {
       {/* Message */}
       {message && (
         <div
-          className={`mb-6 p-4 rounded-lg ${
-            message.type === "success"
-              ? "bg-green-50 text-green-700 border border-green-200"
-              : "bg-red-50 text-red-700 border border-red-200"
-          }`}
+          className={`mb-6 p-4 rounded-lg ${message.type === "success"
+            ? "bg-green-50 text-green-700 border border-green-200"
+            : "bg-red-50 text-red-700 border border-red-200"
+            }`}
         >
           {message.text}
         </div>
@@ -321,20 +320,24 @@ export default function RolesTab() {
                     : "-"}
                 </span>
                 <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleEdit(role)}
-                    className="text-blue-600 hover:text-blue-800 p-1"
-                    title="Edit"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDelete(role.roleId)}
-                    className="text-red-600 hover:text-red-800 p-1"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
+                  {hasPermission("role.update") && (
+                    <button
+                      onClick={() => handleEdit(role)}
+                      className="text-blue-600 hover:text-blue-800 p-1"
+                      title="Edit"
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  {hasPermission("role.delete") && (
+                    <button
+                      onClick={() => handleDelete(role.roleId)}
+                      className="text-red-600 hover:text-red-800 p-1"
+                      title="Delete"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

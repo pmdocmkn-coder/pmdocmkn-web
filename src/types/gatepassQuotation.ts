@@ -9,6 +9,7 @@ export interface GatepassList {
     status: string;
     itemCount: number;
     createdByName?: string;
+    isSigned: boolean;
 }
 
 export interface GatepassResponse {
@@ -29,6 +30,10 @@ export interface GatepassResponse {
     items: GatepassItemResponse[];
     createdByUser?: UserInfo;
     updatedByUser?: UserInfo;
+    signedByUser?: UserInfo;
+    signedAt?: string;
+    verificationToken?: string;
+    isSigned: boolean;
 }
 
 export interface GatepassItemResponse {
@@ -66,6 +71,7 @@ export interface GatepassUpdate {
     signatureQRCode?: string;
     notes?: string;
     status: number;
+    items?: GatepassItemCreate[];
 }
 
 export interface GatepassQuery {
@@ -117,6 +123,8 @@ export interface QuotationUpdate {
     description: string;
     notes?: string;
     status: number;
+    customerId?: number;
+    quotationDate?: string;
 }
 
 export interface QuotationQuery {
@@ -135,6 +143,8 @@ export interface UserInfo {
     fullName: string;
     email?: string;
     photoUrl?: string;
+    employeeId?: string;
+    division?: string;
 }
 
 // Status helpers
