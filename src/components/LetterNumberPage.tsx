@@ -34,7 +34,12 @@ import {
     CheckCircle,
     ChevronDown,
     ChevronRight,
+    Check,
+    ChevronsUpDown,
 } from "lucide-react";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { cn } from "../lib/utils";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -181,6 +186,7 @@ function LetterTab() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedLetter, setSelectedLetter] = useState<LetterNumberList | null>(null);
+    const [openCompanyBox, setOpenCompanyBox] = useState(false);
     const [formData, setFormData] = useState<LetterNumberCreate>({
         companyId: 0, documentTypeId: 0, letterDate: new Date().toISOString().split("T")[0],
         subject: "", recipient: "", attachmentUrl: "", status: LetterStatus.Draft,
@@ -349,12 +355,49 @@ function LetterTab() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Company *</Label>
-                                <Select value={formData.companyId.toString()} onValueChange={(v) => setFormData({ ...formData, companyId: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih company" /></SelectTrigger>
-                                    <SelectContent>
-                                        {companies.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={openCompanyBox} onOpenChange={setOpenCompanyBox}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={openCompanyBox}
+                                            className="w-full justify-between font-normal"
+                                        >
+                                            {formData.companyId
+                                                ? companies.find((c) => c.id === formData.companyId)?.name
+                                                : "Pilih company"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Cari company..." />
+                                            <CommandList>
+                                                <CommandEmpty>Company tidak ditemukan.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {companies.map((c) => (
+                                                        <CommandItem
+                                                            key={c.id}
+                                                            value={c.name}
+                                                            onSelect={() => {
+                                                                setFormData({ ...formData, companyId: c.id });
+                                                                setOpenCompanyBox(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    formData.companyId === c.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {c.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2">
                                 <Label>Tipe Dokumen *</Label>
@@ -893,6 +936,8 @@ function QuotationTab() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<QuotationList | null>(null);
+    const [openCreateCompanyBox, setOpenCreateCompanyBox] = useState(false);
+    const [openEditCompanyBox, setOpenEditCompanyBox] = useState(false);
 
     const [formData, setFormData] = useState<QuotationCreate>({
         customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 0,
@@ -1056,12 +1101,49 @@ function QuotationTab() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer *</Label>
-                                <Select value={formData.customerId.toString()} onValueChange={(v) => setFormData({ ...formData, customerId: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih customer" /></SelectTrigger>
-                                    <SelectContent>
-                                        {companies.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={openCreateCompanyBox} onOpenChange={setOpenCreateCompanyBox}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={openCreateCompanyBox}
+                                            className="w-full justify-between font-normal"
+                                        >
+                                            {formData.customerId
+                                                ? companies.find((c) => c.id === formData.customerId)?.name
+                                                : "Pilih customer"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Cari customer..." />
+                                            <CommandList>
+                                                <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {companies.map((c) => (
+                                                        <CommandItem
+                                                            key={c.id}
+                                                            value={c.name}
+                                                            onSelect={() => {
+                                                                setFormData({ ...formData, customerId: c.id });
+                                                                setOpenCreateCompanyBox(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    formData.customerId === c.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {c.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             <div className="space-y-2">
                                 <Label>Tanggal *</Label>
@@ -1097,12 +1179,49 @@ function QuotationTab() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer</Label>
-                                <Select value={(editFormData.customerId || 0).toString()} onValueChange={(v) => setEditFormData({ ...editFormData, customerId: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih customer" /></SelectTrigger>
-                                    <SelectContent>
-                                        {companies.map((c) => <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
+                                <Popover open={openEditCompanyBox} onOpenChange={setOpenEditCompanyBox}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={openEditCompanyBox}
+                                            className="w-full justify-between font-normal"
+                                        >
+                                            {editFormData.customerId
+                                                ? companies.find((c) => c.id === editFormData.customerId)?.name
+                                                : "Pilih customer"}
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Cari customer..." />
+                                            <CommandList>
+                                                <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {companies.map((c) => (
+                                                        <CommandItem
+                                                            key={c.id}
+                                                            value={c.name}
+                                                            onSelect={() => {
+                                                                setEditFormData({ ...editFormData, customerId: c.id });
+                                                                setOpenEditCompanyBox(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    editFormData.customerId === c.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {c.name}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
                             </div>
                             {isAdmin && (
                                 <div className="space-y-2">
