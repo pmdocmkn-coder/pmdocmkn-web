@@ -405,8 +405,6 @@ export default function SwrSignalPage() {
             <SwrChannelsTable
               channels={channels}
               loading={loading}
-              onEdit
-
               onEdit={hasPermission("swr.update") ? handleEditChannel : undefined}
               onDelete={hasPermission("swr.delete") ? handleDeleteChannel : undefined}
             />

@@ -199,7 +199,7 @@ export default function CompanyPage() {
                                 checked={showInactiveOnly}
                                 onCheckedChange={setShowInactiveOnly}
                             />
-                            <Label>Show Inactive Only</Label>
+                            <Label>Show Inactive Data Only</Label>
                         </div>
                         {hasPermission('letter.create') && (
                             <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-blue-600 hover:bg-blue-700">
