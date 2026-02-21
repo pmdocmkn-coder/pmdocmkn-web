@@ -355,7 +355,7 @@ function LetterTab() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Company *</Label>
-                                <Popover open={openCompanyBox} onOpenChange={setOpenCompanyBox}>
+                                <Popover open={openCompanyBox} onOpenChange={setOpenCompanyBox} modal={true}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -369,7 +369,7 @@ function LetterTab() {
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                    <PopoverContent className="w-[400px] p-0 pointer-events-auto" align="start">
                                         <Command>
                                             <CommandInput placeholder="Cari company..." />
                                             <CommandList>
@@ -495,7 +495,7 @@ function GatepassTab() {
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<GatepassList | null>(null);
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
-    const [expandedItemDetails, setExpandedItemDetails] = useState<Record<number, any[]>>({});
+    const [expandedItemDetails, setExpandedItemDetails] = useState<Record<number, any>>({});
 
     const [formData, setFormData] = useState<GatepassCreate>({
         destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0],
@@ -622,7 +622,7 @@ function GatepassTab() {
             if (!expandedItemDetails[id]) {
                 try {
                     const detail = await gatepassApi.getById(id);
-                    setExpandedItemDetails(prev => ({ ...prev, [id]: detail.items }));
+                    setExpandedItemDetails(prev => ({ ...prev, [id]: detail }));
                 } catch (e) { console.error(e); }
             }
         }
@@ -667,9 +667,9 @@ function GatepassTab() {
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={7} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div></td></tr>
+                                <tr><td colSpan={(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) ? 8 : 7} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div></td></tr>
                             ) : items.length === 0 ? (
-                                <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Tidak ada data gatepass</td></tr>
+                                <tr><td colSpan={(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) ? 8 : 7} className="px-6 py-12 text-center text-gray-500">Tidak ada data gatepass</td></tr>
                             ) : items.map((item) => (
                                 <React.Fragment key={item.id}>
                                     <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpandRow(item.id)}>
@@ -700,35 +700,45 @@ function GatepassTab() {
                                     </tr>
                                     {expandedRows.has(item.id) && (
                                         <tr className="bg-emerald-50">
-                                            <td colSpan={7} className="px-6 py-3">
+                                            <td colSpan={(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) ? 8 : 7} className="px-6 py-3">
                                                 {expandedItemDetails[item.id] ? (
-                                                    <div className="space-y-1">
-                                                        <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Detail Barang</p>
-                                                        <table className="w-full text-sm">
-                                                            <thead>
-                                                                <tr className="text-xs text-gray-500">
-                                                                    <th className="text-left py-1">Nama Barang</th>
-                                                                    <th className="text-left py-1">Qty</th>
-                                                                    <th className="text-left py-1">Unit</th>
-                                                                    <th className="text-left py-1">Serial Number</th>
-                                                                    <th className="text-left py-1">Deskripsi</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                {expandedItemDetails[item.id].map((detail: any, i: number) => (
-                                                                    <tr key={i} className="border-t border-emerald-100">
-                                                                        <td className="py-1">{detail.itemName}</td>
-                                                                        <td className="py-1">{detail.quantity}</td>
-                                                                        <td className="py-1">{detail.unit}</td>
-                                                                        <td className="py-1 text-gray-500">{detail.serialNumber || "-"}</td>
-                                                                        <td className="py-1 text-gray-500">{detail.description || "-"}</td>
+                                                    <div className="space-y-4 pt-2">
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-white p-3 rounded border border-emerald-100 shadow-sm">
+                                                            <div>
+                                                                <span className="font-semibold text-gray-600 block mb-1">Nama Driver / Pembawa Gatepass:</span>
+                                                                <span className="text-gray-900">{expandedItemDetails[item.id].picContact || "-"}</span>
+                                                            </div>
+                                                            <div>
+                                                                <span className="font-semibold text-gray-600 block mb-1">Catatan Tambahan:</span>
+                                                                <span className="text-gray-900">{expandedItemDetails[item.id].notes || "-"}</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className="space-y-1 bg-white p-3 rounded border border-emerald-100 shadow-sm">
+                                                            <p className="text-xs font-semibold text-gray-600 uppercase mb-2">Detail Barang</p>
+                                                            <table className="w-full text-sm">
+                                                                <thead>
+                                                                    <tr className="text-xs text-gray-500">
+                                                                        <th className="text-left py-1 w-1/3">Nama Barang</th>
+                                                                        <th className="text-left py-1 w-16">Qty</th>
+                                                                        <th className="text-left py-1 w-16">Unit</th>
+                                                                        <th className="text-left py-1 w-1/4">Serial Number</th>
                                                                     </tr>
-                                                                ))}
-                                                            </tbody>
-                                                        </table>
+                                                                </thead>
+                                                                <tbody>
+                                                                    {expandedItemDetails[item.id].items.map((detail: any, i: number) => (
+                                                                        <tr key={i} className="border-t border-emerald-50">
+                                                                            <td className="py-2 text-gray-900 font-medium">{detail.itemName}</td>
+                                                                            <td className="py-2 text-gray-700">{detail.quantity}</td>
+                                                                            <td className="py-2 text-gray-700">{detail.unit}</td>
+                                                                            <td className="py-2 text-gray-500">{detail.serialNumber || "-"}</td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
                                                     </div>
                                                 ) : (
-                                                    <div className="text-center text-gray-400 py-2">Memuat detail...</div>
+                                                    <div className="text-center text-gray-400 py-4"><div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>Memuat detail...</div>
                                                 )}
                                             </td>
                                         </tr>
@@ -794,7 +804,7 @@ function GatepassTab() {
                             </div>
                             {formData.items.map((item, index) => (
                                 <div key={index} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg">
-                                    <div className="col-span-4">
+                                    <div className="col-span-5">
                                         <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateItem(index, "itemName", e.target.value)} />
                                     </div>
                                     <div className="col-span-2">
@@ -871,7 +881,7 @@ function GatepassTab() {
                             </div>
                             {(editFormData.items || []).map((item, index) => (
                                 <div key={index} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg">
-                                    <div className="col-span-4">
+                                    <div className="col-span-5">
                                         <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateEditItem(index, "itemName", e.target.value)} />
                                     </div>
                                     <div className="col-span-2">
@@ -880,7 +890,7 @@ function GatepassTab() {
                                     <div className="col-span-2">
                                         <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateEditItem(index, "unit", e.target.value)} />
                                     </div>
-                                    <div className="col-span-3">
+                                    <div className="col-span-2">
                                         <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateEditItem(index, "serialNumber", e.target.value)} />
                                     </div>
                                     <div className="col-span-1 flex items-center">
@@ -1086,7 +1096,7 @@ function QuotationTab() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer *</Label>
-                                <Popover open={openCreateCompanyBox} onOpenChange={setOpenCreateCompanyBox}>
+                                <Popover open={openCreateCompanyBox} onOpenChange={setOpenCreateCompanyBox} modal={true}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -1100,7 +1110,7 @@ function QuotationTab() {
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                    <PopoverContent className="w-[400px] p-0 pointer-events-auto" align="start">
                                         <Command>
                                             <CommandInput placeholder="Cari customer..." />
                                             <CommandList>
@@ -1164,7 +1174,7 @@ function QuotationTab() {
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer</Label>
-                                <Popover open={openEditCompanyBox} onOpenChange={setOpenEditCompanyBox}>
+                                <Popover open={openEditCompanyBox} onOpenChange={setOpenEditCompanyBox} modal={true}>
                                     <PopoverTrigger asChild>
                                         <Button
                                             variant="outline"
@@ -1178,7 +1188,7 @@ function QuotationTab() {
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0" align="start">
+                                    <PopoverContent className="w-[400px] p-0 pointer-events-auto" align="start">
                                         <Command>
                                             <CommandInput placeholder="Cari customer..." />
                                             <CommandList>

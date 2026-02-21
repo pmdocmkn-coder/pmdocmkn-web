@@ -30,6 +30,9 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -46,6 +49,8 @@ import {
   ChevronLeft, // ◀ Sebelumnya
   ChevronRight, // ▶ Berikutnya
   ChevronsRight, // ⏭ Akhir
+  Check,
+  ChevronsUpDown,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -214,6 +219,7 @@ const NecHistoryPage: React.FC = () => {
     }[]
   >([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [openLinkBox, setOpenLinkBox] = useState(false);
 
   useEffect(() => {
     const loadInitialData = async () => {
@@ -1411,27 +1417,61 @@ const NecHistoryPage: React.FC = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="necLinkId">Link</Label>
-                <Select
-                  required
-                  value={formData.necLinkId.toString()}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      necLinkId: parseInt(value),
-                    }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Pilih Link" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {links.map((link) => (
-                      <SelectItem key={link.id} value={link.id.toString()}>
-                        {link.name} ({link.nearEndTower} → {link.farEndTower})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                {modalMode === "edit" ? (
+                  <Input disabled value={links.find((l) => l.id === formData.necLinkId)?.name || ""} className="disabled:opacity-50 mt-1" />
+                ) : (
+                  <Popover open={openLinkBox} onOpenChange={setOpenLinkBox} modal={true}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={openLinkBox}
+                        className="w-full justify-between font-normal mt-1"
+                      >
+                        <span className="truncate">
+                          {formData.necLinkId
+                            ? (() => {
+                              const selected = links.find((l) => l.id === formData.necLinkId);
+                              return selected ? `${selected.name} (${selected.nearEndTower} → ${selected.farEndTower})` : "Pilih Link";
+                            })()
+                            : "Pilih Link"}
+                        </span>
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[460px] p-0 pointer-events-auto" align="start">
+                      <Command>
+                        <CommandInput placeholder="Cari link..." />
+                        <CommandList>
+                          <CommandEmpty>Link tidak ditemukan.</CommandEmpty>
+                          <CommandGroup>
+                            {links.map((link) => (
+                              <CommandItem
+                                key={link.id}
+                                value={`${link.name} ${link.nearEndTower} ${link.farEndTower}`}
+                                onSelect={() => {
+                                  setFormData((prev) => ({
+                                    ...prev,
+                                    necLinkId: link.id,
+                                  }));
+                                  setOpenLinkBox(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    "mr-2 h-4 w-4",
+                                    formData.necLinkId === link.id ? "opacity-100" : "opacity-0"
+                                  )}
+                                />
+                                {link.name} ({link.nearEndTower} → {link.farEndTower})
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
               <div>
                 <Label htmlFor="date">Tanggal</Label>

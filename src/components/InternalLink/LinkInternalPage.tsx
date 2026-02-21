@@ -10,12 +10,15 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 import { hasPermission } from "../../utils/permissionUtils";
 import { toast } from "@/hooks/use-toast";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
-    Plus, Edit, Trash, Search, Eye, Image, Camera, X,
+    Plus, Edit, Trash, Search, Eye, Image, Camera, X, Check, ChevronsUpDown,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
     Wifi, WifiOff, Settings, Activity, Link2,
 } from "lucide-react";
@@ -139,6 +142,7 @@ const LinkInternalPage: React.FC = () => {
     // History Modal
     const [showHistoryModal, setShowHistoryModal] = useState(false);
     const [historyModalMode, setHistoryModalMode] = useState<"create" | "edit">("create");
+    const [openLinkBox, setOpenLinkBox] = useState(false);
     const [editingHistory, setEditingHistory] = useState<InternalLinkHistoryItemDto | null>(null);
     const [historyForm, setHistoryForm] = useState<InternalLinkHistoryCreateDto>({
         internalLinkId: 0, date: format(new Date(), "yyyy-MM-dd"),
@@ -1572,10 +1576,55 @@ const LinkInternalPage: React.FC = () => {
                     <form onSubmit={handleHistorySubmit} className="space-y-4">
                         <div>
                             <Label>Link *</Label>
-                            <select value={historyForm.internalLinkId} onChange={(e) => setHistoryForm(prev => ({ ...prev, internalLinkId: Number(e.target.value) }))} disabled={historyModalMode === "edit"} className="w-full border rounded-md px-3 py-2 text-sm disabled:opacity-50">
-                                <option value={0}>-- Pilih Link --</option>
-                                {links.map(l => <option key={l.id} value={l.id}>{l.linkName}</option>)}
-                            </select>
+                            {historyModalMode === "edit" ? (
+                                <Input disabled value={links.find((l) => l.id === historyForm.internalLinkId)?.linkName || ""} className="disabled:opacity-50 mt-1" />
+                            ) : (
+                                <Popover open={openLinkBox} onOpenChange={setOpenLinkBox} modal={true}>
+                                    <PopoverTrigger asChild>
+                                        <Button
+                                            variant="outline"
+                                            role="combobox"
+                                            aria-expanded={openLinkBox}
+                                            className="w-full justify-between font-normal mt-1"
+                                        >
+                                            <span className="truncate">
+                                                {historyForm.internalLinkId
+                                                    ? links.find((l) => l.id === historyForm.internalLinkId)?.linkName
+                                                    : "-- Pilih Link --"}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                        </Button>
+                                    </PopoverTrigger>
+                                    <PopoverContent className="w-[460px] p-0 pointer-events-auto" align="start">
+                                        <Command>
+                                            <CommandInput placeholder="Cari link..." />
+                                            <CommandList>
+                                                <CommandEmpty>Link tidak ditemukan.</CommandEmpty>
+                                                <CommandGroup>
+                                                    {links.map((l) => (
+                                                        <CommandItem
+                                                            key={l.id}
+                                                            value={l.linkName}
+                                                            onSelect={() => {
+                                                                setHistoryForm((prev) => ({ ...prev, internalLinkId: l.id }));
+                                                                setOpenLinkBox(false);
+                                                            }}
+                                                        >
+                                                            <Check
+                                                                className={cn(
+                                                                    "mr-2 h-4 w-4",
+                                                                    historyForm.internalLinkId === l.id ? "opacity-100" : "opacity-0"
+                                                                )}
+                                                            />
+                                                            {l.linkName}
+                                                        </CommandItem>
+                                                    ))}
+                                                </CommandGroup>
+                                            </CommandList>
+                                        </Command>
+                                    </PopoverContent>
+                                </Popover>
+                            )}
                         </div>
                         <div className="grid grid-cols-2 gap-4">
                             <div><Label>Tanggal *</Label><Input type="date" required value={historyForm.date} onChange={(e) => setHistoryForm(prev => ({ ...prev, date: e.target.value }))} /></div>
