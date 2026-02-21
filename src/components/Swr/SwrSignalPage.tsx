@@ -258,7 +258,7 @@ export default function SwrSignalPage() {
   };
 
   return (
-    <div className="container mx-auto p-6">
+    <div className="w-full p-6">
       {/* Header - Clean, no background */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>

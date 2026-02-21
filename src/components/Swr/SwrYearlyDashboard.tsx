@@ -1364,7 +1364,7 @@ const SwrYearlyDashboard: React.FC = () => {
 
   if (error && retryCount >= 3) {
     return (
-      <div className="container mx-auto p-6">
+      <div className="w-full p-6">
         <Alert variant="destructive" className="mb-6">
           <AlertTriangle className="h-4 w-4" />
           <AlertTitle>Failed to Load Dashboard</AlertTitle>
@@ -1399,7 +1399,7 @@ const SwrYearlyDashboard: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 space-y-6">
+      <div className="w-full p-6 space-y-6">
         <div className="flex justify-between items-center">
           <Skeleton className="h-10 w-64" />
           <Skeleton className="h-10 w-48" />
@@ -1419,7 +1419,7 @@ const SwrYearlyDashboard: React.FC = () => {
   // ============================================
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="w-full p-6 space-y-6">
       {/* Header */}
       <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
         <div>

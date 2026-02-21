@@ -499,12 +499,12 @@ function GatepassTab() {
 
     const [formData, setFormData] = useState<GatepassCreate>({
         destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0],
-        notes: "", status: 0, items: [{ itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }],
+        notes: "", status: 0, items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }],
     });
 
     const [editFormData, setEditFormData] = useState<GatepassUpdate>({
         destination: "", picName: "", picContact: "", notes: "", status: 0,
-        items: [{ itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }],
+        items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }],
     });
 
     useEffect(() => { loadItems(); }, [currentPage, searchTerm]);
@@ -522,7 +522,7 @@ function GatepassTab() {
     };
 
     const addItem = () => {
-        setFormData({ ...formData, items: [...formData.items, { itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }] });
+        setFormData({ ...formData, items: [...formData.items, { itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }] });
     };
 
     const removeItem = (index: number) => {
@@ -587,7 +587,7 @@ function GatepassTab() {
                 items: detail.items.map(i => ({
                     itemName: i.itemName,
                     quantity: i.quantity,
-                    unit: i.unit || "unit",
+                    unit: i.unit || "EA",
                     description: i.description || "",
                     serialNumber: i.serialNumber || "",
                 })),
@@ -599,7 +599,7 @@ function GatepassTab() {
     };
 
     const addEditItem = () => {
-        setEditFormData({ ...editFormData, items: [...(editFormData.items || []), { itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }] });
+        setEditFormData({ ...editFormData, items: [...(editFormData.items || []), { itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }] });
     };
 
     const removeEditItem = (index: number) => {
@@ -611,17 +611,6 @@ function GatepassTab() {
         const updated = [...(editFormData.items || [])];
         (updated[index] as any)[field] = value;
         setEditFormData({ ...editFormData, items: updated });
-    };
-
-    const handleSign = async (id: number) => {
-        if (!confirm("Apakah Anda yakin ingin menandatangani gatepass ini? Tanda tangan tidak dapat dibatalkan.")) return;
-        try {
-            await gatepassApi.sign(id);
-            toast({ title: "Success", description: "Gatepass berhasil ditandatangani" });
-            loadItems();
-        } catch (error: any) {
-            toast({ title: "Error", description: error.response?.data?.message || error.message, variant: "destructive" });
-        }
     };
 
     const toggleExpandRow = async (id: number) => {
@@ -641,7 +630,7 @@ function GatepassTab() {
     };
 
     const resetForm = () => {
-        setFormData({ destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0], notes: "", status: 0, items: [{ itemName: "", quantity: 1, unit: "unit", description: "", serialNumber: "" }] });
+        setFormData({ destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0], notes: "", status: 0, items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }] });
         setSelectedItem(null);
     };
 
@@ -672,6 +661,7 @@ function GatepassTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PIC</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembuat</th>
                                 {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
                             </tr>
                         </thead>
@@ -696,17 +686,12 @@ function GatepassTab() {
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
                                                 <StatusBadge status={item.status} />
-                                                {item.isSigned && <span title="Sudah ditandatangani"><CheckCircle className="h-4 w-4 text-green-600" /></span>}
                                             </div>
                                         </td>
+                                        <td className="px-6 py-4 text-sm text-gray-500">{item.createdByName || "-"}</td>
                                         {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
                                             <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-end gap-1">
-                                                    {!item.isSigned && (
-                                                        <Button variant="ghost" size="sm" onClick={() => handleSign(item.id)} className="text-blue-600 hover:text-blue-700" title="Tanda Tangani">
-                                                            <CheckCircle className="h-4 w-4" />
-                                                        </Button>
-                                                    )}
                                                     {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
                                                     {hasPermission("gatepass.delete") && <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>}
                                                 </div>
@@ -780,8 +765,8 @@ function GatepassTab() {
                                 <Input value={formData.picName} onChange={(e) => setFormData({ ...formData, picName: e.target.value })} placeholder="Nama PIC" />
                             </div>
                             <div className="space-y-2">
-                                <Label>Kontak PIC</Label>
-                                <Input value={formData.picContact || ""} onChange={(e) => setFormData({ ...formData, picContact: e.target.value })} placeholder="No. HP / Email" />
+                                <Label>Nama Driver / Pembawa Gatepass</Label>
+                                <Input value={formData.picContact || ""} onChange={(e) => setFormData({ ...formData, picContact: e.target.value })} placeholder="Masukkan nama driver / pembawa" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">
@@ -857,8 +842,8 @@ function GatepassTab() {
                                 <Input value={editFormData.picName} onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })} />
                             </div>
                             <div className="space-y-2">
-                                <Label>Kontak PIC</Label>
-                                <Input value={editFormData.picContact || ""} onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })} />
+                                <Label>Nama Driver / Pembawa Gatepass</Label>
+                                <Input value={editFormData.picContact || ""} onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })} placeholder="Masukkan nama driver / pembawa" />
                             </div>
                         </div>
                         <div className="grid grid-cols-2 gap-4">

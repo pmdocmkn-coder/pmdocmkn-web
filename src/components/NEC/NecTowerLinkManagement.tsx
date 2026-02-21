@@ -371,7 +371,7 @@ const NecTowerLinkManagement: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="w-full p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Manajemen Tower & Link NEC</h1>
         <Button onClick={() => navigate("/nec-history")} variant="outline">
@@ -755,15 +755,13 @@ const NecTowerLinkManagement: React.FC = () => {
                   }
                   placeholder={
                     linkFormData.nearEndTowerId && linkFormData.farEndTowerId
-                      ? `${
-                          towers.find(
-                            (t) => t.id === linkFormData.nearEndTowerId
-                          )?.name || ""
-                        } to ${
-                          towers.find(
-                            (t) => t.id === linkFormData.farEndTowerId
-                          )?.name || ""
-                        }`
+                      ? `${towers.find(
+                        (t) => t.id === linkFormData.nearEndTowerId
+                      )?.name || ""
+                      } to ${towers.find(
+                        (t) => t.id === linkFormData.farEndTowerId
+                      )?.name || ""
+                      }`
                       : "Contoh: M5 to Tower Harapan"
                   }
                 />

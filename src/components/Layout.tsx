@@ -77,7 +77,7 @@ const Layout: React.FC<LayoutProps> = ({
 
         {/* Main content area */}
         <main className="flex-1 p-6 md:p-10">
-          <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+          <div className="w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {children}
           </div>
         </main>

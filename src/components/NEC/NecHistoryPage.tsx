@@ -946,7 +946,7 @@ const NecHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="container mx-auto p-4">
+    <div className="w-full p-4">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Histori Jaringan NEC</h1>
         <div className="flex space-x-2">
@@ -980,8 +980,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("history")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "history"
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
             >
               <span className="flex items-center gap-2">
@@ -998,8 +998,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("pivot")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "pivot"
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
             >
               <span className="flex items-center gap-2">
@@ -1011,8 +1011,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("monthly")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "monthly"
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
             >
               <span className="flex items-center gap-2">
@@ -1024,8 +1024,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("yearly")}
               className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "yearly"
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                ? "bg-blue-100 text-blue-700 border border-blue-200"
+                : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                 }`}
             >
               <span className="flex items-center gap-2">

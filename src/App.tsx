@@ -20,6 +20,7 @@ import ProfilePage from "./components/ProfilePage";
 import SettingsPage from "./components/SettingsPage";
 import InspeksiKPCPage from "./components/InspeksiKPCPage";
 import NecHistoryPage from "./components/NEC/NecHistoryPage";
+import LinkInternalPage from "./components/InternalLink/LinkInternalPage";
 import NecTowerLinkManagement from "./components/NEC/NecTowerLinkManagement";
 import SwrSignalPage from "./components/Swr/SwrSignalPage";
 import LetterNumberPage from "./components/LetterNumberPage";
@@ -191,6 +192,15 @@ function AppContent() {
             element={
               <PermissionGuard permission="nec.histori.menu">
                 <NecHistoryPage />
+              </PermissionGuard>
+            }
+          />
+
+          <Route
+            path="/link-internal"
+            element={
+              <PermissionGuard permission="internal.link.menu">
+                <LinkInternalPage />
               </PermissionGuard>
             }
           />

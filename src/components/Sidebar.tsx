@@ -25,6 +25,7 @@ import {
   RadioReceiver,
   PencilRuler,
   Trash2,
+  Link2,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -91,6 +92,13 @@ const navItems: NavItem[] = [
     icon: TrendingUp,
     id: "nec-history",
     permission: "nec.histori.menu",
+  },
+  {
+    name: "Link Internal",
+    path: "/link-internal",
+    icon: Link2,
+    id: "link-internal",
+    permission: "internal.link.menu",
   },
   {
     name: "SWR Signal",
