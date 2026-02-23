@@ -935,7 +935,7 @@ function QuotationTab() {
     const [openEditCompanyBox, setOpenEditCompanyBox] = useState(false);
 
     const [formData, setFormData] = useState<QuotationCreate>({
-        customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 0,
+        customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1,
     });
     const [editFormData, setEditFormData] = useState<QuotationUpdate>({
         description: "", notes: "", status: 0, customerId: 0, quotationDate: "",
@@ -1020,7 +1020,7 @@ function QuotationTab() {
     };
 
     const resetForm = () => {
-        setFormData({ customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 0 });
+        setFormData({ customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1 });
         setSelectedItem(null);
     };
 
@@ -1145,9 +1145,21 @@ function QuotationTab() {
                                 <Input type="date" value={formData.quotationDate} onChange={(e) => setFormData({ ...formData, quotationDate: e.target.value })} />
                             </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Deskripsi *</Label>
-                            <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Deskripsi quotation" />
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Deskripsi *</Label>
+                                <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Deskripsi quotation" />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Status</Label>
+                                <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">Draft</SelectItem>
+                                        <SelectItem value="1">Sent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
                         <div className="space-y-2">
                             <Label>Catatan</Label>

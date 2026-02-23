@@ -51,6 +51,7 @@ import {
   ChevronsRight, // ⏭ Akhir
   Check,
   ChevronsUpDown,
+  Loader2,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -197,6 +198,7 @@ const NecHistoryPage: React.FC = () => {
     notes: "",
     status: "active",
   });
+  const [isSaving, setIsSaving] = useState(false);
 
   const [importResult, setImportResult] =
     useState<NecSignalImportResultDto | null>(null);
@@ -437,6 +439,7 @@ const NecHistoryPage: React.FC = () => {
       return;
     }
 
+    setIsSaving(true);
     const payload = {
       necLinkId: formData.necLinkId,
       date: formData.date,
@@ -471,6 +474,8 @@ const NecHistoryPage: React.FC = () => {
         description: "Gagal menyimpan data history.",
         variant: "destructive",
       });
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -1556,8 +1561,15 @@ const NecHistoryPage: React.FC = () => {
               >
                 Batal
               </Button>
-              <Button type="submit">
-                {modalMode === "create" ? "Simpan" : "Perbarui"}
+              <Button type="submit" disabled={isSaving}>
+                {isSaving ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {modalMode === "create" ? "Menyimpan..." : "Memperbarui..."}
+                  </>
+                ) : (
+                  modalMode === "create" ? "Simpan" : "Perbarui"
+                )}
               </Button>
             </DialogFooter>
           </form>

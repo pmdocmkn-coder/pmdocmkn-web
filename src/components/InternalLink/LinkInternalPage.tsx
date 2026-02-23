@@ -138,6 +138,8 @@ const LinkInternalPage: React.FC = () => {
         linkName: "", linkGroup: "", direction: "TX", ipAddress: "", device: "", type: "", usedFrequency: "",
         serviceType: "LinkInternal", isActive: true,
     });
+    const [openGroupBox, setOpenGroupBox] = useState(false);
+    const [groupSearch, setGroupSearch] = useState("");
 
     // History Modal
     const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -1514,55 +1516,127 @@ const LinkInternalPage: React.FC = () => {
                         <DialogTitle>{linkModalMode === "edit" ? "Edit Link" : "Tambah Link Baru"}</DialogTitle>
                         <DialogDescription>Isi detail link internal di bawah ini.</DialogDescription>
                     </DialogHeader>
-                    <form onSubmit={handleLinkSubmit} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Link Name *</Label>
-                                <Input value={linkForm.linkName} onChange={(e) => setLinkForm(prev => ({ ...prev, linkName: e.target.value }))} placeholder="e.g. AB to Surya" required />
-                            </div>
-                            <div>
-                                <Label>Link Group</Label>
-                                <Input value={linkForm.linkGroup || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, linkGroup: e.target.value }))} placeholder="e.g. AB - Surya (Bisa dikosongi)" title="Gunakan nama yang sama untuk TX dan RX agar digabung di grafik tahunan" />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div>
-                                <Label>Direction (TX/RX)</Label>
-                                <select value={linkForm.direction || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, direction: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm">
-                                    <option value="None">-- Pilih --</option>
-                                    {DIRECTION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                            <div><Label>IP Address</Label><Input value={linkForm.ipAddress || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, ipAddress: e.target.value }))} placeholder="192.168.1.1" /></div>
-                            <div><Label>Device</Label><Input value={linkForm.device || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, device: e.target.value }))} placeholder="Router/Switch" /></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div>
-                                <Label>Tipe Link</Label>
-                                <select value={linkForm.type || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, type: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm">
-                                    <option value="">-- Pilih Tipe --</option>
-                                    {LINK_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                            <div><Label>Used Frequency</Label><Input value={linkForm.usedFrequency || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, usedFrequency: e.target.value }))} placeholder="5.8 GHz" /></div>
-                        </div>
-                        <div className="grid grid-cols-1 gap-4">
-                            <div>
-                                <Label>Service Type</Label>
-                                <select value={linkForm.serviceType || "LinkInternal"} onChange={(e) => setLinkForm(prev => ({ ...prev, serviceType: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm">
-                                    {SERVICE_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                                </select>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <input type="checkbox" checked={linkForm.isActive} onChange={(e) => setLinkForm(prev => ({ ...prev, isActive: e.target.checked }))} className="rounded" />
-                            <Label>Active</Label>
-                        </div>
-                        <DialogFooter>
-                            <Button type="button" variant="outline" onClick={() => setShowLinkModal(false)}>Batal</Button>
-                            <Button type="submit" disabled={loading}>{loading ? "Menyimpan..." : linkModalMode === "edit" ? "Simpan Perubahan" : "Tambah Link"}</Button>
-                        </DialogFooter>
-                    </form>
+                    {(() => {
+                        const uniqueGroups = Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort() as string[];
+                        return (
+                            <form onSubmit={handleLinkSubmit} className="space-y-4">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label>Link Name *</Label>
+                                        <Input value={linkForm.linkName} onChange={(e) => setLinkForm(prev => ({ ...prev, linkName: e.target.value }))} placeholder="e.g. AB to Surya" required />
+                                    </div>
+                                    <div className="space-y-1">
+                                        <Label>Link Group</Label>
+                                        <Popover open={openGroupBox} onOpenChange={setOpenGroupBox} modal={true}>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    aria-expanded={openGroupBox}
+                                                    className="w-full justify-between font-normal"
+                                                >
+                                                    <span className="truncate">
+                                                        {linkForm.linkGroup || "Pilih atau ketik group..."}
+                                                    </span>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[230px] p-0 pointer-events-auto" align="start">
+                                                <Command>
+                                                    <CommandInput
+                                                        placeholder="Cari group..."
+                                                        value={groupSearch}
+                                                        onValueChange={setGroupSearch}
+                                                    />
+                                                    <CommandList>
+                                                        <CommandEmpty>
+                                                            <div className="p-2 space-y-2">
+                                                                <p className="text-xs text-gray-500">Group tidak ditemukan.</p>
+                                                                {groupSearch && (
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="secondary"
+                                                                        size="sm"
+                                                                        className="w-full justify-start text-xs h-8"
+                                                                        onClick={() => {
+                                                                            setLinkForm(prev => ({ ...prev, linkGroup: groupSearch }));
+                                                                            setOpenGroupBox(false);
+                                                                            setGroupSearch("");
+                                                                        }}
+                                                                    >
+                                                                        Gunakan "{groupSearch}"
+                                                                    </Button>
+                                                                )}
+                                                            </div>
+                                                        </CommandEmpty>
+                                                        <CommandGroup>
+                                                            {uniqueGroups.map((group) => (
+                                                                <CommandItem
+                                                                    key={group}
+                                                                    value={group}
+                                                                    onSelect={(currentValue) => {
+                                                                        // currentValue might be lowercase depending on library, so use original group name
+                                                                        setLinkForm((prev) => ({ ...prev, linkGroup: group }));
+                                                                        setOpenGroupBox(false);
+                                                                        setGroupSearch("");
+                                                                    }}
+                                                                >
+                                                                    <Check
+                                                                        className={cn(
+                                                                            "mr-2 h-4 w-4",
+                                                                            linkForm.linkGroup === group ? "opacity-100" : "opacity-0"
+                                                                        )}
+                                                                    />
+                                                                    {group}
+                                                                </CommandItem>
+                                                            ))}
+                                                        </CommandGroup>
+                                                    </CommandList>
+                                                </Command>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </div>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div>
+                                        <Label>Direction (TX/RX)</Label>
+                                        <select value={linkForm.direction || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, direction: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm">
+                                            <option value="None">-- Pilih --</option>
+                                            {DIRECTION_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div><Label>IP Address</Label><Input value={linkForm.ipAddress || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, ipAddress: e.target.value }))} placeholder="192.168.1.1" /></div>
+                                    <div><Label>Device</Label><Input value={linkForm.device || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, device: e.target.value }))} placeholder="Router/Switch" /></div>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <Label>Tipe Link</Label>
+                                        <select value={linkForm.type || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, type: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm">
+                                            <option value="">-- Pilih Tipe --</option>
+                                            {LINK_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
+                                    <div><Label>Used Frequency</Label><Input value={linkForm.usedFrequency || ""} onChange={(e) => setLinkForm(prev => ({ ...prev, usedFrequency: e.target.value }))} placeholder="5.8 GHz" /></div>
+                                </div>
+                                <div className="grid grid-cols-1 gap-4">
+                                    <div>
+                                        <Label>Service Type</Label>
+                                        <select value={linkForm.serviceType || "LinkInternal"} onChange={(e) => setLinkForm(prev => ({ ...prev, serviceType: e.target.value }))} className="w-full border rounded-md px-3 py-2 text-sm">
+                                            {SERVICE_TYPE_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <input type="checkbox" checked={linkForm.isActive} onChange={(e) => setLinkForm(prev => ({ ...prev, isActive: e.target.checked }))} className="rounded" />
+                                    <Label>Active</Label>
+                                </div>
+                                <DialogFooter>
+                                    <Button type="button" variant="outline" onClick={() => setShowLinkModal(false)}>Batal</Button>
+                                    <Button type="submit" disabled={loading}>{loading ? "Menyimpan..." : linkModalMode === "edit" ? "Simpan Perubahan" : "Tambah Link"}</Button>
+                                </DialogFooter>
+                            </form>
+                        );
+                    })()}
                 </DialogContent>
             </Dialog>
 
