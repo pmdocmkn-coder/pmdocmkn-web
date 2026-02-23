@@ -261,11 +261,7 @@ function AppContent() {
 
           <Route
             path="/settings"
-            element={
-              <PermissionGuard permission="setting.menu">
-                <SettingsPage />
-              </PermissionGuard>
-            }
+            element={<SettingsPage />}
           />
 
           {/* ✅ PROFILE SELALU ACCESSIBLE */}

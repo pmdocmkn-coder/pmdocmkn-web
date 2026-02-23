@@ -24,11 +24,6 @@ export default function SettingsPage() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>('permissions');
 
-  // ✅ CEK PERMISSION HALAMAN
-  if (!hasPermission("setting.menu")) {
-    return <Navigate to="/dashboard" replace />;
-  }
-
   // ✅ FILTER TABS BASED ON PERMISSION
   const tabs = [
     {
@@ -36,44 +31,49 @@ export default function SettingsPage() {
       name: 'Permissions',
       icon: Key,
       description: 'Kelola daftar permission',
-      permission: 'role.permission.view',
+      permission: 'system.permission.view',
     },
     {
       id: 'roles' as TabType,
       name: 'Roles',
       icon: Shield,
       description: 'Kelola role pengguna',
-      permission: 'role.view',
+      permission: 'system.role.view',
     },
     {
       id: 'role-permissions' as TabType,
       name: 'Role Permissions',
       icon: UserCog,
       description: 'Atur permission untuk setiap role',
-      permission: 'role.permission.view',
+      permission: 'system.role.permission.view',
     },
     {
       id: 'users' as TabType,
       name: 'User Management',
       icon: Users,
       description: 'Kelola pengguna dan aktivasi akun',
-      permission: 'user.view',
+      permission: 'system.user.management.view',
     },
     {
       id: 'divisions' as TabType,
       name: 'Divisions',
       icon: Building2,
       description: 'Kelola data divisi',
-      permission: 'division.view',
+      permission: 'system.division.view',
     },
     {
       id: 'activity-logs' as TabType,
       name: 'Audit Logs',
       icon: ScrollText,
       description: 'Riwayat aktivitas pengguna',
-      permission: 'system.audit.view', // Pastikan permission ini ada di database/seeder
+      permission: 'system.audit.view',
     },
   ].filter(tab => hasPermission(tab.permission));
+
+  // ✅ CEK PERMISSION HALAMAN (Bisa akses jika punya minimal salah satu permission tab)
+  if (tabs.length === 0) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   // ✅ REDIRECT IF ACTIVE TAB IS NOT ALLOWED
   if (tabs.length > 0 && !tabs.find(t => t.id === activeTab)) {

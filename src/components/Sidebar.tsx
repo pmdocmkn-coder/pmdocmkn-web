@@ -414,7 +414,12 @@ export default function Sidebar({
         }
 
         {
-          hasPermission("setting.menu") && (
+          (hasPermission("system.permission.view") ||
+            hasPermission("system.role.view") ||
+            hasPermission("system.role.permission.view") ||
+            hasPermission("system.user.management.view") ||
+            hasPermission("system.division.view") ||
+            hasPermission("system.audit.view")) && (
             <div className={isCollapsed && !isMobile ? "mt-2" : "mt-6"}>
               <NavLink
                 item={{

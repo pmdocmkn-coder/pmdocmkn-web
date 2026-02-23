@@ -1092,7 +1092,7 @@ export const divisionApi = {
 
   update: async (
     id: number,
-    data: { name: string; isActive: boolean }
+    data: { code?: string; name: string; isActive: boolean }
   ): Promise<any> => {
     const response = await api.put(`/api/divisions/${id}`, data);
     return response.data.data;

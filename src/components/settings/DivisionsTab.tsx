@@ -31,6 +31,7 @@ export default function DivisionsTab() {
         type: "success" | "error";
         text: string;
     } | null>(null);
+    const [isSuperAdmin, setIsSuperAdmin] = useState(false);
 
     const [formData, setFormData] = useState({
         code: "",
@@ -39,8 +40,21 @@ export default function DivisionsTab() {
     });
 
     useEffect(() => {
+        checkSuperAdmin();
         fetchDivisions();
     }, []);
+
+    const checkSuperAdmin = () => {
+        const userStr = localStorage.getItem("user");
+        if (userStr) {
+            try {
+                const user = JSON.parse(userStr);
+                setIsSuperAdmin(user.roleName === "Super Admin");
+            } catch (e) {
+                console.error("Error parsing user for super admin check", e);
+            }
+        }
+    };
 
     const fetchDivisions = async () => {
         try {
@@ -69,6 +83,7 @@ export default function DivisionsTab() {
         try {
             if (editingId) {
                 await divisionApi.update(editingId, {
+                    code: isSuperAdmin ? formData.code.trim().toUpperCase() : undefined,
                     name: formData.name.trim(),
                     isActive: formData.isActive,
                 });
@@ -208,11 +223,16 @@ export default function DivisionsTab() {
                                         className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                         placeholder="e.g., IT, HR, FIN"
                                         required
-                                        disabled={!!editingId}
+                                        disabled={!!editingId && !isSuperAdmin}
                                     />
-                                    {editingId && (
+                                    {editingId && !isSuperAdmin && (
                                         <p className="text-xs text-gray-500 mt-1">
                                             Code tidak dapat diubah
+                                        </p>
+                                    )}
+                                    {editingId && isSuperAdmin && (
+                                        <p className="text-xs text-blue-600 mt-1">
+                                            Anda dapat mengubah Code sebagai Super Admin
                                         </p>
                                     )}
                                 </div>
