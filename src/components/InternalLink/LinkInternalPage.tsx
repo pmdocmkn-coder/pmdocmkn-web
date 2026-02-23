@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -127,6 +127,40 @@ const LinkInternalPage: React.FC = () => {
     // ALL histories (for charts & pivot table)
     const [allHistories, setAllHistories] = useState<InternalLinkHistoryItemDto[]>([]);
 
+    // Kelola Link Filters
+    const [linkSearchTerm, setLinkSearchTerm] = useState("");
+    const [linkGroupFilter, setLinkGroupFilter] = useState("all");
+    const [linkTypeFilter, setLinkTypeFilter] = useState("all");
+    const [linkDirectionFilter, setLinkDirectionFilter] = useState("all");
+    const [linkServiceFilter, setLinkServiceFilter] = useState("all");
+    const [linkStatusFilter, setLinkStatusFilter] = useState("all");
+
+    const filteredLinks = useMemo(() => {
+        return links.filter(link => {
+            const matchesSearch = !linkSearchTerm ||
+                link.linkName.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
+                link.ipAddress?.toLowerCase().includes(linkSearchTerm.toLowerCase()) ||
+                link.device?.toLowerCase().includes(linkSearchTerm.toLowerCase());
+
+            const matchesGroup = linkGroupFilter === "all" || link.linkGroup === linkGroupFilter;
+            const matchesType = linkTypeFilter === "all" || link.type === linkTypeFilter;
+            const matchesDirection = linkDirectionFilter === "all" || link.directionString === linkDirectionFilter;
+            const matchesService = linkServiceFilter === "all" || link.serviceType.toString() === linkServiceFilter;
+            const matchesStatus = linkStatusFilter === "all" || getStatusLabel(link.isActive ? "Active" : "Removed") === linkStatusFilter;
+
+            return matchesSearch && matchesGroup && matchesType && matchesDirection && matchesService && matchesStatus;
+        });
+    }, [links, linkSearchTerm, linkGroupFilter, linkTypeFilter, linkDirectionFilter, linkServiceFilter, linkStatusFilter]);
+
+    const resetFilters = () => {
+        setLinkSearchTerm("");
+        setLinkGroupFilter("all");
+        setLinkTypeFilter("all");
+        setLinkDirectionFilter("all");
+        setLinkServiceFilter("all");
+        setLinkStatusFilter("all");
+    };
+
     // UI
     const [loading, setLoading] = useState(false);
 
@@ -140,6 +174,14 @@ const LinkInternalPage: React.FC = () => {
     });
     const [openGroupBox, setOpenGroupBox] = useState(false);
     const [groupSearch, setGroupSearch] = useState("");
+
+    const formatFrequency = (freq: string | null | undefined) => {
+        if (!freq) return "-";
+        const f = freq.trim();
+        if (f === "" || f === "-") return "-";
+        if (/[a-zA-Z]/.test(f)) return f; // Already has unit
+        return `${f} MHz`;
+    };
 
     // History Modal
     const [showHistoryModal, setShowHistoryModal] = useState(false);
@@ -976,7 +1018,7 @@ const LinkInternalPage: React.FC = () => {
                                                         <TableCell>{format(new Date(h.date), "dd/MM/yyyy")}</TableCell>
                                                         <TableCell className="font-medium">{h.linkName}</TableCell>
                                                         <TableCell className="font-mono text-xs">{parentLink?.ipAddress || "-"}</TableCell>
-                                                        <TableCell className="text-xs">{parentLink?.usedFrequency || "-"}</TableCell>
+                                                        <TableCell className="text-xs">{formatFrequency(parentLink?.usedFrequency)}</TableCell>
                                                         <TableCell>
                                                             <div className="flex flex-col">
                                                                 {h.rslNearEnd != null ? (
@@ -1398,67 +1440,139 @@ const LinkInternalPage: React.FC = () => {
                                     </AlertDescription>
                                 </Alert>
                             ) : (
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow>
-                                            <TableHead>No</TableHead>
-                                            <TableHead>Link Name</TableHead>
-                                            <TableHead>Group</TableHead>
-                                            <TableHead>Dir</TableHead>
-                                            <TableHead>Tipe</TableHead>
-                                            <TableHead>IP Address</TableHead>
-                                            <TableHead>Device</TableHead>
-                                            <TableHead>Frequency</TableHead>
-                                            <TableHead>Service</TableHead>
-                                            <TableHead>Status</TableHead>
-                                            <TableHead>History</TableHead>
-                                            <TableHead>Aksi</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {links.map((link, idx) => (
-                                            <TableRow key={link.id}>
-                                                <TableCell>{idx + 1}</TableCell>
-                                                <TableCell className="font-medium">{link.linkName}</TableCell>
-                                                <TableCell>{link.linkGroup || "-"}</TableCell>
-                                                <TableCell>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${link.directionString === 'TX' ? 'bg-indigo-100 text-indigo-700' : link.directionString === 'RX' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-100 text-gray-600'}`}>
-                                                        {link.directionString !== 'None' ? link.directionString : "-"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getLinkTypeBadgeClass(link.type)}`}>
-                                                        {link.type || "-"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell className="font-mono text-xs">{link.ipAddress || "-"}</TableCell>
-                                                <TableCell>{link.device || "-"}</TableCell>
-                                                <TableCell>{link.usedFrequency || "-"}</TableCell>
-                                                <TableCell>
-                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                        {getServiceTypeLabel(link.serviceType)}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${link.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
-                                                        {link.isActive ? "Active" : "Inactive"}
-                                                    </span>
-                                                </TableCell>
-                                                <TableCell>{link.historyCount}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex space-x-1">
-                                                        {hasPermission("internal.link.update") && (
-                                                            <Button variant="ghost" size="sm" onClick={() => openLinkModal("edit", link)}><Edit className="h-4 w-4" /></Button>
-                                                        )}
-                                                        {hasPermission("internal.link.delete") && (
-                                                            <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ type: "link", id: link.id })}><Trash className="h-4 w-4" /></Button>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
+                                <>
+                                    {/* Filter Bar */}
+                                    <div className="bg-gray-50 border rounded-lg p-3 mb-4 space-y-3">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <div className="relative">
+                                                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                                                <Input
+                                                    placeholder="Cari link, IP, atau device..."
+                                                    className="pl-9"
+                                                    value={linkSearchTerm}
+                                                    onChange={(e) => setLinkSearchTerm(e.target.value)}
+                                                />
+                                            </div>
+                                            <Select value={linkGroupFilter} onValueChange={setLinkGroupFilter}>
+                                                <SelectTrigger><SelectValue placeholder="Semua Group" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Semua Group</SelectItem>
+                                                    {Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort().map(g => (
+                                                        <SelectItem key={g!} value={g!}>{g}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={linkTypeFilter} onValueChange={setLinkTypeFilter}>
+                                                <SelectTrigger><SelectValue placeholder="Semua Tipe" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Semua Tipe</SelectItem>
+                                                    {LINK_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={linkDirectionFilter} onValueChange={setLinkDirectionFilter}>
+                                                <SelectTrigger><SelectValue placeholder="Semua Direction" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Semua Direction</SelectItem>
+                                                    {DIRECTION_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                            <Select value={linkServiceFilter} onValueChange={setLinkServiceFilter}>
+                                                <SelectTrigger><SelectValue placeholder="Semua Service" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Semua Service</SelectItem>
+                                                    {SERVICE_TYPE_OPTIONS.map(opt => (
+                                                        <SelectItem key={opt.value} value={opt.value === "Internet" ? "0" : opt.value === "AudioCodesVoip" ? "1" : opt.value === "LocalLoop" ? "2" : opt.value === "CCTV" ? "3" : "4"}>
+                                                            {opt.label}
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <Select value={linkStatusFilter} onValueChange={setLinkStatusFilter}>
+                                                <SelectTrigger><SelectValue placeholder="Semua Status" /></SelectTrigger>
+                                                <SelectContent>
+                                                    <SelectItem value="all">Semua Status</SelectItem>
+                                                    {STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                            <div className="md:col-span-2 flex justify-end">
+                                                <Button variant="ghost" size="sm" onClick={resetFilters} className="text-gray-500 hover:text-red-600">
+                                                    <X className="h-4 w-4 mr-2" /> Reset Filter
+                                                </Button>
+                                            </div>
+                                        </div>
+
+                                        {filteredLinks.length !== links.length && (
+                                            <div className="text-xs text-gray-500 pt-1 border-t flex justify-between">
+                                                <span>Menampilkan <b>{filteredLinks.length}</b> dari {links.length} total link</span>
+                                                <span className="italic text-blue-600">Filter sedang aktif</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow>
+                                                <TableHead>No</TableHead>
+                                                <TableHead>Link Name</TableHead>
+                                                <TableHead>Group</TableHead>
+                                                <TableHead>Dir</TableHead>
+                                                <TableHead>Tipe</TableHead>
+                                                <TableHead>IP Address</TableHead>
+                                                <TableHead>Device</TableHead>
+                                                <TableHead>Frequency</TableHead>
+                                                <TableHead>Service</TableHead>
+                                                <TableHead>Status</TableHead>
+                                                <TableHead>History</TableHead>
+                                                <TableHead>Aksi</TableHead>
                                             </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {filteredLinks.map((link, idx) => (
+                                                <TableRow key={link.id}>
+                                                    <TableCell>{idx + 1}</TableCell>
+                                                    <TableCell className="font-medium">{link.linkName}</TableCell>
+                                                    <TableCell>{link.linkGroup || "-"}</TableCell>
+                                                    <TableCell>
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${link.directionString === 'TX' ? 'bg-indigo-100 text-indigo-700' : link.directionString === 'RX' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                            {link.directionString !== 'None' ? link.directionString : "-"}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getLinkTypeBadgeClass(link.type)}`}>
+                                                            {link.type || "-"}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell className="font-mono text-xs">{link.ipAddress || "-"}</TableCell>
+                                                    <TableCell>{link.device || "-"}</TableCell>
+                                                    <TableCell>{formatFrequency(link.usedFrequency)}</TableCell>
+                                                    <TableCell>
+                                                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                            {getServiceTypeLabel(link.serviceType)}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${link.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                                            {link.isActive ? "Active" : "Inactive"}
+                                                        </span>
+                                                    </TableCell>
+                                                    <TableCell>{link.historyCount}</TableCell>
+                                                    <TableCell>
+                                                        <div className="flex space-x-1">
+                                                            {hasPermission("internal.link.update") && (
+                                                                <Button variant="ghost" size="sm" onClick={() => openLinkModal("edit", link)}><Edit className="h-4 w-4" /></Button>
+                                                            )}
+                                                            {hasPermission("internal.link.delete") && (
+                                                                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ type: "link", id: link.id })}><Trash className="h-4 w-4" /></Button>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </>
                             )}
                         </CardContent>
                     </Card>
@@ -1780,7 +1894,7 @@ const LinkInternalPage: React.FC = () => {
                                         </div>
                                         <div>
                                             <span className="text-xs text-gray-500 uppercase tracking-wider">Frekuensi</span>
-                                            <p className="text-sm mt-1">{detailLink?.usedFrequency || "-"}</p>
+                                            <p className="text-sm mt-1">{formatFrequency(detailLink?.usedFrequency)}</p>
                                         </div>
                                         <div>
                                             <span className="text-xs text-gray-500 uppercase tracking-wider">Service Type</span>
