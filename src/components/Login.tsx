@@ -1,7 +1,7 @@
 // components/Login.tsx - COMPLETE MODERN UPDATE
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   BarChart3,
@@ -29,6 +29,7 @@ const Login: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   // Clear messages when user starts typing
   useEffect(() => {
@@ -72,9 +73,13 @@ const Login: React.FC = () => {
       setUsername('');
       setPassword('');
 
-      // Redirect to dashboard
+      // Read intended destination from location state or default to dashboard
+      const locationState = location.state as { from?: { pathname: string } };
+      const from = locationState?.from?.pathname || '/dashboard';
+
+      // Redirect to intended destination
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate(from, { replace: true });
       }, 1500);
     } catch (error: any) {
       console.error('🔐 Login error details:', error);
@@ -405,18 +410,18 @@ const Login: React.FC = () => {
               variants={itemVariants}
               className="mt-8 pt-6 border-t border-white/10"
             >
-               {/* Register Link */}
-                <div className="text-center mb-4">
-                  <p className="text-blue-100/70 text-sm">
-                    Don't have an account?{' '}
-                    <Link
-                      to="/register"
-                      className="text-blue-300 hover:text-blue-200 font-medium transition-colors"
-                    >
-                      Create Account
-                    </Link>
-                  </p>
-                </div>
+              {/* Register Link */}
+              <div className="text-center mb-4">
+                <p className="text-blue-100/70 text-sm">
+                  Don't have an account?{' '}
+                  <Link
+                    to="/register"
+                    className="text-blue-300 hover:text-blue-200 font-medium transition-colors"
+                  >
+                    Create Account
+                  </Link>
+                </p>
+              </div>
 
               <p className="text-blue-100/40 text-xs text-center font-light">
                 © 2024 Call Analytics Dashboard. All rights reserved.

@@ -268,6 +268,16 @@ export default function UsersManagementTab() {
   };
 
   const filteredUsers = users.filter((user) => {
+    // 🔥 NEW: Filter for Supv MKN role
+    if (currentUser?.roleName === "Supv MKN") {
+      if (user.roleName !== "Teknisi" && user.roleName !== "Office") {
+        return false;
+      }
+    } else if (currentUser?.roleId !== 1) {
+      // Keep existing logic: Non-Super Admins cannot see Super Admins
+      if (user.roleId === 1) return false;
+    }
+
     const matchesSearch =
       user.fullName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -286,9 +296,9 @@ export default function UsersManagementTab() {
   const paginatedUsers = filteredUsers.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const stats = {
-    total: users.length,
-    active: users.filter((u) => u.isActive).length,
-    inactive: users.filter((u) => !u.isActive).length,
+    total: filteredUsers.length,
+    active: filteredUsers.filter((u) => u.isActive).length,
+    inactive: filteredUsers.filter((u) => !u.isActive).length,
   };
 
   if (loading) {
@@ -466,7 +476,11 @@ export default function UsersManagementTab() {
                       >
                         {roles
                           .filter(role => {
-                            // Sembunyikan Role "Super Admin" (ID 1) jika user yang login BUKAN Super Admin
+                            // Filter for Supv MKN: Only allow Teknisi and Office
+                            if (currentUser?.roleName === "Supv MKN") {
+                              return role.roleName === "Teknisi" || role.roleName === "Office";
+                            }
+                            // Keep existing logic: Hide Super Admin from non-Super Admins
                             if (currentUser?.roleId !== 1 && role.roleId === 1) return false;
                             return true;
                           })

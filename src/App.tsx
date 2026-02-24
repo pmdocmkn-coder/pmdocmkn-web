@@ -5,6 +5,7 @@ import {
   Route,
   Navigate,
   useNavigate,
+  useLocation,
 } from "react-router-dom";
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
@@ -78,6 +79,7 @@ function DefaultRoute() {
 
 function ProtectedRoute({ children }: { children: JSX.Element }) {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -87,7 +89,8 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
     );
   }
 
-  return user ? children : <Navigate to="/" replace />;
+  // ✅ NEW: Save location to allow redirecting back after login
+  return user ? children : <Navigate to="/" state={{ from: location }} replace />;
 }
 
 // ✅ ROUTE GUARD: CEK PERMISSION SEBELUM RENDER PAGE
@@ -267,7 +270,7 @@ function AppContent() {
           {/* ✅ PROFILE SELALU ACCESSIBLE */}
           <Route path="/profile" element={<ProfilePage />} />
 
-          {/* ✅ CATCH-ALL: REDIRECT KE DEFAULT ROUTE */}
+          {/* ✅ CATCH-ALL: REDIRECT KE DEFAULT ROUTE JIKA TIDAK ADA YANG COCOK */}
           <Route path="*" element={<DefaultRoute />} />
         </Routes>
       </Layout>
@@ -300,7 +303,11 @@ function AppRoutes() {
       <Route path="/verify/gatepass/:token" element={<VerifyPage />} />
       <Route
         path="/*"
-        element={user ? <AppContent /> : <Navigate to="/" replace />}
+        element={
+          <ProtectedRoute>
+            <AppContent />
+          </ProtectedRoute>
+        }
       />
     </Routes>
   );
