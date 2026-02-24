@@ -739,12 +739,12 @@ export default function ProfilePage() {
               <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
                   <div className="flex items-center gap-4">
-                    <div className="p-3 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
-                      <Lock className="text-amber-600 w-5 h-5" />
+                    <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800">
+                      <Lock className="text-amber-500 w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">Account Security</h3>
-                      <p className="text-sm text-slate-500">Manage your password and authentication methods</p>
+                      <h3 className="font-bold text-slate-800 dark:text-slate-200">Account Security</h3>
+                      <p className="text-xs text-slate-500 mt-0.5">Manage your password and authentication methods</p>
                     </div>
                   </div>
                   <button
@@ -753,7 +753,7 @@ export default function ProfilePage() {
                       setIsEditing(true);
                       setIsChangingPassword(!isChangingPassword);
                     }}
-                    className="w-full md:w-auto px-6 py-2.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all font-bold rounded-lg border border-blue-200"
+                    className="w-full md:w-auto px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50/50 hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded-lg transition-colors"
                   >
                     Change Password
                   </button>
@@ -768,70 +768,70 @@ export default function ProfilePage() {
                       className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800"
                     >
                       <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                          <label className="block text-sm font-medium text-slate-600">Current Password</label>
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Current Password</label>
                           <div className="relative">
                             <input
                               type={showPassword.old ? "text" : "password"}
                               value={formData.oldPassword}
                               onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })}
-                              className="w-full pr-10 border-slate-200 rounded-lg"
+                              className="w-full pr-10 pl-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
                               required={isChangingPassword}
                             />
-                            <button type="button" onClick={() => setShowPassword({ ...showPassword, old: !showPassword.old })} className="absolute right-3 top-2.5 text-slate-400">
+                            <button type="button" onClick={() => setShowPassword({ ...showPassword, old: !showPassword.old })} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
                               {showPassword.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                             </button>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-600">New Password</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">New Password</label>
                             <div className="relative">
                               <input
                                 type={showPassword.new ? "text" : "password"}
                                 value={formData.newPassword}
                                 onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                                className={`w-full pr-10 border rounded-lg ${formData.newPassword ? (passwordValidation.isValid ? 'border-green-500' : 'border-orange-500') : 'border-slate-200'}`}
+                                className={`w-full pr-10 pl-3 py-2 text-sm border rounded-lg bg-white dark:bg-slate-900 transition-colors focus:ring-1 ${formData.newPassword ? (passwordValidation.isValid ? 'border-green-500 focus:ring-green-500 focus:border-green-500' : 'border-orange-500 focus:ring-orange-500 focus:border-orange-500') : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'}`}
                                 required={isChangingPassword}
                               />
-                              <button type="button" onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })} className="absolute right-3 top-2.5 text-slate-400">
+                              <button type="button" onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
                                 {showPassword.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
                             </div>
 
                             {formData.newPassword && (
                               <div className="mt-2 space-y-2 text-xs">
-                                <div className="flex justify-between font-semibold">
-                                  <span>Strength: <span className={passwordValidation.strength <= 40 ? 'text-red-500' : passwordValidation.strength <= 80 ? 'text-yellow-500' : 'text-green-500'}>{getStrengthText(passwordValidation.strength)}</span></span>
+                                <div className="flex justify-between font-bold">
+                                  <span>Strength: <span className={passwordValidation.strength <= 40 ? 'text-red-500' : passwordValidation.strength <= 80 ? 'text-amber-500' : 'text-green-500'}>{getStrengthText(passwordValidation.strength)}</span></span>
                                 </div>
                                 <div className="flex flex-wrap gap-2 text-slate-500">
-                                  <span className={passwordValidation.requirements.minLength ? 'text-green-500' : ''}>8+ chars</span>
-                                  <span className={passwordValidation.requirements.upperCase ? 'text-green-500' : ''}>Uppercase</span>
-                                  <span className={passwordValidation.requirements.lowerCase ? 'text-green-500' : ''}>Lowercase</span>
-                                  <span className={passwordValidation.requirements.numbers ? 'text-green-500' : ''}>Number</span>
-                                  <span className={passwordValidation.requirements.specialChar ? 'text-green-500' : ''}>Special</span>
+                                  <span className={passwordValidation.requirements.minLength ? 'text-green-500 font-medium' : ''}>8+ chars</span>
+                                  <span className={passwordValidation.requirements.upperCase ? 'text-green-500 font-medium' : ''}>Uppercase</span>
+                                  <span className={passwordValidation.requirements.lowerCase ? 'text-green-500 font-medium' : ''}>Lowercase</span>
+                                  <span className={passwordValidation.requirements.numbers ? 'text-green-500 font-medium' : ''}>Number</span>
+                                  <span className={passwordValidation.requirements.specialChar ? 'text-green-500 font-medium' : ''}>Special</span>
                                 </div>
                               </div>
                             )}
                           </div>
 
-                          <div className="space-y-2">
-                            <label className="block text-sm font-medium text-slate-600">Confirm Password</label>
+                          <div className="space-y-1.5">
+                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Confirm Password</label>
                             <div className="relative">
                               <input
                                 type={showPassword.confirm ? "text" : "password"}
                                 value={formData.confirmPassword}
                                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                className={`w-full pr-10 border rounded-lg ${formData.confirmPassword ? (confirmPasswordMatch ? 'border-green-500' : 'border-red-500') : 'border-slate-200'}`}
+                                className={`w-full pr-10 pl-3 py-2 text-sm border rounded-lg bg-white dark:bg-slate-900 transition-colors focus:ring-1 ${formData.confirmPassword ? (confirmPasswordMatch ? 'border-green-500 focus:ring-green-500 focus:border-green-500' : 'border-red-500 focus:ring-red-500 focus:border-red-500') : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'}`}
                                 required={isChangingPassword}
                               />
-                              <button type="button" onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })} className="absolute right-3 top-2.5 text-slate-400">
+                              <button type="button" onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
                                 {showPassword.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                               </button>
                             </div>
                             {formData.confirmPassword && (
-                              <p className={`text-xs mt-1 ${confirmPasswordMatch ? 'text-green-600' : 'text-red-600'}`}>
+                              <p className={`text-xs mt-1 font-medium ${confirmPasswordMatch ? 'text-green-600' : 'text-red-600'}`}>
                                 {confirmPasswordMatch ? 'Passwords match' : 'Passwords do not match'}
                               </p>
                             )}
