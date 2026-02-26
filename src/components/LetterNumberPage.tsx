@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { letterNumberApi, companyApi, documentTypeApi } from "../services/letterNumberApi";
 import { gatepassApi, quotationApi } from "../services/gatepassQuotationApi";
 import {
@@ -33,6 +34,7 @@ import {
     Receipt,
     CheckCircle,
     ChevronDown,
+    ChevronLeft,
     ChevronRight,
     Check,
     ChevronsUpDown,
@@ -115,6 +117,7 @@ function Pagination({ currentPage, totalPages, totalCount, pageSize, onPageChang
 // MAIN PAGE
 // =============================================
 export default function LetterNumberPage() {
+    const navigate = useNavigate();
     const [activeTab, setActiveTab] = useState<TabType>("letters");
 
     const tabs = [
@@ -124,31 +127,74 @@ export default function LetterNumberPage() {
     ];
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
-            {/* Header */}
-            <div className="mb-6">
-                <div className="flex items-center gap-3 mb-4">
-                    <div className="p-3 bg-indigo-100 rounded-lg">
-                        <FileText className="h-6 w-6 text-indigo-600" />
-                    </div>
-                    <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Letter Management</h1>
-                        <p className="text-sm text-gray-500">Manage letters, gatepass, and quotations</p>
+        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
+            {/* Mobile Top App Bar */}
+            <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-4">
+                <div className="flex items-center p-4 justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate("/dashboard")}
+                            className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
+                            Letter Management
+                        </h2>
                     </div>
                 </div>
+            </div>
 
-                {/* Tabs */}
-                <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border">
+            {/* Desktop Header */}
+            <div className="hidden md:block mb-6">
+                <div className="flex items-center justify-between gap-3 mb-4">
+                    <div className="flex items-center gap-3">
+                        <div className="p-3 bg-indigo-100 rounded-lg">
+                            <FileText className="h-6 w-6 text-indigo-600" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl font-bold text-gray-900">Letter Management</h1>
+                            <p className="text-sm text-gray-500">Manage letters, gatepass, and quotations</p>
+                        </div>
+                    </div>
+                    <Button onClick={() => navigate("/dashboard")} variant="outline" size="sm">
+                        <ChevronLeft className="h-4 w-4 mr-2" />
+                        Kembali ke Dashboard
+                    </Button>
+                </div>
+
+                {/* Tabs - Mobile: underline style */}
+                <div className="md:hidden flex border-b border-gray-200 gap-2 overflow-x-auto hide-scrollbar">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${activeTab === tab.id
-                                ? `bg-${tab.color}-600 text-white shadow-sm`
-                                : "text-gray-600 hover:bg-gray-100"
+                            className={`flex items-center justify-center whitespace-nowrap flex-shrink-0 gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition-all border-b-[3px] ${activeTab === tab.id
+                                ? 'text-gray-900'
+                                : 'border-transparent text-gray-400 hover:text-gray-600'
                                 }`}
                             style={activeTab === tab.id ? {
-                                backgroundColor: tab.color === "indigo" ? "#4f46e5" : tab.color === "emerald" ? "#059669" : "#7c3aed"
+                                borderBottomColor: tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed',
+                                color: tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed'
+                            } : {}}
+                        >
+                            <tab.icon className="h-4 w-4" />
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+                {/* Tabs - Desktop: pill style */}
+                <div className="hidden md:flex gap-1 bg-white rounded-lg p-1 shadow-sm border overflow-x-auto hide-scrollbar">
+                    {tabs.map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setActiveTab(tab.id)}
+                            className={`flex items-center justify-center whitespace-nowrap flex-shrink-0 gap-2 px-4 py-2.5 rounded-md text-sm font-medium transition-all ${activeTab === tab.id
+                                ? 'text-white shadow-sm'
+                                : 'text-gray-600 hover:bg-gray-100'
+                                }`}
+                            style={activeTab === tab.id ? {
+                                backgroundColor: tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed'
                             } : {}}
                         >
                             <tab.icon className="h-4 w-4" />
@@ -267,7 +313,8 @@ function LetterTab() {
         <>
             {/* Filters */}
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                {/* Desktop Filters */}
+                <div className="hidden md:grid grid-cols-5 gap-4">
                     <div className="md:col-span-2">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -292,23 +339,55 @@ function LetterTab() {
                         <Plus className="h-4 w-4 mr-2" />Buat Surat
                     </Button>}
                 </div>
+
+                {/* Mobile Filters */}
+                <div className="md:hidden flex flex-col gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input placeholder="Cari nomor, subject..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50" />
+                    </div>
+
+                    <div className="flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1">
+                        <div className="relative shrink-0">
+                            <button onClick={() => {
+                                document.getElementById("mobile-dropdown-company")?.classList.remove("hidden");
+                            }} className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[120px]">
+                                <span className="truncate max-w-[140px]">{selectedCompany ? companies.find(c => c.id === selectedCompany)?.name : "Semua Company"}</span>
+                                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                            </button>
+                        </div>
+                        <div className="relative shrink-0">
+                            <button onClick={() => {
+                                document.getElementById("mobile-dropdown-doctype")?.classList.remove("hidden");
+                            }} className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[110px]">
+                                <span className="truncate max-w-[130px]">{selectedDocType ? documentTypes.find(d => d.id === selectedDocType)?.name : "Semua Tipe"}</span>
+                                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                            </button>
+                        </div>
+                        {hasPermission("letter.create") && (
+                            <button onClick={() => setIsCreateDialogOpen(true)} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-3 border border-indigo-700 text-white text-xs font-semibold shadow-sm">
+                                <Plus className="w-3 h-3" /> Buat Surat
+                            </button>
+                        )}
+                    </div>
+                </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            {/* Table - Desktop */}
+            <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Subject</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Penerima</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tipe</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembuat</th>
-                                {(hasPermission("letter.update") || hasPermission("letter.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Nomor</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tanggal</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Subject</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Penerima</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Company</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tipe</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
+                                {(hasPermission("letter.update") || hasPermission("letter.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -318,14 +397,14 @@ function LetterTab() {
                                 <tr><td colSpan={9} className="px-6 py-12 text-center text-gray-500">Tidak ada data surat</td></tr>
                             ) : letters.map((letter) => (
                                 <tr key={letter.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{letter.formattedNumber}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(letter.letterDate).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">{letter.formattedNumber}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{new Date(letter.letterDate).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">{letter.subject}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{letter.recipient}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{letter.companyCode}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{letter.documentTypeCode}</td>
-                                    <td className="px-6 py-4"><StatusBadge status={letter.status} /></td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{letter.createdByName || "-"}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{letter.companyCode}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{letter.documentTypeCode}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={letter.status} /></td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{letter.createdByName || "-"}</td>
                                     {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
@@ -341,6 +420,47 @@ function LetterTab() {
                         </tbody>
                     </table>
                 </div>
+                <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col gap-3">
+                {loading ? (
+                    <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>
+                ) : letters.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">Tidak ada data surat</div>
+                ) : letters.map((letter) => (
+                    <div key={letter.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">
+                        <div className="flex justify-between items-start">
+                            <StatusBadge status={letter.status} />
+                            <span className="text-xs text-gray-400 font-medium">{new Date(letter.letterDate).toLocaleDateString()}</span>
+                        </div>
+                        <div>
+                            <p className="text-sm font-bold text-gray-900">{letter.formattedNumber}</p>
+                            <p className="text-sm text-gray-700 mt-1 line-clamp-1">{letter.subject}</p>
+                        </div>
+                        {letter.recipient && (
+                            <p className="text-xs text-gray-500">Penerima: {letter.recipient}</p>
+                        )}
+                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                            <div className="flex items-center gap-2 text-xs text-gray-500">
+                                <span className="font-medium">{letter.companyCode}</span>
+                                <span>•</span>
+                                <span>{letter.documentTypeCode}</span>
+                                <span>•</span>
+                                <span>{letter.createdByName || "-"}</span>
+                            </div>
+                            {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
+                                <div className="flex gap-1">
+                                    {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>}
+                                    {hasPermission("letter.delete") && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                ))}
                 <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
             </div>
 
@@ -474,6 +594,51 @@ function LetterTab() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* ========== MOBILE FILTER MODALS ========== */}
+            <div id="mobile-dropdown-company" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                onClick={() => document.getElementById("mobile-dropdown-company")?.classList.add("hidden")}>
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
+                    onClick={(e) => e.stopPropagation()}>
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+                        <h3 className="font-bold text-gray-800">Pilih Company</h3>
+                    </div>
+                    <div className="overflow-y-auto p-2 space-y-1">
+                        <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!selectedCompany ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                            onClick={() => { setSelectedCompany(undefined); setCurrentPage(1); document.getElementById("mobile-dropdown-company")?.classList.add("hidden"); }}>
+                            Semua Company {!selectedCompany && <Check className="w-4 h-4" />}
+                        </div>
+                        {companies.map((c) => (
+                            <div key={c.id} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedCompany === c.id ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                                onClick={() => { setSelectedCompany(c.id); setCurrentPage(1); document.getElementById("mobile-dropdown-company")?.classList.add("hidden"); }}>
+                                {c.name} {selectedCompany === c.id && <Check className="w-4 h-4" />}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+
+            <div id="mobile-dropdown-doctype" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity"
+                onClick={() => document.getElementById("mobile-dropdown-doctype")?.classList.add("hidden")}>
+                <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
+                    onClick={(e) => e.stopPropagation()}>
+                    <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+                        <h3 className="font-bold text-gray-800">Pilih Tipe Dokumen</h3>
+                    </div>
+                    <div className="overflow-y-auto p-2 space-y-1">
+                        <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!selectedDocType ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                            onClick={() => { setSelectedDocType(undefined); setCurrentPage(1); document.getElementById("mobile-dropdown-doctype")?.classList.add("hidden"); }}>
+                            Semua Tipe {!selectedDocType && <Check className="w-4 h-4" />}
+                        </div>
+                        {documentTypes.map((t) => (
+                            <div key={t.id} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedDocType === t.id ? 'font-bold text-indigo-700 bg-indigo-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                                onClick={() => { setSelectedDocType(t.id); setCurrentPage(1); document.getElementById("mobile-dropdown-doctype")?.classList.add("hidden"); }}>
+                                {t.name} {selectedDocType === t.id && <Check className="w-4 h-4" />}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
         </>
     );
 }
@@ -637,7 +802,8 @@ function GatepassTab() {
     return (
         <>
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Desktop Filters */}
+                <div className="hidden md:grid grid-cols-3 gap-4">
                     <div className="md:col-span-2">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -648,21 +814,37 @@ function GatepassTab() {
                         <Plus className="h-4 w-4 mr-2" />Buat Gatepass
                     </Button>}
                 </div>
+
+                {/* Mobile Filters */}
+                <div className="md:hidden flex flex-col gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input placeholder="Cari gatepass..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-gray-50" />
+                    </div>
+                    {hasPermission("gatepass.create") && (
+                        <div className="flex justify-end pb-1">
+                            <button onClick={() => setIsCreateDialogOpen(true)} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-4 text-white text-xs font-semibold shadow-sm">
+                                <Plus className="w-3 h-3" /> Buat Gatepass
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            {/* Table - Desktop */}
+            <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tujuan</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">PIC</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembuat</th>
-                                {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Nomor</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tanggal</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tujuan</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">PIC</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Items</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
+                                {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -673,24 +855,24 @@ function GatepassTab() {
                             ) : items.map((item) => (
                                 <React.Fragment key={item.id}>
                                     <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpandRow(item.id)}>
-                                        <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.formattedNumber}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{new Date(item.gatepassDate).toLocaleDateString()}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-900">{item.destination}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{item.picName}</td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">
+                                        <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">{item.formattedNumber}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{new Date(item.gatepassDate).toLocaleDateString()}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{item.destination}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{item.picName}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
                                             <span className="flex items-center gap-1">
                                                 {expandedRows.has(item.id) ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
                                                 {item.itemCount} item(s)
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
+                                        <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center gap-2">
                                                 <StatusBadge status={item.status} />
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{item.createdByName || "-"}</td>
+                                        <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{item.createdByName || "-"}</td>
                                         {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
-                                            <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                                            <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                                                 <div className="flex justify-end gap-1">
                                                     {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
                                                     {hasPermission("gatepass.delete") && <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>}
@@ -751,6 +933,85 @@ function GatepassTab() {
                 <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
             </div>
 
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col gap-3">
+                {loading ? (
+                    <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div>
+                ) : items.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">Tidak ada data gatepass</div>
+                ) : items.map((item) => (
+                    <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="p-4 cursor-pointer" onClick={() => toggleExpandRow(item.id)}>
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-1 flex-1">
+                                    <div className="flex items-center gap-2">
+                                        <StatusBadge status={item.status} />
+                                        <span className="text-xs text-gray-400 font-medium">{new Date(item.gatepassDate).toLocaleDateString()}</span>
+                                    </div>
+                                    <p className="text-sm font-bold text-gray-900">{item.formattedNumber} | {item.destination}</p>
+                                    <p className="text-xs text-gray-500">PIC: {item.picName}</p>
+                                </div>
+                                <div className={`text-gray-400 transition-transform duration-200 ${expandedRows.has(item.id) ? 'rotate-180' : ''}`}>
+                                    <ChevronDown className="h-5 w-5" />
+                                </div>
+                            </div>
+                        </div>
+                        {expandedRows.has(item.id) && (
+                            <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                                {expandedItemDetails[item.id] ? (
+                                    <div className="flex flex-col gap-3">
+                                        <div className="flex flex-col">
+                                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Driver</span>
+                                            <p className="text-sm font-medium text-gray-700">{expandedItemDetails[item.id].picContact || "-"}</p>
+                                        </div>
+                                        {expandedItemDetails[item.id].notes && (
+                                            <div className="flex flex-col">
+                                                <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Catatan</span>
+                                                <p className="text-sm text-gray-700">{expandedItemDetails[item.id].notes}</p>
+                                            </div>
+                                        )}
+                                        <div className="flex flex-col gap-2">
+                                            <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Items</span>
+                                            <div className="bg-gray-50 rounded-lg p-3">
+                                                <table className="w-full text-left text-sm">
+                                                    <thead>
+                                                        <tr className="text-gray-400 text-xs border-b border-gray-200">
+                                                            <th className="pb-1 font-medium">Nama Barang</th>
+                                                            <th className="pb-1 font-medium text-right">Qty</th>
+                                                            <th className="pb-1 font-medium text-right">S/N</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody className="text-gray-600">
+                                                        {expandedItemDetails[item.id].items.map((detail: any, i: number) => (
+                                                            <tr key={i}>
+                                                                <td className="pt-2">{detail.itemName}</td>
+                                                                <td className="pt-2 text-right">{detail.quantity} {detail.unit}</td>
+                                                                <td className="pt-2 text-right text-gray-400">{detail.serialNumber || "-"}</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                        {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
+                                            <div className="flex justify-end gap-1 pt-1">
+                                                {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                                {hasPermission("gatepass.delete") && (
+                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center text-gray-400 py-4"><div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>Memuat detail...</div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                ))}
+                <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
+            </div>
+
             {/* Create Gatepass Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
@@ -803,20 +1064,22 @@ function GatepassTab() {
                                 <Button type="button" variant="outline" size="sm" onClick={addItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
                             </div>
                             {formData.items.map((item, index) => (
-                                <div key={index} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg">
-                                    <div className="col-span-5">
-                                        <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateItem(index, "itemName", e.target.value)} />
+                                <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex gap-2">
+                                        <div className="flex-1">
+                                            <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateItem(index, "itemName", e.target.value)} />
+                                        </div>
+                                        <div className="w-16">
+                                            <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)} />
+                                        </div>
+                                        <div className="w-16">
+                                            <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateItem(index, "unit", e.target.value)} />
+                                        </div>
                                     </div>
-                                    <div className="col-span-2">
-                                        <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)} />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateItem(index, "unit", e.target.value)} />
-                                    </div>
-                                    <div className="col-span-3">
-                                        <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateItem(index, "serialNumber", e.target.value)} />
-                                    </div>
-                                    <div className="col-span-1 flex items-center">
+                                    <div className="flex gap-2 items-center">
+                                        <div className="flex-1">
+                                            <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateItem(index, "serialNumber", e.target.value)} />
+                                        </div>
                                         {formData.items.length > 1 && (
                                             <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
                                         )}
@@ -880,20 +1143,22 @@ function GatepassTab() {
                                 <Button type="button" variant="outline" size="sm" onClick={addEditItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
                             </div>
                             {(editFormData.items || []).map((item, index) => (
-                                <div key={index} className="grid grid-cols-12 gap-2 p-3 bg-gray-50 rounded-lg">
-                                    <div className="col-span-5">
-                                        <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateEditItem(index, "itemName", e.target.value)} />
+                                <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
+                                    <div className="flex gap-2">
+                                        <div className="flex-1">
+                                            <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateEditItem(index, "itemName", e.target.value)} />
+                                        </div>
+                                        <div className="w-16">
+                                            <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateEditItem(index, "quantity", parseInt(e.target.value) || 1)} />
+                                        </div>
+                                        <div className="w-16">
+                                            <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateEditItem(index, "unit", e.target.value)} />
+                                        </div>
                                     </div>
-                                    <div className="col-span-2">
-                                        <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateEditItem(index, "quantity", parseInt(e.target.value) || 1)} />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateEditItem(index, "unit", e.target.value)} />
-                                    </div>
-                                    <div className="col-span-2">
-                                        <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateEditItem(index, "serialNumber", e.target.value)} />
-                                    </div>
-                                    <div className="col-span-1 flex items-center">
+                                    <div className="flex gap-2 items-center">
+                                        <div className="flex-1">
+                                            <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateEditItem(index, "serialNumber", e.target.value)} />
+                                        </div>
                                         {(editFormData.items || []).length > 1 && (
                                             <Button type="button" variant="ghost" size="sm" onClick={() => removeEditItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
                                         )}
@@ -1027,7 +1292,8 @@ function QuotationTab() {
     return (
         <>
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Desktop Filters */}
+                <div className="hidden md:grid grid-cols-3 gap-4">
                     <div className="md:col-span-2">
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
@@ -1038,20 +1304,37 @@ function QuotationTab() {
                         <Plus className="h-4 w-4 mr-2" />Buat Quotation
                     </Button>}
                 </div>
+
+                {/* Mobile Filters */}
+                <div className="md:hidden flex flex-col gap-3">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input placeholder="Cari quotation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-gray-50" />
+                    </div>
+                    {hasPermission("quotation.create") && (
+                        <div className="flex justify-end pb-1">
+                            <button onClick={() => setIsCreateDialogOpen(true)} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-violet-600 px-4 text-white text-xs font-semibold shadow-sm">
+                                <Plus className="w-3 h-3" /> Buat Quotation
+                            </button>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+
+            {/* Table - Desktop */}
+            <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nomor</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tanggal</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Customer</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Deskripsi</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Pembuat</th>
-                                {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Aksi</th>}
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Nomor</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tanggal</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Customer</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Deskripsi</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
+                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
+                                {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -1061,12 +1344,12 @@ function QuotationTab() {
                                 <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Tidak ada data quotation</td></tr>
                             ) : items.map((item) => (
                                 <tr key={item.id} className="hover:bg-gray-50">
-                                    <td className="px-6 py-4 text-sm font-medium text-gray-900">{item.formattedNumber}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{new Date(item.quotationDate).toLocaleDateString()}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-900">{item.customerName}</td>
+                                    <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">{item.formattedNumber}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{new Date(item.quotationDate).toLocaleDateString()}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{item.customerName}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{item.description}</td>
-                                    <td className="px-6 py-4"><StatusBadge status={item.status} /></td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{item.createdByName || "-"}</td>
+                                    <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={item.status} /></td>
+                                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{item.createdByName || "-"}</td>
                                     {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
                                         <td className="px-6 py-4 text-right">
                                             <div className="flex justify-end gap-2">
@@ -1083,10 +1366,49 @@ function QuotationTab() {
                     </table>
                 </div>
                 <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
-            </div>
+            </div >
+
+            {/* Mobile Card View */}
+            < div className="md:hidden flex flex-col gap-3" >
+                {
+                    loading ? (
+                        <div className="flex justify-center py-12" > <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div>
+                    ) : items.length === 0 ? (
+                        <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">Tidak ada data quotation</div>
+                    ) : items.map((item) => (
+                        <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">
+                            <div className="flex justify-between items-start">
+                                <StatusBadge status={item.status} />
+                                <span className="text-xs text-gray-400 font-medium">{new Date(item.quotationDate).toLocaleDateString()}</span>
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-900">{item.formattedNumber}</p>
+                                <p className="text-sm text-gray-500 mt-1 italic line-clamp-1">{item.description}</p>
+                            </div>
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center">
+                                        <Receipt className="h-3 w-3 text-violet-600" />
+                                    </div>
+                                    <p className="text-xs text-gray-600 font-medium">{item.customerName}</p>
+                                </div>
+                                <p className="text-xs text-gray-400">{item.createdByName || "-"}</p>
+                            </div>
+                            {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
+                                <div className="flex justify-end gap-1 pt-1">
+                                    {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                    {hasPermission("quotation.delete") && (
+                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    ))}
+                <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
+            </div >
 
             {/* Create Quotation Dialog */}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            < Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} >
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                         <DialogTitle>Buat Quotation Baru</DialogTitle>
@@ -1173,10 +1495,10 @@ function QuotationTab() {
                         </Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
 
             {/* Edit Quotation Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            < Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} >
                 <DialogContent className="sm:max-w-[600px]">
                     <DialogHeader>
                         <DialogTitle>Edit Quotation</DialogTitle>
@@ -1261,7 +1583,7 @@ function QuotationTab() {
                         <Button onClick={handleUpdate} className="bg-violet-600 hover:bg-violet-700">Update</Button>
                     </DialogFooter>
                 </DialogContent>
-            </Dialog>
+            </Dialog >
         </>
     );
 }

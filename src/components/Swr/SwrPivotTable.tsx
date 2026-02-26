@@ -732,7 +732,7 @@ const SwrPivotTable: React.FC = () => {
             {isLoading ? (
               <Skeleton className="h-[350px] w-full" />
             ) : (
-              <div className="h-[350px]">
+              <div className="h-[350px]" style={{ minWidth: '200px', minHeight: '200px' }}>
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={lineChartData}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
@@ -836,7 +836,7 @@ const SwrPivotTable: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="h-[250px]">
+                <div className="h-[250px]" style={{ minWidth: '200px', minHeight: '200px' }}>
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                       <Pie
@@ -1169,19 +1169,19 @@ const SwrPivotTable: React.FC = () => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex justify-between items-center p-4 border-t">
-            <div className="text-sm text-gray-600">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 p-4 border-t">
+            <div className="text-sm text-gray-600 text-center md:text-left w-full md:w-auto">
               Menampilkan {(currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredData.length)} dari {filteredData.length} channel
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 disabled={currentPage <= 1}
                 onClick={() => setCurrentPage((p) => p - 1)}
               >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Sebelumnya
+                <ChevronLeft className="h-4 w-4 mr-1 md:mr-0 lg:mr-1" />
+                <span className="hidden md:inline">Sebelumnya</span>
               </Button>
               <div className="flex items-center gap-1">
                 {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
@@ -1215,8 +1215,8 @@ const SwrPivotTable: React.FC = () => {
                 disabled={currentPage >= totalPages}
                 onClick={() => setCurrentPage((p) => p + 1)}
               >
-                Berikutnya
-                <ChevronRight className="h-4 w-4 ml-1" />
+                <span className="hidden md:inline">Berikutnya</span>
+                <ChevronRight className="h-4 w-4 ml-1 md:ml-0 lg:ml-1" />
               </Button>
             </div>
           </div>

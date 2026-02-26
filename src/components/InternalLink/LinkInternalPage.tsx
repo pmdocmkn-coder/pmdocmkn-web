@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Plus, Edit, Trash, Search, Eye, Image, Camera, X, Check, ChevronsUpDown,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Wifi, WifiOff, Settings, Activity, Link2,
+    Wifi, WifiOff, Settings, Activity, Link2, ChevronDown, Filter, RefreshCw,
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -163,6 +163,7 @@ const LinkInternalPage: React.FC = () => {
 
     // UI
     const [loading, setLoading] = useState(false);
+    const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
 
     // Link Modal
     const [showLinkModal, setShowLinkModal] = useState(false);
@@ -396,6 +397,7 @@ const LinkInternalPage: React.FC = () => {
             setLoading(true);
             if (historyModalMode === "edit" && editingHistory) {
                 const updateDto: InternalLinkHistoryUpdateDto = {
+                    date: historyForm.date,
                     rslNearEnd: historyForm.rslNearEnd,
                     uptime: historyForm.uptime, notes: historyForm.notes,
                     status: historyForm.status,
@@ -911,18 +913,107 @@ const LinkInternalPage: React.FC = () => {
     // MAIN RENDER
     // ============================================
     return (
-        <div className="w-full p-4">
-            {/* Header — same style as NEC */}
-            <div className="flex justify-between items-center mb-6">
+        <div className="w-full p-4 md:p-6 pb-20">
+            {/* Mobile Top App Bar */}
+            <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-4">
+                <div className="flex items-center p-4 justify-between">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => navigate("/dashboard")}
+                            className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50"
+                        >
+                            <ChevronLeft className="w-5 h-5" />
+                        </button>
+                        <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
+                            Link Internal
+                        </h2>
+                    </div>
+                </div>
+            </div>
+
+            {/* Desktop Header — same style as NEC */}
+            <div className="hidden md:flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
                 <h1 className="text-2xl font-bold">Link Internal Monitoring</h1>
-                <div className="flex space-x-2">
-                    <Button onClick={() => navigate("/dashboard")} variant="outline">Kembali ke Dashboard</Button>
+                <div className="flex flex-wrap gap-2">
+                    <Button onClick={() => navigate("/dashboard")} variant="outline" size="sm">
+                        <ChevronLeft className="h-4 w-4 md:mr-1" />
+                        <span className="hidden md:inline">Kembali ke Dashboard</span>
+                    </Button>
                 </div>
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-                {/* Tab Navigation — same style as NEC */}
-                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+                {/* Navigation Tabs - Advanced version */}
+                {/* Mobile Card Grid Navigation */}
+                <div className="md:hidden mb-2">
+                    <div className="grid grid-cols-2 gap-3">
+                        <button
+                            onClick={() => { setActiveTab("history"); fetchHistories(1, searchTerm, selectedLinkId); }}
+                            className={`col-span-2 relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-200 ${activeTab === "history"
+                                ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200 ring-2 ring-blue-400 ring-offset-2"
+                                : "bg-gradient-to-br from-blue-400/80 to-indigo-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                }`}
+                        >
+                            <div className="flex justify-between items-start mb-2">
+                                <span className="text-3xl opacity-90 block">📋</span>
+                                {totalCount > 0 && (
+                                    <span className="bg-white/20 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">
+                                        {totalCount.toLocaleString()} data
+                                    </span>
+                                )}
+                            </div>
+                            <div className="text-lg font-bold">Daftar History</div>
+                            <div className="text-xs opacity-75 mt-0.5">Catatan performa link harian</div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab("links")}
+                            className={`relative overflow-hidden rounded-2xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeTab === "links"
+                                    ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-200 ring-2 ring-pink-400 ring-offset-2"
+                                    : "bg-gradient-to-br from-pink-400/80 to-rose-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                }`}
+                        >
+                            <span className="text-2xl mb-1.5 opacity-90 block">🔗</span>
+                            <div className="text-sm font-bold truncate">Kelola Link</div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab("pivot")}
+                            className={`relative overflow-hidden rounded-2xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeTab === "pivot"
+                                    ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-400 ring-offset-2"
+                                    : "bg-gradient-to-br from-emerald-400/80 to-teal-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                }`}
+                        >
+                            <span className="text-2xl mb-1.5 opacity-90 block">📊</span>
+                            <div className="text-sm font-bold truncate">Pivot Table</div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab("monthly")}
+                            className={`relative overflow-hidden rounded-2xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeTab === "monthly"
+                                ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-200 ring-2 ring-violet-400 ring-offset-2"
+                                : "bg-gradient-to-br from-violet-400/80 to-purple-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                }`}
+                        >
+                            <span className="text-2xl mb-1.5 opacity-90 block">📈</span>
+                            <div className="text-sm font-bold truncate">Grafik Bulanan</div>
+                        </button>
+
+                        <button
+                            onClick={() => setActiveTab("yearly")}
+                            className={`relative overflow-hidden rounded-2xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeTab === "yearly"
+                                ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200 ring-2 ring-amber-400 ring-offset-2"
+                                : "bg-gradient-to-br from-amber-400/80 to-orange-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                }`}
+                        >
+                            <span className="text-2xl mb-1.5 opacity-90 block">📉</span>
+                            <div className="text-sm font-bold truncate">Grafik Tahunan</div>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Desktop Tab Bar */}
+                <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 p-4">
                     <div className="flex flex-wrap gap-3">
                         <button onClick={() => { setActiveTab("history"); fetchHistories(1, searchTerm, selectedLinkId); }}
                             className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeTab === "history" ? "bg-blue-100 text-blue-700 border border-blue-200" : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"}`}>
@@ -964,25 +1055,43 @@ const LinkInternalPage: React.FC = () => {
                             </div>
                         </CardHeader>
                         <CardContent>
-                            <div className="flex space-x-4 mb-4">
+                            <div className="flex flex-col md:flex-row gap-3 mb-4">
                                 <div className="flex-1">
                                     <Input placeholder="Cari history..." value={searchTerm}
                                         onChange={(e) => setSearchTerm(e.target.value)}
                                         onKeyDown={(e) => { if (e.key === "Enter") fetchHistories(1, searchTerm, selectedLinkId); }} />
                                 </div>
-                                <Select value={selectedLinkId?.toString() || "all"}
-                                    onValueChange={(v) => {
-                                        const val = v === "all" ? undefined : parseInt(v);
-                                        setSelectedLinkId(val);
-                                        fetchHistories(1, searchTerm, val);
-                                    }}>
-                                    <SelectTrigger className="w-[200px]"><SelectValue placeholder="Semua Link" /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="all">Semua Link</SelectItem>
-                                        {links.map(l => <SelectItem key={l.id} value={l.id.toString()}>{l.linkName}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                                <Button onClick={() => fetchHistories(1, searchTerm, selectedLinkId)}><Search className="h-4 w-4" /></Button>
+                                {/* Mobile Filter Chips */}
+                                <div className="md:hidden flex overflow-x-auto pb-1 gap-2 no-scrollbar">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setActiveMobileFilter("history-link")}
+                                        className={cn(
+                                            "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                            selectedLinkId ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                        )}
+                                    >
+                                        <Filter className="w-3.5 h-3.5" />
+                                        <span>Link: {selectedLinkId ? links.find(l => l.id === selectedLinkId)?.linkName : "Semua"}</span>
+                                        <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                    </Button>
+                                </div>
+                                <div className="hidden md:flex gap-2">
+                                    <Select value={selectedLinkId?.toString() || "all"}
+                                        onValueChange={(v) => {
+                                            const val = v === "all" ? undefined : parseInt(v);
+                                            setSelectedLinkId(val);
+                                            fetchHistories(1, searchTerm, val);
+                                        }}>
+                                        <SelectTrigger className="w-full md:w-[200px]"><SelectValue placeholder="Semua Link" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">Semua Link</SelectItem>
+                                            {links.map(l => <SelectItem key={l.id} value={l.id.toString()}>{l.linkName}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                    <Button onClick={() => fetchHistories(1, searchTerm, selectedLinkId)}><Search className="h-4 w-4" /></Button>
+                                </div>
                             </div>
 
                             {loading ? (
@@ -995,87 +1104,164 @@ const LinkInternalPage: React.FC = () => {
                                 </div>
                             ) : histories.length > 0 ? (
                                 <div className="space-y-4">
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>No</TableHead>
-                                                <TableHead>Tanggal</TableHead>
-                                                <TableHead>Link</TableHead>
-                                                <TableHead>IP Address</TableHead>
-                                                <TableHead>Frekuensi</TableHead>
-                                                <TableHead>RSL</TableHead>
-                                                <TableHead>Uptime</TableHead>
-                                                <TableHead>Screenshot</TableHead>
-                                                <TableHead>Aksi</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {histories.map(h => {
-                                                const parentLink = links.find(l => l.id === h.internalLinkId);
-                                                return (
-                                                    <TableRow key={h.id}>
-                                                        <TableCell>{h.no || h.id}</TableCell>
-                                                        <TableCell>{format(new Date(h.date), "dd/MM/yyyy")}</TableCell>
-                                                        <TableCell className="font-medium">{h.linkName}</TableCell>
-                                                        <TableCell className="font-mono text-xs">{parentLink?.ipAddress || "-"}</TableCell>
-                                                        <TableCell className="text-xs">{formatFrequency(parentLink?.usedFrequency)}</TableCell>
-                                                        <TableCell>
-                                                            <div className="flex flex-col">
+                                    {/* Desktop Table */}
+                                    <div className="hidden md:block">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>No</TableHead>
+                                                    <TableHead>Tanggal</TableHead>
+                                                    <TableHead>Link</TableHead>
+                                                    <TableHead>IP Address</TableHead>
+                                                    <TableHead>Frekuensi</TableHead>
+                                                    <TableHead>RSL</TableHead>
+                                                    <TableHead>Uptime</TableHead>
+                                                    <TableHead>Screenshot</TableHead>
+                                                    <TableHead>Aksi</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {histories.map(h => {
+                                                    const parentLink = links.find(l => l.id === h.internalLinkId);
+                                                    return (
+                                                        <TableRow key={h.id}>
+                                                            <TableCell>{h.no || h.id}</TableCell>
+                                                            <TableCell>{format(new Date(h.date), "dd/MM/yyyy")}</TableCell>
+                                                            <TableCell className="font-medium">{h.linkName}</TableCell>
+                                                            <TableCell className="font-mono text-xs">{parentLink?.ipAddress || "-"}</TableCell>
+                                                            <TableCell className="text-xs">{formatFrequency(parentLink?.usedFrequency)}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex flex-col">
+                                                                    {h.rslNearEnd != null ? (
+                                                                        <>
+                                                                            <span className={`font-mono font-semibold ${getRslTextColor(h.rslNearEnd)}`}>
+                                                                                {h.rslNearEnd.toFixed(1)} dBm
+                                                                            </span>
+                                                                            <span className="text-xs text-gray-500 mt-1">{getRslStatusLabel(h.rslNearEnd)}</span>
+                                                                        </>
+                                                                    ) : <span className="text-gray-400">-</span>}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell>{h.uptime != null ? `${h.uptime} Hari` : "-"}</TableCell>
+                                                            <TableCell>
+                                                                {h.hasScreenshot ? (
+                                                                    <button onClick={() => handleViewScreenshot(h.id)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Lihat Screenshot">
+                                                                        <Camera className="h-5 w-5" />
+                                                                    </button>
+                                                                ) : <span className="text-gray-300">-</span>}
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <div className="flex space-x-1">
+                                                                    <Button variant="ghost" size="sm" onClick={() => handleViewDetail(h.id)} title="Detail"><Eye className="h-4 w-4" /></Button>
+                                                                    {hasPermission("internal.link.update") && (
+                                                                        <Button variant="ghost" size="sm" onClick={() => openHistoryModal("edit", h)} title="Edit"><Edit className="h-4 w-4" /></Button>
+                                                                    )}
+                                                                    {hasPermission("internal.link.delete") && (
+                                                                        <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ type: "history", id: h.id })} title="Hapus"><Trash className="h-4 w-4" /></Button>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    );
+                                                })}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+
+                                    {/* Mobile Cards */}
+                                    <div className="md:hidden flex flex-col gap-3">
+                                        {histories.map(h => {
+                                            const parentLink = links.find(l => l.id === h.internalLinkId);
+                                            return (
+                                                <div key={h.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <div>
+                                                            <span className="text-xs font-semibold text-gray-500 block">#{h.no || h.id}</span>
+                                                            <h4 className="text-base font-bold text-gray-900">{h.linkName}</h4>
+                                                        </div>
+                                                        <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md whitespace-nowrap">
+                                                            {format(new Date(h.date), "dd/MM/yyyy")}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="py-2 mb-2 border-y border-gray-50 space-y-1.5">
+                                                        <div className="flex justify-between items-center">
+                                                            <span className="text-sm text-gray-600">RSL Near End:</span>
+                                                            <div className="text-right">
                                                                 {h.rslNearEnd != null ? (
                                                                     <>
-                                                                        <span className={`font-mono font-semibold ${getRslTextColor(h.rslNearEnd)}`}>
+                                                                        <span className={`block font-mono font-bold text-sm ${getRslTextColor(h.rslNearEnd)}`}>
                                                                             {h.rslNearEnd.toFixed(1)} dBm
                                                                         </span>
-                                                                        <span className="text-xs text-gray-500 mt-1">{getRslStatusLabel(h.rslNearEnd)}</span>
+                                                                        <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                                                                            {getRslStatusLabel(h.rslNearEnd)}
+                                                                        </span>
                                                                     </>
                                                                 ) : <span className="text-gray-400">-</span>}
                                                             </div>
-                                                        </TableCell>
-                                                        <TableCell>{h.uptime != null ? `${h.uptime} Hari` : "-"}</TableCell>
-                                                        <TableCell>
-                                                            {h.hasScreenshot ? (
-                                                                <button onClick={() => handleViewScreenshot(h.id)} className="text-blue-500 hover:text-blue-700 transition-colors" title="Lihat Screenshot">
-                                                                    <Camera className="h-5 w-5" />
-                                                                </button>
-                                                            ) : <span className="text-gray-300">-</span>}
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <div className="flex space-x-1">
-                                                                <Button variant="ghost" size="sm" onClick={() => handleViewDetail(h.id)} title="Detail"><Eye className="h-4 w-4" /></Button>
-                                                                {hasPermission("internal.link.update") && (
-                                                                    <Button variant="ghost" size="sm" onClick={() => openHistoryModal("edit", h)} title="Edit"><Edit className="h-4 w-4" /></Button>
-                                                                )}
-                                                                {hasPermission("internal.link.delete") && (
-                                                                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ type: "history", id: h.id })} title="Hapus"><Trash className="h-4 w-4" /></Button>
-                                                                )}
+                                                        </div>
+                                                        {parentLink?.ipAddress && (
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-xs text-gray-500">IP:</span>
+                                                                <span className="font-mono text-xs text-gray-700">{parentLink.ipAddress}</span>
                                                             </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                );
-                                            })}
-                                        </TableBody>
-                                    </Table>
+                                                        )}
+                                                        {h.uptime != null && (
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-xs text-gray-500">Uptime:</span>
+                                                                <span className="text-xs text-gray-700">{h.uptime} Hari</span>
+                                                            </div>
+                                                        )}
+                                                        {h.hasScreenshot && (
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-xs text-gray-500">Screenshot:</span>
+                                                                <button onClick={() => handleViewScreenshot(h.id)} className="text-blue-500 hover:text-blue-700 text-xs flex items-center gap-1">
+                                                                    <Camera className="h-3.5 w-3.5" /> Lihat
+                                                                </button>
+                                                            </div>
+                                                        )}
+                                                    </div>
 
-                                    {/* Pagination — same style as NEC */}
-                                    <div className="flex justify-between items-center pt-4 border-t">
-                                        <div className="flex gap-2">
+                                                    <div className="flex justify-end gap-2">
+                                                        <Button variant="outline" size="sm" className="h-8" onClick={() => handleViewDetail(h.id)}>
+                                                            <Eye className="h-3.5 w-3.5 mr-1" /> Detail
+                                                        </Button>
+                                                        {hasPermission("internal.link.update") && (
+                                                            <Button variant="outline" size="sm" className="h-8 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => openHistoryModal("edit", h)}>
+                                                                <Edit className="h-3.5 w-3.5 mr-1" /> Edit
+                                                            </Button>
+                                                        )}
+                                                        {hasPermission("internal.link.delete") && (
+                                                            <Button variant="outline" size="sm" className="h-8 border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirmDelete({ type: "history", id: h.id })}>
+                                                                <Trash className="h-3.5 w-3.5 mr-1" /> Hapus
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Pagination */}
+                                    <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 pt-4 border-t">
+                                        <div className="flex gap-2 justify-center md:justify-start">
                                             <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => fetchHistories(1, searchTerm, selectedLinkId)}>
-                                                <ChevronsLeft className="h-4 w-4 mr-1" /> Awal
+                                                <ChevronsLeft className="h-4 w-4" /><span className="hidden sm:inline ml-1">Awal</span>
                                             </Button>
                                             <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => fetchHistories(currentPage - 1, searchTerm, selectedLinkId)}>
-                                                <ChevronLeft className="h-4 w-4 mr-1" /> Sebelumnya
+                                                <ChevronLeft className="h-4 w-4" /><span className="hidden sm:inline ml-1">Sebelumnya</span>
                                             </Button>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className="text-sm text-gray-600">Halaman {currentPage} dari {totalPages}</span>
-                                            <span className="text-xs text-gray-400">(Menampilkan {histories.length} data)</span>
+                                        <div className="flex flex-col items-center md:flex-row md:items-center gap-1 md:gap-2 order-first md:order-none">
+                                            <span className="text-sm font-medium text-gray-700">Halaman {currentPage} dari {totalPages}</span>
+                                            <span className="text-xs text-gray-400">({histories.length} data)</span>
                                         </div>
-                                        <div className="flex gap-2">
+                                        <div className="flex gap-2 justify-center md:justify-end">
                                             <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => fetchHistories(currentPage + 1, searchTerm, selectedLinkId)}>
-                                                Berikutnya <ChevronRight className="h-4 w-4 ml-1" />
+                                                <span className="hidden sm:inline mr-1">Berikutnya</span><ChevronRight className="h-4 w-4" />
                                             </Button>
                                             <Button variant="outline" size="sm" disabled={currentPage >= totalPages} onClick={() => fetchHistories(totalPages, searchTerm, selectedLinkId)}>
-                                                Akhir <ChevronsRight className="h-4 w-4 ml-1" />
+                                                <span className="hidden sm:inline mr-1">Akhir</span><ChevronsRight className="h-4 w-4" />
                                             </Button>
                                         </div>
                                     </div>
@@ -1102,7 +1288,41 @@ const LinkInternalPage: React.FC = () => {
                         <CardHeader>
                             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                                 <CardTitle>RSL History - Pivot Table ({selectedYear})</CardTitle>
-                                <div className="flex flex-wrap gap-2">
+                                {/* Mobile Filters */}
+                                <div className="md:hidden w-full space-y-3">
+                                    <div className="relative">
+                                        <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+                                        <Input placeholder="Cari link..." className="pl-9 h-10 bg-gray-50/50" value={pivotLinkFilter ?? ""}
+                                            onChange={(e) => setPivotLinkFilter(e.target.value)} />
+                                    </div>
+                                    <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setActiveMobileFilter("pivot-type")}
+                                            className={cn(
+                                                "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                                pivotTypeFilter ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                            )}
+                                        >
+                                            <span>Tipe: {pivotTypeFilter || "Semua"}</span>
+                                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                        </Button>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setActiveMobileFilter("pivot-year")}
+                                            className="rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 bg-white text-gray-600 border-gray-200 hover:bg-gray-50 shadow-sm text-sm font-medium transition-colors"
+                                        >
+                                            <span>Tahun: {selectedYear}</span>
+                                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                        </Button>
+                                        <Button variant="outline" size="sm" className="rounded-full h-9 px-4 bg-white text-gray-600 border-gray-200 shadow-sm" onClick={() => fetchAllHistories()} disabled={loading}>
+                                            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+                                        </Button>
+                                    </div>
+                                </div>
+                                <div className="hidden md:flex flex-wrap gap-2">
                                     <Input placeholder="Cari link..." className="w-[160px]" value={pivotLinkFilter ?? ""}
                                         onChange={(e) => setPivotLinkFilter(e.target.value)} />
                                     <Select value={pivotTypeFilter ?? "all"} onValueChange={(v) => setPivotTypeFilter(v === "all" ? null : v)}>
@@ -1442,64 +1662,147 @@ const LinkInternalPage: React.FC = () => {
                             ) : (
                                 <>
                                     {/* Filter Bar */}
-                                    <div className="bg-gray-50 border rounded-lg p-3 mb-4 space-y-3">
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                    <div className="bg-white md:bg-gray-50 border rounded-xl md:rounded-lg p-3 md:p-3 mb-4 space-y-3 shadow-sm md:shadow-none">
+                                        {/* Mobile Filters */}
+                                        <div className="md:hidden space-y-3">
                                             <div className="relative">
-                                                <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
                                                 <Input
                                                     placeholder="Cari link, IP, atau device..."
-                                                    className="pl-9"
+                                                    className="pl-9 h-10 bg-gray-50/50 border-gray-200"
                                                     value={linkSearchTerm}
                                                     onChange={(e) => setLinkSearchTerm(e.target.value)}
                                                 />
                                             </div>
-                                            <Select value={linkGroupFilter} onValueChange={setLinkGroupFilter}>
-                                                <SelectTrigger><SelectValue placeholder="Semua Group" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Semua Group</SelectItem>
-                                                    {Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort().map(g => (
-                                                        <SelectItem key={g!} value={g!}>{g}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={linkTypeFilter} onValueChange={setLinkTypeFilter}>
-                                                <SelectTrigger><SelectValue placeholder="Semua Tipe" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Semua Tipe</SelectItem>
-                                                    {LINK_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={linkDirectionFilter} onValueChange={setLinkDirectionFilter}>
-                                                <SelectTrigger><SelectValue placeholder="Semua Direction" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Semua Direction</SelectItem>
-                                                    {DIRECTION_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                                            <Select value={linkServiceFilter} onValueChange={setLinkServiceFilter}>
-                                                <SelectTrigger><SelectValue placeholder="Semua Service" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Semua Service</SelectItem>
-                                                    {SERVICE_TYPE_OPTIONS.map(opt => (
-                                                        <SelectItem key={opt.value} value={opt.value === "Internet" ? "0" : opt.value === "AudioCodesVoip" ? "1" : opt.value === "LocalLoop" ? "2" : opt.value === "CCTV" ? "3" : "4"}>
-                                                            {opt.label}
-                                                        </SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                            <Select value={linkStatusFilter} onValueChange={setLinkStatusFilter}>
-                                                <SelectTrigger><SelectValue placeholder="Semua Status" /></SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="all">Semua Status</SelectItem>
-                                                    {STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-                                                </SelectContent>
-                                            </Select>
-                                            <div className="md:col-span-2 flex justify-end">
-                                                <Button variant="ghost" size="sm" onClick={resetFilters} className="text-gray-500 hover:text-red-600">
-                                                    <X className="h-4 w-4 mr-2" /> Reset Filter
+                                            <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setActiveMobileFilter("links-group")}
+                                                    className={cn(
+                                                        "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                                        linkGroupFilter !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                                    )}
+                                                >
+                                                    <span>Group: {linkGroupFilter === "all" ? "Semua" : linkGroupFilter}</span>
+                                                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
                                                 </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setActiveMobileFilter("links-type")}
+                                                    className={cn(
+                                                        "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                                        linkTypeFilter !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                                    )}
+                                                >
+                                                    <span>Tipe: {linkTypeFilter === "all" ? "Semua" : LINK_TYPE_OPTIONS.find(o => o.value === linkTypeFilter)?.label || linkTypeFilter}</span>
+                                                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setActiveMobileFilter("links-direction")}
+                                                    className={cn(
+                                                        "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                                        linkDirectionFilter !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                                    )}
+                                                >
+                                                    <span>Dir: {linkDirectionFilter === "all" ? "Semua" : DIRECTION_OPTIONS.find(o => o.value === linkDirectionFilter)?.label || linkDirectionFilter}</span>
+                                                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setActiveMobileFilter("links-service")}
+                                                    className={cn(
+                                                        "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                                        linkServiceFilter !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                                    )}
+                                                >
+                                                    <span>Service: {linkServiceFilter === "all" ? "Semua" : getServiceTypeLabel(parseInt(linkServiceFilter))}</span>
+                                                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                                </Button>
+                                                <Button
+                                                    variant="outline"
+                                                    size="sm"
+                                                    onClick={() => setActiveMobileFilter("links-status")}
+                                                    className={cn(
+                                                        "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                                                        linkStatusFilter !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                                                    )}
+                                                >
+                                                    <span>Status: {linkStatusFilter === "all" ? "Semua" : STATUS_OPTIONS.find(o => o.value === linkStatusFilter)?.label || linkStatusFilter}</span>
+                                                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                                </Button>
+                                            </div>
+                                            {(linkSearchTerm !== "" || linkGroupFilter !== "all" || linkTypeFilter !== "all" || linkDirectionFilter !== "all" || linkServiceFilter !== "all" || linkStatusFilter !== "all") && (
+                                                <Button variant="ghost" size="sm" onClick={resetFilters} className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-xs font-semibold">
+                                                    <X className="h-3.5 w-3.5 mr-1.5" /> Reset Semua Filter
+                                                </Button>
+                                            )}
+                                        </div>
+
+                                        {/* Desktop Filters */}
+                                        <div className="hidden md:block space-y-3">
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                <div className="relative">
+                                                    <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                                                    <Input
+                                                        placeholder="Cari link, IP, atau device..."
+                                                        className="pl-9"
+                                                        value={linkSearchTerm}
+                                                        onChange={(e) => setLinkSearchTerm(e.target.value)}
+                                                    />
+                                                </div>
+                                                <Select value={linkGroupFilter} onValueChange={setLinkGroupFilter}>
+                                                    <SelectTrigger><SelectValue placeholder="Semua Group" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Semua Group</SelectItem>
+                                                        {Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort().map(g => (
+                                                            <SelectItem key={g!} value={g!}>{g}</SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Select value={linkTypeFilter} onValueChange={setLinkTypeFilter}>
+                                                    <SelectTrigger><SelectValue placeholder="Semua Tipe" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Semua Tipe</SelectItem>
+                                                        {LINK_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Select value={linkDirectionFilter} onValueChange={setLinkDirectionFilter}>
+                                                    <SelectTrigger><SelectValue placeholder="Semua Direction" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Semua Direction</SelectItem>
+                                                        {DIRECTION_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                                                <Select value={linkServiceFilter} onValueChange={setLinkServiceFilter}>
+                                                    <SelectTrigger><SelectValue placeholder="Semua Service" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Semua Service</SelectItem>
+                                                        {SERVICE_TYPE_OPTIONS.map(opt => (
+                                                            <SelectItem key={opt.value} value={opt.value === "Internet" ? "0" : opt.value === "AudioCodesVoip" ? "1" : opt.value === "LocalLoop" ? "2" : opt.value === "CCTV" ? "3" : "4"}>
+                                                                {opt.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                                <Select value={linkStatusFilter} onValueChange={setLinkStatusFilter}>
+                                                    <SelectTrigger><SelectValue placeholder="Semua Status" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">Semua Status</SelectItem>
+                                                        {STATUS_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                                <div className="md:col-span-2 flex justify-end">
+                                                    <Button variant="ghost" size="sm" onClick={resetFilters} className="text-gray-500 hover:text-red-600">
+                                                        <X className="h-4 w-4 mr-2" /> Reset Filter
+                                                    </Button>
+                                                </div>
                                             </div>
                                         </div>
 
@@ -1511,67 +1814,125 @@ const LinkInternalPage: React.FC = () => {
                                         )}
                                     </div>
 
-                                    <Table>
-                                        <TableHeader>
-                                            <TableRow>
-                                                <TableHead>No</TableHead>
-                                                <TableHead>Link Name</TableHead>
-                                                <TableHead>Group</TableHead>
-                                                <TableHead>Dir</TableHead>
-                                                <TableHead>Tipe</TableHead>
-                                                <TableHead>IP Address</TableHead>
-                                                <TableHead>Device</TableHead>
-                                                <TableHead>Frequency</TableHead>
-                                                <TableHead>Service</TableHead>
-                                                <TableHead>Status</TableHead>
-                                                <TableHead>History</TableHead>
-                                                <TableHead>Aksi</TableHead>
-                                            </TableRow>
-                                        </TableHeader>
-                                        <TableBody>
-                                            {filteredLinks.map((link, idx) => (
-                                                <TableRow key={link.id}>
-                                                    <TableCell>{idx + 1}</TableCell>
-                                                    <TableCell className="font-medium">{link.linkName}</TableCell>
-                                                    <TableCell>{link.linkGroup || "-"}</TableCell>
-                                                    <TableCell>
+                                    {/* Desktop Table */}
+                                    <div className="hidden md:block">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>No</TableHead>
+                                                    <TableHead>Link Name</TableHead>
+                                                    <TableHead>Group</TableHead>
+                                                    <TableHead>Dir</TableHead>
+                                                    <TableHead>Tipe</TableHead>
+                                                    <TableHead>IP Address</TableHead>
+                                                    <TableHead>Device</TableHead>
+                                                    <TableHead>Frequency</TableHead>
+                                                    <TableHead>Service</TableHead>
+                                                    <TableHead>Status</TableHead>
+                                                    <TableHead>History</TableHead>
+                                                    <TableHead>Aksi</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {filteredLinks.map((link, idx) => (
+                                                    <TableRow key={link.id}>
+                                                        <TableCell>{idx + 1}</TableCell>
+                                                        <TableCell className="font-medium">{link.linkName}</TableCell>
+                                                        <TableCell>{link.linkGroup || "-"}</TableCell>
+                                                        <TableCell>
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${link.directionString === 'TX' ? 'bg-indigo-100 text-indigo-700' : link.directionString === 'RX' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-100 text-gray-600'}`}>
+                                                                {link.directionString !== 'None' ? link.directionString : "-"}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getLinkTypeBadgeClass(link.type)}`}>
+                                                                {link.type || "-"}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell className="font-mono text-xs">{link.ipAddress || "-"}</TableCell>
+                                                        <TableCell>{link.device || "-"}</TableCell>
+                                                        <TableCell>{formatFrequency(link.usedFrequency)}</TableCell>
+                                                        <TableCell>
+                                                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                                {getServiceTypeLabel(link.serviceType)}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${link.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                                                {link.isActive ? "Active" : "Inactive"}
+                                                            </span>
+                                                        </TableCell>
+                                                        <TableCell>{link.historyCount}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex space-x-1">
+                                                                {hasPermission("internal.link.update") && (
+                                                                    <Button variant="ghost" size="sm" onClick={() => openLinkModal("edit", link)}><Edit className="h-4 w-4" /></Button>
+                                                                )}
+                                                                {hasPermission("internal.link.delete") && (
+                                                                    <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ type: "link", id: link.id })}><Trash className="h-4 w-4" /></Button>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </div>
+
+                                    {/* Mobile Cards */}
+                                    <div className="md:hidden flex flex-col gap-3">
+                                        {filteredLinks.map((link, idx) => (
+                                            <div key={link.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <div>
+                                                        <span className="text-xs font-semibold text-gray-500 block">#{idx + 1}</span>
+                                                        <h4 className="text-base font-bold text-gray-900">{link.linkName}</h4>
+                                                        {link.linkGroup && <span className="text-xs text-gray-500">{link.linkGroup}</span>}
+                                                    </div>
+                                                    <div className="flex gap-1">
                                                         <span className={`px-2 py-0.5 rounded text-xs font-semibold ${link.directionString === 'TX' ? 'bg-indigo-100 text-indigo-700' : link.directionString === 'RX' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-100 text-gray-600'}`}>
                                                             {link.directionString !== 'None' ? link.directionString : "-"}
                                                         </span>
-                                                    </TableCell>
-                                                    <TableCell>
                                                         <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getLinkTypeBadgeClass(link.type)}`}>
                                                             {link.type || "-"}
                                                         </span>
-                                                    </TableCell>
-                                                    <TableCell className="font-mono text-xs">{link.ipAddress || "-"}</TableCell>
-                                                    <TableCell>{link.device || "-"}</TableCell>
-                                                    <TableCell>{formatFrequency(link.usedFrequency)}</TableCell>
-                                                    <TableCell>
-                                                        <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                                                            {getServiceTypeLabel(link.serviceType)}
-                                                        </span>
-                                                    </TableCell>
-                                                    <TableCell>
-                                                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${link.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
+                                                    </div>
+                                                </div>
+
+                                                <div className="py-2 mb-2 border-y border-gray-50 space-y-1.5 text-xs">
+                                                    <div className="flex justify-between"><span className="text-gray-500">IP Address:</span><span className="font-mono text-gray-700">{link.ipAddress || "-"}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-500">Device:</span><span className="text-gray-700">{link.device || "-"}</span></div>
+                                                    <div className="flex justify-between"><span className="text-gray-500">Frequency:</span><span className="text-gray-700">{formatFrequency(link.usedFrequency)}</span></div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-gray-500">Service:</span>
+                                                        <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{getServiceTypeLabel(link.serviceType)}</span>
+                                                    </div>
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-gray-500">Status:</span>
+                                                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${link.isActive ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}`}>
                                                             {link.isActive ? "Active" : "Inactive"}
                                                         </span>
-                                                    </TableCell>
-                                                    <TableCell>{link.historyCount}</TableCell>
-                                                    <TableCell>
-                                                        <div className="flex space-x-1">
-                                                            {hasPermission("internal.link.update") && (
-                                                                <Button variant="ghost" size="sm" onClick={() => openLinkModal("edit", link)}><Edit className="h-4 w-4" /></Button>
-                                                            )}
-                                                            {hasPermission("internal.link.delete") && (
-                                                                <Button variant="ghost" size="sm" onClick={() => setConfirmDelete({ type: "link", id: link.id })}><Trash className="h-4 w-4" /></Button>
-                                                            )}
-                                                        </div>
-                                                    </TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
+                                                    </div>
+                                                    <div className="flex justify-between"><span className="text-gray-500">History:</span><span className="text-gray-700">{link.historyCount}</span></div>
+                                                </div>
+
+                                                {(hasPermission("internal.link.update") || hasPermission("internal.link.delete")) && (
+                                                    <div className="flex justify-end gap-2">
+                                                        {hasPermission("internal.link.update") && (
+                                                            <Button variant="outline" size="sm" className="h-8 flex-1 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => openLinkModal("edit", link)}>
+                                                                <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                                            </Button>
+                                                        )}
+                                                        {hasPermission("internal.link.delete") && (
+                                                            <Button variant="outline" size="sm" className="h-8 flex-1 border-red-200 text-red-700 hover:bg-red-50" onClick={() => setConfirmDelete({ type: "link", id: link.id })}>
+                                                                <Trash className="h-3.5 w-3.5 mr-1.5" /> Hapus
+                                                            </Button>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
                                 </>
                             )}
                         </CardContent>
@@ -2081,6 +2442,143 @@ const LinkInternalPage: React.FC = () => {
                     </div>
                 </div>
             )}
+            {/* MOBILE FILTER MODAL (Bottom Sheet) */}
+            <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
+                <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300">
+                    <DialogHeader className="p-4 border-b bg-gray-50/80">
+                        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
+                        <DialogTitle className="text-lg font-bold flex items-center gap-2">
+                            <Filter className="w-5 h-5 text-blue-600" />
+                            {(() => {
+                                switch (activeMobileFilter) {
+                                    case "history-link": return "Pilih Link (History)";
+                                    case "pivot-type": return "Pilih Tipe Link";
+                                    case "pivot-year": return "Pilih Tahun";
+                                    case "links-group": return "Pilih Group Link";
+                                    case "links-type": return "Pilih Tipe Link";
+                                    case "links-direction": return "Pilih Direction";
+                                    case "links-service": return "Pilih Service";
+                                    case "links-status": return "Pilih Status";
+                                    default: return "Filter";
+                                }
+                            })()}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
+                        <div className="grid grid-cols-1 gap-2">
+                            {activeMobileFilter === "history-link" && (
+                                <>
+                                    <button onClick={() => { setSelectedLinkId(undefined); fetchHistories(1, searchTerm, undefined); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl transition-all border", !selectedLinkId ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                                        Semua Link
+                                    </button>
+                                    {links.map(l => (
+                                        <button key={l.id} onClick={() => { setSelectedLinkId(l.id); fetchHistories(1, searchTerm, l.id); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl transition-all border", selectedLinkId === l.id ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                                            {l.linkName}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            {activeMobileFilter === "pivot-type" && (
+                                <>
+                                    <button onClick={() => { setPivotTypeFilter(null); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", !pivotTypeFilter ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Semua Tipe
+                                    </button>
+                                    {LINK_TYPE_OPTIONS.map(opt => (
+                                        <button key={opt.value} onClick={() => { setPivotTypeFilter(opt.value); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border", pivotTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            {activeMobileFilter === "pivot-year" && (
+                                availableYears().map(y => (
+                                    <button key={y} onClick={() => { setSelectedYear(y); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", selectedYear === y ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Tahun {y}
+                                    </button>
+                                ))
+                            )}
+                            {activeMobileFilter === "links-group" && (
+                                <>
+                                    <button onClick={() => { setLinkGroupFilter("all"); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkGroupFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Semua Group
+                                    </button>
+                                    {Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort().map(g => (
+                                        <button key={g!} onClick={() => { setLinkGroupFilter(g!); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border", linkGroupFilter === g ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            {g}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            {activeMobileFilter === "links-type" && (
+                                <>
+                                    <button onClick={() => { setLinkTypeFilter("all"); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkTypeFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Semua Tipe
+                                    </button>
+                                    {LINK_TYPE_OPTIONS.map(opt => (
+                                        <button key={opt.value} onClick={() => { setLinkTypeFilter(opt.value); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border", linkTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            {activeMobileFilter === "links-direction" && (
+                                <>
+                                    <button onClick={() => { setLinkDirectionFilter("all"); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkDirectionFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Semua Direction
+                                    </button>
+                                    {DIRECTION_OPTIONS.map(opt => (
+                                        <button key={opt.value} onClick={() => { setLinkDirectionFilter(opt.value); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border", linkDirectionFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                            {activeMobileFilter === "links-service" && (
+                                <>
+                                    <button onClick={() => { setLinkServiceFilter("all"); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkServiceFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Semua Service
+                                    </button>
+                                    {SERVICE_TYPE_OPTIONS.map(opt => {
+                                        const val = opt.value === "Internet" ? "0" : opt.value === "AudioCodesVoip" ? "1" : opt.value === "LocalLoop" ? "2" : opt.value === "CCTV" ? "3" : "4";
+                                        return (
+                                            <button key={opt.value} onClick={() => { setLinkServiceFilter(val); setActiveMobileFilter(null); }}
+                                                className={cn("w-full text-left p-4 rounded-xl border", linkServiceFilter === val ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                                {opt.label}
+                                            </button>
+                                        );
+                                    })}
+                                </>
+                            )}
+                            {activeMobileFilter === "links-status" && (
+                                <>
+                                    <button onClick={() => { setLinkStatusFilter("all"); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkStatusFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        Semua Status
+                                    </button>
+                                    {STATUS_OPTIONS.map(opt => (
+                                        <button key={opt.value} onClick={() => { setLinkStatusFilter(opt.value); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border", linkStatusFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </>
+                            )}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 };

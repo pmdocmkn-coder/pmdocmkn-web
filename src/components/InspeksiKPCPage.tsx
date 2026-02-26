@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, DragEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
   inspeksiApi,
@@ -31,6 +32,8 @@ import {
   RefreshCw,
   Trash,
   AlertTriangle,
+  ArrowLeft,
+  Bell,
 } from "lucide-react";
 import { id } from "date-fns/locale";
 import { formatCompactDate, formatDateTime } from "../utils/dateUtils";
@@ -270,6 +273,7 @@ const ImageUploadZone: React.FC<ImageUploadZoneProps> = ({
 import { hasPermission } from "../utils/permissionUtils";
 
 export default function InspeksiKPCPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
 
   // ✅ PERMISSION MANAGEMENT
@@ -1116,9 +1120,103 @@ export default function InspeksiKPCPage() {
   }
 
   return (
-    <div className="p-6 max-w-full mx-auto">
-      {/* Header */}
-      <div className="mb-6">
+    <div className="md:p-6 max-w-full mx-auto">
+      {/* ========== MOBILE HEADER (md:hidden) ========== */}
+      <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100">
+        <div className="flex items-center p-4 justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
+              Inspeksi KPC {showHistory && "- History"}
+            </h2>
+          </div>
+          <div className="flex items-center">
+            <button
+              onClick={() => {
+                const el = document.getElementById('mobile-search-input');
+                if (el) { el.classList.toggle('hidden'); el.focus(); }
+              }}
+              className="flex size-10 items-center justify-center rounded-full text-gray-600 hover:bg-indigo-50"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        {/* Mobile Search Input (toggleable) */}
+        <div id="mobile-search-input" className="hidden px-4 pb-3">
+          <div className="relative">
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Cari ruang, temuan, inspector..."
+              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50"
+            />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          </div>
+        </div>
+        {/* Mobile Filter Chips */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar relative z-30">
+          {/* Custom Dropdown: Ruangan */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => {
+                const el = document.getElementById("dropdown-ruangan");
+                if (el) el.classList.toggle("hidden");
+                // Hide the other dropdown
+                const other = document.getElementById("dropdown-status");
+                if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
+              }}
+              className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[100px]"
+            >
+              <span className="truncate max-w-[120px]">{selectedRuang || "Ruangan"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+
+          {/* Custom Dropdown: Status */}
+          <div className="relative shrink-0">
+            <button
+              onClick={() => {
+                const el = document.getElementById("dropdown-status");
+                if (el) el.classList.toggle("hidden");
+                // Hide the other dropdown
+                const other = document.getElementById("dropdown-ruangan");
+                if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
+              }}
+              className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[80px]"
+            >
+              <span>{selectedStatus || "Status"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+          <button
+            onClick={() => { setShowHistory(!showHistory); setCurrentPage(1); }}
+            className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 border text-xs font-semibold ${showHistory ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}
+          >
+            {showHistory ? <RotateCcw className="w-3 h-3" /> : <Archive className="w-3 h-3" />}
+            {showHistory ? "Aktif" : "History"}
+          </button>
+          {canExport && (
+            <button
+              onClick={handleExportWithImages}
+              disabled={exportLoading}
+              className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-purple-50 px-3 border border-purple-200 text-purple-700 text-xs font-semibold"
+            >
+              <Download className="w-3 h-3" />
+              Export
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ========== DESKTOP HEADER (hidden md:block) ========== */}
+      <div className="hidden md:block mb-6">
         <h1 className="text-3xl font-bold text-gray-800 flex items-center gap-3">
           <ClipboardList className="w-8 h-8 text-blue-600" />
           Inspeksi KPC {showHistory && "- History"}
@@ -1165,8 +1263,8 @@ export default function InspeksiKPCPage() {
         )}
       </AnimatePresence>
 
-      {/* Filters & Actions */}
-      <div className="mb-6 space-y-4">
+      {/* Filters & Actions - Desktop only */}
+      <div className="hidden md:block mb-6 space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -1327,8 +1425,153 @@ export default function InspeksiKPCPage() {
         </div>
       </div>
 
-      {/* Table - Unchanged, just the action buttons will use the new loading states */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+      {/* ========== MOBILE CARD VIEW (md:hidden) ========== */}
+      <div className="md:hidden flex flex-col gap-4 p-4 pb-28">
+        {filteredData.length === 0 ? (
+          <div className="text-center py-16 text-gray-500">
+            <ClipboardList className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+            <p className="font-medium">{showHistory ? 'Tidak ada data di history' : 'Belum ada data temuan'}</p>
+          </div>
+        ) : (
+          filteredData.map((item) => (
+            <motion.div
+              key={item.id}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex flex-col bg-white rounded-xl shadow-sm border border-indigo-100 overflow-hidden ${item.status === 'Closed' ? 'opacity-75' : ''}`}
+            >
+              {/* Card Image / Photo Header */}
+              <div
+                className={`relative w-full aspect-video bg-slate-200 bg-cover bg-center ${item.status === 'Closed' ? 'grayscale' : ''}`}
+                style={item.fotoTemuanUrls && item.fotoTemuanUrls.length > 0 ? { backgroundImage: `url("${item.fotoTemuanUrls[0]}")` } : {}}
+                onClick={() => item.fotoTemuanUrls && item.fotoTemuanUrls.length > 0 && openImageGallery(item.fotoTemuanUrls)}
+              >
+                {/* If no photo, show placeholder icon */}
+                {(!item.fotoTemuanUrls || item.fotoTemuanUrls.length === 0) && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Camera className="w-10 h-10 text-slate-400" />
+                  </div>
+                )}
+                {/* Badges */}
+                <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
+                  <span className={`text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${item.severity === 'Critical' ? 'bg-red-600' : item.severity === 'High' ? 'bg-red-500' : item.severity === 'Medium' ? 'bg-amber-500' : 'bg-slate-500'
+                    }`}>
+                    {item.severity} Severity
+                  </span>
+                  <span className={`text-white text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-full ${item.status === 'Open' ? 'bg-blue-500' : item.status === 'In Progress' ? 'bg-indigo-500' : item.status === 'Closed' ? 'bg-emerald-600' : 'bg-red-600'
+                    }`}>
+                    {item.status}
+                  </span>
+                </div>
+                {/* Photo count badge */}
+                {item.fotoTemuanUrls && item.fotoTemuanUrls.length > 1 && (
+                  <div className="absolute top-3 right-3 bg-black/60 text-white text-xs px-2 py-1 rounded-full flex items-center gap-1">
+                    <Camera className="w-3 h-3" /> {item.fotoTemuanUrls.length}
+                  </div>
+                )}
+              </div>
+              {/* Card Body */}
+              <div className="p-4 flex flex-col gap-2">
+                <h3 className="text-gray-900 text-lg font-bold">{item.ruang}</h3>
+                <p className="text-gray-500 text-sm flex items-center gap-1.5">
+                  <User className="w-3.5 h-3.5" />
+                  Inspektur: {item.inspector || '-'}
+                </p>
+                <p className="text-gray-600 text-sm line-clamp-2">{item.temuan}</p>
+                {/* Card Footer */}
+                <div className="flex flex-col gap-2 mt-2 pt-2 border-t border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <p className="text-gray-400 text-xs">{formatCompactDate(item.tanggalTemuan)}</p>
+                    {/* Lihat Detail - SEMUA USER */}
+                    {!showHistory && (
+                      <button
+                        onClick={() => item.id && setExpandedTemuan(item.id)}
+                        className="flex items-center gap-1 rounded-lg h-8 px-3 bg-indigo-600 text-white text-xs font-semibold"
+                      >
+                        <Eye className="w-3 h-3" /> Lihat Detail
+                      </button>
+                    )}
+                    {/* History - Restore */}
+                    {showHistory && canRestore && (
+                      <button
+                        onClick={() => item.id && handleRestore(item.id)}
+                        disabled={restoringItem === item.id}
+                        className="flex items-center gap-1 rounded-lg h-8 px-3 bg-green-100 text-green-700 text-xs font-semibold"
+                      >
+                        <RotateCcw className="w-3 h-3" /> Restore
+                      </button>
+                    )}
+                  </div>
+                  {/* Admin actions - Edit & Update */}
+                  {!showHistory && canUpdate && (
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => item.id && openEditModal(item.id)}
+                        className="flex-1 flex items-center justify-center gap-1 rounded-lg h-8 bg-blue-50 text-blue-700 text-xs font-semibold border border-blue-200"
+                      >
+                        <Edit className="w-3 h-3" /> Edit
+                      </button>
+                      <button
+                        onClick={() => item.id && openUpdateModal(item.id)}
+                        className="flex-1 flex items-center justify-center gap-1 rounded-lg h-8 bg-green-50 text-green-700 text-xs font-semibold border border-green-200"
+                      >
+                        <RefreshCw className="w-3 h-3" /> Update
+                      </button>
+                      {canDelete && (
+                        <button
+                          onClick={() => item.id && handleDelete(item.id)}
+                          disabled={deletingItem === item.id}
+                          className="flex items-center justify-center rounded-lg h-8 w-8 bg-red-50 text-red-600 border border-red-200"
+                        >
+                          {deletingItem === item.id ? (
+                            <div className="w-3 h-3 border-2 border-red-600 border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <Trash2 className="w-3 h-3" />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          ))
+        )}
+        {/* Mobile Pagination */}
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between py-3">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+            >
+              Previous
+            </button>
+            <span className="text-sm text-gray-600">Hal {currentPage}/{totalPages}</span>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-sm disabled:opacity-50"
+            >
+              Next
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ========== MOBILE FAB (md:hidden) ========== */}
+      {!showHistory && canCreate && (
+        <button
+          onClick={openCreateModal}
+          className="md:hidden fixed bottom-6 right-4 flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-full shadow-lg shadow-indigo-600/40 active:scale-95 transition-transform z-30"
+        >
+          <Plus className="w-5 h-5" />
+          <span className="font-bold text-sm">Tambah Temuan</span>
+        </button>
+      )}
+
+      {/* ========== DESKTOP TABLE (hidden md:block) ========== */}
+      <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead className="bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -1626,150 +1869,6 @@ export default function InspeksiKPCPage() {
           </table>
         </div>
 
-        <AnimatePresence>
-          {expandedTemuan && (
-            <div
-              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-              onClick={(e) => {
-                console.log("🔴 Backdrop clicked");
-                setExpandedTemuan(null);
-              }}
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                transition={{ type: "spring", duration: 0.3 }}
-                className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full overflow-hidden"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  console.log("⚪ Modal content clicked - NOT closing");
-                }}
-              >
-                {/* Header */}
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 bg-white/20 rounded-lg">
-                      <Eye className="w-5 h-5" />
-                    </div>
-                    <h3 className="text-xl font-bold">Detail Temuan</h3>
-                  </div>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      console.log("❌ Close button clicked");
-                      setExpandedTemuan(null);
-                    }}
-                    className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
-                    type="button"
-                  >
-                    <X className="w-5 h-5" />
-                  </button>
-                </div>
-
-                {/* Content */}
-                <div className="p-6">
-                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200 mb-4">
-                    <h4 className="text-sm font-semibold text-gray-700 mb-2">
-                      📝 Deskripsi Temuan
-                    </h4>
-                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                      {data.find((d) => d.id === expandedTemuan)?.temuan ||
-                        "Data tidak ditemukan"}
-                    </p>
-                  </div>
-
-                  {/* Additional Info */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <span className="text-xs text-gray-600 block mb-1">
-                        📍 Ruang
-                      </span>
-                      <span className="font-semibold text-gray-900">
-                        {data.find((d) => d.id === expandedTemuan)?.ruang ||
-                          "-"}
-                      </span>
-                    </div>
-
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <span className="text-xs text-gray-600 block mb-1">
-                        ⚠️ Severity
-                      </span>
-                      <span
-                        className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${data.find((d) => d.id === expandedTemuan)
-                          ?.severity === "Critical"
-                          ? "bg-red-100 text-red-800"
-                          : data.find((d) => d.id === expandedTemuan)
-                            ?.severity === "High"
-                            ? "bg-orange-100 text-orange-800"
-                            : data.find((d) => d.id === expandedTemuan)
-                              ?.severity === "Medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
-                          }`}
-                      >
-                        {data.find((d) => d.id === expandedTemuan)?.severity ||
-                          "-"}
-                      </span>
-                    </div>
-
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <span className="text-xs text-gray-600 block mb-1">
-                        👤 Inspector
-                      </span>
-                      <span className="font-semibold text-gray-900">
-                        {data.find((d) => d.id === expandedTemuan)?.inspector ||
-                          "-"}
-                      </span>
-                    </div>
-
-                    <div className="bg-blue-50 p-3 rounded-lg">
-                      <span className="text-xs text-gray-600 block mb-1">
-                        📅 Tanggal
-                      </span>
-                      <span className="font-semibold text-gray-900">
-                        {formatCompactDate(
-                          data.find((d) => d.id === expandedTemuan)
-                            ?.tanggalTemuan
-                        )}
-                      </span>
-                    </div>
-
-                    {data.find((d) => d.id === expandedTemuan)
-                      ?.kategoriTemuan && (
-                        <div className="bg-blue-50 p-3 rounded-lg col-span-2">
-                          <span className="text-xs text-gray-600 block mb-1">
-                            🏷️ Kategori
-                          </span>
-                          <span className="font-semibold text-gray-900">
-                            {
-                              data.find((d) => d.id === expandedTemuan)
-                                ?.kategoriTemuan
-                            }
-                          </span>
-                        </div>
-                      )}
-                  </div>
-                </div>
-
-                {/* Footer */}
-                <div className="px-6 py-4 bg-gray-50 border-t flex justify-end gap-3">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setExpandedTemuan(null);
-                    }}
-                    type="button"
-                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm hover:shadow-md"
-                  >
-                    Tutup
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
-
         {/* Pagination */}
         {totalPages > 1 && (
           <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
@@ -1797,6 +1896,194 @@ export default function InspeksiKPCPage() {
           </div>
         )}
       </div>
+
+      {/* ========== DETAIL MODAL (visible on ALL screens) ========== */}
+      <AnimatePresence>
+        {expandedTemuan && (() => {
+          const item = data.find((d) => d.id === expandedTemuan);
+          if (!item) return null;
+          return (
+            <div
+              className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+              onClick={() => setExpandedTemuan(null)}
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                transition={{ type: "spring", duration: 0.3 }}
+                className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden flex flex-col"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Header */}
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-4 md:p-5 flex items-center justify-between shrink-0">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-white/20 rounded-lg">
+                      <Eye className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg md:text-xl font-bold">Detail Temuan</h3>
+                      <p className="text-white/70 text-xs">{item.ruang}</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setExpandedTemuan(null)}
+                    className="text-white/80 hover:text-white hover:bg-white/10 p-2 rounded-lg transition-colors"
+                    type="button"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                {/* Scrollable Content */}
+                <div className="p-4 md:p-6 overflow-y-auto flex-1 space-y-4">
+                  {/* Status & Severity Badges */}
+                  <div className="flex flex-wrap gap-2">
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${item.severity === "Critical" ? "bg-red-100 text-red-800"
+                      : item.severity === "High" ? "bg-orange-100 text-orange-800"
+                        : item.severity === "Medium" ? "bg-yellow-100 text-yellow-800"
+                          : "bg-green-100 text-green-800"
+                      }`}>
+                      ⚠️ {item.severity}
+                    </span>
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold ${item.status === "Closed" ? "bg-green-100 text-green-800"
+                      : item.status === "In Progress" ? "bg-blue-100 text-blue-800"
+                        : item.status === "Rejected" ? "bg-red-100 text-red-800"
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}>
+                      {item.status}
+                    </span>
+                  </div>
+
+                  {/* Deskripsi Temuan */}
+                  <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">📝 Deskripsi Temuan</h4>
+                    <p className="text-gray-800 whitespace-pre-wrap leading-relaxed text-sm">{item.temuan}</p>
+                  </div>
+
+                  {/* Info Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <span className="text-xs text-gray-500 block">📍 Ruang</span>
+                      <span className="font-semibold text-gray-900 text-sm">{item.ruang}</span>
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <span className="text-xs text-gray-500 block">👤 Inspector</span>
+                      <span className="font-semibold text-gray-900 text-sm">{item.inspector || "-"}</span>
+                    </div>
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <span className="text-xs text-gray-500 block">📅 Tgl Temuan</span>
+                      <span className="font-semibold text-gray-900 text-sm">{formatCompactDate(item.tanggalTemuan)}</span>
+                    </div>
+                    {item.kategoriTemuan && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <span className="text-xs text-gray-500 block">🏷️ Kategori</span>
+                        <span className="font-semibold text-gray-900 text-sm">{item.kategoriTemuan}</span>
+                      </div>
+                    )}
+                    {item.noFollowUp && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <span className="text-xs text-gray-500 block">📋 No Follow Up</span>
+                        <span className="font-semibold text-gray-900 text-sm">{item.noFollowUp}</span>
+                      </div>
+                    )}
+                    {item.picPelaksana && (
+                      <div className="bg-blue-50 p-3 rounded-lg">
+                        <span className="text-xs text-gray-500 block">🔧 PIC Pelaksana</span>
+                        <span className="font-semibold text-gray-900 text-sm">{item.picPelaksana}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Foto Temuan */}
+                  {item.fotoTemuanUrls && item.fotoTemuanUrls.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">📸 Foto Temuan ({item.fotoTemuanUrls.length})</h4>
+                      <div className="grid grid-cols-3 gap-2">
+                        {item.fotoTemuanUrls.map((url, idx) => (
+                          <img
+                            key={idx}
+                            src={url}
+                            alt={`Temuan ${idx + 1}`}
+                            className="w-full h-24 md:h-32 object-cover rounded-lg border border-blue-200 cursor-pointer hover:opacity-80 transition-opacity"
+                            onClick={() => openImageGallery(item.fotoTemuanUrls || [], idx)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Perbaikan Section */}
+                  {(item.perbaikanDilakukan || item.tanggalPerbaikan || (item.fotoHasilUrls && item.fotoHasilUrls.length > 0)) && (
+                    <div className="bg-green-50 rounded-lg p-4 border border-green-200">
+                      <h4 className="text-sm font-semibold text-green-800 mb-3">🔧 Perbaikan</h4>
+                      {item.perbaikanDilakukan && (
+                        <p className="text-gray-800 text-sm mb-3 whitespace-pre-wrap">{item.perbaikanDilakukan}</p>
+                      )}
+                      <div className="grid grid-cols-2 gap-2 text-sm">
+                        {item.tanggalPerbaikan && (
+                          <div>
+                            <span className="text-xs text-gray-500 block">📅 Tgl Perbaikan</span>
+                            <span className="font-medium text-gray-800">{formatDateSafe(item.tanggalPerbaikan)}</span>
+                          </div>
+                        )}
+                        {item.tanggalSelesaiPerbaikan && (
+                          <div>
+                            <span className="text-xs text-gray-500 block">✅ Tgl Selesai</span>
+                            <span className="font-medium text-gray-800">{formatDateSafe(item.tanggalSelesaiPerbaikan)}</span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Foto Hasil */}
+                      {item.fotoHasilUrls && item.fotoHasilUrls.length > 0 && (
+                        <div className="mt-3">
+                          <h5 className="text-xs font-semibold text-green-700 mb-2">📸 Foto Hasil ({item.fotoHasilUrls.length})</h5>
+                          <div className="grid grid-cols-3 gap-2">
+                            {item.fotoHasilUrls.map((url, idx) => (
+                              <img
+                                key={idx}
+                                src={url}
+                                alt={`Hasil ${idx + 1}`}
+                                className="w-full h-24 md:h-32 object-cover rounded-lg border border-green-200 cursor-pointer hover:opacity-80 transition-opacity"
+                                onClick={() => openImageGallery(item.fotoHasilUrls || [], idx)}
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Keterangan */}
+                  {item.keterangan && (
+                    <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">💬 Keterangan</h4>
+                      <p className="text-gray-800 text-sm whitespace-pre-wrap">{item.keterangan}</p>
+                    </div>
+                  )}
+
+                  {/* Created By */}
+                  <div className="text-xs text-gray-400 text-right">
+                    Dibuat oleh {item.createdByName} • {formatDateTime(item.createdAt)}
+                  </div>
+                </div>
+
+                {/* Footer */}
+                <div className="px-4 md:px-6 py-3 md:py-4 bg-gray-50 border-t flex justify-end shrink-0">
+                  <button
+                    onClick={() => setExpandedTemuan(null)}
+                    type="button"
+                    className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium shadow-sm text-sm"
+                  >
+                    Tutup
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          );
+        })()}
+      </AnimatePresence>
 
       {/* Modal Form - Keep existing modal code but use new delete handlers */}
       {/* I'll continue with the modal in the next part due to length... */}
@@ -2680,6 +2967,82 @@ export default function InspeksiKPCPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ========== FILTER MODALS (Root level to fix z-index issues) ========== */}
+      <div id="dropdown-ruangan" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={() => document.getElementById("dropdown-ruangan")?.classList.add("hidden")}>
+        <div
+          className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] sm:max-h-[80vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Ruangan</h3>
+            <button onClick={() => document.getElementById("dropdown-ruangan")?.classList.add("hidden")} className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1.5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="overflow-y-auto overscroll-contain p-2 space-y-1">
+            <div
+              className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer transition-all flex items-center justify-between ${!selectedRuang ? 'font-bold text-indigo-700 bg-indigo-50/80' : 'text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => {
+                setSelectedRuang("");
+                setCurrentPage(1);
+                document.getElementById("dropdown-ruangan")?.classList.add("hidden");
+              }}
+            >
+              Semua Ruangan
+              {!selectedRuang && <Check className="w-4 h-4" />}
+            </div>
+            {ruangList.map((r) => (
+              <div
+                key={r}
+                className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer transition-all flex items-center justify-between ${selectedRuang === r ? 'font-bold text-indigo-700 bg-indigo-50/80' : 'text-gray-700 hover:bg-gray-50'}`}
+                onClick={() => {
+                  setSelectedRuang(r);
+                  setCurrentPage(1);
+                  document.getElementById("dropdown-ruangan")?.classList.add("hidden");
+                }}
+              >
+                {r}
+                {selectedRuang === r && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="dropdown-status" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={() => document.getElementById("dropdown-status")?.classList.add("hidden")}>
+        <div
+          className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] sm:max-h-[80vh] animate-in slide-in-from-bottom-8 sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Status</h3>
+            <button onClick={() => document.getElementById("dropdown-status")?.classList.add("hidden")} className="text-gray-500 hover:text-gray-700 hover:bg-gray-200 p-1.5 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+          </div>
+          <div className="overflow-y-auto overscroll-contain p-2 space-y-1">
+            {[
+              { val: "", label: "Semua Status" },
+              { val: "Open", label: "Open" },
+              { val: "In Progress", label: "In Progress" },
+              { val: "Closed", label: "Closed" },
+              { val: "Rejected", label: "Rejected" }
+            ].map((s) => (
+              <div
+                key={s.label}
+                className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer transition-all flex items-center justify-between ${selectedStatus === s.val ? 'font-bold text-indigo-700 bg-indigo-50/80' : 'text-gray-700 hover:bg-gray-50'}`}
+                onClick={() => {
+                  setSelectedStatus(s.val);
+                  setCurrentPage(1);
+                  document.getElementById("dropdown-status")?.classList.add("hidden");
+                }}
+              >
+                {s.label}
+                {selectedStatus === s.val && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

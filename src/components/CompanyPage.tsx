@@ -164,7 +164,7 @@ export default function CompanyPage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-6">
+        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
             {/* Header */}
             <div className="mb-6">
                 <div className="flex items-center gap-3 mb-2">
@@ -211,8 +211,8 @@ export default function CompanyPage() {
                 </div>
             </div>
 
-            {/* Table */}
-            <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            {/* Table - Desktop */}
+            <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full">
                         <thead className="bg-gray-50 border-b border-gray-200">
@@ -342,6 +342,54 @@ export default function CompanyPage() {
                                 </nav>
                             </div>
                         </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden flex flex-col gap-3">
+                {loading ? (
+                    <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div></div>
+                ) : companies.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">No companies found</div>
+                ) : companies.map((company) => (
+                    <div key={company.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-3">
+                        <div className="flex justify-between items-start">
+                            <div className="flex flex-col gap-1">
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-blue-600 bg-blue-50 px-2 py-0.5 rounded w-fit">CODE: {company.code}</span>
+                                <h3 className="text-sm font-bold text-gray-900">{company.name}</h3>
+                            </div>
+                            <div className="flex gap-1">
+                                {hasPermission('letter.update') && (
+                                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(company)} className="text-blue-600 hover:text-blue-700">
+                                        <Edit className="h-4 w-4" />
+                                    </Button>
+                                )}
+                                {hasPermission('letter.delete') && (
+                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(company.id)} className="text-red-600 hover:text-red-700">
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <span className={`h-2 w-2 rounded-full ${company.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
+                                <span className="text-xs font-medium text-gray-500">Status</span>
+                            </div>
+                            {company.isActive ? (
+                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-green-100 text-green-700">ACTIVE</span>
+                            ) : (
+                                <span className="text-[10px] font-bold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600">INACTIVE</span>
+                            )}
+                        </div>
+                    </div>
+                ))}
+                {/* Mobile Pagination */}
+                {totalPages > 1 && (
+                    <div className="flex justify-between gap-4 pt-2">
+                        <Button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} variant="outline" className="flex-1">Previous</Button>
+                        <Button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} variant="outline" className="flex-1">Next</Button>
                     </div>
                 )}
             </div>

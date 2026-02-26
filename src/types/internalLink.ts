@@ -97,6 +97,7 @@ export interface InternalLinkHistoryCreateDto {
 }
 
 export interface InternalLinkHistoryUpdateDto {
+    date?: string;
     rslNearEnd?: number | null;
     uptime?: number | null; // in days
     notes?: string | null;

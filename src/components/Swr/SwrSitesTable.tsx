@@ -123,7 +123,7 @@ export default function SwrSitesTable({
       {/* Table */}
       {getPaginatedSites().length > 0 ? (
         <>
-          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hidden md:block">
             <Table>
               <TableHeader>
                 <TableRow className="border-b border-gray-200 hover:bg-transparent">
@@ -212,32 +212,78 @@ export default function SwrSitesTable({
             </Table>
           </div>
 
+          {/* Mobile Cards */}
+          <div className="md:hidden flex flex-col gap-3">
+            {loading ? (
+              [...Array(3)].map((_, i) => <Skeleton key={i} className="h-28 w-full rounded-xl" />)
+            ) : (
+              getPaginatedSites().map((site, idx) => (
+                <div key={site.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div>
+                      <span className="text-xs font-semibold text-gray-500 block">#{(currentPage - 1) * sitesPerPage + idx + 1}</span>
+                      <h4 className="text-base font-bold text-gray-900">{site.name}</h4>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded text-xs font-medium ${site.type === "Trunking" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                      {site.type}
+                    </span>
+                  </div>
+                  <div className="py-2 mb-2 border-y border-gray-50 space-y-1.5 text-xs">
+                    <div className="flex justify-between"><span className="text-gray-500">Location:</span><span className="text-gray-700">{site.location || "-"}</span></div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-gray-500">Channels:</span>
+                      <span className="bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded text-xs font-medium">{site.channelCount}</span>
+                    </div>
+                  </div>
+                  {(onEdit || onDelete) && (
+                    <div className="flex justify-end gap-2">
+                      {onEdit && (
+                        <Button size="sm" variant="outline" className="h-8 flex-1 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => onEdit(site)}>
+                          <Edit2 className="w-3.5 h-3.5 mr-1.5" /> Edit
+                        </Button>
+                      )}
+                      {onDelete && (
+                        <Button size="sm" variant="outline" className="h-8 flex-1 border-red-200 text-red-700 hover:bg-red-50" onClick={() => onDelete(site.id)}>
+                          <Trash2 className="w-3.5 h-3.5 mr-1.5" /> Delete
+                        </Button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))
+            )}
+          </div>
+
           {/* Pagination */}
           {totalPages > 1 && !loading && (
-            <div className="flex justify-between items-center">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage <= 1}
-                onClick={() => setCurrentPage((p) => p - 1)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <span className="text-sm text-gray-600">
+            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3">
+              <div className="flex gap-2 justify-center md:justify-start">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => p - 1)}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  <span className="hidden sm:inline ml-1">Previous</span>
+                </Button>
+              </div>
+              <span className="text-sm text-gray-600 text-center">
                 Page {currentPage} of {totalPages}
               </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={currentPage >= totalPages}
-                onClick={() => setCurrentPage((p) => p + 1)}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
+              <div className="flex gap-2 justify-center md:justify-end">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => p + 1)}
+                  className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                >
+                  <span className="hidden sm:inline mr-1">Next</span>
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           )}
         </>

@@ -710,54 +710,92 @@ const FleetStatisticsPage: React.FC = () => {
           </div>
 
           {statistics.topCallers.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caller Fleet</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Calls</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Duration</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Duration</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {statistics.topCallers.map((caller, index) => (
-                    <motion.tr
-                      key={caller.rank}
-                      custom={index}
-                      variants={tableRowVariants}
-                      initial="hidden"
-                      animate="show"
-                      whileHover={{ backgroundColor: "rgba(243, 244, 246, 0.5)" }}
-                      className="transition-colors"
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${caller.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-                          caller.rank === 2 ? 'bg-gray-100 text-gray-800' :
-                            caller.rank === 3 ? 'bg-orange-100 text-orange-800' :
-                              'bg-blue-100 text-blue-800'
-                          }`}>
-                          #{caller.rank}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {caller.callerFleet}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
-                        {caller.totalCalls.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {caller.totalDurationFormatted}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {caller.averageDurationFormatted}
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Caller Fleet</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Calls</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Duration</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {statistics.topCallers.map((caller, index) => (
+                      <motion.tr
+                        key={caller.rank}
+                        custom={index}
+                        variants={tableRowVariants}
+                        initial="hidden"
+                        animate="show"
+                        whileHover={{ backgroundColor: "rgba(243, 244, 246, 0.5)" }}
+                        className="transition-colors"
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${caller.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                            caller.rank === 2 ? 'bg-gray-100 text-gray-800' :
+                              caller.rank === 3 ? 'bg-orange-100 text-orange-800' :
+                                'bg-blue-100 text-blue-800'
+                            }`}>
+                            #{caller.rank}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {caller.callerFleet}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
+                          {caller.totalCalls.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          {caller.totalDurationFormatted}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          {caller.averageDurationFormatted}
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden flex flex-col gap-3 p-4">
+                {statistics.topCallers.map((caller) => (
+                  <div key={caller.rank} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+                    <div className={`absolute top-0 left-0 w-1.5 h-full ${caller.rank === 1 ? 'bg-yellow-400' :
+                        caller.rank === 2 ? 'bg-gray-400' :
+                          caller.rank === 3 ? 'bg-orange-400' :
+                            'bg-blue-400'
+                      }`} />
+                    <div className="pl-2">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="text-xs font-medium text-gray-500 mb-1 block">Rank #{caller.rank}</span>
+                          <h4 className="text-base font-bold text-gray-900">{caller.callerFleet}</h4>
+                        </div>
+                        <div className="bg-blue-50 text-blue-700 font-mono font-bold px-3 py-1 rounded-full text-sm">
+                          {caller.totalCalls.toLocaleString()} calls
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50">
+                        <div>
+                          <span className="text-xs text-gray-500 block">Total Duration</span>
+                          <span className="text-sm font-medium text-gray-800">{caller.totalDurationFormatted}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 block">Avg Duration</span>
+                          <span className="text-sm font-medium text-gray-800">{caller.averageDurationFormatted}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="px-6 py-12 text-center text-gray-500">
               <Users className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -785,65 +823,113 @@ const FleetStatisticsPage: React.FC = () => {
           </div>
 
           {statistics.topCalledFleets.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Called Fleet</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Calls</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Duration</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Duration</th>
-                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Callers</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {statistics.topCalledFleets.map((called, index) => (
-                    <motion.tr
-                      key={called.rank}
-                      custom={index}
-                      variants={tableRowVariants}
-                      initial="hidden"
-                      animate="show"
-                      whileHover={{ backgroundColor: "rgba(243, 244, 246, 0.5)" }}
-                      className="transition-colors"
-                    >
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${called.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
-                          called.rank === 2 ? 'bg-gray-100 text-gray-800' :
-                            called.rank === 3 ? 'bg-orange-100 text-orange-800' :
-                              'bg-green-100 text-green-800'
-                          }`}>
-                          #{called.rank}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {called.calledFleet}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
-                        {called.totalCalls.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {called.totalDurationFormatted}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        {called.averageDurationFormatted}
-                      </td>
-                      <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
-                        <motion.button
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
+            <>
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rank</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Called Fleet</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Calls</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Duration</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Avg Duration</th>
+                      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Unique Callers</th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {statistics.topCalledFleets.map((called, index) => (
+                      <motion.tr
+                        key={called.rank}
+                        custom={index}
+                        variants={tableRowVariants}
+                        initial="hidden"
+                        animate="show"
+                        whileHover={{ backgroundColor: "rgba(243, 244, 246, 0.5)" }}
+                        className="transition-colors"
+                      >
+                        <td className="px-4 py-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${called.rank === 1 ? 'bg-yellow-100 text-yellow-800' :
+                            called.rank === 2 ? 'bg-gray-100 text-gray-800' :
+                              called.rank === 3 ? 'bg-orange-100 text-orange-800' :
+                                'bg-green-100 text-green-800'
+                            }`}>
+                            #{called.rank}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {called.calledFleet}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-mono">
+                          {called.totalCalls.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          {called.totalDurationFormatted}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          {called.averageDurationFormatted}
+                        </td>
+                        <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-600">
+                          <motion.button
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => loadUniqueCallersDetail(called.calledFleet)}
+                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer transition-colors"
+                          >
+                            {called.uniqueCallers} callers →
+                          </motion.button>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Mobile Cards */}
+              <div className="md:hidden flex flex-col gap-3 p-4">
+                {statistics.topCalledFleets.map((called) => (
+                  <div key={called.rank} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+                    <div className={`absolute top-0 left-0 w-1.5 h-full ${called.rank === 1 ? 'bg-yellow-400' :
+                        called.rank === 2 ? 'bg-gray-400' :
+                          called.rank === 3 ? 'bg-orange-400' :
+                            'bg-green-400'
+                      }`} />
+                    <div className="pl-2">
+                      <div className="flex justify-between items-start mb-2">
+                        <div>
+                          <span className="text-xs font-medium text-gray-500 mb-1 block">Rank #{called.rank}</span>
+                          <h4 className="text-base font-bold text-gray-900">{called.calledFleet}</h4>
+                        </div>
+                        <div className="bg-green-50 text-green-700 font-mono font-bold px-3 py-1 rounded-full text-sm">
+                          {called.totalCalls.toLocaleString()} calls
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-gray-50">
+                        <div>
+                          <span className="text-xs text-gray-500 block">Total Duration</span>
+                          <span className="text-sm font-medium text-gray-800">{called.totalDurationFormatted}</span>
+                        </div>
+                        <div>
+                          <span className="text-xs text-gray-500 block">Avg Duration</span>
+                          <span className="text-sm font-medium text-gray-800">{called.averageDurationFormatted}</span>
+                        </div>
+                      </div>
+
+                      <div className="mt-3 pt-3 border-t border-gray-50">
+                        <button
                           onClick={() => loadUniqueCallersDetail(called.calledFleet)}
-                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 hover:bg-purple-200 cursor-pointer transition-colors"
+                          className="w-full flex justify-between items-center px-4 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-sm font-medium transition-colors"
                         >
-                          {called.uniqueCallers} callers →
-                        </motion.button>
-                      </td>
-                    </motion.tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                          <span>View Unique Callers</span>
+                          <span className="bg-white bg-opacity-50 px-2 py-0.5 rounded-full">{called.uniqueCallers}</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
           ) : (
             <div className="px-6 py-12 text-center text-gray-500">
               <Phone className="w-16 h-16 mx-auto mb-4 text-gray-300" />
@@ -972,86 +1058,149 @@ const FleetStatisticsPage: React.FC = () => {
                         </button>
                       </div>
                     </div>
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                            {detailModal.type === 'caller' ? 'Caller Fleet' : 'Called Fleet'}
-                          </th>
-                          <th
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                            onClick={() => { setModalSortField('calls'); setModalSortOrder(modalSortField === 'calls' && modalSortOrder === 'DESC' ? 'ASC' : 'DESC'); }}
-                          >
-                            Total Calls {modalSortField === 'calls' && (modalSortOrder === 'DESC' ? '↓' : '↑')}
-                          </th>
-                          <th
-                            className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
-                            onClick={() => { setModalSortField('duration'); setModalSortOrder(modalSortField === 'duration' && modalSortOrder === 'DESC' ? 'ASC' : 'DESC'); }}
-                          >
-                            Duration {modalSortField === 'duration' && (modalSortOrder === 'DESC' ? '↓' : '↑')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {/* Filter and sort data client-side */}
-                        {(() => {
-                          let filteredData = [...detailModal.data];
-
-                          // Apply search filter
-                          if (modalSearch) {
-                            filteredData = filteredData.filter(item => {
-                              const fleet = detailModal.type === 'caller'
-                                ? (item as UniqueCallerDetailDto).callerFleet
-                                : (item as UniqueCalledDetailDto).calledFleet;
-                              return fleet.toLowerCase().includes(modalSearch.toLowerCase());
-                            });
-                          }
-
-                          // Apply sort
-                          filteredData.sort((a, b) => {
-                            let aVal, bVal;
-                            if (modalSortField === 'calls') {
-                              aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).callCount : (a as UniqueCalledDetailDto).callCount;
-                              bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).callCount : (b as UniqueCalledDetailDto).callCount;
-                            } else {
-                              aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).totalDurationSeconds : (a as UniqueCalledDetailDto).totalDurationSeconds;
-                              bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).totalDurationSeconds : (b as UniqueCalledDetailDto).totalDurationSeconds;
-                            }
-                            return modalSortOrder === 'DESC' ? bVal - aVal : aVal - bVal;
-                          });
-
-                          return filteredData.map((item, index) => (
-                            <motion.tr
-                              key={detailModal.type === 'caller'
-                                ? (item as UniqueCallerDetailDto).callerFleet
-                                : (item as UniqueCalledDetailDto).calledFleet}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              transition={{ delay: index * 0.02 }}
-                              className="hover:bg-gray-50"
+                    {/* Desktop Table */}
+                    <div className="hidden md:block">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">#</th>
+                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                              {detailModal.type === 'caller' ? 'Caller Fleet' : 'Called Fleet'}
+                            </th>
+                            <th
+                              className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                              onClick={() => { setModalSortField('calls'); setModalSortOrder(modalSortField === 'calls' && modalSortOrder === 'DESC' ? 'ASC' : 'DESC'); }}
                             >
-                              <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-                              <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                {detailModal.type === 'caller'
+                              Total Calls {modalSortField === 'calls' && (modalSortOrder === 'DESC' ? '↓' : '↑')}
+                            </th>
+                            <th
+                              className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase cursor-pointer hover:bg-gray-100"
+                              onClick={() => { setModalSortField('duration'); setModalSortOrder(modalSortField === 'duration' && modalSortOrder === 'DESC' ? 'ASC' : 'DESC'); }}
+                            >
+                              Duration {modalSortField === 'duration' && (modalSortOrder === 'DESC' ? '↓' : '↑')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {/* Filter and sort data client-side */}
+                          {(() => {
+                            let filteredData = [...detailModal.data];
+
+                            // Apply search filter
+                            if (modalSearch) {
+                              filteredData = filteredData.filter(item => {
+                                const fleet = detailModal.type === 'caller'
+                                  ? (item as UniqueCallerDetailDto).callerFleet
+                                  : (item as UniqueCalledDetailDto).calledFleet;
+                                return fleet.toLowerCase().includes(modalSearch.toLowerCase());
+                              });
+                            }
+
+                            // Apply sort
+                            filteredData.sort((a, b) => {
+                              let aVal, bVal;
+                              if (modalSortField === 'calls') {
+                                aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).callCount : (a as UniqueCalledDetailDto).callCount;
+                                bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).callCount : (b as UniqueCalledDetailDto).callCount;
+                              } else {
+                                aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).totalDurationSeconds : (a as UniqueCalledDetailDto).totalDurationSeconds;
+                                bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).totalDurationSeconds : (b as UniqueCalledDetailDto).totalDurationSeconds;
+                              }
+                              return modalSortOrder === 'DESC' ? bVal - aVal : aVal - bVal;
+                            });
+
+                            return filteredData.map((item, index) => (
+                              <motion.tr
+                                key={detailModal.type === 'caller'
                                   ? (item as UniqueCallerDetailDto).callerFleet
                                   : (item as UniqueCalledDetailDto).calledFleet}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-900 font-mono">
-                                {detailModal.type === 'caller'
-                                  ? (item as UniqueCallerDetailDto).callCount.toLocaleString()
-                                  : (item as UniqueCalledDetailDto).callCount.toLocaleString()}
-                              </td>
-                              <td className="px-4 py-3 text-sm text-gray-600">
-                                {detailModal.type === 'caller'
-                                  ? (item as UniqueCallerDetailDto).totalDurationFormatted
-                                  : (item as UniqueCalledDetailDto).totalDurationFormatted}
-                              </td>
-                            </motion.tr>
-                          ));
-                        })()}
-                      </tbody>
-                    </table>
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.02 }}
+                                className="hover:bg-gray-50"
+                              >
+                                <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
+                                  {detailModal.type === 'caller'
+                                    ? (item as UniqueCallerDetailDto).callerFleet
+                                    : (item as UniqueCalledDetailDto).calledFleet}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-900 font-mono">
+                                  {detailModal.type === 'caller'
+                                    ? (item as UniqueCallerDetailDto).callCount.toLocaleString()
+                                    : (item as UniqueCalledDetailDto).callCount.toLocaleString()}
+                                </td>
+                                <td className="px-4 py-3 text-sm text-gray-600">
+                                  {detailModal.type === 'caller'
+                                    ? (item as UniqueCallerDetailDto).totalDurationFormatted
+                                    : (item as UniqueCalledDetailDto).totalDurationFormatted}
+                                </td>
+                              </motion.tr>
+                            ));
+                          })()}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Mobile Cards for Modal */}
+                    <div className="md:hidden flex flex-col gap-3 pb-4">
+                      {(() => {
+                        let filteredData = [...detailModal.data];
+
+                        // Apply search filter
+                        if (modalSearch) {
+                          filteredData = filteredData.filter(item => {
+                            const fleet = detailModal.type === 'caller'
+                              ? (item as UniqueCallerDetailDto).callerFleet
+                              : (item as UniqueCalledDetailDto).calledFleet;
+                            return fleet.toLowerCase().includes(modalSearch.toLowerCase());
+                          });
+                        }
+
+                        // Apply sort
+                        filteredData.sort((a, b) => {
+                          let aVal, bVal;
+                          if (modalSortField === 'calls') {
+                            aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).callCount : (a as UniqueCalledDetailDto).callCount;
+                            bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).callCount : (b as UniqueCalledDetailDto).callCount;
+                          } else {
+                            aVal = detailModal.type === 'caller' ? (a as UniqueCallerDetailDto).totalDurationSeconds : (a as UniqueCalledDetailDto).totalDurationSeconds;
+                            bVal = detailModal.type === 'caller' ? (b as UniqueCallerDetailDto).totalDurationSeconds : (b as UniqueCalledDetailDto).totalDurationSeconds;
+                          }
+                          return modalSortOrder === 'DESC' ? bVal - aVal : aVal - bVal;
+                        });
+
+                        return filteredData.map((item, index) => {
+                          const fleetName = detailModal.type === 'caller'
+                            ? (item as UniqueCallerDetailDto).callerFleet
+                            : (item as UniqueCalledDetailDto).calledFleet;
+                          const callCount = detailModal.type === 'caller'
+                            ? (item as UniqueCallerDetailDto).callCount
+                            : (item as UniqueCalledDetailDto).callCount;
+                          const duration = detailModal.type === 'caller'
+                            ? (item as UniqueCallerDetailDto).totalDurationFormatted
+                            : (item as UniqueCalledDetailDto).totalDurationFormatted;
+
+                          return (
+                            <div key={fleetName} className="bg-white border text-left border-gray-200 rounded-xl p-4 shadow-sm">
+                              <div className="flex justify-between items-start mb-2">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-gray-400 font-medium text-sm">#{index + 1}</span>
+                                  <h4 className="font-bold text-gray-900">{fleetName}</h4>
+                                </div>
+                                <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-full">
+                                  {callCount.toLocaleString()} calls
+                                </span>
+                              </div>
+                              <div className="flex items-center text-sm text-gray-600 mt-2">
+                                <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
+                                <span>Duration: <span className="font-medium text-gray-800">{duration}</span></span>
+                              </div>
+                            </div>
+                          );
+                        });
+                      })()}
+                    </div>
                   </>
                 ) : (
                   <div className="text-center py-8 text-gray-500">

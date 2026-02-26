@@ -30,6 +30,8 @@ import {
   Search,
   X,
   RefreshCw,
+  Filter,
+  ChevronDown,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -196,6 +198,7 @@ export default function SwrHistoryTab() {
   const [sites, setSites] = useState<SwrSiteListDto[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
+  const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
@@ -581,12 +584,11 @@ export default function SwrHistoryTab() {
 
         <CardContent>
           {/* Filters */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-6">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              {!hasLoadedOnce && isLoading ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
+          <div className="mb-6">
+            {/* Mobile Filters */}
+            <div className="md:hidden space-y-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
                   placeholder="Search channel, site, or notes..."
                   value={searchTerm}
@@ -594,84 +596,159 @@ export default function SwrHistoryTab() {
                     setSearchTerm(e.target.value);
                     setCurrentPage(1);
                   }}
-                  className="pl-10 h-10"
+                  className="pl-10 h-10 bg-gray-50/50 border-gray-200"
                 />
+              </div>
+              <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveMobileFilter("site")}
+                  className={cn(
+                    "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                    selectedSite !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                  )}
+                >
+                  <Filter className="w-3.5 h-3.5" />
+                  <span>Site: {selectedSite === "all" ? "Semua" : sites.find(s => s.id.toString() === selectedSite)?.name || "Selected"}</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveMobileFilter("type")}
+                  className={cn(
+                    "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                    selectedType !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                  )}
+                >
+                  <span>Tipe: {selectedType === "all" ? "Semua" : selectedType}</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setActiveMobileFilter("channel")}
+                  className={cn(
+                    "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                    selectedChannel !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                  )}
+                >
+                  <span>Channel: {selectedChannel === "all" ? "Semua" : channels.find(c => c.id.toString() === selectedChannel)?.channelName || "Selected"}</span>
+                  <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                </Button>
+              </div>
+              {(searchTerm !== "" || selectedSite !== "all" || selectedType !== "all" || selectedChannel !== "all") && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSearchTerm("");
+                    setSelectedSite("all");
+                    setSelectedType("all");
+                    setSelectedChannel("all");
+                    setCurrentPage(1);
+                  }}
+                  className="w-full text-red-500 hover:text-red-600 hover:bg-red-50 h-8 text-xs font-semibold"
+                >
+                  <X className="h-3.5 w-3.5 mr-1.5" /> Reset Semua Filter
+                </Button>
               )}
             </div>
 
-            {!hasLoadedOnce && isLoading ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select
-                value={selectedSite}
-                onValueChange={(v) => {
-                  setSelectedSite(v);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Filter by Site" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Sites</SelectItem>
-                  {sites.map((site) => (
-                    <SelectItem key={site.id} value={site.id.toString()}>
-                      {site.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+            {/* Desktop Filters */}
+            <div className="hidden md:grid grid-cols-4 gap-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                {!hasLoadedOnce && isLoading ? (
+                  <Skeleton className="h-10 w-full" />
+                ) : (
+                  <Input
+                    placeholder="Search channel, site, or notes..."
+                    value={searchTerm}
+                    onChange={(e) => {
+                      setSearchTerm(e.target.value);
+                      setCurrentPage(1);
+                    }}
+                    className="pl-10 h-10"
+                  />
+                )}
+              </div>
 
-            {!hasLoadedOnce && isLoading ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select
-                value={selectedType}
-                onValueChange={(v) => {
-                  setSelectedType(v);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Filter by Type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Types</SelectItem>
-                  <SelectItem value="Trunking">Trunking</SelectItem>
-                  <SelectItem value="Conventional">Conventional</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
+              {!hasLoadedOnce && isLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select
+                  value={selectedSite}
+                  onValueChange={(v) => {
+                    setSelectedSite(v);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Filter by Site" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Sites</SelectItem>
+                    {sites.map((site) => (
+                      <SelectItem key={site.id} value={site.id.toString()}>
+                        {site.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
-            {!hasLoadedOnce && isLoading ? (
-              <Skeleton className="h-10 w-full" />
-            ) : (
-              <Select
-                value={selectedChannel}
-                onValueChange={(v) => {
-                  setSelectedChannel(v);
-                  setCurrentPage(1);
-                }}
-              >
-                <SelectTrigger className="h-10">
-                  <SelectValue placeholder="Filter by Channel" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Channels</SelectItem>
-                  {channels.map((ch) => (
-                    <SelectItem key={ch.id} value={ch.id.toString()}>
-                      {ch.channelName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            )}
+              {!hasLoadedOnce && isLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select
+                  value={selectedType}
+                  onValueChange={(v) => {
+                    setSelectedType(v);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Filter by Type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Types</SelectItem>
+                    <SelectItem value="Trunking">Trunking</SelectItem>
+                    <SelectItem value="Conventional">Conventional</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+
+              {!hasLoadedOnce && isLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <Select
+                  value={selectedChannel}
+                  onValueChange={(v) => {
+                    setSelectedChannel(v);
+                    setCurrentPage(1);
+                  }}
+                >
+                  <SelectTrigger className="h-10">
+                    <SelectValue placeholder="Filter by Channel" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Channels</SelectItem>
+                    {channels.map((ch) => (
+                      <SelectItem key={ch.id} value={ch.id.toString()}>
+                        {ch.channelName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
           </div>
 
           {/* Table */}
           <div className="space-y-4">
-            <div className="overflow-x-auto border rounded-lg">
+            <div className="hidden md:block overflow-x-auto border rounded-lg">
               <table className="w-full border-collapse">
                 <thead className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white sticky top-0 z-10">
                   <tr>
@@ -827,6 +904,91 @@ export default function SwrHistoryTab() {
                   )}
                 </tbody>
               </table>
+            </div>
+
+            {/* Mobile Cards */}
+            <div className="md:hidden flex flex-col gap-3">
+              {!hasLoadedOnce && isLoading ? (
+                [...Array(5)].map((_, i) => <Skeleton key={i} className="h-36 w-full rounded-xl" />)
+              ) : histories.length > 0 ? (
+                histories.map((history, idx) => (
+                  <div key={history.id} className={cn(
+                    "bg-white rounded-xl border border-gray-100 shadow-sm p-4 transition-opacity duration-200",
+                    isLoading && "opacity-50 pointer-events-none"
+                  )}>
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <span className="text-xs font-semibold text-gray-500 block">#{(currentPage - 1) * pageSize + idx + 1}</span>
+                        <h4 className="text-base font-bold text-blue-700">{history.channelName}</h4>
+                        <span className="text-xs text-gray-500">{history.siteName}</span>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-0.5 rounded-md">
+                          {format(new Date(history.date), "dd/MM/yyyy")}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${history.siteType === "Trunking" ? "bg-purple-100 text-purple-700" : "bg-green-100 text-green-700"}`}>
+                          {history.siteType}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="py-2 mb-2 border-y border-gray-50 space-y-1.5 text-xs">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">VSWR:</span>
+                        <span className={`font-mono font-bold text-sm ${getVswrColor(history.vswr)}`}>
+                          {history.vswr.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">FPWR:</span>
+                        <span className="font-mono text-gray-700">
+                          {history.fpwr !== null && history.fpwr !== undefined ? `${history.fpwr.toFixed(1)} W` : "-"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-500">Status:</span>
+                        {getStatusDisplay(history.status)}
+                      </div>
+                      {history.notes && (
+                        <div className="flex justify-between items-start">
+                          <span className="text-gray-500 shrink-0">Notes:</span>
+                          <span className="text-gray-700 text-right ml-2 line-clamp-2">{history.notes}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex justify-end gap-2">
+                      <Button variant="outline" size="sm" className="h-8 flex-1 border-blue-200 text-blue-700 hover:bg-blue-50" onClick={() => openModal("edit", history)}>
+                        ✏️ Edit
+                      </Button>
+                      <Button variant="outline" size="sm" className="h-8 flex-1 border-red-200 text-red-700 hover:bg-red-50" onClick={() => handleDelete(history.id)}>
+                        🗑️ Delete
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="flex flex-col items-center justify-center">
+                    {isLoading ? (
+                      <RefreshCw className="h-12 w-12 text-blue-400 mb-4 animate-spin opacity-50" />
+                    ) : (
+                      <Search className="h-12 w-12 text-gray-300 mb-4" />
+                    )}
+                    <p className="text-base font-semibold text-gray-700">
+                      {isLoading ? "Mencari data..." : "No records found"}
+                    </p>
+                    {!isLoading && !searchTerm && selectedChannel === "all" && selectedSite === "all" && selectedType === "all" && (
+                      <Button
+                        onClick={() => openModal("create")}
+                        className="mt-4 bg-blue-600 hover:bg-blue-700"
+                      >
+                        Add First Record
+                      </Button>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* ✅ PAGINATION */}
@@ -1081,6 +1243,80 @@ export default function SwrHistoryTab() {
               }
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Mobile Filter Modal (Bottom Sheet) */}
+      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
+        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300 focus:outline-none">
+          <DialogHeader className="p-4 border-b bg-gray-50/80">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-600" />
+              {activeMobileFilter === "site" ? "Pilih Site" : activeMobileFilter === "type" ? "Pilih Tipe" : "Pilih Channel"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
+            <div className="flex flex-col gap-2">
+              {activeMobileFilter === "site" && (
+                <>
+                  <button
+                    onClick={() => { setSelectedSite("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedSite === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                  >
+                    All Sites
+                  </button>
+                  {sites.map((site) => (
+                    <button
+                      key={site.id}
+                      onClick={() => { setSelectedSite(site.id.toString()); setCurrentPage(1); setActiveMobileFilter(null); }}
+                      className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedSite === site.id.toString() ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                    >
+                      {site.name}
+                    </button>
+                  ))}
+                </>
+              )}
+              {activeMobileFilter === "type" && (
+                <>
+                  <button
+                    onClick={() => { setSelectedType("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedType === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                  >
+                    All Types
+                  </button>
+                  {["Trunking", "Conventional"].map((type) => (
+                    <button
+                      key={type}
+                      onClick={() => { setSelectedType(type); setCurrentPage(1); setActiveMobileFilter(null); }}
+                      className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedType === type ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </>
+              )}
+              {activeMobileFilter === "channel" && (
+                <>
+                  <button
+                    onClick={() => { setSelectedChannel("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedChannel === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                  >
+                    All Channels
+                  </button>
+                  {channels.map((ch) => (
+                    <button
+                      key={ch.id}
+                      onClick={() => { setSelectedChannel(ch.id.toString()); setCurrentPage(1); setActiveMobileFilter(null); }}
+                      className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedChannel === ch.id.toString() ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                    >
+                      <div className="font-bold">{ch.channelName}</div>
+                      <div className="text-xs opacity-70">{ch.swrSiteName} • {ch.swrSiteType}</div>
+                    </button>
+                  ))}
+                </>
+              )}
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div >

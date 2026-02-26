@@ -15,7 +15,9 @@ import {
   XCircle,
   FileSpreadsheet,
   FileSpreadsheetIcon,
+  ChevronLeft,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { swrSignalApi } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import SwrSitesTable from "./SwrSitesTable";
@@ -38,9 +40,11 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import SwrYearlyDashboard from "./SwrYearlyDashboard";
 
 export default function SwrSignalPage() {
+  const navigate = useNavigate();
   const [sites, setSites] = useState<SwrSiteListDto[]>([]);
   const [channels, setChannels] = useState<SwrChannelListDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeSwrTab, setActiveSwrTab] = useState("analytics");
   const [showSiteDialog, setShowSiteDialog] = useState(false);
   const [showChannelDialog, setShowChannelDialog] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
@@ -258,9 +262,66 @@ export default function SwrSignalPage() {
   };
 
   return (
-    <div className="w-full p-6">
-      {/* Header - Clean, no background */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+    <div className="w-full p-4 md:p-6 pb-20">
+      {/* Mobile Top App Bar */}
+      <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-6">
+        <div className="flex items-center px-4 pt-4 pb-2 justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50 shadow-sm"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
+                SWR Signal
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">Monitor & manage sites</p>
+            </div>
+          </div>
+        </div>
+        {/* Action chips row */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => setShowImportInstructions(true)}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold whitespace-nowrap hover:bg-gray-100 transition-colors shadow-sm"
+          >
+            <AlertCircle className="w-3.5 h-3.5" />
+            Guide
+          </button>
+          {hasPermission("swr.import") && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors shadow-sm"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Import
+            </button>
+          )}
+          {hasPermission("swr.create") && (
+            <>
+              <button
+                onClick={() => { setEditingSite(null); setShowSiteDialog(true); }}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Site
+              </button>
+              <button
+                onClick={() => { setEditingChannel(null); setShowChannelDialog(true); }}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold whitespace-nowrap hover:bg-purple-100 transition-colors shadow-sm"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                Channel
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Header - Clean, no background */}
+      <div className="hidden md:flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900">
             SWR Signal Management
@@ -274,16 +335,20 @@ export default function SwrSignalPage() {
           <Button
             onClick={() => setShowImportInstructions(true)}
             variant="outline"
+            size="sm"
             className="border-gray-300 text-gray-700 hover:bg-gray-50"
           >
-            <AlertCircle className="w-4 h-4 mr-2" /> Import Guide
+            <AlertCircle className="w-4 h-4 md:mr-2" />
+            <span className="hidden md:inline">Import Guide</span>
           </Button>
           {hasPermission("swr.import") && (
             <Button
               onClick={() => setShowImportModal(true)}
+              size="sm"
               className="bg-green-600 hover:bg-green-700 text-white"
             >
-              <Upload className="w-4 h-4 mr-2" /> Import Excel
+              <Upload className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">Import Excel</span>
             </Button>
           )}
           {hasPermission("swr.create") && (
@@ -292,9 +357,11 @@ export default function SwrSignalPage() {
                 setEditingSite(null);
                 setShowSiteDialog(true);
               }}
+              size="sm"
               className="bg-indigo-600 hover:bg-indigo-700"
             >
-              <Plus className="w-4 h-4 mr-2" /> New Site
+              <Plus className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">New Site</span>
             </Button>
           )}
           {hasPermission("swr.create") && (
@@ -303,17 +370,85 @@ export default function SwrSignalPage() {
                 setEditingChannel(null);
                 setShowChannelDialog(true);
               }}
+              size="sm"
               className="bg-purple-600 hover:bg-purple-700"
             >
-              <Plus className="w-4 h-4 mr-2" /> New Channel
+              <Plus className="w-4 h-4 md:mr-2" />
+              <span className="hidden md:inline">New Channel</span>
             </Button>
           )}
         </div>
       </div>
 
-      {/* Tabs - NEC Style */}
-      <Tabs defaultValue="analytics" className="w-full">
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
+      {/* Tabs */}
+      <Tabs value={activeSwrTab} onValueChange={setActiveSwrTab} className="w-full">
+        {/* Mobile Card Grid Navigation */}
+        <div className="md:hidden mb-6">
+          <div className="grid grid-cols-2 gap-3">
+            {/* Hero card - Analytics (full width) */}
+            <button
+              onClick={() => setActiveSwrTab("analytics")}
+              className={`col-span-2 relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[120px] text-left transition-all duration-200 ${activeSwrTab === "analytics"
+                  ? "bg-[#a855f7] text-white shadow-md ring-2 ring-[#c084fc] ring-offset-2"
+                  : "bg-[#b06bf3] text-white/90 shadow-sm hover:shadow-md"
+                }`}
+            >
+              <div className="text-xl font-bold tracking-tight">Analytics</div>
+              <div className="text-xs opacity-80 mt-0.5">Real-time performance metrics</div>
+            </button>
+
+            <button
+              onClick={() => setActiveSwrTab("history")}
+              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "history"
+                  ? "bg-[#2d3748] text-white shadow-md ring-2 ring-slate-400 ring-offset-2"
+                  : "bg-[#334155] text-white/90 shadow-sm hover:shadow-md"
+                }`}
+            >
+              <div className="text-sm font-bold tracking-wide">History Records</div>
+            </button>
+
+            <button
+              onClick={() => setActiveSwrTab("yearly-dashboard")}
+              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "yearly-dashboard"
+                  ? "bg-[#7c3aed] text-white shadow-md ring-2 ring-[#a78bfa] ring-offset-2"
+                  : "bg-[#8b5cf6] text-white/90 shadow-sm hover:shadow-md"
+                }`}
+            >
+              {/* Optional: Add a subtle chart icon background overlay here to mimic the image */}
+              <div className="absolute top-0 right-0 p-2 opacity-20">
+                <BarChart3 className="w-16 h-16" />
+              </div>
+              <div className="relative z-10 text-sm font-bold tracking-wide">Yearly Dashboard</div>
+            </button>
+
+            <button
+              onClick={() => setActiveSwrTab("sites")}
+              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "sites"
+                  ? "bg-[#0f172a] text-white shadow-md ring-2 ring-slate-500 ring-offset-2"
+                  : "bg-[#1e293b] text-white/90 shadow-sm hover:shadow-md"
+                }`}
+            >
+              {/* Optional: Add a subtle building icon background overlay here to mimic the image */}
+              <div className="absolute top-0 right-0 p-2 opacity-10">
+                <LayoutGrid className="w-16 h-16" />
+              </div>
+              <div className="relative z-10 text-sm font-bold tracking-wide">Sites ({loading ? '...' : sites.length})</div>
+            </button>
+
+            <button
+              onClick={() => setActiveSwrTab("channels")}
+              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "channels"
+                  ? "bg-[#a855f7] text-white shadow-md ring-2 ring-[#c084fc] ring-offset-2"
+                  : "bg-[#b06bf3] text-white/90 shadow-sm hover:shadow-md"
+                }`}
+            >
+              <div className="text-sm font-bold tracking-wide">Channels ({loading ? '...' : channels.length})</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Tab Bar */}
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
           <TabsList className="flex flex-wrap gap-3 bg-transparent border-0 p-0 h-auto">
             <TabsTrigger value="history">
               📋 History Records

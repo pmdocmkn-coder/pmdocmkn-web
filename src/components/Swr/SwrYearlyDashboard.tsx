@@ -95,7 +95,9 @@ import {
   Shield,
   AlertCircle,
   FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 // Types - Using centralized types from @/types/swr
 interface SwrYearlySummaryDto {
@@ -199,6 +201,7 @@ const SwrYearlyDashboard: React.FC = () => {
   const [threshold, setThreshold] = useState<number>(1.5);
   const [error, setError] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState<number>(0);
+  const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
   const [acknowledgedAlerts, setAcknowledgedAlerts] = useState<string[]>(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('swr_acknowledged_alerts');
@@ -1165,16 +1168,17 @@ const SwrYearlyDashboard: React.FC = () => {
               </div>
 
               {filteredData.length > pageSize && (
-                <div className="flex items-center justify-between border-t pt-4 mt-4">
-                  <div className="text-sm text-gray-600">
+                <div className="flex flex-col items-center gap-4 border-t pt-4 mt-4">
+                  <div className="text-sm text-gray-500 w-full text-center">
                     Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, filteredData.length)} of {filteredData.length} entries
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center justify-center gap-2">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(1)}
                       disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
                     >
                       <ChevronsLeft className="w-4 h-4" />
                     </Button>
@@ -1183,10 +1187,11 @@ const SwrYearlyDashboard: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                       disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm">
+                    <span className="text-sm font-medium px-2">
                       Page {currentPage} of {Math.ceil(filteredData.length / pageSize)}
                     </span>
                     <Button
@@ -1194,6 +1199,7 @@ const SwrYearlyDashboard: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(prev => Math.min(Math.ceil(filteredData.length / pageSize), prev + 1))}
                       disabled={currentPage === Math.ceil(filteredData.length / pageSize)}
+                      className="h-8 w-8 p-0"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </Button>
@@ -1202,27 +1208,30 @@ const SwrYearlyDashboard: React.FC = () => {
                       size="sm"
                       onClick={() => setCurrentPage(Math.ceil(filteredData.length / pageSize))}
                       disabled={currentPage === Math.ceil(filteredData.length / pageSize)}
+                      className="h-8 w-8 p-0"
                     >
                       <ChevronsRight className="w-4 h-4" />
                     </Button>
                   </div>
-                  <Select
-                    value={pageSize.toString()}
-                    onValueChange={(value) => {
-                      setPageSize(parseInt(value));
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <SelectTrigger className="w-24">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="10">10 / page</SelectItem>
-                      <SelectItem value="25">25 / page</SelectItem>
-                      <SelectItem value="50">50 / page</SelectItem>
-                      <SelectItem value="100">100 / page</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <div className="w-full flex justify-center mt-2">
+                    <Select
+                      value={pageSize.toString()}
+                      onValueChange={(value) => {
+                        setPageSize(parseInt(value));
+                        setCurrentPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[120px] h-8 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="10">10 / page</SelectItem>
+                        <SelectItem value="25">25 / page</SelectItem>
+                        <SelectItem value="50">50 / page</SelectItem>
+                        <SelectItem value="100">100 / page</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
               )}
             </>
@@ -1429,7 +1438,45 @@ const SwrYearlyDashboard: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-2">
+        {/* Mobile Filters */}
+        <div className="md:hidden w-full space-y-3">
+          <div className="flex overflow-x-auto pb-1 gap-2 no-scrollbar">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveMobileFilter("year")}
+              className="rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 bg-white text-gray-600 border-gray-200 hover:bg-gray-50 shadow-sm text-sm font-medium transition-colors"
+            >
+              <Calendar className="w-3.5 h-3.5" />
+              <span>Tahun: {selectedYear}</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setActiveMobileFilter("site")}
+              className={cn(
+                "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                selectedSites.length > 0 ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+              )}
+            >
+              <Layers className="w-3.5 h-3.5" />
+              <span>Site: {selectedSites.length === 0 ? "Semua" : `${selectedSites.length} Dipilih`}</span>
+              <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={fetchData}
+              className="rounded-full h-9 px-3 bg-white text-gray-600 border-gray-200 shadow-sm"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+            </Button>
+          </div>
+        </div>
+
+        {/* Desktop Filters */}
+        <div className="hidden md:flex flex-wrap gap-2">
           <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
             <SelectTrigger className="w-32">
               <Calendar className="w-4 h-4 mr-2" />
@@ -1902,6 +1949,91 @@ const SwrYearlyDashboard: React.FC = () => {
           }
         }
       `}} />
+      {/* MOBILE FILTER MODAL (Bottom Sheet) */}
+      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
+        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300 focus:outline-none">
+          <DialogHeader className="p-4 border-b bg-gray-50/80">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-600" />
+              {activeMobileFilter === "year" ? "Pilih Tahun" : "Pilih Site"}
+            </DialogTitle>
+            <DialogDescription>
+              {activeMobileFilter === "year" ? "Pilih tahun untuk melihat data dashboard" : "Pilih site untuk filter data"}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
+            <div className="flex flex-col gap-2">
+              {activeMobileFilter === "year" && availableYears.map((year) => (
+                <button
+                  key={year}
+                  onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
+                  className={cn(
+                    "w-full text-left p-4 rounded-xl border transition-all",
+                    selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5" />
+                    <span className="text-base">Tahun {year}</span>
+                  </div>
+                </button>
+              ))}
+              {activeMobileFilter === "site" && (
+                <>
+                  <button
+                    onClick={() => { setSelectedSites([]); setActiveMobileFilter(null); fetchData(); }}
+                    className={cn(
+                      "w-full text-left p-4 rounded-xl border transition-all",
+                      selectedSites.length === 0 ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                    )}
+                  >
+                    Semua Site
+                  </button>
+                  {sites.map((site) => {
+                    const isSelected = selectedSites.includes(site.id.toString());
+                    return (
+                      <button
+                        key={site.id}
+                        onClick={() => {
+                          handleToggleSite(site.id.toString());
+                        }}
+                        className={cn(
+                          "w-full text-left p-4 rounded-xl border transition-all",
+                          isSelected ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                        )}
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">{site.name}</div>
+                            <div className="text-xs opacity-70">{site.type}{site.location ? ` • ${site.location}` : ''}</div>
+                          </div>
+                          <div className={cn(
+                            "w-5 h-5 border-2 rounded flex items-center justify-center",
+                            isSelected ? "bg-blue-500 border-blue-500" : "border-gray-300"
+                          )}>
+                            {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
+                          </div>
+                        </div>
+                      </button>
+                    );
+                  })}
+                  {selectedSites.length > 0 && (
+                    <div className="flex gap-2 mt-2 sticky bottom-0 bg-white py-2">
+                      <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedSites([])}>
+                        Clear
+                      </Button>
+                      <Button size="sm" className="flex-1" onClick={() => { setActiveMobileFilter(null); fetchData(); }}>
+                        Terapkan ({selectedSites.length})
+                      </Button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

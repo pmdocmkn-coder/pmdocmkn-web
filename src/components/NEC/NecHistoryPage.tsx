@@ -49,6 +49,7 @@ import {
   ChevronLeft, // ◀ Sebelumnya
   ChevronRight, // ▶ Berikutnya
   ChevronsRight, // ⏭ Akhir
+  ChevronDown,
   Check,
   ChevronsUpDown,
   Loader2,
@@ -957,24 +958,77 @@ const NecHistoryPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full p-4">
-      <div className="flex justify-between items-center mb-6">
+    <div className="w-full p-4 md:p-6 pb-20">
+      {/* Mobile Top App Bar */}
+      <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-4">
+        <div className="flex items-center px-4 pt-4 pb-2 justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate("/dashboard")}
+              className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50 shadow-sm"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+            <div>
+              <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
+                Jaringan NEC
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">History & monitoring</p>
+            </div>
+          </div>
+        </div>
+        {/* Action chips row */}
+        <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
+          <button
+            onClick={() => navigate("/nec-management")}
+            className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
+          >
+            <Settings className="w-3.5 h-3.5" />
+            Kelola
+          </button>
+          {hasPermission("nec.import") && (
+            <button
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors shadow-sm"
+            >
+              <Upload className="w-3.5 h-3.5" />
+              Impor
+            </button>
+          )}
+          {hasPermission("nec.export") && (
+            <button
+              onClick={handleExport}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-semibold whitespace-nowrap hover:bg-sky-100 transition-colors shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Ekspor
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Desktop Header */}
+      <div className="hidden md:flex flex-col md:flex-row md:justify-between md:items-center gap-4 mb-6">
         <h1 className="text-2xl font-bold">Histori Jaringan NEC</h1>
-        <div className="flex space-x-2">
-          <Button onClick={() => navigate("/dashboard")} variant="outline">
-            Kembali ke Dashboard
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={() => navigate("/dashboard")} variant="outline" size="sm">
+            <ChevronLeft className="h-4 w-4 md:mr-1" />
+            <span className="hidden md:inline">Kembali ke Dashboard</span>
           </Button>
-          <Button onClick={() => navigate("/nec-management")} variant="outline">
-            <Settings className="mr-2 h-4 w-4" /> Kelola Tower & Link
+          <Button onClick={() => navigate("/nec-management")} variant="outline" size="sm">
+            <Settings className="h-4 w-4 md:mr-1" />
+            <span className="hidden md:inline">Kelola Tower & Link</span>
           </Button>
           {hasPermission("nec.import") && (
-            <Button onClick={() => setIsImportModalOpen(true)}>
-              <Upload className="mr-2 h-4 w-4" /> Impor Excel
+            <Button onClick={() => setIsImportModalOpen(true)} size="sm">
+              <Upload className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Impor Excel</span>
             </Button>
           )}
           {hasPermission("nec.export") && (
-            <Button onClick={handleExport}>
-              <Download className="mr-2 h-4 w-4" /> Ekspor Tahunan
+            <Button onClick={handleExport} size="sm">
+              <Download className="h-4 w-4 md:mr-1" />
+              <span className="hidden md:inline">Ekspor Tahunan</span>
             </Button>
           )}
         </div>
@@ -986,7 +1040,68 @@ const NecHistoryPage: React.FC = () => {
         className="space-y-4"
       >
         {/* Navigation Tabs - Advanced version */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+        {/* Mobile Card Grid Navigation */}
+        <div className="md:hidden mb-2">
+          <div className="grid grid-cols-2 gap-3">
+            <button
+              onClick={() => setActiveTab("history")}
+              className={`col-span-2 relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-200 ${activeTab === "history"
+                  ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200 ring-2 ring-blue-400 ring-offset-2"
+                  : "bg-gradient-to-br from-blue-400/80 to-indigo-500/80 text-white/90 shadow-md hover:shadow-lg"
+                }`}
+            >
+              <div className="flex justify-between items-start mb-2">
+                <span className="text-3xl opacity-90 block">📋</span>
+                {totalPages > 0 && (
+                  <span className="bg-white/20 text-white px-2.5 py-1 rounded-full text-xs font-semibold backdrop-blur-sm">
+                    {(totalPages * 15).toLocaleString()} data
+                  </span>
+                )}
+              </div>
+              <div className="text-lg font-bold">Daftar History</div>
+              <div className="text-xs opacity-75 mt-0.5">Catatan RSL link transmission harian</div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("pivot")}
+              className={`relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-200 ${activeTab === "pivot"
+                  ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-400 ring-offset-2"
+                  : "bg-gradient-to-br from-emerald-400/80 to-teal-500/80 text-white/90 shadow-md hover:shadow-lg"
+                }`}
+            >
+              <span className="text-2xl mb-1.5 opacity-90 block">📊</span>
+              <div className="text-sm font-bold leading-tight">Pivot Table</div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("monthly")}
+              className={`relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-200 ${activeTab === "monthly"
+                  ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-200 ring-2 ring-violet-400 ring-offset-2"
+                  : "bg-gradient-to-br from-violet-400/80 to-purple-500/80 text-white/90 shadow-md hover:shadow-lg"
+                }`}
+            >
+              <span className="text-2xl mb-1.5 opacity-90 block">📈</span>
+              <div className="text-sm font-bold leading-tight">Grafik<br />Bulanan</div>
+            </button>
+
+            <button
+              onClick={() => setActiveTab("yearly")}
+              className={`col-span-2 relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-200 flex items-center justify-between ${activeTab === "yearly"
+                  ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200 ring-2 ring-amber-400 ring-offset-2"
+                  : "bg-gradient-to-br from-amber-400/80 to-orange-500/80 text-white/90 shadow-md hover:shadow-lg"
+                }`}
+            >
+              <div>
+                <div className="text-sm font-bold">Grafik Tahunan</div>
+                <div className="text-xs opacity-75 mt-0.5">Perbandingan tren per bulan</div>
+              </div>
+              <span className="text-2xl opacity-90">📉</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Desktop Tab Bar */}
+        <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-200 p-4">
           <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setActiveTab("history")}
@@ -1060,7 +1175,8 @@ const NecHistoryPage: React.FC = () => {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex space-x-4 mb-4">
+              {/* Desktop Filters */}
+              <div className="hidden md:flex space-x-4 mb-4">
                 <div className="flex-1">
                   <Input
                     placeholder="Cari history..."
@@ -1112,6 +1228,42 @@ const NecHistoryPage: React.FC = () => {
                 </Button>
               </div>
 
+              {/* Mobile Filters */}
+              <div className="md:hidden flex flex-col gap-3 mb-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <Input
+                    placeholder="Cari history..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onKeyPress={(e) => {
+                      if (e.key === "Enter") {
+                        setCurrentPage(1);
+                        fetchHistories(
+                          1,
+                          searchTerm,
+                          selectedLink ?? undefined
+                        );
+                      }
+                    }}
+                    className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 text-sm bg-gray-50"
+                  />
+                </div>
+                <div className="flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1">
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => document.getElementById("mobile-dropdown-neclink")?.classList.remove("hidden")}
+                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[120px]"
+                    >
+                      <span className="truncate max-w-[140px]">
+                        {selectedLink ? links.find((l) => l.id === selectedLink)?.name : "Semua Link"}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               {isLoading ? (
                 <div className="flex justify-center items-center h-64">
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -1121,99 +1273,176 @@ const NecHistoryPage: React.FC = () => {
                 <div className="space-y-4">
                   {histories.length > 0 ? (
                     <>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>No</TableHead>
-                            <TableHead>Tanggal</TableHead>
-                            <TableHead>Link</TableHead>
-                            <TableHead>RSL</TableHead>
-                            {(hasPermission("nec.update") || hasPermission("nec.delete")) && <TableHead>Aksi</TableHead>}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {histories.map((history) => (
-                            <TableRow key={history.id}>
-                              <TableCell>{history.no || history.id}</TableCell>
-                              <TableCell>
-                                {format(new Date(history.date), "dd/MM/yyyy")}
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                {history.linkName}
-                              </TableCell>
-                              <TableCell>
-                                <div className="flex flex-col">
-                                  {isStatusActive(history.status) ? (
-                                    <>
-                                      <span
-                                        className={`font-mono font-semibold ${getRslTextColor(
-                                          history.rslNearEnd
-                                        )}`}
-                                      >
-                                        {history.rslNearEnd?.toFixed(1) ??
-                                          "N/A"}{" "}
-                                        dBm
-                                      </span>
-                                      <span className="text-xs text-gray-500 mt-1">
-                                        {getRslStatusLabel(history.rslNearEnd)}
-                                      </span>
-                                    </>
-                                  ) : (
-                                    <div className="space-y-1">
-                                      <span
-                                        className={
-                                          getOperationalStatusDisplay(
-                                            history.status
-                                          ).className
-                                        }
-                                      >
-                                        {
-                                          getOperationalStatusDisplay(
-                                            history.status
-                                          ).label
-                                        }
-                                      </span>
-                                      {history.notes && (
-                                        <p className="text-xs text-gray-600 italic">
-                                          {history.notes}
-                                        </p>
-                                      )}
-                                    </div>
-                                  )}
-                                </div>
-                              </TableCell>
-                              {(hasPermission("nec.update") || hasPermission("nec.delete")) && (
+                      {/* Desktop Table */}
+                      <div className="hidden md:block">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>No</TableHead>
+                              <TableHead>Tanggal</TableHead>
+                              <TableHead>Link</TableHead>
+                              <TableHead>RSL</TableHead>
+                              {(hasPermission("nec.update") || hasPermission("nec.delete")) && <TableHead>Aksi</TableHead>}
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {histories.map((history) => (
+                              <TableRow key={history.id}>
+                                <TableCell>{history.no || history.id}</TableCell>
                                 <TableCell>
-                                  <div className="flex space-x-2">
-                                    {hasPermission("nec.update") && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => openModal("edit", history)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                    )}
-                                    {hasPermission("nec.delete") && (
-                                      <Button
-                                        variant="ghost"
-                                        size="sm"
-                                        onClick={() => handleDelete(history.id)}
-                                      >
-                                        <Trash className="h-4 w-4" />
-                                      </Button>
+                                  {format(new Date(history.date), "dd/MM/yyyy")}
+                                </TableCell>
+                                <TableCell className="font-medium">
+                                  {history.linkName}
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex flex-col">
+                                    {isStatusActive(history.status) ? (
+                                      <>
+                                        <span
+                                          className={`font-mono font-semibold ${getRslTextColor(
+                                            history.rslNearEnd
+                                          )}`}
+                                        >
+                                          {history.rslNearEnd?.toFixed(1) ??
+                                            "N/A"}{" "}
+                                          dBm
+                                        </span>
+                                        <span className="text-xs text-gray-500 mt-1">
+                                          {getRslStatusLabel(history.rslNearEnd)}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <div className="space-y-1">
+                                        <span
+                                          className={
+                                            getOperationalStatusDisplay(
+                                              history.status
+                                            ).className
+                                          }
+                                        >
+                                          {
+                                            getOperationalStatusDisplay(
+                                              history.status
+                                            ).label
+                                          }
+                                        </span>
+                                        {history.notes && (
+                                          <p className="text-xs text-gray-600 italic">
+                                            {history.notes}
+                                          </p>
+                                        )}
+                                      </div>
                                     )}
                                   </div>
                                 </TableCell>
+                                {(hasPermission("nec.update") || hasPermission("nec.delete")) && (
+                                  <TableCell>
+                                    <div className="flex space-x-2">
+                                      {hasPermission("nec.update") && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => openModal("edit", history)}
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                      {hasPermission("nec.delete") && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleDelete(history.id)}
+                                        >
+                                          <Trash className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                )}
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+
+                      {/* Mobile Cards */}
+                      <div className="md:hidden flex flex-col gap-3 mt-4">
+                        {histories.map((history) => (
+                          <div key={history.id} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
+                            <div className="flex justify-between items-start mb-2">
+                              <div>
+                                <span className="text-xs font-semibold text-gray-500 mb-1 block">#{history.no || history.id}</span>
+                                <h4 className="text-base font-bold text-gray-900 leading-tight pr-2">{history.linkName}</h4>
+                              </div>
+                              <div className="text-right whitespace-nowrap">
+                                <span className="text-xs font-medium text-gray-500 bg-gray-50 px-2 py-1 rounded-md">
+                                  {format(new Date(history.date), "dd/MM/yyyy")}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="py-2 mb-2 border-y border-gray-50">
+                              {isStatusActive(history.status) ? (
+                                <div className="flex justify-between items-center">
+                                  <span className="text-sm text-gray-600">RSL Near End:</span>
+                                  <div className="text-right">
+                                    <span className={`block font-mono font-bold text-sm ${getRslTextColor(history.rslNearEnd)}`}>
+                                      {history.rslNearEnd?.toFixed(1) ?? "N/A"} dBm
+                                    </span>
+                                    <span className="text-[10px] font-medium uppercase tracking-wider text-gray-500">
+                                      {getRslStatusLabel(history.rslNearEnd)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm text-gray-600">Status:</span>
+                                    <span className={getOperationalStatusDisplay(history.status).className}>
+                                      {getOperationalStatusDisplay(history.status).label}
+                                    </span>
+                                  </div>
+                                  {history.notes && (
+                                    <p className="text-xs text-gray-600 bg-gray-50 p-2 rounded-md italic border border-gray-100">
+                                      {history.notes}
+                                    </p>
+                                  )}
+                                </div>
                               )}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                            </div>
+
+                            {(hasPermission("nec.update") || hasPermission("nec.delete")) && (
+                              <div className="flex justify-end gap-2 mt-2 pt-2">
+                                {hasPermission("nec.update") && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 flex-1 border-blue-200 text-blue-700 hover:bg-blue-50"
+                                    onClick={() => openModal("edit", history)}
+                                  >
+                                    <Edit className="h-3.5 w-3.5 mr-1.5" /> Edit
+                                  </Button>
+                                )}
+                                {hasPermission("nec.delete") && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 flex-1 border-red-200 text-red-700 hover:bg-red-50"
+                                    onClick={() => handleDelete(history.id)}
+                                  >
+                                    <Trash className="h-3.5 w-3.5 mr-1.5" /> Hapus
+                                  </Button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
 
                       {histories.length > 0 && (
-                        <div className="flex justify-between items-center pt-4 border-t">
-                          <div className="flex gap-2">
+                        <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-3 pt-4 border-t">
+                          <div className="flex gap-2 justify-center md:justify-start">
                             {/* Button Awal */}
                             <Button
                               variant="outline"
@@ -1227,8 +1456,8 @@ const NecHistoryPage: React.FC = () => {
                                 )
                               }
                             >
-                              <ChevronsLeft className="h-4 w-4 mr-1" />
-                              Awal
+                              <ChevronsLeft className="h-4 w-4" />
+                              <span className="hidden sm:inline ml-1">Awal</span>
                             </Button>
 
                             {/* Button Sebelumnya */}
@@ -1245,22 +1474,22 @@ const NecHistoryPage: React.FC = () => {
                                 );
                               }}
                             >
-                              <ChevronLeft className="h-4 w-4 mr-1" />
-                              Sebelumnya
+                              <ChevronLeft className="h-4 w-4" />
+                              <span className="hidden sm:inline ml-1">Sebelumnya</span>
                             </Button>
                           </div>
 
                           {/* Info Halaman */}
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-gray-600">
+                          <div className="flex flex-col items-center md:flex-row md:items-center gap-1 md:gap-2 order-first md:order-none">
+                            <span className="text-sm font-medium text-gray-700">
                               Halaman {currentPage} dari {totalPages}
                             </span>
                             <span className="text-xs text-gray-400">
-                              (Menampilkan {histories.length} data)
+                              ({histories.length} data)
                             </span>
                           </div>
 
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 justify-center md:justify-end">
                             {/* Button Berikutnya */}
                             <Button
                               variant="outline"
@@ -1278,8 +1507,8 @@ const NecHistoryPage: React.FC = () => {
                                 );
                               }}
                             >
-                              Berikutnya
-                              <ChevronRight className="h-4 w-4 ml-1" />
+                              <span className="hidden sm:inline mr-1">Berikutnya</span>
+                              <ChevronRight className="h-4 w-4" />
                             </Button>
 
                             {/* Button Akhir */}
@@ -1295,8 +1524,8 @@ const NecHistoryPage: React.FC = () => {
                                 )
                               }
                             >
-                              Akhir
-                              <ChevronsRight className="h-4 w-4 ml-1" />
+                              <span className="hidden sm:inline mr-1">Akhir</span>
+                              <ChevronsRight className="h-4 w-4" />
                             </Button>
                           </div>
                         </div>
@@ -1332,9 +1561,11 @@ const NecHistoryPage: React.FC = () => {
         <TabsContent value="monthly">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <CardTitle>Grafik Performa Bulanan</CardTitle>
-                <div className="flex space-x-4">
+
+                {/* Desktop Filters */}
+                <div className="hidden md:flex space-x-4">
                   <Select
                     value={selectedYear.toString()}
                     onValueChange={(value) => setSelectedYear(parseInt(value))}
@@ -1373,6 +1604,30 @@ const NecHistoryPage: React.FC = () => {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* Mobile Filters */}
+                <div className="md:hidden flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1 w-full">
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => document.getElementById("mobile-dropdown-monthly-year")?.classList.remove("hidden")}
+                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[90px]"
+                    >
+                      <span className="truncate">{selectedYear}</span>
+                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                    </button>
+                  </div>
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => document.getElementById("mobile-dropdown-monthly-month")?.classList.remove("hidden")}
+                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[120px]"
+                    >
+                      <span className="truncate">
+                        {new Date(0, selectedMonth - 1).toLocaleString("id-ID", { month: "long" })}
+                      </span>
+                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent>{renderMonthlyChart()}</CardContent>
@@ -1382,26 +1637,43 @@ const NecHistoryPage: React.FC = () => {
         <TabsContent value="yearly">
           <Card>
             <CardHeader>
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
                 <CardTitle>Grafik Ringkasan Tahunan</CardTitle>
-                <Select
-                  value={selectedYear.toString()}
-                  onValueChange={(value) => setSelectedYear(parseInt(value))}
-                >
-                  <SelectTrigger className="w-[120px]">
-                    <SelectValue placeholder="Tahun" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[...Array(5)].map((_, i) => {
-                      const year = new Date().getFullYear() - i;
-                      return (
-                        <SelectItem key={year} value={year.toString()}>
-                          {year}
-                        </SelectItem>
-                      );
-                    })}
-                  </SelectContent>
-                </Select>
+
+                {/* Desktop Filters */}
+                <div className="hidden md:block">
+                  <Select
+                    value={selectedYear.toString()}
+                    onValueChange={(value) => setSelectedYear(parseInt(value))}
+                  >
+                    <SelectTrigger className="w-[120px]">
+                      <SelectValue placeholder="Tahun" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[...Array(5)].map((_, i) => {
+                        const year = new Date().getFullYear() - i;
+                        return (
+                          <SelectItem key={year} value={year.toString()}>
+                            {year}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Mobile Filters */}
+                <div className="md:hidden flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1 w-full">
+                  <div className="relative shrink-0">
+                    <button
+                      onClick={() => document.getElementById("mobile-dropdown-yearly-year")?.classList.remove("hidden")}
+                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[90px]"
+                    >
+                      <span className="truncate">{selectedYear}</span>
+                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+                    </button>
+                  </div>
+                </div>
               </div>
             </CardHeader>
             <CardContent>{renderYearlyChart()}</CardContent>
@@ -1410,20 +1682,24 @@ const NecHistoryPage: React.FC = () => {
       </Tabs>
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="text-xl font-semibold">
               {modalMode === "create"
                 ? "Tambah Data History"
                 : "Edit Data History"}
             </DialogTitle>
+            <DialogDescription className="text-sm text-gray-500">
+              Isi detail history recording jaringan NEC.
+            </DialogDescription>
           </DialogHeader>
           <form onSubmit={handleSubmit}>
-            <div className="space-y-4">
+            <div className="space-y-5">
+              {/* Link - full width */}
               <div>
-                <Label htmlFor="necLinkId">Link</Label>
+                <Label htmlFor="necLinkId" className="text-sm font-medium">Link <span className="text-red-500">*</span></Label>
                 {modalMode === "edit" ? (
-                  <Input disabled value={links.find((l) => l.id === formData.necLinkId)?.name || ""} className="disabled:opacity-50 mt-1" />
+                  <Input disabled value={links.find((l) => l.id === formData.necLinkId)?.name || ""} className="disabled:opacity-50 mt-1.5" />
                 ) : (
                   <Popover open={openLinkBox} onOpenChange={setOpenLinkBox} modal={true}>
                     <PopoverTrigger asChild>
@@ -1431,7 +1707,7 @@ const NecHistoryPage: React.FC = () => {
                         variant="outline"
                         role="combobox"
                         aria-expanded={openLinkBox}
-                        className="w-full justify-between font-normal mt-1"
+                        className="w-full justify-between font-normal mt-1.5"
                       >
                         <span className="truncate">
                           {formData.necLinkId
@@ -1478,54 +1754,84 @@ const NecHistoryPage: React.FC = () => {
                   </Popover>
                 )}
               </div>
-              <div>
-                <Label htmlFor="date">Tanggal</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  name="date"
-                  value={formData.date}
-                  onChange={handleInputChange}
-                  required
-                />
-              </div>
-              <div>
-                <Label htmlFor="rslNearEnd">
-                  RSL Near End (dBm)
+
+              {/* Tanggal + RSL Near End - side by side */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="date" className="text-sm font-medium">Tanggal <span className="text-red-500">*</span></Label>
+                  <Input
+                    id="date"
+                    type="date"
+                    name="date"
+                    value={formData.date}
+                    onChange={handleInputChange}
+                    required
+                    className="mt-1.5"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="rslNearEnd" className="text-sm font-medium">
+                    RSL Near End (dBm)
+                  </Label>
                   {formData.status !== "active" && (
-                    <span className="text-xs text-gray-500 ml-2">
-                      (Otomatis diisi -100 untuk non-active status)
-                    </span>
+                    <p className="text-xs text-gray-400 mt-0.5">Otomatis -100 untuk non-active</p>
                   )}
-                </Label>
-                <Input
-                  id="rslNearEnd"
-                  type="number"
-                  name="rslNearEnd"
-                  step="0.1"
-                  min="-100"
-                  max="-10"
-                  value={formData.rslNearEnd}
-                  onChange={handleInputChange}
-                  required={formData.status === "active"}
-                  disabled={formData.status !== "active"}
-                  className={formData.status !== "active" ? "bg-gray-100" : ""}
-                />
+                  <Input
+                    id="rslNearEnd"
+                    type="number"
+                    name="rslNearEnd"
+                    step="0.1"
+                    min="-100"
+                    max="-10"
+                    value={formData.rslNearEnd}
+                    onChange={handleInputChange}
+                    required={formData.status === "active"}
+                    disabled={formData.status !== "active"}
+                    className={`mt-1.5 ${formData.status !== "active" ? "bg-gray-100" : ""}`}
+                  />
+                </div>
               </div>
+
+              {/* Status - half width */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="status" className="text-sm font-medium">Status</Label>
+                  <Select
+                    value={formData.status}
+                    onValueChange={(value) =>
+                      setFormData((prev) => ({ ...prev, status: value }))
+                    }
+                  >
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="active">Active</SelectItem>
+                      <SelectItem value="dismantled">Dismantled</SelectItem>
+                      <SelectItem value="removed">Removed</SelectItem>
+                      <SelectItem value="obstacle">Obstacle</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Notes - textarea */}
               <div>
-                <Label htmlFor="notes">
-                  Catatan{" "}
+                <Label htmlFor="notes" className="text-sm font-medium">
+                  Notes{" "}
                   {formData.status !== "active" && (
                     <span className="text-red-500">*</span>
                   )}
                 </Label>
-                <Input
+                <textarea
                   id="notes"
                   name="notes"
                   value={formData.notes}
-                  onChange={handleInputChange}
-                  placeholder="Contoh: Link dismantled, pindah ke tower lain"
+                  onChange={(e) => setFormData((prev) => ({ ...prev, notes: e.target.value }))}
+                  placeholder="Catatan tambahan..."
                   required={formData.status !== "active"}
+                  rows={3}
+                  className="mt-1.5 flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 resize-none"
                 />
                 {formData.status !== "active" && (
                   <p className="text-xs text-gray-500 mt-1">
@@ -1533,42 +1839,24 @@ const NecHistoryPage: React.FC = () => {
                   </p>
                 )}
               </div>
-              <div>
-                <Label htmlFor="status">Status Operasional</Label>
-                <Select
-                  value={formData.status}
-                  onValueChange={(value) =>
-                    setFormData((prev) => ({ ...prev, status: value }))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="dismantled">Dismantled</SelectItem>
-                    <SelectItem value="removed">Removed</SelectItem>
-                    <SelectItem value="obstacle">Obstacle</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
             </div>
-            <DialogFooter className="mt-4">
+            <DialogFooter className="mt-6 gap-2">
               <Button
                 type="button"
                 variant="outline"
+                className="px-6"
                 onClick={() => setIsModalOpen(false)}
               >
                 Batal
               </Button>
-              <Button type="submit" disabled={isSaving}>
+              <Button type="submit" disabled={isSaving} className="px-6 bg-[#1a1c1e] hover:bg-black text-white">
                 {isSaving ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {modalMode === "create" ? "Menyimpan..." : "Memperbarui..."}
                   </>
                 ) : (
-                  modalMode === "create" ? "Simpan" : "Perbarui"
+                  modalMode === "create" ? "Simpan" : "Simpan Perubahan"
                 )}
               </Button>
             </DialogFooter>
@@ -1684,6 +1972,91 @@ const NecHistoryPage: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* ========== MOBILE FILTER MODALS ========== */}
+      <div id="mobile-dropdown-neclink" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={() => document.getElementById("mobile-dropdown-neclink")?.classList.add("hidden")}>
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Link</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!selectedLink ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
+              onClick={() => { setSelectedLink(null); setCurrentPage(1); fetchHistories(1, searchTerm, undefined); document.getElementById("mobile-dropdown-neclink")?.classList.add("hidden"); }}>
+              Semua Link {!selectedLink && <Check className="w-4 h-4" />}
+            </div>
+            {links.map((l) => (
+              <div key={l.id} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedLink === l.id ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                onClick={() => { setSelectedLink(l.id); setCurrentPage(1); fetchHistories(1, searchTerm, l.id); document.getElementById("mobile-dropdown-neclink")?.classList.add("hidden"); }}>
+                <span className="truncate pr-2">{l.name}</span>
+                {selectedLink === l.id && <Check className="w-4 h-4 shrink-0" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dropdown-monthly-year" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={() => document.getElementById("mobile-dropdown-monthly-year")?.classList.add("hidden")}>
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Tahun</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            {getAvailableYears(histories).map((year) => (
+              <div key={year} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedYear === year ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                onClick={() => { setSelectedYear(year); document.getElementById("mobile-dropdown-monthly-year")?.classList.add("hidden"); }}>
+                {year} {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dropdown-monthly-month" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={() => document.getElementById("mobile-dropdown-monthly-month")?.classList.add("hidden")}>
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Bulan</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+              <div key={month} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedMonth === month ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                onClick={() => { setSelectedMonth(month); document.getElementById("mobile-dropdown-monthly-month")?.classList.add("hidden"); }}>
+                <span className="truncate pr-2">
+                  {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
+                </span>
+                {selectedMonth === month && <Check className="w-4 h-4 shrink-0" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dropdown-yearly-year" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
+        onClick={() => document.getElementById("mobile-dropdown-yearly-year")?.classList.add("hidden")}>
+        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
+          onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Tahun</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            {[...Array(5)].map((_, i) => {
+              const year = new Date().getFullYear() - i;
+              return (
+                <div key={year} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedYear === year ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
+                  onClick={() => { setSelectedYear(year); document.getElementById("mobile-dropdown-yearly-year")?.classList.add("hidden"); }}>
+                  {year} {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -219,6 +219,19 @@ export default function Sidebar({
   );
 
   const [isRadioOpen, setIsRadioOpen] = useState(true);
+  const mobileNavRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to active menu item when mobile sidebar opens
+  useEffect(() => {
+    if (isMobileMenuOpen && mobileNavRef.current) {
+      setTimeout(() => {
+        const activeEl = mobileNavRef.current?.querySelector('[data-active="true"]');
+        if (activeEl) {
+          activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        }
+      }, 300);
+    }
+  }, [isMobileMenuOpen]);
 
   const NavLink = ({
     item,
@@ -242,6 +255,7 @@ export default function Sidebar({
             ? "bg-white text-indigo-900 shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
             : "text-white/70 hover:bg-white/10 hover:text-white"
           }`}
+        data-active={isActive}
       >
         <Icon
           className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"
@@ -272,7 +286,7 @@ export default function Sidebar({
       </div>
 
       {/* Main Nav */}
-      <div className="flex-1 space-y-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
+      <div ref={isMobile ? mobileNavRef : undefined} className="flex-1 space-y-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
         {filteredNavItems.map((item) => (
           <NavLink
             key={item.id}
@@ -524,7 +538,7 @@ export default function Sidebar({
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
+            className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl md:hidden"
           >
             {SidebarContent(true)}
           </motion.aside>

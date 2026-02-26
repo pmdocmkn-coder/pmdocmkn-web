@@ -3,8 +3,6 @@ import { motion, cubicBezier } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  BarChart3,
-  Upload,
   TrendingUp,
   FileText,
   HelpCircle,
@@ -14,12 +12,29 @@ import {
   Wifi,
   Sparkles,
   Layers,
+  Radio,
+  ClipboardList,
+  Phone,
+  Link2,
+  Settings,
+  BookOpen
 } from "lucide-react";
 import { Variants } from "framer-motion";
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
 }
+
+const hasPermission = (permission: string): boolean => {
+  const permissions = localStorage.getItem("permissions");
+  if (!permissions) return false;
+  try {
+    const permList: string[] = JSON.parse(permissions);
+    return permList.includes(permission);
+  } catch {
+    return false;
+  }
+};
 
 const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
   const navigate = useNavigate();
@@ -80,46 +95,121 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     navigate(`/${tab}`);
   };
 
-  // 📊 Data definisi aksi & fitur
-  const adminActions = [
+  // 📊 Mappings between modules, icons, roles and permissions
+  const allModules = [
     {
-      icon: Upload,
-      title: "Upload Data CSV",
-      description: "Unggah file untuk analisis atau integrasi data.",
+      id: "callrecords",
+      icon: Phone,
+      title: "Call Records",
+      description: "Analisis dan riwayat panggilan.",
       color: "from-blue-500 to-cyan-500",
-      tab: "upload",
+      tab: "callrecords",
+      permission: "callrecord.view",
     },
     {
-      icon: BarChart3,
-      title: "Analisis Data",
-      description: "Pantau tren dan insight dari berbagai sumber data.",
+      id: "radio-management",
+      icon: Radio,
+      title: "Radio Management",
+      description: "Manajemen Trunking, Konvensional, dll.",
       color: "from-purple-500 to-pink-500",
-      tab: "callrecords",
+      tab: "radio-trunking",
+      forAll: true,
+      permission: "radio.view",
     },
+    {
+      id: "letter-numbers",
+      icon: FileText,
+      title: "Letter Management",
+      description: "Penomoran persuratan dan dokumen.",
+      color: "from-amber-500 to-orange-500",
+      tab: "letter-numbers",
+      permission: "letter.view", // Requires Letter Menu Permission
+    },
+    {
+      id: "inspeksi-kpc",
+      icon: ClipboardList,
+      title: "Inspeksi KPC",
+      description: "Laporan data Inspeksi KPC.",
+      color: "from-green-500 to-emerald-500",
+      tab: "inspeksi-kpc",
+      permission: "inspeksi.menu",
+    },
+    {
+      id: "fleet-statistics",
+      icon: TrendingUp,
+      title: "Fleet Statistics",
+      description: "Pemantauan performa Fleet.",
+      color: "from-indigo-500 to-blue-500",
+      tab: "fleet-statistics",
+      permission: "fleet.menu",
+    },
+    {
+      id: "nec-history",
+      icon: TrendingUp, // Keeping consistent with sidebar
+      title: "NEC History",
+      description: "Histori dari data NEC.",
+      color: "from-rose-500 to-red-500",
+      tab: "nec-history",
+      permission: "nec.histori.menu",
+    },
+    {
+      id: "link-internal",
+      icon: Link2,
+      title: "Link Internal",
+      description: "Tautan Link Internal jaringan.",
+      color: "from-lime-500 to-green-500",
+      tab: "link-internal",
+      permission: "internal.link.menu",
+    },
+    {
+      id: "swr-signal",
+      icon: Radio,
+      title: "SWR Signal",
+      description: "Monitoring performa SWR.",
+      color: "from-sky-500 to-cyan-500",
+      tab: "swr-signal",
+      permission: "swr.signal.menu",
+    },
+    {
+      id: "docs",
+      icon: BookOpen,
+      title: "Dokumentasi",
+      description: "Panduan cara penggunaan.",
+      color: "from-slate-500 to-gray-500",
+      tab: "docs",
+      permission: "docs.view",
+    },
+    {
+      id: "settings",
+      icon: Settings,
+      title: "Pengaturan",
+      description: "Pengaturan sistem dan akun.",
+      color: "from-fuchsia-500 to-pink-500",
+      tab: "settings",
+      checkCustomPermission: () => {
+        return hasPermission("system.permission.view") ||
+          hasPermission("system.role.view") ||
+          hasPermission("system.role.permission.view") ||
+          hasPermission("system.user.management.view") ||
+          hasPermission("system.division.view") ||
+          hasPermission("system.audit.view");
+      }
+    }
   ];
 
-  const userActions = [
-    {
-      icon: BarChart3,
-      title: "Lihat Demo Analytics",
-      description: "Jelajahi data contoh dan visualisasi interaktif.",
-      color: "from-purple-500 to-pink-500",
-      tab: "callrecords",
-    },
-    {
-      icon: FileText,
-      title: "Panduan Penggunaan",
-      description: "Pelajari cara kerja platform dan format data.",
-      color: "from-green-500 to-emerald-500",
-      tab: "docs",
-    },
-  ];
+  // Logic to determine available menus based on User Permissions
+  const currentActions = allModules.filter((item) => {
+    if (item.forAll) return true;
+    if (item.checkCustomPermission) return item.checkCustomPermission();
+    if (!item.permission) return true;
+    return hasPermission(item.permission);
+  });
 
   const platformOverview = [
     {
       icon: Layers,
-      title: "3 Modul Aktif",
-      desc: "Analytics, Call Records, dan PM Radio",
+      title: "Modul Tersedia",
+      desc: `${currentActions.length} Modul Aktif`,
       color: "bg-indigo-100 text-indigo-700",
     },
     {
@@ -154,15 +244,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     },
   ];
 
-  const currentActions = isAdmin ? adminActions : userActions;
-  const actionTitle = isAdmin ? "Aksi Administrator" : "Mulai Eksplorasi";
-
   return (
     <motion.div
       initial="hidden"
       animate="visible"
       variants={containerVariants}
-      className="space-y-8"
+      className="space-y-6 md:space-y-8"
     >
       {/* 🏁 Banner */}
       <motion.div
@@ -170,92 +257,117 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white"
       >
         <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
-        <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="relative z-10 p-6 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="text-center md:text-left">
             <motion.h1
               variants={itemVariants}
-              className="text-3xl md:text-5xl font-extrabold mb-4 flex items-center justify-center md:justify-start gap-3"
+              className="text-2xl md:text-5xl font-extrabold mb-3 md:mb-4 flex items-center justify-center md:justify-start gap-2 md:gap-3"
             >
-              <motion.div variants={floatingVariants} animate="float">
-                <Sparkles className="w-10 h-10 text-yellow-300" />
+              <motion.div variants={floatingVariants} animate="float" className="flex-shrink-0">
+                <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-yellow-300" />
               </motion.div>
-              Selamat Datang, {user?.fullName?.split(" ")[0]}!
+              Selamat Datang, {user?.fullName?.split(" ")[0] || "User"}!
             </motion.h1>
             <motion.p
               variants={itemVariants}
-              className="text-blue-100 text-lg max-w-2xl"
+              className="text-blue-100 text-sm md:text-lg max-w-2xl"
             >
-              {isAdmin
-                ? "Kelola, analisis, dan integrasikan data dari berbagai sumber untuk mendapatkan insight terbaik bagi operasional Anda."
-                : "Eksplorasi insight dari data operasional Anda dengan visualisasi interaktif yang dinamis dan mudah dipahami."}
+              Akses cepat segala kebutuhan operasional Anda. Sistem secara otomatis menampilkan modul yang sesuai dengan perizinan akun Anda.
             </motion.p>
           </div>
 
           <motion.div
             variants={itemVariants}
             whileHover={{ scale: 1.05, rotate: 2 }}
-            className="bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-xl min-w-[200px] text-center"
+            className="hidden md:block bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-xl min-w-[200px] text-center"
           >
             <p className="text-xs uppercase tracking-widest text-white/70 mb-2">
               Role Anda
             </p>
             <div className="text-xl font-bold bg-white/20 rounded-xl py-2 px-4 inline-block">
-              {isAdmin ? "Administrator" : "Data Viewer"}
+              {user?.roleName || (isAdmin ? "Administrator" : "User")}
             </div>
           </motion.div>
         </div>
       </motion.div>
 
       {/* 🔧 Content Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Quick Actions */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+        {/* Left Column (Actions & Features) */}
+        <div className="lg:col-span-2 space-y-6 md:space-y-8">
+
+          {/* Menu Sections container */}
           <motion.div
             variants={itemVariants}
-            className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
+            className="md:bg-white md:rounded-3xl md:p-8 md:shadow-sm md:border md:border-gray-100"
           >
-            <h3 className="text-2xl font-bold text-gray-900 mb-6">
-              {actionTitle}
+            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 pl-2 md:pl-0">
+              Menu Tersedia
             </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* Desktop Card View Map */}
+            <div className="hidden md:grid grid-cols-1 xl:grid-cols-2 gap-6">
               {currentActions.map((action, i) => (
                 <motion.button
-                  key={i}
+                  key={action.id}
                   variants={cardHoverVariants}
                   initial="rest"
                   whileHover="hover"
                   whileTap={{ scale: 0.98 }}
                   onClick={() => handleActionClick(action.tab)}
-                  className="p-6 rounded-2xl bg-gray-50 hover:bg-white shadow-sm hover:shadow-xl border border-transparent hover:border-blue-100 text-left transition-all group relative overflow-hidden"
+                  className="p-6 rounded-2xl bg-gray-50 hover:bg-white shadow-sm hover:shadow-xl border border-transparent hover:border-blue-100 text-left transition-all group relative overflow-hidden flex flex-col h-full"
                 >
                   <div
                     className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${action.color} opacity-5 -mr-8 -mt-8 rounded-full`}
                   />
                   <div
-                    className={`p-4 rounded-xl inline-flex bg-gradient-to-r ${action.color} shadow-lg mb-4`}
+                    className={`p-4 rounded-xl inline-flex bg-gradient-to-r ${action.color} shadow-lg mb-4 self-start`}
                   >
                     <action.icon className="w-6 h-6 text-white" />
                   </div>
                   <h4 className="font-bold text-xl text-gray-900 mb-2">
                     {action.title}
                   </h4>
-                  <p className="text-sm text-gray-600 mb-4">
+                  <p className="text-sm text-gray-600 mb-4 flex-grow">
                     {action.description}
                   </p>
-                  <div className="flex items-center text-blue-600 font-bold text-sm">
+                  <div className="flex items-center text-blue-600 font-bold text-sm mt-auto">
                     Mulai Sekarang
                     <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform" />
                   </div>
                 </motion.button>
               ))}
             </div>
+
+            {/* Mobile App-Drawer View Map */}
+            <div className="grid md:hidden grid-cols-2 sm:grid-cols-3 gap-4">
+              {currentActions.map((action, i) => (
+                <motion.button
+                  key={action.id}
+                  variants={cardHoverVariants}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => handleActionClick(action.tab)}
+                  className="p-5 rounded-3xl bg-white shadow-sm hover:shadow-md border border-gray-100/50 flex flex-col items-center justify-center text-center gap-3 transition-all relative overflow-hidden"
+                >
+                  {/* subtle backdrop color */}
+                  <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${action.color} opacity-5 -mr-10 -mt-10 rounded-full pointer-events-none`} />
+
+                  <div className={`p-4 rounded-2xl bg-gradient-to-br ${action.color} shadow-md`}>
+                    <action.icon className="w-7 h-7 text-white" />
+                  </div>
+                  <span className="font-bold text-sm text-gray-800 leading-tight line-clamp-2">
+                    {action.title}
+                  </span>
+                </motion.button>
+              ))}
+            </div>
+
           </motion.div>
 
-          {/* Features */}
+          {/* Features - Hide on mobile if preferred, or keep it cleaner */}
           <motion.div
             variants={itemVariants}
-            className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
+            className="hidden md:block bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
           >
             <h3 className="text-xl font-bold text-gray-900 mb-6">
               Fitur Utama
@@ -281,13 +393,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         </div>
 
         {/* Right Sidebar */}
-        <div className="space-y-8">
+        <div className="space-y-6 md:space-y-8">
           {/* Platform Overview */}
           <motion.div
             variants={itemVariants}
-            className="bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
+            className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100"
           >
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
+            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 md:mb-6">
               Status Sistem
             </h3>
             <div className="space-y-4">
@@ -295,7 +407,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 <motion.div
                   key={i}
                   whileHover={{ x: 5 }}
-                  className="flex items-center space-x-4 p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-50 transition-all"
+                  className="flex items-center space-x-4 p-3 md:p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-50 transition-all"
                 >
                   <div className={`p-3 rounded-xl ${item.color} shadow-sm`}>
                     <item.icon className="w-5 h-5" />
@@ -317,18 +429,16 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
           <motion.div
             variants={itemVariants}
             whileHover={{ y: -5 }}
-            className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-8 text-white shadow-lg relative overflow-hidden"
+            className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden"
           >
             <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 -mr-16 -mt-16 rounded-full" />
             <div className="relative z-10">
-              <div className="bg-white/20 p-3 rounded-xl w-fit mb-6 backdrop-blur-sm">
+              <div className="bg-white/20 p-3 rounded-xl w-fit mb-4 md:mb-6 backdrop-blur-sm">
                 <HelpCircle className="w-6 h-6 text-white" />
               </div>
-              <h4 className="text-xl font-bold mb-2">Butuh Bantuan?</h4>
-              <p className="text-blue-100 text-sm mb-6 leading-relaxed">
-                {isAdmin
-                  ? "Pelajari panduan lengkap untuk manajemen data dan integrasi sistem operasional."
-                  : "Pelajari cara membaca dashboard dan menggunakan fitur analytics dengan maksimal."}
+              <h4 className="text-lg md:text-xl font-bold mb-2">Butuh Bantuan?</h4>
+              <p className="text-blue-100 text-xs md:text-sm mb-6 leading-relaxed">
+                Pelajari panduan lengkap untuk manajemen data dan menggunakan fitur-fitur dengan maksimal.
               </p>
               <button
                 onClick={() => handleActionClick("docs")}
