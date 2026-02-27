@@ -233,6 +233,8 @@ export default function Sidebar({
     }
   }, [isMobileMenuOpen]);
 
+  const isMobile = isMobileMenuOpen;
+
   const NavLink = ({
     item,
     onClick,
@@ -250,59 +252,98 @@ export default function Sidebar({
           onClick?.();
         }}
         title={isCollapsed ? item.name : ""}
-        className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 group relative ${isCollapsed ? "justify-center p-3 mx-2" : "space-x-3 px-4 py-3 mx-2"
+        className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 group relative ${isCollapsed && !isMobile ? "justify-center p-3 mx-2" : "space-x-3 px-4 py-2.5 mx-2"
           } ${isActive
-            ? "bg-white text-indigo-900 shadow-[0_8px_16px_rgba(0,0,0,0.2)]"
+            ? "bg-white/15 text-white shadow-sm backdrop-blur-sm"
             : "text-white/70 hover:bg-white/10 hover:text-white"
           }`}
         data-active={isActive}
       >
         <Icon
-          className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"
+          className={`${isCollapsed && !isMobile ? "w-6 h-6" : "w-5 h-5"
             } flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}
         />
-        {!isCollapsed && <span className="truncate">{item.name}</span>}
+        {(!isCollapsed || isMobile) && <span className="truncate">{item.name}</span>}
       </Link>
     );
   };
 
-  const SidebarContent = (isMobile: boolean = false) => (
-    <div className={`flex flex-col h-full py-6`}>
+  // Sub-menu link for mobile: text-only, indented, no icon
+  const MobileSubLink = ({
+    item,
+    onClick,
+  }: {
+    item: NavItem;
+    onClick?: () => void;
+  }) => {
+    const isActive = location.pathname === item.path;
+    return (
+      <Link
+        to={item.path}
+        onClick={() => {
+          setActiveTab(item.id);
+          onClick?.();
+        }}
+        className={`block pl-12 pr-4 py-1.5 text-[13px] font-medium transition-all duration-200 ${isActive
+          ? "text-white"
+          : "text-white/55 hover:text-white/80"
+          }`}
+        data-active={isActive}
+      >
+        {item.name}
+      </Link>
+    );
+  };
+
+  const SidebarContent = (isMobileView: boolean = false) => (
+    <div className={`flex flex-col h-full ${isMobileView ? 'py-4 pb-6' : 'py-6'}`}>
       {/* Logo Section */}
       <div
-        className={`flex items-center mb-10 px-6 ${isCollapsed && !isMobile ? "justify-center" : "justify-start"
+        className={`flex items-center ${isMobileView ? 'mb-6 px-5' : 'mb-6 px-6'} ${isCollapsed && !isMobileView ? "justify-center" : "justify-between"
           }`}
       >
         <div className="flex items-center space-x-3 overflow-visible">
           <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
             <LayoutDashboard className="w-6 h-6 text-white" />
           </div>
-          {(!isCollapsed || isMobile) && (
+          {(!isCollapsed || isMobileView) && (
             <span className="text-xl font-bold text-white tracking-tight truncate">
               PM Dashboard
             </span>
           )}
         </div>
+        {/* Close button - Mobile only */}
+        {isMobileView && (
+          <button
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="w-9 h-9 flex items-center justify-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all"
+            aria-label="Close menu"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
       </div>
 
       {/* Main Nav */}
-      <div ref={isMobile ? mobileNavRef : undefined} className="flex-1 space-y-1 overflow-y-auto custom-scrollbar overflow-x-hidden">
+      <div ref={isMobileView ? mobileNavRef : undefined} className={`flex-1 ${isMobileView ? 'space-y-0.5' : 'space-y-1'} overflow-y-auto custom-scrollbar overflow-x-hidden`}>
         {filteredNavItems.map((item) => (
           <NavLink
             key={item.id}
             item={item}
-            onClick={() => isMobile && setIsMobileMenuOpen(false)}
+            onClick={() => isMobileView && setIsMobileMenuOpen(false)}
           />
         ))}
 
         {
           hasPermission("call.record.menu") && filteredCallRecords.length > 0 && (
-            <div className="mt-6">
-              {!isCollapsed || isMobile ? (
+            <div className={isMobileView ? 'mt-2 pt-2' : 'mt-6'}>
+              {/* Section divider for mobile */}
+              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+              {!isCollapsed || isMobileView ? (
                 <>
                   <button
                     onClick={() => setIsCallRecordsOpen(!isCallRecordsOpen)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
                   >
                     <span>Call Records</span>
                     <ChevronDown
@@ -316,16 +357,24 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="space-y-1 mt-1"
+                        className={`${isMobileView ? 'space-y-0' : 'space-y-1'} ${isMobileView ? '' : 'mt-1'}`}
                       >
                         {filteredCallRecords.map((item) => (
-                          <NavLink
-                            key={item.id}
-                            item={item}
-                            onClick={() =>
-                              isMobile && setIsMobileMenuOpen(false)
-                            }
-                          />
+                          isMobileView ? (
+                            <MobileSubLink
+                              key={item.id}
+                              item={item}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            />
+                          ) : (
+                            <NavLink
+                              key={item.id}
+                              item={item}
+                              onClick={() =>
+                                isMobileView && setIsMobileMenuOpen(false)
+                              }
+                            />
+                          )
                         ))}
                       </motion.div>
                     )}
@@ -342,12 +391,14 @@ export default function Sidebar({
 
         {
           hasPermission("radio.management.menu") && filteredRadioMenu.length > 0 && (
-            <div className="mt-6">
-              {!isCollapsed || isMobile ? (
+            <div className={isMobileView ? 'mt-2 pt-2' : 'mt-4'}>
+              {/* Section divider for mobile */}
+              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+              {!isCollapsed || isMobileView ? (
                 <>
                   <button
                     onClick={() => setIsRadioOpen(!isRadioOpen)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
                   >
                     <span>Radio Management</span>
                     <ChevronDown
@@ -361,16 +412,24 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="space-y-1 mt-1"
+                        className={`${isMobileView ? 'space-y-0' : 'space-y-1'} ${isMobileView ? '' : 'mt-1'}`}
                       >
                         {filteredRadioMenu.map((item) => (
-                          <NavLink
-                            key={item.id}
-                            item={item}
-                            onClick={() =>
-                              isMobile && setIsMobileMenuOpen(false)
-                            }
-                          />
+                          isMobileView ? (
+                            <MobileSubLink
+                              key={item.id}
+                              item={item}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            />
+                          ) : (
+                            <NavLink
+                              key={item.id}
+                              item={item}
+                              onClick={() =>
+                                isMobileView && setIsMobileMenuOpen(false)
+                              }
+                            />
+                          )
                         ))}
                       </motion.div>
                     )}
@@ -388,12 +447,14 @@ export default function Sidebar({
 
         {
           hasPermission("letter.menu") && filteredLetterNumbers.length > 0 && (
-            <div className="mt-6">
-              {!isCollapsed || isMobile ? (
+            <div className={isMobileView ? 'mt-2 pt-2' : 'mt-4'}>
+              {/* Section divider for mobile */}
+              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+              {!isCollapsed || isMobileView ? (
                 <>
                   <button
                     onClick={() => setIsLetterNumberOpen(!isLetterNumberOpen)}
-                    className="w-full flex items-center justify-between px-4 py-2 text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors"
+                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
                   >
                     <span>Letter Numbering</span>
                     <ChevronDown
@@ -407,14 +468,22 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className="overflow-hidden space-y-1 mt-1"
+                        className={`overflow-hidden ${isMobileView ? 'space-y-0' : 'space-y-1'} ${isMobileView ? '' : 'mt-1'}`}
                       >
                         {filteredLetterNumbers.map((item) => (
-                          <NavLink
-                            key={item.id}
-                            item={item}
-                            onClick={() => isMobile && setIsMobileMenuOpen(false)}
-                          />
+                          isMobileView ? (
+                            <MobileSubLink
+                              key={item.id}
+                              item={item}
+                              onClick={() => setIsMobileMenuOpen(false)}
+                            />
+                          ) : (
+                            <NavLink
+                              key={item.id}
+                              item={item}
+                              onClick={() => isMobileView && setIsMobileMenuOpen(false)}
+                            />
+                          )
                         ))}
                       </motion.div>
                     )}
@@ -434,7 +503,9 @@ export default function Sidebar({
             hasPermission("system.user.management.view") ||
             hasPermission("system.division.view") ||
             hasPermission("system.audit.view")) && (
-            <div className={isCollapsed && !isMobile ? "mt-2" : "mt-6"}>
+            <div className={isCollapsed && !isMobileView ? "mt-2" : isMobileView ? "mt-2 pt-2" : "mt-4"}>
+              {/* Section divider for mobile */}
+              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
               <NavLink
                 item={{
                   name: "Settings",
@@ -442,7 +513,7 @@ export default function Sidebar({
                   icon: Settings,
                   id: "settings",
                 }}
-                onClick={() => isMobile && setIsMobileMenuOpen(false)}
+                onClick={() => isMobileView && setIsMobileMenuOpen(false)}
               />
             </div>
           )
@@ -451,58 +522,103 @@ export default function Sidebar({
 
       {/* Footer / User */}
       <div
-        className={`mt-auto pt-6 border-t border-white/10 ${isCollapsed && !isMobile ? "items-center" : ""
+        className={`mt-auto ${isMobileView ? 'pt-3 px-4 pb-2' : 'pt-6 border-t border-white/10'} ${isCollapsed && !isMobileView ? "items-center" : ""
           }`}
       >
-        <Link
-          to="/profile"
-          onClick={() => {
-            setActiveTab("profile");
-            isMobile && setIsMobileMenuOpen(false);
-          }}
-          title={isCollapsed ? user?.fullName : ""}
-          className={`flex items-center rounded-xl hover:bg-white/10 transition-all group ${isCollapsed && !isMobile ? "justify-center p-2" : "space-x-3 p-3"
-            }`}
-        >
-          {user?.photoUrl ? (
-            <img
-              src={user.photoUrl}
-              alt={user.fullName}
-              className="w-10 h-10 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
-            />
-          ) : (
-            <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
-              {user?.fullName?.[0] || "U"}
-            </div>
-          )}
-          {(!isCollapsed || isMobile) && (
-            <div className="flex-1 min-w-0 text-left">
-              <p className="text-sm font-semibold text-white truncate">
-                {user?.fullName || "User"}
-              </p>
-              <p className="text-xs text-white/60 truncate">
-                {user?.roleName || "Role"}
-              </p>
-            </div>
-          )}
-        </Link>
-        <button
-          onClick={() => {
-            logout();
-            window.location.href = "/";
-          }}
-          title={isCollapsed ? "Logout" : ""}
-          className={`w-full flex items-center mt-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all ${isCollapsed && !isMobile
-            ? "justify-center p-3"
-            : "space-x-3 px-4 py-3"
-            }`}
-        >
-          <LogOut
-            className={`${isCollapsed && !isMobile ? "w-6 h-6" : "w-5 h-5"
-              } flex-shrink-0`}
-          />
-          {(!isCollapsed || isMobile) && <span>Logout</span>}
-        </button>
+        {/* Mobile: Card wrapper */}
+        {isMobileView ? (
+          <div className="bg-white/5 rounded-2xl p-3 space-y-2">
+            <Link
+              to="/profile"
+              onClick={() => {
+                setActiveTab("profile");
+                setIsMobileMenuOpen(false);
+              }}
+              className="flex items-center space-x-3 hover:bg-white/5 rounded-xl px-1 py-1.5 transition-all group"
+            >
+              {user?.photoUrl ? (
+                <img
+                  src={user.photoUrl}
+                  alt={user.fullName}
+                  className="w-9 h-9 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
+                />
+              ) : (
+                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
+                  {user?.fullName?.[0] || "U"}
+                </div>
+              )}
+              <div className="flex-1 min-w-0 text-left">
+                <p className="text-[13px] font-semibold text-white truncate">
+                  {user?.fullName || "User"}
+                </p>
+                <p className="text-[11px] text-white/60 truncate">
+                  {user?.roleName || "Role"}
+                </p>
+              </div>
+            </Link>
+            <button
+              onClick={() => {
+                logout();
+                window.location.href = "/";
+              }}
+              className="w-full flex items-center justify-center bg-red-600/80 hover:bg-red-600 text-white rounded-xl px-4 py-2.5 gap-2 text-sm font-semibold transition-all"
+            >
+              <LogOut className="w-5 h-5 flex-shrink-0" />
+              <span>Logout</span>
+            </button>
+          </div>
+        ) : (
+          /* Desktop: Original style */
+          <>
+            <Link
+              to="/profile"
+              onClick={() => {
+                setActiveTab("profile");
+              }}
+              title={isCollapsed ? user?.fullName : ""}
+              className={`flex items-center rounded-xl hover:bg-white/10 transition-all group ${isCollapsed ? "justify-center p-2" : "space-x-3 p-3"
+                }`}
+            >
+              {user?.photoUrl ? (
+                <img
+                  src={user.photoUrl}
+                  alt={user.fullName}
+                  className="w-10 h-10 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
+                  {user?.fullName?.[0] || "U"}
+                </div>
+              )}
+              {!isCollapsed && (
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-semibold text-white truncate">
+                    {user?.fullName || "User"}
+                  </p>
+                  <p className="text-xs text-white/60 truncate">
+                    {user?.roleName || "Role"}
+                  </p>
+                </div>
+              )}
+            </Link>
+            <button
+              onClick={() => {
+                logout();
+                window.location.href = "/";
+              }}
+              title={isCollapsed ? "Logout" : ""}
+              className={`w-full flex items-center justify-center mt-2 text-sm font-semibold transition-all ${isCollapsed
+                ? "justify-center p-3 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                : "space-x-3 px-4 py-3 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200"
+                }`}
+            >
+              <LogOut
+                className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"} flex-shrink-0`}
+              />
+              {!isCollapsed && <span>Logout</span>}
+            </button>
+          </>
+        )}
       </div >
     </div >
   );
@@ -538,7 +654,7 @@ export default function Sidebar({
             animate={{ x: 0 }}
             exit={{ x: "-100%" }}
             transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed top-0 left-0 bottom-0 z-50 w-72 bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl md:hidden"
+            className="fixed top-0 left-0 bottom-0 z-50 w-[280px] bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl md:hidden rounded-r-3xl overflow-hidden"
           >
             {SidebarContent(true)}
           </motion.aside>

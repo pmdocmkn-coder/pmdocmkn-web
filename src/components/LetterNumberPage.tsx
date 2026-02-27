@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { letterNumberApi, companyApi, documentTypeApi } from "../services/letterNumberApi";
 import { gatepassApi, quotationApi } from "../services/gatepassQuotationApi";
@@ -38,7 +39,11 @@ import {
     ChevronRight,
     Check,
     ChevronsUpDown,
+    Menu,
+    Bell,
+    Eye,
 } from "lucide-react";
+import { DatePicker } from "./ui/date-picker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../lib/utils";
@@ -128,23 +133,6 @@ export default function LetterNumberPage() {
 
     return (
         <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-            {/* Mobile Top App Bar */}
-            <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-4">
-                <div className="flex items-center p-4 justify-between">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => navigate("/dashboard")}
-                            className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
-                            Letter Management
-                        </h2>
-                    </div>
-                </div>
-            </div>
-
             {/* Desktop Header */}
             <div className="hidden md:block mb-6">
                 <div className="flex items-center justify-between gap-3 mb-4">
@@ -162,26 +150,27 @@ export default function LetterNumberPage() {
                         Kembali ke Dashboard
                     </Button>
                 </div>
+            </div>
 
-                {/* Tabs - Mobile: underline style */}
-                <div className="md:hidden flex border-b border-gray-200 gap-2 overflow-x-auto hide-scrollbar">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
-                            className={`flex items-center justify-center whitespace-nowrap flex-shrink-0 gap-2 px-3 pb-3 pt-2 text-sm font-semibold transition-all border-b-[3px] ${activeTab === tab.id
-                                ? 'text-gray-900'
-                                : 'border-transparent text-gray-400 hover:text-gray-600'
-                                }`}
-                            style={activeTab === tab.id ? {
-                                borderBottomColor: tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed',
-                                color: tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed'
-                            } : {}}
-                        >
-                            <tab.icon className="h-4 w-4" />
-                            {tab.label}
-                        </button>
-                    ))}
+            {/* Mobile Header Elements (Removed - superseded by Top App Bar) */}
+
+            {/* Tabs Container */}
+            <div className="mb-6">
+                {/* Tabs - Mobile: Underline Style Header Tab */}
+                <div className="md:hidden flex border-b border-gray-200 mb-4 bg-transparent overflow-x-auto hide-scrollbar">
+                    {tabs.map((tab) => {
+                        const activeColor = tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed';
+                        return (
+                            <button
+                                key={tab.id}
+                                onClick={() => setActiveTab(tab.id)}
+                                className={`flex flex-1 items-center justify-center whitespace-nowrap min-w-fit px-4 py-3 text-[13px] font-bold transition-all border-b-2`}
+                                style={activeTab === tab.id ? { color: activeColor, borderColor: activeColor } : { borderColor: 'transparent', color: '#64748b' }}
+                            >
+                                {tab.label}
+                            </button>
+                        );
+                    })}
                 </div>
                 {/* Tabs - Desktop: pill style */}
                 <div className="hidden md:flex gap-1 bg-white rounded-lg p-1 shadow-sm border overflow-x-auto hide-scrollbar">
@@ -232,6 +221,8 @@ function LetterTab() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedLetter, setSelectedLetter] = useState<LetterNumberList | null>(null);
+    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+    const [selectedDetailLetter, setSelectedDetailLetter] = useState<LetterNumberList | null>(null);
     const [openCompanyBox, setOpenCompanyBox] = useState(false);
     const [formData, setFormData] = useState<LetterNumberCreate>({
         companyId: 0, documentTypeId: 0, letterDate: new Date().toISOString().split("T")[0],
@@ -341,34 +332,29 @@ function LetterTab() {
                 </div>
 
                 {/* Mobile Filters */}
-                <div className="md:hidden flex flex-col gap-3">
+                <div className="md:hidden flex flex-col gap-3 bg-[#fbf8ff] p-4 rounded-xl mb-4 border border-purple-100">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <Input placeholder="Cari nomor, subject..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b5cf6]" />
+                        <Input placeholder="Search letters..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]" />
                     </div>
 
-                    <div className="flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1">
+                    <div className="flex flex-wrap gap-2 relative z-30 pb-1">
                         <div className="relative shrink-0">
                             <button onClick={() => {
                                 document.getElementById("mobile-dropdown-company")?.classList.remove("hidden");
-                            }} className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[120px]">
-                                <span className="truncate max-w-[140px]">{selectedCompany ? companies.find(c => c.id === selectedCompany)?.name : "Semua Company"}</span>
+                            }} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[100px]">
+                                <span className="truncate max-w-[120px]">{selectedCompany ? companies.find(c => c.id === selectedCompany)?.name : "Company"}</span>
                                 <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
                             </button>
                         </div>
                         <div className="relative shrink-0">
                             <button onClick={() => {
                                 document.getElementById("mobile-dropdown-doctype")?.classList.remove("hidden");
-                            }} className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[110px]">
-                                <span className="truncate max-w-[130px]">{selectedDocType ? documentTypes.find(d => d.id === selectedDocType)?.name : "Semua Tipe"}</span>
+                            }} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+                                <span className="truncate max-w-[110px]">{selectedDocType ? documentTypes.find(d => d.id === selectedDocType)?.name : "Type"}</span>
                                 <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
                             </button>
                         </div>
-                        {hasPermission("letter.create") && (
-                            <button onClick={() => setIsCreateDialogOpen(true)} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-indigo-600 px-3 border border-indigo-700 text-white text-xs font-semibold shadow-sm">
-                                <Plus className="w-3 h-3" /> Buat Surat
-                            </button>
-                        )}
                     </div>
                 </div>
             </div>
@@ -442,27 +428,42 @@ function LetterTab() {
                         {letter.recipient && (
                             <p className="text-xs text-gray-500">Penerima: {letter.recipient}</p>
                         )}
-                        <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                            <div className="flex items-center gap-2 text-xs text-gray-500">
-                                <span className="font-medium">{letter.companyCode}</span>
-                                <span>•</span>
-                                <span>{letter.documentTypeCode}</span>
-                                <span>•</span>
-                                <span>{letter.createdByName || "-"}</span>
+                        <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+                            <div className="flex items-center flex-wrap gap-1.5 text-xs text-gray-500 min-w-0 pr-2">
+                                <span className="font-medium shrink-0">{letter.companyCode}</span>
+                                <span className="shrink-0">•</span>
+                                <span className="shrink-0">{letter.documentTypeCode}</span>
+                                <span className="shrink-0">•</span>
+                                <span className="truncate">{letter.createdByName || "-"}</span>
                             </div>
-                            {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
-                                <div className="flex gap-1">
-                                    {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>}
-                                    {hasPermission("letter.delete") && (
-                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                    )}
-                                </div>
-                            )}
+                            <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+                                <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailLetter(letter); setIsDetailDialogOpen(true); }} className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
+                                    <Eye className="h-4 w-4" />
+                                </Button>
+                                {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
+                                    <>
+                                        {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>}
+                                        {hasPermission("letter.delete") && (
+                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                        )}
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </div>
                 ))}
                 <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
             </div>
+
+            {/* Mobile Floating Action Button */}
+            {hasPermission("letter.create") && (
+                <button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-[#9333ea] hover:bg-purple-700 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-purple-500/40 transition-all active:scale-95 text-[15px]"
+                >
+                    <Plus className="w-5 h-5" /> Buat Surat
+                </button>
+            )}
 
             {/* Create Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
@@ -472,7 +473,7 @@ function LetterTab() {
                         <DialogDescription>Isi data untuk generate nomor surat baru.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Company *</Label>
                                 <Popover open={openCompanyBox} onOpenChange={setOpenCompanyBox} modal={true}>
@@ -531,7 +532,11 @@ function LetterTab() {
                         </div>
                         <div className="space-y-2">
                             <Label>Tanggal Surat *</Label>
-                            <Input type="date" value={formData.letterDate} onChange={(e) => setFormData({ ...formData, letterDate: e.target.value })} />
+                            <DatePicker
+                                date={formData.letterDate ? new Date(formData.letterDate) : undefined}
+                                onSelect={(d) => setFormData({ ...formData, letterDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                className="w-full"
+                            />
                         </div>
                         <div className="space-y-2">
                             <Label>Subject *</Label>
@@ -591,6 +596,54 @@ function LetterTab() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                         <Button onClick={handleUpdate} className="bg-indigo-600 hover:bg-indigo-700">Update</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Detail Surat Mobile Dialog */}
+            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Detail Surat Umum</DialogTitle>
+                    </DialogHeader>
+                    {selectedDetailLetter && (
+                        <div className="grid gap-3 py-4 text-sm">
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Nomor Surat</span>
+                                <span className="font-bold text-gray-900">{selectedDetailLetter.formattedNumber}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Tanggal</span>
+                                <span className="text-gray-900">{new Date(selectedDetailLetter.letterDate).toLocaleDateString('id-ID')}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Status</span>
+                                <span><StatusBadge status={selectedDetailLetter.status} /></span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Perusahaan</span>
+                                <span className="text-gray-900">{selectedDetailLetter.companyCode}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Tipe Dokumen</span>
+                                <span className="text-gray-900">{selectedDetailLetter.documentTypeCode}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Pembuat</span>
+                                <span className="text-gray-900">{selectedDetailLetter.createdByName || "-"}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 border-b pb-2">
+                                <span className="text-gray-500">Subjek</span>
+                                <span className="text-gray-900">{selectedDetailLetter.subject}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 border-b pb-2">
+                                <span className="text-gray-500">Penerima</span>
+                                <span className="text-gray-900">{selectedDetailLetter.recipient || "-"}</span>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -659,6 +712,8 @@ function GatepassTab() {
     const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
     const [selectedItem, setSelectedItem] = useState<GatepassList | null>(null);
+    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+    const [selectedDetailItem, setSelectedDetailItem] = useState<GatepassList | null>(null);
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [expandedItemDetails, setExpandedItemDetails] = useState<Record<number, any>>({});
 
@@ -816,18 +871,11 @@ function GatepassTab() {
                 </div>
 
                 {/* Mobile Filters */}
-                <div className="md:hidden flex flex-col gap-3">
+                <div className="md:hidden flex flex-col gap-3 bg-[#fbf8ff] p-4 rounded-xl mb-4 border border-purple-100">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <Input placeholder="Cari gatepass..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-gray-50" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b5cf6]" />
+                        <Input placeholder="Search gatepass..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]" />
                     </div>
-                    {hasPermission("gatepass.create") && (
-                        <div className="flex justify-end pb-1">
-                            <button onClick={() => setIsCreateDialogOpen(true)} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-emerald-600 px-4 text-white text-xs font-semibold shadow-sm">
-                                <Plus className="w-3 h-3" /> Buat Gatepass
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -940,24 +988,47 @@ function GatepassTab() {
                 ) : items.length === 0 ? (
                     <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">Tidak ada data gatepass</div>
                 ) : items.map((item) => (
-                    <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="p-4 cursor-pointer" onClick={() => toggleExpandRow(item.id)}>
+                    <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
+                        <div className="p-4 cursor-pointer flex flex-col gap-2" onClick={() => toggleExpandRow(item.id)}>
                             <div className="flex justify-between items-start">
-                                <div className="flex flex-col gap-1 flex-1">
-                                    <div className="flex items-center gap-2">
-                                        <StatusBadge status={item.status} />
-                                        <span className="text-xs text-gray-400 font-medium">{new Date(item.gatepassDate).toLocaleDateString()}</span>
+                                <StatusBadge status={item.status} />
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400 font-medium">{new Date(item.gatepassDate).toLocaleDateString()}</span>
+                                    <div className={`text-gray-400 transition-transform duration-200 ${expandedRows.has(item.id) ? 'rotate-180' : ''}`}>
+                                        <ChevronDown className="h-4 w-4" />
                                     </div>
-                                    <p className="text-sm font-bold text-gray-900">{item.formattedNumber} | {item.destination}</p>
-                                    <p className="text-xs text-gray-500">PIC: {item.picName}</p>
                                 </div>
-                                <div className={`text-gray-400 transition-transform duration-200 ${expandedRows.has(item.id) ? 'rotate-180' : ''}`}>
-                                    <ChevronDown className="h-5 w-5" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-gray-900">{item.formattedNumber}</p>
+                                <p className="text-sm text-gray-700 mt-1 line-clamp-1">{item.destination}</p>
+                            </div>
+                            <p className="text-xs text-gray-500">PIC: {item.picName}</p>
+                            <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+                                <div className="flex items-center flex-wrap gap-1.5 text-xs text-gray-500 min-w-0 pr-2">
+                                    <span className="font-medium shrink-0">Gatepass</span>
+                                    <span className="shrink-0">•</span>
+                                    <span className="whitespace-nowrap shrink-0">{item.itemCount} items</span>
+                                    <span className="shrink-0">•</span>
+                                    <span className="truncate">{item.createdByName || "-"}</span>
+                                </div>
+                                <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                        <Eye className="h-4 w-4" />
+                                    </Button>
+                                    {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
+                                        <>
+                                            {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                            {hasPermission("gatepass.delete") && (
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                            )}
+                                        </>
+                                    )}
                                 </div>
                             </div>
                         </div>
                         {expandedRows.has(item.id) && (
-                            <div className="px-4 pb-4 border-t border-gray-100 pt-3">
+                            <div className="px-4 pb-4 border-t border-gray-100 pt-3 bg-gray-50/50">
                                 {expandedItemDetails[item.id] ? (
                                     <div className="flex flex-col gap-3">
                                         <div className="flex flex-col">
@@ -972,10 +1043,10 @@ function GatepassTab() {
                                         )}
                                         <div className="flex flex-col gap-2">
                                             <span className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Items</span>
-                                            <div className="bg-gray-50 rounded-lg p-3">
+                                            <div className="bg-white rounded-lg p-3 border border-gray-100 shadow-sm">
                                                 <table className="w-full text-left text-sm">
                                                     <thead>
-                                                        <tr className="text-gray-400 text-xs border-b border-gray-200">
+                                                        <tr className="text-gray-400 text-xs border-b border-gray-100">
                                                             <th className="pb-1 font-medium">Nama Barang</th>
                                                             <th className="pb-1 font-medium text-right">Qty</th>
                                                             <th className="pb-1 font-medium text-right">S/N</th>
@@ -993,14 +1064,6 @@ function GatepassTab() {
                                                 </table>
                                             </div>
                                         </div>
-                                        {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
-                                            <div className="flex justify-end gap-1 pt-1">
-                                                {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
-                                                {hasPermission("gatepass.delete") && (
-                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                                )}
-                                            </div>
-                                        )}
                                     </div>
                                 ) : (
                                     <div className="text-center text-gray-400 py-4"><div className="inline-block animate-spin rounded-full h-4 w-4 border-b-2 border-emerald-600 mr-2"></div>Memuat detail...</div>
@@ -1012,6 +1075,16 @@ function GatepassTab() {
                 <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
             </div>
 
+            {/* Mobile Floating Action Button */}
+            {hasPermission("gatepass.create") && (
+                <button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-[#9333ea] hover:bg-purple-700 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-purple-500/40 transition-all active:scale-95 text-[15px]"
+                >
+                    <Plus className="w-5 h-5" /> Buat Gatepass
+                </button>
+            )}
+
             {/* Create Gatepass Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
@@ -1020,17 +1093,21 @@ function GatepassTab() {
                         <DialogDescription>Isi data untuk membuat gatepass baru.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Tujuan *</Label>
                                 <Input value={formData.destination} onChange={(e) => setFormData({ ...formData, destination: e.target.value })} placeholder="Tujuan pengiriman" />
                             </div>
                             <div className="space-y-2">
                                 <Label>Tanggal *</Label>
-                                <Input type="date" value={formData.gatepassDate} onChange={(e) => setFormData({ ...formData, gatepassDate: e.target.value })} />
+                                <DatePicker
+                                    date={formData.gatepassDate ? new Date(formData.gatepassDate) : undefined}
+                                    onSelect={(d) => setFormData({ ...formData, gatepassDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                    className="w-full"
+                                />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Nama PIC *</Label>
                                 <Input value={formData.picName} onChange={(e) => setFormData({ ...formData, picName: e.target.value })} placeholder="Nama PIC" />
@@ -1040,7 +1117,7 @@ function GatepassTab() {
                                 <Input value={formData.picContact || ""} onChange={(e) => setFormData({ ...formData, picContact: e.target.value })} placeholder="Masukkan nama driver / pembawa" />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Catatan</Label>
                                 <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
@@ -1105,25 +1182,27 @@ function GatepassTab() {
                         <DialogDescription>Update detail gatepass.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="space-y-2">
-                            <Label>Tujuan *</Label>
-                            <Input value={editFormData.destination} onChange={(e) => setEditFormData({ ...editFormData, destination: e.target.value })} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-4 items-end">
+                            <div className="space-y-2">
+                                <Label>Tujuan *</Label>
+                                <Input value={editFormData.destination} onChange={(e) => setEditFormData({ ...editFormData, destination: e.target.value })} placeholder="Tujuan pengiriman" />
+                            </div>
                             <div className="space-y-2">
                                 <Label>Nama PIC *</Label>
-                                <Input value={editFormData.picName} onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })} />
+                                <Input value={editFormData.picName} onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })} placeholder="Nama PIC" />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Nama Driver / Pembawa Gatepass</Label>
                                 <Input value={editFormData.picContact || ""} onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })} placeholder="Masukkan nama driver / pembawa" />
                             </div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Catatan</Label>
-                                <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} />
+                                <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} placeholder="Catatan tambahan" />
                             </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Status</Label>
                                 <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
@@ -1173,6 +1252,54 @@ function GatepassTab() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Detail Gatepass Mobile Dialog */}
+            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Detail Gatepass</DialogTitle>
+                    </DialogHeader>
+                    {selectedDetailItem && (
+                        <div className="grid gap-3 py-4 text-sm">
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Nomor Gatepass</span>
+                                <span className="font-bold text-gray-900">{selectedDetailItem.formattedNumber}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Tanggal</span>
+                                <span className="text-gray-900">{new Date(selectedDetailItem.gatepassDate).toLocaleDateString('id-ID')}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Status</span>
+                                <span><StatusBadge status={selectedDetailItem.status} /></span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Tujuan</span>
+                                <span className="text-gray-900">{selectedDetailItem.destination}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Nama PIC</span>
+                                <span className="text-gray-900">{selectedDetailItem.picName}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Driver</span>
+                                <span className="text-gray-900">{selectedDetailItem.picContact || "-"}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Total Item</span>
+                                <span className="text-gray-900 font-bold">{selectedDetailItem.itemCount}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Pembuat</span>
+                                <span className="text-gray-900">{selectedDetailItem.createdByName || "-"}</span>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }
@@ -1198,6 +1325,9 @@ function QuotationTab() {
     const [selectedItem, setSelectedItem] = useState<QuotationList | null>(null);
     const [openCreateCompanyBox, setOpenCreateCompanyBox] = useState(false);
     const [openEditCompanyBox, setOpenEditCompanyBox] = useState(false);
+
+    const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+    const [selectedDetailItem, setSelectedDetailItem] = useState<QuotationList | null>(null);
 
     const [formData, setFormData] = useState<QuotationCreate>({
         customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1,
@@ -1306,18 +1436,11 @@ function QuotationTab() {
                 </div>
 
                 {/* Mobile Filters */}
-                <div className="md:hidden flex flex-col gap-3">
+                <div className="md:hidden flex flex-col gap-3 bg-[#fbf8ff] p-4 rounded-xl mb-4 border border-purple-100">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                        <Input placeholder="Cari quotation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-gray-200 rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-gray-50" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b5cf6]" />
+                        <Input placeholder="Search quotation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]" />
                     </div>
-                    {hasPermission("quotation.create") && (
-                        <div className="flex justify-end pb-1">
-                            <button onClick={() => setIsCreateDialogOpen(true)} className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-violet-600 px-4 text-white text-xs font-semibold shadow-sm">
-                                <Plus className="w-3 h-3" /> Buat Quotation
-                            </button>
-                        </div>
-                    )}
                 </div>
             </div>
 
@@ -1385,27 +1508,48 @@ function QuotationTab() {
                                 <p className="text-sm font-bold text-gray-900">{item.formattedNumber}</p>
                                 <p className="text-sm text-gray-500 mt-1 italic line-clamp-1">{item.description}</p>
                             </div>
-                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-                                <div className="flex items-center gap-2">
-                                    <div className="w-6 h-6 rounded-full bg-violet-100 flex items-center justify-center">
-                                        <Receipt className="h-3 w-3 text-violet-600" />
+                            {item.customerName && (
+                                <div className="flex items-center gap-1.5 mt-1">
+                                    <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
+                                        <Receipt className="h-2.5 w-2.5 text-violet-600" />
                                     </div>
-                                    <p className="text-xs text-gray-600 font-medium">{item.customerName}</p>
-                                </div>
-                                <p className="text-xs text-gray-400">{item.createdByName || "-"}</p>
-                            </div>
-                            {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
-                                <div className="flex justify-end gap-1 pt-1">
-                                    {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
-                                    {hasPermission("quotation.delete") && (
-                                        <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                    )}
+                                    <p className="text-xs text-gray-800 font-medium">{item.customerName}</p>
                                 </div>
                             )}
+                            <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+                                <div className="flex items-center gap-2 text-xs text-gray-500">
+                                    <span className="font-medium">Quotation</span>
+                                    <span>•</span>
+                                    <span>{item.createdByName || "-"}</span>
+                                </div>
+                                <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
+                                        <Eye className="h-4 w-4" />
+                                    </Button>
+                                    {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
+                                        <>
+                                            {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                            {hasPermission("quotation.delete") && (
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                     ))}
                 <Pagination currentPage={currentPage} totalPages={totalPages} totalCount={totalCount} pageSize={pageSize} onPageChange={setCurrentPage} />
             </div >
+
+            {/* Mobile Floating Action Button */}
+            {hasPermission("quotation.create") && (
+                <button
+                    onClick={() => setIsCreateDialogOpen(true)}
+                    className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-[#9333ea] hover:bg-purple-700 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-purple-500/40 transition-all active:scale-95 text-[15px]"
+                >
+                    <Plus className="w-5 h-5" /> Buat Quotation
+                </button>
+            )}
 
             {/* Create Quotation Dialog */}
             < Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} >
@@ -1463,11 +1607,15 @@ function QuotationTab() {
                                 </Popover>
                             </div>
                             <div className="space-y-2">
-                                <Label>Tanggal *</Label>
-                                <Input type="date" value={formData.quotationDate} onChange={(e) => setFormData({ ...formData, quotationDate: e.target.value })} />
+                                <Label>Tanggal Quotation *</Label>
+                                <DatePicker
+                                    date={formData.quotationDate ? new Date(formData.quotationDate) : undefined}
+                                    onSelect={(d) => setFormData({ ...formData, quotationDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                    className="w-full"
+                                />
                             </div>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Deskripsi *</Label>
                                 <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Deskripsi quotation" />
@@ -1505,7 +1653,7 @@ function QuotationTab() {
                         <DialogDescription>Update detail quotation.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer</Label>
                                 <Popover open={openEditCompanyBox} onOpenChange={setOpenEditCompanyBox} modal={true}>
@@ -1555,7 +1703,11 @@ function QuotationTab() {
                             {isAdmin && (
                                 <div className="space-y-2">
                                     <Label>Tanggal</Label>
-                                    <Input type="date" value={editFormData.quotationDate || ""} onChange={(e) => setEditFormData({ ...editFormData, quotationDate: e.target.value })} />
+                                    <DatePicker
+                                        date={editFormData.quotationDate ? new Date(editFormData.quotationDate) : undefined}
+                                        onSelect={(d) => setEditFormData({ ...editFormData, quotationDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                        className="w-full"
+                                    />
                                 </div>
                             )}
                         </div>
@@ -1581,6 +1733,46 @@ function QuotationTab() {
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
                         <Button onClick={handleUpdate} className="bg-violet-600 hover:bg-violet-700">Update</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Detail Quotation Mobile Dialog */}
+            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+                <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-xl max-h-[85vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Detail Quotation</DialogTitle>
+                    </DialogHeader>
+                    {selectedDetailItem && (
+                        <div className="grid gap-3 py-4 text-sm">
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Nomor Quotation</span>
+                                <span className="font-bold text-gray-900">{selectedDetailItem.formattedNumber}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Tanggal</span>
+                                <span className="text-gray-900">{new Date(selectedDetailItem.quotationDate).toLocaleDateString('id-ID')}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Status</span>
+                                <span><StatusBadge status={selectedDetailItem.status} /></span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Customer</span>
+                                <span className="text-gray-900">{selectedDetailItem.customerName}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Pembuat</span>
+                                <span className="text-gray-900">{selectedDetailItem.createdByName || "-"}</span>
+                            </div>
+                            <div className="flex flex-col gap-1 pb-2">
+                                <span className="text-gray-500">Deskripsi</span>
+                                <span className="text-gray-900">{selectedDetailItem.description}</span>
+                            </div>
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog >

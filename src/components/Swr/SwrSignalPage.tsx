@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   FileSpreadsheetIcon,
   ChevronLeft,
+  FileText,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { swrSignalApi } from "@/services/api";
@@ -388,61 +389,93 @@ export default function SwrSignalPage() {
             {/* Hero card - Analytics (full width) */}
             <button
               onClick={() => setActiveSwrTab("analytics")}
-              className={`col-span-2 relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[120px] text-left transition-all duration-200 ${activeSwrTab === "analytics"
-                  ? "bg-[#a855f7] text-white shadow-md ring-2 ring-[#c084fc] ring-offset-2"
-                  : "bg-[#b06bf3] text-white/90 shadow-sm hover:shadow-md"
+              className={`col-span-2 relative overflow-hidden rounded-[1.5rem] p-5 flex flex-col justify-end min-h-[140px] text-left transition-all duration-300 ${activeSwrTab === "analytics"
+                ? "bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white shadow-lg shadow-fuchsia-500/30 ring-2 ring-white/50"
+                : "bg-gradient-to-r from-violet-400 to-fuchsia-400 text-white/95 shadow-md shadow-fuchsia-500/20 active:scale-[0.98]"
                 }`}
             >
-              <div className="text-xl font-bold tracking-tight">Analytics</div>
-              <div className="text-xs opacity-80 mt-0.5">Real-time performance metrics</div>
+              <div className="absolute top-4 right-4 bg-white/20 p-2 rounded-full backdrop-blur-md">
+                <BarChart3 className="w-5 h-5 text-white" />
+              </div>
+              <div className="relative z-10">
+                <div className="text-2xl font-bold tracking-tight mb-1">Analytics</div>
+                <div className="text-sm font-medium text-white/80">Real-time performance</div>
+              </div>
             </button>
 
+            {/* History Records */}
             <button
               onClick={() => setActiveSwrTab("history")}
-              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "history"
-                  ? "bg-[#2d3748] text-white shadow-md ring-2 ring-slate-400 ring-offset-2"
-                  : "bg-[#334155] text-white/90 shadow-sm hover:shadow-md"
+              className={`relative overflow-hidden rounded-[1.25rem] p-4 flex flex-col justify-between min-h-[120px] text-left transition-all duration-300 ${activeSwrTab === "history"
+                ? "bg-gradient-to-br from-slate-700 to-slate-900 text-white shadow-lg shadow-slate-900/40 ring-2 ring-white/50"
+                : "bg-gradient-to-br from-slate-600 to-slate-800 text-white/95 shadow-md shadow-slate-900/20 active:scale-[0.98]"
                 }`}
             >
-              <div className="text-sm font-bold tracking-wide">History Records</div>
+              <div className="bg-white/10 p-2 rounded-xl w-fit mb-4">
+                <FileText className="w-4 h-4 text-white" />
+              </div>
+              <div className="text-sm font-bold leading-tight">History<br />Records</div>
             </button>
 
+            {/* Yearly Dashboard */}
             <button
               onClick={() => setActiveSwrTab("yearly-dashboard")}
-              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "yearly-dashboard"
-                  ? "bg-[#7c3aed] text-white shadow-md ring-2 ring-[#a78bfa] ring-offset-2"
-                  : "bg-[#8b5cf6] text-white/90 shadow-sm hover:shadow-md"
+              className={`relative overflow-hidden rounded-[1.25rem] p-4 flex flex-col justify-between min-h-[120px] text-left transition-all duration-300 ${activeSwrTab === "yearly-dashboard"
+                ? "bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-lg shadow-blue-500/40 ring-2 ring-white/50"
+                : "bg-gradient-to-br from-indigo-400 to-blue-500 text-white/95 shadow-md shadow-blue-500/20 active:scale-[0.98]"
                 }`}
             >
-              {/* Optional: Add a subtle chart icon background overlay here to mimic the image */}
-              <div className="absolute top-0 right-0 p-2 opacity-20">
-                <BarChart3 className="w-16 h-16" />
+              <div className="absolute -right-4 -bottom-4 opacity-10 blur-[2px]">
+                <BarChart3 className="w-24 h-24" />
               </div>
-              <div className="relative z-10 text-sm font-bold tracking-wide">Yearly Dashboard</div>
+              <div className="bg-white/20 p-2 rounded-xl w-fit mb-4 backdrop-blur-md">
+                <FileSpreadsheetIcon className="w-4 h-4 text-white" />
+              </div>
+              <div className="relative z-10 text-sm font-bold leading-tight">Yearly<br />Dashboard</div>
             </button>
 
+            {/* Sites */}
             <button
               onClick={() => setActiveSwrTab("sites")}
-              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "sites"
-                  ? "bg-[#0f172a] text-white shadow-md ring-2 ring-slate-500 ring-offset-2"
-                  : "bg-[#1e293b] text-white/90 shadow-sm hover:shadow-md"
+              className={`relative overflow-hidden rounded-[1.25rem] p-4 flex flex-col justify-between min-h-[120px] text-left transition-all duration-300 ${activeSwrTab === "sites"
+                ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-500/40 ring-2 ring-white/50"
+                : "bg-gradient-to-br from-emerald-400 to-teal-500 text-white/95 shadow-md shadow-emerald-500/20 active:scale-[0.98]"
                 }`}
             >
-              {/* Optional: Add a subtle building icon background overlay here to mimic the image */}
-              <div className="absolute top-0 right-0 p-2 opacity-10">
-                <LayoutGrid className="w-16 h-16" />
+              <div className="absolute -right-2 -bottom-2 opacity-10">
+                <LayoutGrid className="w-24 h-24" />
               </div>
-              <div className="relative z-10 text-sm font-bold tracking-wide">Sites ({loading ? '...' : sites.length})</div>
+              <div className="bg-white/20 p-2 rounded-xl w-fit mb-2 backdrop-blur-md">
+                <LayoutGrid className="w-4 h-4 text-white" />
+              </div>
+              <div className="relative z-10">
+                <div className="text-sm font-bold leading-tight mb-1">Sites</div>
+                <div className="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full w-fit">
+                  {loading ? '...' : sites.length} total
+                </div>
+              </div>
             </button>
 
+            {/* Channels */}
             <button
               onClick={() => setActiveSwrTab("channels")}
-              className={`relative overflow-hidden rounded-xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeSwrTab === "channels"
-                  ? "bg-[#a855f7] text-white shadow-md ring-2 ring-[#c084fc] ring-offset-2"
-                  : "bg-[#b06bf3] text-white/90 shadow-sm hover:shadow-md"
+              className={`relative overflow-hidden rounded-[1.25rem] p-4 flex flex-col justify-between min-h-[120px] text-left transition-all duration-300 ${activeSwrTab === "channels"
+                ? "bg-gradient-to-br from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/40 ring-2 ring-white/50"
+                : "bg-gradient-to-br from-amber-400 to-orange-400 text-white/95 shadow-md shadow-amber-500/20 active:scale-[0.98]"
                 }`}
             >
-              <div className="text-sm font-bold tracking-wide">Channels ({loading ? '...' : channels.length})</div>
+              <div className="absolute -right-2 -top-2 opacity-10 transform rotate-12">
+                <List className="w-24 h-24" />
+              </div>
+              <div className="bg-white/20 p-2 rounded-xl w-fit mb-2 backdrop-blur-md relative z-10">
+                <List className="w-4 h-4 text-white" />
+              </div>
+              <div className="relative z-10">
+                <div className="text-sm font-bold leading-tight mb-1">Channels</div>
+                <div className="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full w-fit">
+                  {loading ? '...' : channels.length} total
+                </div>
+              </div>
             </button>
           </div>
         </div>
