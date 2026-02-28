@@ -19,6 +19,9 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
+  RefreshCw,
+  X,
+  Clock,
 } from "lucide-react";
 import { callRecordApi } from "../services/api";
 import {
@@ -28,6 +31,10 @@ import {
 } from "../types/callRecord";
 import HourlyChart from "./HourlyChart";
 import HourlySummaryTable from "./HourlySummaryTable";
+import { MobilePageHeader } from "./ui/MobilePageHeader";
+import { DatePicker } from "./ui/date-picker";
+import { format } from "date-fns";
+import { id as localeId } from "date-fns/locale";
 
 // Interface untuk DebugInfo
 interface DebugInfo {
@@ -411,166 +418,449 @@ const CallRecordsPage: React.FC = () => {
   const hasNext = recordsResponse?.meta?.pagination?.hasNext || false;
   const hasPrevious = recordsResponse?.meta?.pagination?.hasPrevious || false;
 
+  // Helper: navigate date by offset
+  const navigateDate = (offset: number) => {
+    const d = new Date(selectedDate);
+    d.setDate(d.getDate() + offset);
+    setSelectedDate(d.toISOString().split('T')[0]);
+  };
+
+  // Helper: format for mobile display
+  const mobileDisplayDate = () => {
+    try {
+      const d = new Date(selectedDate);
+      const month = format(d, 'MMMM yyyy', { locale: localeId });
+      const day = format(d, 'EEEE, dd', { locale: localeId });
+      return { month, day };
+    } catch { return { month: '', day: selectedDate }; }
+  };
+
+  const { month: mobileMonth, day: mobileDay } = mobileDisplayDate();
+
+  // Chart helpers
+  const getMaxHourlyQty = () => {
+    if (!dailySummary?.hourlyData) return 1;
+    return Math.max(...dailySummary.hourlyData.map(h => h.qty), 1);
+  };
+
   return (
-    <div className="mx-auto flex-1 mt-10 md:mt-12 px-4 space-y-6">
-      {/* Error Banner */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
-            <span className="text-red-700 font-medium">{error}</span>
-            <button
-              onClick={() => setError(null)}
-              className="ml-auto text-red-500 hover:text-red-700"
-            >
-              ×
+    <div className="w-full">
+      {/* ==================== MOBILE VIEW ==================== */}
+      <div className="md:hidden bg-[#f8f5fc] min-h-screen pb-24 text-slate-900 font-sans">
+        <MobilePageHeader
+          label="Data Center"
+          title="Call Records"
+          rightAction={
+            <button onClick={refreshData} disabled={isLoading} className="flex items-center justify-center rounded-xl h-9 w-9 bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/25 active:scale-90 transition-all">
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
+          }
+        />
+
+        {/* Date Navigation */}
+        <div className="px-4 py-3 flex items-center justify-center gap-4">
+          <button onClick={() => navigateDate(-1)} className="w-9 h-9 rounded-full bg-white border border-purple-100 shadow-sm flex items-center justify-center text-purple-600 active:scale-90 transition-all">
+            <ChevronLeft className="w-5 h-5" />
+          </button>
+          <div className="flex flex-col items-center min-w-[140px]">
+            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-[0.15em]">{mobileMonth}</span>
+            <span className="text-lg font-black text-slate-900 tracking-tight">{mobileDay}</span>
+          </div>
+          <button onClick={() => navigateDate(1)} className="w-9 h-9 rounded-full bg-white border border-purple-100 shadow-sm flex items-center justify-center text-purple-600 active:scale-90 transition-all">
+            <ChevronRight className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Date Picker */}
+        <div className="px-4 mb-4">
+          <div className="flex flex-col gap-1.5">
+            <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Pilih Tanggal</label>
+            <div className="bg-white rounded-xl border border-purple-100/60 shadow-[0_1px_8px_rgba(147,17,212,0.04)] overflow-hidden">
+              <DatePicker
+                date={selectedDate ? new Date(selectedDate) : undefined}
+                onSelect={(d) => setSelectedDate(d ? format(d, 'yyyy-MM-dd') : '')}
+                className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
+              />
+            </div>
           </div>
         </div>
-      )}
 
-      {/* Page Header */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Call Records</h1>
-            <p className="text-gray-600 mt-1">
-              Data for:{" "}
-              <span className="font-semibold text-blue-600">
-                {formatDisplayDate(selectedDate)}
-              </span>
-              {userRole && (
-                <span
-                  className={`ml-2 px-2 py-1 rounded text-xs font-medium ${userRole === "Super Admin"
+        {/* Error Banner */}
+        {error && (
+          <div className="mx-4 mb-3 p-3 bg-red-50 rounded-2xl border border-red-100 flex items-center gap-3">
+            <div className="w-7 h-7 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+              <AlertCircle className="w-3.5 h-3.5 text-red-500" />
+            </div>
+            <p className="text-[11px] text-red-700 font-medium flex-1">{error}</p>
+            <button onClick={() => setError(null)} className="text-red-400"><X className="w-4 h-4" /></button>
+          </div>
+        )}
+
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex flex-col items-center justify-center py-10 gap-3">
+            <div className="w-10 h-10 rounded-full border-[3px] border-purple-200 border-t-purple-600 animate-spin" />
+            <p className="text-xs font-medium text-slate-500">Memuat data call records...</p>
+          </div>
+        )}
+
+        {/* Daily Summary Cards */}
+        {!isLoading && dailySummary && (
+          <section className="px-4 mb-6">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 mb-3 flex items-center gap-1.5">
+              <BarChart3 className="w-3 h-3" />
+              Daily Summary
+            </h2>
+            <div className="grid grid-cols-2 gap-2.5">
+              {/* Total Calls */}
+              <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-4 rounded-2xl shadow-lg shadow-purple-500/15 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-14 h-14 bg-white/10 rounded-full -translate-x-2 -translate-y-5" />
+                <Phone className="w-4 h-4 text-purple-200 mb-2" />
+                <p className="text-[9px] font-bold tracking-widest text-purple-200 uppercase">Total Calls</p>
+                <p className="text-[22px] leading-none font-black text-white tracking-tight mt-1">{dailySummary.totalQty.toLocaleString()}</p>
+              </div>
+              {/* TE Busy */}
+              <div className="bg-gradient-to-br from-rose-500 to-rose-700 p-4 rounded-2xl shadow-lg shadow-rose-500/15 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-14 h-14 bg-white/10 rounded-full -translate-x-2 -translate-y-5" />
+                <PhoneOff className="w-4 h-4 text-rose-200 mb-2" />
+                <p className="text-[9px] font-bold tracking-widest text-rose-200 uppercase">TE Busy</p>
+                <p className="text-[22px] leading-none font-black text-white tracking-tight mt-1">{dailySummary.totalTEBusy.toLocaleString()}</p>
+                <p className="text-[10px] font-bold text-rose-200 mt-1">{dailySummary.avgTEBusyPercent}%</p>
+              </div>
+              {/* System Busy */}
+              <div className="bg-gradient-to-br from-amber-500 to-amber-700 p-4 rounded-2xl shadow-lg shadow-amber-500/15 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-14 h-14 bg-white/10 rounded-full -translate-x-2 -translate-y-5" />
+                <PhoneMissed className="w-4 h-4 text-amber-200 mb-2" />
+                <p className="text-[9px] font-bold tracking-widest text-amber-200 uppercase">System Busy</p>
+                <p className="text-[22px] leading-none font-black text-white tracking-tight mt-1">{dailySummary.totalSysBusy.toLocaleString()}</p>
+                <p className="text-[10px] font-bold text-amber-200 mt-1">{dailySummary.avgSysBusyPercent}%</p>
+              </div>
+              {/* Others */}
+              <div className="bg-gradient-to-br from-emerald-500 to-emerald-700 p-4 rounded-2xl shadow-lg shadow-emerald-500/15 relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-14 h-14 bg-white/10 rounded-full -translate-x-2 -translate-y-5" />
+                <TrendingUp className="w-4 h-4 text-emerald-200 mb-2" />
+                <p className="text-[9px] font-bold tracking-widest text-emerald-200 uppercase">Others</p>
+                <p className="text-[22px] leading-none font-black text-white tracking-tight mt-1">{dailySummary.totalOthers.toLocaleString()}</p>
+                <p className="text-[10px] font-bold text-emerald-200 mt-1">{dailySummary.avgOthersPercent}%</p>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Mobile Bar Chart - Pure CSS */}
+        {!isLoading && dailySummary?.hourlyData && dailySummary.hourlyData.length > 0 && (
+          <section className="px-4 mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 flex items-center gap-1.5">
+                <BarChart3 className="w-3 h-3" />
+                Call Distribution by Hour
+              </h2>
+              <div className="flex gap-2.5">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span className="text-[9px] text-slate-500 font-medium">TE</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-500" />
+                  <span className="text-[9px] text-slate-500 font-medium">Sys</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span className="text-[9px] text-slate-500 font-medium">Other</span>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.04)] border border-purple-50/80 p-3 pt-4">
+              <div className="flex items-end justify-between gap-[2px] h-[180px]">
+                {dailySummary.hourlyData.map((h) => {
+                  const maxQ = getMaxHourlyQty();
+                  const totalPct = (h.qty / maxQ) * 100;
+                  const tePct = h.qty > 0 ? (h.teBusy / h.qty) * totalPct : 0;
+                  const sysPct = h.qty > 0 ? (h.sysBusy / h.qty) * totalPct : 0;
+                  const otherPct = h.qty > 0 ? (h.others / h.qty) * totalPct : 0;
+                  return (
+                    <div key={h.hourGroup} className="flex-1 flex flex-col items-center h-full justify-end">
+                      <div className="w-full flex flex-col flex-shrink-0" style={{ height: `${Math.max(totalPct, 2)}%` }}>
+                        <div className="w-full bg-emerald-400 rounded-t-[2px] flex-shrink-0" style={{ flex: otherPct }} />
+                        <div className="w-full bg-amber-400 flex-shrink-0" style={{ flex: Math.max(sysPct, 0.1) }} />
+                        <div className="w-full bg-rose-500 rounded-b-[2px] flex-shrink-0" style={{ flex: tePct }} />
+                      </div>
+                      <span className="text-[6px] text-slate-400 font-semibold mt-1 leading-none">{String(h.hourGroup).padStart(2, '0')}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Hourly Detailed Summary - Full Details */}
+        {!isLoading && dailySummary?.hourlyData && dailySummary.hourlyData.length > 0 && (
+          <section className="px-4 mb-6">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 mb-3 flex items-center gap-1.5">
+              <Clock className="w-3 h-3" />
+              Hourly Detailed Summary
+            </h2>
+
+            {/* Card-based hourly data */}
+            <div className="flex flex-col gap-2">
+              {dailySummary.hourlyData.map((h) => (
+                <div key={h.hourGroup} className="bg-white rounded-2xl border border-purple-50/80 shadow-[0_1px_8px_rgba(0,0,0,0.03)] p-3">
+                  {/* Top row: Time + Total */}
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-[12px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">{h.timeRange}</span>
+                    <div className="text-right">
+                      <span className="text-[10px] text-slate-400 font-medium mr-1">Total</span>
+                      <span className="text-[14px] font-black text-slate-800">{h.qty.toLocaleString()}</span>
+                    </div>
+                  </div>
+                  {/* Metrics row: 3 colored boxes */}
+                  <div className="grid grid-cols-3 gap-1.5">
+                    {/* TE Busy */}
+                    <div className="bg-rose-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-[8px] font-bold text-rose-400 uppercase tracking-wider">TE Busy</p>
+                      <p className="text-[13px] font-black text-rose-600 leading-tight">{h.teBusy.toLocaleString()}</p>
+                      <p className="text-[9px] font-bold text-rose-500">{h.teBusyPercent.toFixed(1)}%</p>
+                    </div>
+                    {/* System Busy */}
+                    <div className="bg-amber-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-[8px] font-bold text-amber-400 uppercase tracking-wider">Sys Busy</p>
+                      <p className="text-[13px] font-black text-amber-600 leading-tight">{h.sysBusy.toLocaleString()}</p>
+                      <p className="text-[9px] font-bold text-amber-500">{h.sysBusyPercent.toFixed(1)}%</p>
+                    </div>
+                    {/* Others */}
+                    <div className="bg-emerald-50 rounded-lg px-2 py-1.5 text-center">
+                      <p className="text-[8px] font-bold text-emerald-400 uppercase tracking-wider">Others</p>
+                      <p className="text-[13px] font-black text-emerald-600 leading-tight">{h.others.toLocaleString()}</p>
+                      <p className="text-[9px] font-bold text-emerald-500">{h.othersPercent.toFixed(1)}%</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* TOTAL Summary Card */}
+              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-3 shadow-lg shadow-purple-500/10">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[12px] font-extrabold text-white/90 uppercase tracking-wider">Total</span>
+                  <span className="text-[16px] font-black text-white">{dailySummary.totalQty.toLocaleString()}</span>
+                </div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <div className="bg-white/15 backdrop-blur rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">TE Busy</p>
+                    <p className="text-[12px] font-black text-white leading-tight">{dailySummary.totalTEBusy.toLocaleString()}</p>
+                    <p className="text-[9px] font-bold text-rose-300">{dailySummary.avgTEBusyPercent}%</p>
+                  </div>
+                  <div className="bg-white/15 backdrop-blur rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Sys Busy</p>
+                    <p className="text-[12px] font-black text-white leading-tight">{dailySummary.totalSysBusy.toLocaleString()}</p>
+                    <p className="text-[9px] font-bold text-amber-300">{dailySummary.avgSysBusyPercent}%</p>
+                  </div>
+                  <div className="bg-white/15 backdrop-blur rounded-lg px-2 py-1.5 text-center">
+                    <p className="text-[8px] font-bold text-white/70 uppercase tracking-wider">Others</p>
+                    <p className="text-[12px] font-black text-white leading-tight">{dailySummary.totalOthers.toLocaleString()}</p>
+                    <p className="text-[9px] font-bold text-emerald-300">{dailySummary.avgOthersPercent}%</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Export Actions */}
+            <div className="flex gap-2 mt-3">
+              {canExportCSV && (
+                <button
+                  onClick={handleExportCSV}
+                  className="flex-1 py-2.5 text-[11px] font-bold text-purple-700 bg-white rounded-xl border border-purple-200 shadow-sm hover:bg-purple-50 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Export CSV
+                </button>
+              )}
+              {canExportExcel && (
+                <button
+                  onClick={handleExportDailySummary}
+                  className="flex-1 py-2.5 text-[11px] font-bold text-emerald-700 bg-white rounded-xl border border-emerald-200 shadow-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  Export Excel
+                </button>
+              )}
+            </div>
+          </section>
+        )}
+
+        {/* No Data State */}
+        {!isLoading && !dailySummary && !error && (
+          <div className="flex flex-col items-center justify-center py-16 px-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-100 to-purple-200 flex items-center justify-center mb-4">
+              <BarChart3 className="w-8 h-8 text-purple-400" />
+            </div>
+            <p className="text-base font-bold text-slate-700 text-center">Belum ada data</p>
+            <p className="text-xs text-slate-400 text-center mt-1.5">Tidak ada data call record untuk tanggal ini</p>
+          </div>
+        )}
+      </div>
+
+      {/* ==================== DESKTOP VIEW ==================== */}
+      <div className="hidden md:block mx-auto flex-1 mt-10 md:mt-12 px-4 space-y-6">
+        {/* Error Banner */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <AlertCircle className="w-5 h-5 text-red-500 mr-2" />
+              <span className="text-red-700 font-medium">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="ml-auto text-red-500 hover:text-red-700"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Page Header */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Call Records</h1>
+              <p className="text-gray-600 mt-1">
+                Data for:{" "}
+                <span className="font-semibold text-blue-600">
+                  {formatDisplayDate(selectedDate)}
+                </span>
+                {userRole && (
+                  <span
+                    className={`ml-2 px-2 py-1 rounded text-xs font-medium ${userRole === "Super Admin"
                       ? "bg-purple-100 text-purple-800"
                       : userRole === "Admin"
                         ? "bg-blue-100 text-blue-800"
                         : "bg-gray-100 text-gray-800"
-                    }`}
-                >
-                  Role: {userRole}
-                </span>
-              )}
-            </p>
-          </div>
-          <div className="mt-4 lg:mt-0 flex flex-wrap gap-3">
-            <div className="flex items-center space-x-2 bg-blue-50 rounded-lg px-3 py-2">
-              <Calendar className="w-4 h-4 text-blue-600" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="bg-transparent border-none focus:ring-0 text-sm font-medium text-blue-700"
-              />
+                      }`}
+                  >
+                    Role: {userRole}
+                  </span>
+                )}
+              </p>
             </div>
+            <div className="mt-4 lg:mt-0 flex flex-wrap gap-3">
+              <div className="flex items-center space-x-2 bg-blue-50 rounded-lg px-3 py-2">
+                <Calendar className="w-4 h-4 text-blue-600" />
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent border-none focus:ring-0 text-sm font-medium text-blue-700"
+                />
+              </div>
 
-            {/* Delete Button - HIDDEN UNTUK ROLE SELAIN 1 & 2 */}
-            {hasFullAccess && (
-              <button
-                onClick={handleDeleteRecords}
-                disabled={
-                  records.length === 0 || !hasDeletePermission || isLoading
-                }
-                className={`px-4 py-2 rounded-lg transition-colors flex items-center ${hasDeletePermission
+              {/* Delete Button - HIDDEN UNTUK ROLE SELAIN 1 & 2 */}
+              {hasFullAccess && (
+                <button
+                  onClick={handleDeleteRecords}
+                  disabled={
+                    records.length === 0 || !hasDeletePermission || isLoading
+                  }
+                  className={`px-4 py-2 rounded-lg transition-colors flex items-center ${hasDeletePermission
                     ? "bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                     : "bg-gray-400 text-gray-200 cursor-not-allowed"
+                    }`}
+                  title={
+                    !hasDeletePermission
+                      ? `Missing permission: callrecord.delete`
+                      : records.length === 0
+                        ? "No records to delete"
+                        : "Delete all records for selected date"
+                  }
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  {isLoading ? "Deleting..." : "Delete Records"}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Navigation Tabs */}
+        {hasFullAccess ? (
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+            <div className="flex space-x-4">
+              <button
+                onClick={() => setActiveSection("summary")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeSection === "summary"
+                  ? "bg-blue-100 text-blue-700 border border-blue-200"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
                   }`}
-                title={
-                  !hasDeletePermission
-                    ? `Missing permission: callrecord.delete`
-                    : records.length === 0
-                      ? "No records to delete"
-                      : "Delete all records for selected date"
-                }
               >
-                <Trash2 className="w-4 h-4 mr-2" />
-                {isLoading ? "Deleting..." : "Delete Records"}
+                📊 Daily Summary & Charts
               </button>
+              <button
+                onClick={() => setActiveSection("records")}
+                className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeSection === "records"
+                  ? "bg-blue-100 text-blue-700 border border-blue-200"
+                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                  }`}
+              >
+                📋 Call Records ({totalRecords.toLocaleString()})
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-center">
+              <BarChart3 className="w-5 h-5 text-blue-600 mr-2" />
+              <span className="text-blue-800 font-medium">
+                Viewing Daily Summary & Charts
+              </span>
+            </div>
+          </div>
+        )}
+
+        {/* Content Sections */}
+        {hasFullAccess ? (
+          <>
+            {activeSection === "records" && (
+              <CallRecordsSection
+                records={records}
+                recordsResponse={recordsResponse}
+                isLoading={isLoading}
+                searchTerm={queryParams.search}
+                onSearchChange={handleSearch}
+                filterReason={filterReason}
+                onFilterReasonChange={handleFilterReason}
+                filterHour={filterHour}
+                onFilterHourChange={handleFilterHour}
+                sortBy={queryParams.sortBy}
+                sortDir={queryParams.sortDir}
+                onSort={handleSort}
+                currentPage={currentPage}
+                totalPages={totalPages}
+                hasNext={hasNext}
+                hasPrevious={hasPrevious}
+                onPageChange={handlePageChange}
+                showFilters={showFilters}
+                onToggleFilters={() => setShowFilters(!showFilters)}
+                getCloseReasonText={getCloseReasonText}
+                getCloseReasonDescription={getCloseReasonDescription}
+                dailySummary={dailySummary} // TAMBAHKAN INI
+              />
             )}
-          </div>
-        </div>
+
+            {activeSection === "summary" && (
+              <SummarySection
+                dailySummary={dailySummary}
+                isLoading={isLoading}
+                selectedDate={selectedDate}
+              />
+            )}
+          </>
+        ) : (
+          <SummarySection
+            dailySummary={dailySummary}
+            isLoading={isLoading}
+            selectedDate={selectedDate}
+          />
+        )}
       </div>
-
-      {/* Navigation Tabs */}
-      {hasFullAccess ? (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-          <div className="flex space-x-4">
-            <button
-              onClick={() => setActiveSection("summary")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeSection === "summary"
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                }`}
-            >
-              📊 Daily Summary & Charts
-            </button>
-            <button
-              onClick={() => setActiveSection("records")}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${activeSection === "records"
-                  ? "bg-blue-100 text-blue-700 border border-blue-200"
-                  : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                }`}
-            >
-              📋 Call Records ({totalRecords.toLocaleString()})
-            </button>
-          </div>
-        </div>
-      ) : (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-          <div className="flex items-center">
-            <BarChart3 className="w-5 h-5 text-blue-600 mr-2" />
-            <span className="text-blue-800 font-medium">
-              Viewing Daily Summary & Charts
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Content Sections */}
-      {hasFullAccess ? (
-        <>
-          {activeSection === "records" && (
-            <CallRecordsSection
-              records={records}
-              recordsResponse={recordsResponse}
-              isLoading={isLoading}
-              searchTerm={queryParams.search}
-              onSearchChange={handleSearch}
-              filterReason={filterReason}
-              onFilterReasonChange={handleFilterReason}
-              filterHour={filterHour}
-              onFilterHourChange={handleFilterHour}
-              sortBy={queryParams.sortBy}
-              sortDir={queryParams.sortDir}
-              onSort={handleSort}
-              currentPage={currentPage}
-              totalPages={totalPages}
-              hasNext={hasNext}
-              hasPrevious={hasPrevious}
-              onPageChange={handlePageChange}
-              showFilters={showFilters}
-              onToggleFilters={() => setShowFilters(!showFilters)}
-              getCloseReasonText={getCloseReasonText}
-              getCloseReasonDescription={getCloseReasonDescription}
-              dailySummary={dailySummary} // TAMBAHKAN INI
-            />
-          )}
-
-          {activeSection === "summary" && (
-            <SummarySection
-              dailySummary={dailySummary}
-              isLoading={isLoading}
-              selectedDate={selectedDate}
-            />
-          )}
-        </>
-      ) : (
-        <SummarySection
-          dailySummary={dailySummary}
-          isLoading={isLoading}
-          selectedDate={selectedDate}
-        />
-      )}
     </div>
   );
 };
@@ -968,10 +1258,10 @@ const CallRecordsSection: React.FC<{
                       <td className="px-3 py-3 text-xs max-w-[150px]">
                         <span
                           className={`inline-flex px-2 py-1 rounded-full text-xs font-medium border ${record.callCloseReason === 0
-                              ? "bg-red-100 text-red-800 border-red-200"
-                              : record.callCloseReason === 1
-                                ? "bg-yellow-100 text-yellow-800 border-yellow-200"
-                                : "bg-green-100 text-green-800 border-green-200"
+                            ? "bg-red-100 text-red-800 border-red-200"
+                            : record.callCloseReason === 1
+                              ? "bg-yellow-100 text-yellow-800 border-yellow-200"
+                              : "bg-green-100 text-green-800 border-green-200"
                             }`}
                         >
                           {getCloseReasonText(record.callCloseReason)}
@@ -1046,8 +1336,8 @@ const CallRecordsSection: React.FC<{
                           key={page}
                           onClick={() => onPageChange(page)}
                           className={`px-2 py-1 border text-xs font-medium min-w-[32px] ${currentPage === page
-                              ? "border-blue-500 bg-blue-500 text-white"
-                              : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
+                            ? "border-blue-500 bg-blue-500 text-white"
+                            : "border-gray-300 bg-white text-gray-700 hover:bg-gray-50"
                             } rounded`}
                         >
                           {page}
