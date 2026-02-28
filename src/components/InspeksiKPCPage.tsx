@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { MobilePageHeader } from "./ui/MobilePageHeader";
 import { useAuth } from "../contexts/AuthContext";
 import {
   inspeksiApi,
@@ -34,6 +35,7 @@ import {
   AlertTriangle,
   ArrowLeft,
   Bell,
+  Home,
 } from "lucide-react";
 import { id } from "date-fns/locale";
 import { formatCompactDate, formatDateTime } from "../utils/dateUtils";
@@ -1122,98 +1124,89 @@ export default function InspeksiKPCPage() {
   return (
     <div className="md:p-6 max-w-full mx-auto">
       {/* ========== MOBILE HEADER (md:hidden) ========== */}
-      <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100">
-        <div className="flex items-center p-4 justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
-            <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
-              Inspeksi KPC {showHistory && "- History"}
-            </h2>
-          </div>
-          <div className="flex items-center">
-            <button
-              onClick={() => {
-                const el = document.getElementById('mobile-search-input');
-                if (el) { el.classList.toggle('hidden'); el.focus(); }
-              }}
-              className="flex size-10 items-center justify-center rounded-full text-gray-600 hover:bg-indigo-50"
-            >
-              <Search className="w-5 h-5" />
-            </button>
-          </div>
-        </div>
-        {/* Mobile Search Input (toggleable) */}
-        <div id="mobile-search-input" className="hidden px-4 pb-3">
-          <div className="relative">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Cari ruang, temuan, inspector..."
-              className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50"
-            />
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          </div>
-        </div>
-        {/* Mobile Filter Chips */}
-        <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar relative z-30">
-          {/* Custom Dropdown: Ruangan */}
-          <div className="relative shrink-0">
-            <button
-              onClick={() => {
-                const el = document.getElementById("dropdown-ruangan");
-                if (el) el.classList.toggle("hidden");
-                // Hide the other dropdown
-                const other = document.getElementById("dropdown-status");
-                if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
-              }}
-              className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[100px]"
-            >
-              <span className="truncate max-w-[120px]">{selectedRuang || "Ruangan"}</span>
-              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-            </button>
-          </div>
-
-          {/* Custom Dropdown: Status */}
-          <div className="relative shrink-0">
-            <button
-              onClick={() => {
-                const el = document.getElementById("dropdown-status");
-                if (el) el.classList.toggle("hidden");
-                // Hide the other dropdown
-                const other = document.getElementById("dropdown-ruangan");
-                if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
-              }}
-              className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[80px]"
-            >
-              <span>{selectedStatus || "Status"}</span>
-              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-            </button>
-          </div>
+      <MobilePageHeader
+        label="Inspeksi"
+        title={`KPC ${showHistory ? "- History" : ""}`}
+        rightAction={
           <button
-            onClick={() => { setShowHistory(!showHistory); setCurrentPage(1); }}
-            className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 border text-xs font-semibold ${showHistory ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}
+            onClick={() => {
+              const el = document.getElementById('mobile-search-input');
+              if (el) { el.classList.toggle('hidden'); el.focus(); }
+            }}
+            className="w-10 h-10 rounded-full border border-slate-200 text-slate-500 bg-white shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0"
           >
-            {showHistory ? <RotateCcw className="w-3 h-3" /> : <Archive className="w-3 h-3" />}
-            {showHistory ? "Aktif" : "History"}
+            <Search className="w-4 h-4" />
           </button>
-          {canExport && (
+        }
+        contentAfterTitle={
+          <div id="mobile-search-input" className="hidden px-4 pb-3">
+            <div className="relative">
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Cari ruang, temuan, inspector..."
+                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50"
+              />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
+          </div>
+        }
+        scrollableChips={
+          <div className="flex gap-2">
+            {/* Custom Dropdown: Ruangan */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => {
+                  const el = document.getElementById("dropdown-ruangan");
+                  if (el) el.classList.toggle("hidden");
+                  // Hide the other dropdown
+                  const other = document.getElementById("dropdown-status");
+                  if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
+                }}
+                className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[100px]"
+              >
+                <span className="truncate max-w-[120px]">{selectedRuang || "Ruangan"}</span>
+                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+              </button>
+            </div>
+
+            {/* Custom Dropdown: Status */}
+            <div className="relative shrink-0">
+              <button
+                onClick={() => {
+                  const el = document.getElementById("dropdown-status");
+                  if (el) el.classList.toggle("hidden");
+                  // Hide the other dropdown
+                  const other = document.getElementById("dropdown-ruangan");
+                  if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
+                }}
+                className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[80px]"
+              >
+                <span>{selectedStatus || "Status"}</span>
+                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+              </button>
+            </div>
             <button
-              onClick={handleExportWithImages}
-              disabled={exportLoading}
-              className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-purple-50 px-3 border border-purple-200 text-purple-700 text-xs font-semibold"
+              onClick={() => { setShowHistory(!showHistory); setCurrentPage(1); }}
+              className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 border text-xs font-semibold ${showHistory ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}
             >
-              <Download className="w-3 h-3" />
-              Export
+              {showHistory ? <RotateCcw className="w-3 h-3" /> : <Archive className="w-3 h-3" />}
+              {showHistory ? "Aktif" : "History"}
             </button>
-          )}
-        </div>
-      </div>
+            {canExport && (
+              <button
+                onClick={handleExportWithImages}
+                disabled={exportLoading}
+                className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-purple-50 px-3 border border-purple-200 text-purple-700 text-xs font-semibold"
+              >
+                <Download className="w-3 h-3" />
+                Export
+              </button>
+            )}
+          </div>
+        }
+      />
 
       {/* ========== DESKTOP HEADER (hidden md:block) ========== */}
       <div className="hidden md:block mb-6">

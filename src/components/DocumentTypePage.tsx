@@ -3,7 +3,8 @@ import { hasPermission } from "../utils/permissionUtils";
 import { documentTypeApi } from "../services/letterNumberApi";
 import { DocumentTypeList, DocumentTypeCreate, DocumentTypeUpdate } from "../types/letterNumber";
 import { useToast } from "../hooks/use-toast";
-import { FileType, Plus, Search, Edit, Trash2, CheckCircle, XCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { FileType, Plus, Search, Edit, Trash2, CheckCircle, XCircle, Home, ChevronLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -19,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 
 export default function DocumentTypePage() {
+    const navigate = useNavigate();
     const { toast } = useToast();
     const [documentTypes, setDocumentTypes] = useState<DocumentTypeList[]>([]);
     const [loading, setLoading] = useState(false);
@@ -165,289 +167,212 @@ export default function DocumentTypePage() {
     };
 
     return (
-        <div className="min-h-screen bg-gray-50 p-4 md:p-6">
-            {/* Header */}
-            <div className="mb-6">
-                <div className="flex items-center gap-3 mb-2">
-                    <div className="p-3 bg-purple-100 rounded-lg">
-                        <FileType className="h-6 w-6 text-purple-600" />
-                    </div>
+        <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-[#f7f6f8] text-slate-900">
+            {/* ====== MOBILE INTEGRATED HEADER ====== */}
+            <div className="md:hidden pt-4 pb-4 mb-4 px-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
+                <div className="flex items-start justify-between pb-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-gray-900">Document Type Management</h1>
-                        <p className="text-sm text-gray-500">Manage document types for letter numbering</p>
+                        <div className="flex items-center gap-1.5 mb-1 opacity-80">
+                            <span className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">Master Data</span>
+                        </div>
+                        <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
+                            Document Type
+                        </h1>
                     </div>
+                    <button
+                        onClick={() => navigate("/dashboard")}
+                        className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors shrink-0"
+                    >
+                        <Home className="h-4 w-4" strokeWidth={2.5} />
+                    </button>
                 </div>
             </div>
 
-            {/* Filters and Actions */}
-            <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
-                <div className="flex flex-col md:flex-row gap-4 justify-between">
-                    <div className="flex-1 max-w-md">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                                placeholder="Search document types..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                    </div>
+            {/* Default Header for Desktop */}
+            <header className="hidden md:flex sticky top-0 z-10 items-center bg-[#f7f6f8] p-4 border-b border-[#9311d4]/10 justify-between">
+                <div className="flex-1">
+                    <h2 className="text-slate-900 text-lg font-bold leading-tight tracking-tight">Document Type</h2>
+                    <p className="text-xs text-slate-500 font-medium">Manage letter number types</p>
+                </div>
+                <Button onClick={() => navigate("/dashboard")} variant="outline" size="sm">
+                    <ChevronLeft className="h-4 w-4 mr-2" />
+                    Dashboard
+                </Button>
+            </header>
 
-                    <div className="flex gap-4 items-center">
-                        <div className="flex items-center gap-2">
-                            <Switch
-                                checked={showInactiveOnly}
-                                onCheckedChange={setShowInactiveOnly}
-                            />
-                            <Label>Show Inactive Only</Label>
+            {/* Search Bar Section */}
+            <div className="px-4 py-4 bg-[#f7f6f8]">
+                <label className="flex flex-col min-w-40 h-12 w-full">
+                    <div className="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm border border-[#9311d4]/10 overflow-hidden bg-white focus-within:ring-2 focus-within:ring-[#9311d4]/50 transition-all">
+                        <div className="text-[#9311d4] flex bg-white items-center justify-center pl-4 pr-2">
+                            <Search className="w-5 h-5" />
                         </div>
-                        {hasPermission('letter.create') && (
-                            <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-purple-600 hover:bg-purple-700">
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Document Type
-                            </Button>
-                        )}
+                        <input
+                            className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-slate-900 focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-slate-400 px-2 text-base font-medium"
+                            placeholder="Search document types..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
                     </div>
+                </label>
+            </div>
+
+            {/* Filter and Toggle Section */}
+            <div className="px-4 py-2 @container">
+                <div className="flex flex-1 flex-col items-start justify-between gap-4 rounded-xl border border-[#9311d4]/10 bg-white p-4 sm:flex-row sm:items-center shadow-sm">
+                    <div className="flex flex-col gap-0.5">
+                        <p className="text-slate-900 text-sm font-bold leading-tight">Show Inactive Data Only</p>
+                        <p className="text-slate-500 text-xs font-medium">Filter to see only deactivated types</p>
+                    </div>
+                    <Switch
+                        checked={showInactiveOnly}
+                        onCheckedChange={setShowInactiveOnly}
+                        className="data-[state=checked]:bg-[#9311d4]"
+                    />
                 </div>
             </div>
 
-            {/* Table - Desktop */}
-            <div className="hidden md:block bg-white rounded-lg shadow-sm overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full">
-                        <thead className="bg-gray-50 border-b border-gray-200">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Code
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Name
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Status
-                                </th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Deskripsi
-                                </th>
-                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                            {loading ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center">
-                                        <div className="flex justify-center">
-                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ) : documentTypes.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-12 text-center text-gray-500">
-                                        No document types found
-                                    </td>
-                                </tr>
-                            ) : (
-                                documentTypes.map((docType) => (
-                                    <tr key={docType.id} className="hover:bg-gray-50">
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm font-medium text-gray-900">{docType.code}</div>
-                                        </td>
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900">{docType.name}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            {docType.isActive ? (
-                                                <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    <CheckCircle className="h-3 w-3 mr-1" />
-                                                    Active
-                                                </span>
-                                            ) : (
-                                                <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">
-                                                    <XCircle className="h-3 w-3 mr-1" />
-                                                    Inactive
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <div className="text-sm text-gray-500">{docType.description || "-"}</div>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <div className="flex justify-end gap-2">
-                                                {hasPermission('letter.update') && (
-                                                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(docType)}>
-                                                        <Edit className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                                {hasPermission('letter.delete') && (
-                                                    <Button
-                                                        variant="ghost"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(docType.id)}
-                                                        className="text-red-600 hover:text-red-700"
-                                                    >
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
+            {/* Action Button Section */}
+            {hasPermission('letter.create') && (
+                <div className="flex px-4 py-4">
+                    <button
+                        onClick={() => setIsCreateDialogOpen(true)}
+                        className="flex h-12 px-6 flex-1 items-center justify-center overflow-hidden rounded-xl bg-[#9311d4] text-white gap-2 font-bold shadow-lg shadow-[#9311d4]/20 hover:bg-[#9311d4]/90 transition-all active:scale-[0.98]"
+                    >
+                        <Plus className="w-5 h-5 tracking-wide" />
+                        <span className="truncate">Add Document Type</span>
+                    </button>
                 </div>
+            )}
 
-                {/* Pagination */}
-                {totalPages > 1 && (
-                    <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-                        <div className="flex-1 flex justify-between sm:hidden">
-                            <Button
-                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                variant="outline"
-                            >
-                                Previous
-                            </Button>
-                            <Button
-                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                variant="outline"
-                            >
-                                Next
-                            </Button>
-                        </div>
-                        <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-                            <div>
-                                <p className="text-sm text-gray-700">
-                                    Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{" "}
-                                    <span className="font-medium">{Math.min(currentPage * pageSize, totalCount)}</span> of{" "}
-                                    <span className="font-medium">{totalCount}</span> results
-                                </p>
-                            </div>
-                            <div>
-                                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                                    <Button
-                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
-                                        variant="outline"
-                                        className="rounded-r-none"
-                                    >
-                                        Previous
-                                    </Button>
-                                    <Button
-                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
-                                        variant="outline"
-                                        className="rounded-l-none"
-                                    >
-                                        Next
-                                    </Button>
-                                </nav>
-                            </div>
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Mobile Card View */}
-            <div className="md:hidden flex flex-col gap-3">
+            {/* Card List */}
+            <div className="flex flex-col gap-3 p-4 pb-24">
                 {loading ? (
-                    <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>
-                ) : documentTypes.length === 0 ? (
-                    <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">No document types found</div>
-                ) : documentTypes.map((docType) => (
-                    <div key={docType.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                        <div className="flex justify-between items-start mb-3">
-                            <div className="flex flex-col gap-1">
-                                <span className="text-[10px] font-bold uppercase tracking-wider text-purple-600 bg-purple-50 px-2 py-0.5 rounded w-fit">{docType.code}</span>
-                                <h3 className="text-sm font-bold text-gray-900">{docType.name}</h3>
-                            </div>
-                            <div className="flex gap-1">
-                                {hasPermission('letter.update') && (
-                                    <Button variant="ghost" size="sm" onClick={() => openEditDialog(docType)} className="text-purple-600 hover:text-purple-700">
-                                        <Edit className="h-4 w-4" />
-                                    </Button>
-                                )}
-                                {hasPermission('letter.delete') && (
-                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(docType.id)} className="text-red-600 hover:text-red-700">
-                                        <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                )}
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            {docType.description && (
-                                <p className="text-xs text-gray-500 leading-relaxed">{docType.description}</p>
-                            )}
-                            <div className="flex items-center gap-2">
-                                <span className={`h-2 w-2 rounded-full ${docType.isActive ? 'bg-green-500' : 'bg-gray-400'}`}></span>
-                                {docType.isActive ? (
-                                    <span className="text-xs font-semibold text-green-600">Active</span>
-                                ) : (
-                                    <span className="text-xs font-semibold text-gray-500">Inactive</span>
-                                )}
-                            </div>
-                        </div>
+                    <div className="flex justify-center py-12">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#9311d4]"></div>
                     </div>
-                ))}
-                {/* Mobile Pagination */}
+                ) : documentTypes.length === 0 ? (
+                    <div className="text-center py-12 text-gray-500 bg-white rounded-xl border border-[#9311d4]/10 shadow-sm font-medium">
+                        No document types found.
+                    </div>
+                ) : (
+                    documentTypes.map((docType) => (
+                        <div key={docType.id} className="flex flex-col gap-3 rounded-xl border border-[#9311d4]/10 bg-white p-5 shadow-sm hover:shadow-md transition-shadow">
+                            <div className="flex justify-between items-start">
+                                <div className="flex flex-col gap-1.5 flex-1 pr-2">
+                                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#9311d4] bg-[#9311d4]/10 px-2.5 py-1 rounded-full w-fit">
+                                        {docType.code}
+                                    </span>
+                                    <h3 className="text-slate-900 font-bold text-base leading-tight mt-1">{docType.name}</h3>
+                                    {docType.description && (
+                                        <p className="text-sm text-slate-500 mt-1 leading-relaxed">
+                                            {docType.description}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex gap-1 ml-2 shrink-0">
+                                    {hasPermission('letter.update') && (
+                                        <button
+                                            onClick={() => openEditDialog(docType)}
+                                            className="p-2 text-[#9311d4] hover:bg-purple-50 rounded-lg transition-colors"
+                                        >
+                                            <Edit className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                    {hasPermission('letter.delete') && (
+                                        <button
+                                            onClick={() => handleDelete(docType.id)}
+                                            className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                                        >
+                                            <Trash2 className="w-5 h-5" />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 mt-1">
+                                <div className={`h-2 w-2 rounded-full ${docType.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`}></div>
+                                <span className={`text-sm font-semibold tracking-wide ${docType.isActive ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                    {docType.isActive ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    ))
+                )}
+
+                {/* Pagination Controls */}
                 {totalPages > 1 && (
-                    <div className="flex justify-between gap-4 pt-2">
-                        <Button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} variant="outline" className="flex-1">Previous</Button>
-                        <Button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} variant="outline" className="flex-1">Next</Button>
+                    <div className="flex justify-between gap-4 pt-4 mt-2">
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                            disabled={currentPage === 1}
+                            className="flex-1 py-2.5 px-4 rounded-xl border border-[#9311d4]/20 text-[#9311d4] font-semibold text-sm disabled:opacity-50 disabled:bg-slate-50 hover:bg-[#9311d4]/5 transition-colors"
+                        >
+                            Previous
+                        </button>
+                        <div className="flex items-center justify-center px-4 font-bold text-slate-700 text-sm">
+                            {currentPage} / {totalPages}
+                        </div>
+                        <button
+                            onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                            disabled={currentPage === totalPages}
+                            className="flex-1 py-2.5 px-4 rounded-xl border border-[#9311d4]/20 text-[#9311d4] font-semibold text-sm disabled:opacity-50 disabled:bg-slate-50 hover:bg-[#9311d4]/5 transition-colors"
+                        >
+                            Next
+                        </button>
                     </div>
                 )}
             </div>
 
             {/* Create Dialog */}
             <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle>Add New Document Type</DialogTitle>
-                        <DialogDescription>Create a new document type for letter numbering.</DialogDescription>
+                        <DialogTitle className="text-[#9311d4] text-xl font-bold">Add New Document Type</DialogTitle>
+                        <DialogDescription className="text-slate-500">
+                            Create a new document type for letter numbering.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-5 py-4">
                         <div className="space-y-2">
-                            <Label htmlFor="code">Document Code *</Label>
+                            <Label htmlFor="code" className="font-bold text-slate-700">Document Code *</Label>
                             <Input
                                 id="code"
                                 value={formData.code}
                                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
                                 placeholder="e.g., BAO"
                                 maxLength={50}
+                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="name">Document Name *</Label>
+                            <Label htmlFor="name" className="font-bold text-slate-700">Document Name *</Label>
                             <Input
                                 id="name"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                                 placeholder="e.g., Berita Acara"
+                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="description">Description</Label>
+                            <Label htmlFor="description" className="font-bold text-slate-700">Description</Label>
                             <Textarea
                                 id="description"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 placeholder="Document type description"
                                 rows={3}
+                                className="rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
                             />
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
                             Cancel
                         </Button>
-                        <Button onClick={handleCreate} className="bg-purple-600 hover:bg-purple-700">
+                        <Button onClick={handleCreate} className="rounded-xl h-11 bg-[#9311d4] hover:bg-[#9311d4]/90 text-white font-bold px-6">
                             Create Document Type
                         </Button>
                     </DialogFooter>
@@ -456,50 +381,58 @@ export default function DocumentTypePage() {
 
             {/* Edit Dialog */}
             <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[500px]">
+                <DialogContent className="sm:max-w-[500px] rounded-2xl">
                     <DialogHeader>
-                        <DialogTitle>Edit Document Type</DialogTitle>
-                        <DialogDescription>Update document type information.</DialogDescription>
+                        <DialogTitle className="text-[#9311d4] text-xl font-bold">Edit Document Type</DialogTitle>
+                        <DialogDescription className="text-slate-500">
+                            Update document type information.
+                        </DialogDescription>
                     </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    <div className="grid gap-5 py-4">
                         <div className="space-y-2">
-                            <Label>Document Code</Label>
-                            <Input value={formData.code} disabled className="bg-gray-100" />
+                            <Label className="font-bold text-slate-700">Document Code</Label>
+                            <Input value={formData.code} disabled className="bg-slate-100 h-11 rounded-xl opacity-70 font-semibold" />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="edit-name">Document Name *</Label>
+                            <Label htmlFor="edit-name" className="font-bold text-slate-700">Document Name *</Label>
                             <Input
                                 id="edit-name"
                                 value={formData.name}
                                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
                             />
                         </div>
 
                         <div className="space-y-2">
-                            <Label htmlFor="edit-description">Description</Label>
+                            <Label htmlFor="edit-description" className="font-bold text-slate-700">Description</Label>
                             <Textarea
                                 id="edit-description"
                                 value={formData.description}
                                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                                 rows={3}
+                                className="rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
                             />
                         </div>
 
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center justify-between mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                            <div className="flex flex-col">
+                                <Label className="font-bold text-slate-900 text-sm">Active Status</Label>
+                                <span className="text-xs text-slate-500">Toggle whether this type is active</span>
+                            </div>
                             <Switch
                                 checked={formData.isActive}
                                 onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
+                                className="data-[state=checked]:bg-[#9311d4]"
                             />
-                            <Label>Active</Label>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>
+                    <DialogFooter className="gap-2 sm:gap-0">
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
                             Cancel
                         </Button>
-                        <Button onClick={handleUpdate} className="bg-purple-600 hover:bg-purple-700">
-                            Update
+                        <Button onClick={handleUpdate} className="rounded-xl h-11 bg-[#9311d4] hover:bg-[#9311d4]/90 text-white font-bold px-6">
+                            Save Changes
                         </Button>
                     </DialogFooter>
                 </DialogContent>

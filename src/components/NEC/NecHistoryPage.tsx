@@ -53,6 +53,7 @@ import {
   Check,
   ChevronsUpDown,
   Loader2,
+  Home,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -959,26 +960,26 @@ const NecHistoryPage: React.FC = () => {
 
   return (
     <div className="w-full p-4 md:p-6 pb-20">
-      {/* Mobile Top App Bar */}
-      <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-4">
-        <div className="flex items-center px-4 pt-4 pb-2 justify-between">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => navigate("/dashboard")}
-              className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50 shadow-sm"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-            <div>
-              <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
-                Jaringan NEC
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">History & monitoring</p>
+      {/* ====== MOBILE INTEGRATED HEADER ====== */}
+      <div className="md:hidden pt-4 pb-4 mb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl -mx-4 -mt-4 sticky top-0 z-30">
+        <div className="flex items-start justify-between pb-4 px-4">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1 opacity-80">
+              <span className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">Monitoring</span>
             </div>
+            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
+              Jaringan NEC
+            </h1>
           </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors shrink-0"
+          >
+            <Home className="h-4 w-4" strokeWidth={2.5} />
+          </button>
         </div>
         {/* Action chips row */}
-        <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 px-4 pb-1 overflow-x-auto no-scrollbar">
           <button
             onClick={() => navigate("/nec-management")}
             className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
@@ -1046,8 +1047,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("history")}
               className={`col-span-2 relative overflow-hidden rounded-2xl p-5 text-left transition-all duration-200 ${activeTab === "history"
-                  ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200 ring-2 ring-blue-400 ring-offset-2"
-                  : "bg-gradient-to-br from-blue-400/80 to-indigo-500/80 text-white/90 shadow-md hover:shadow-lg"
+                ? "bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-lg shadow-blue-200 ring-2 ring-blue-400 ring-offset-2"
+                : "bg-gradient-to-br from-blue-400/80 to-indigo-500/80 text-white/90 shadow-md hover:shadow-lg"
                 }`}
             >
               <div className="flex justify-between items-start mb-2">
@@ -1065,8 +1066,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("pivot")}
               className={`relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-200 ${activeTab === "pivot"
-                  ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-400 ring-offset-2"
-                  : "bg-gradient-to-br from-emerald-400/80 to-teal-500/80 text-white/90 shadow-md hover:shadow-lg"
+                ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-400 ring-offset-2"
+                : "bg-gradient-to-br from-emerald-400/80 to-teal-500/80 text-white/90 shadow-md hover:shadow-lg"
                 }`}
             >
               <span className="text-2xl mb-1.5 opacity-90 block">📊</span>
@@ -1076,8 +1077,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("monthly")}
               className={`relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-200 ${activeTab === "monthly"
-                  ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-200 ring-2 ring-violet-400 ring-offset-2"
-                  : "bg-gradient-to-br from-violet-400/80 to-purple-500/80 text-white/90 shadow-md hover:shadow-lg"
+                ? "bg-gradient-to-br from-violet-500 to-purple-600 text-white shadow-lg shadow-violet-200 ring-2 ring-violet-400 ring-offset-2"
+                : "bg-gradient-to-br from-violet-400/80 to-purple-500/80 text-white/90 shadow-md hover:shadow-lg"
                 }`}
             >
               <span className="text-2xl mb-1.5 opacity-90 block">📈</span>
@@ -1087,8 +1088,8 @@ const NecHistoryPage: React.FC = () => {
             <button
               onClick={() => setActiveTab("yearly")}
               className={`col-span-2 relative overflow-hidden rounded-2xl p-4 text-left transition-all duration-200 flex items-center justify-between ${activeTab === "yearly"
-                  ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200 ring-2 ring-amber-400 ring-offset-2"
-                  : "bg-gradient-to-br from-amber-400/80 to-orange-500/80 text-white/90 shadow-md hover:shadow-lg"
+                ? "bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-lg shadow-amber-200 ring-2 ring-amber-400 ring-offset-2"
+                : "bg-gradient-to-br from-amber-400/80 to-orange-500/80 text-white/90 shadow-md hover:shadow-lg"
                 }`}
             >
               <div>

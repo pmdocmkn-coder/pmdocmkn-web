@@ -284,7 +284,7 @@ export default function Sidebar({
           setActiveTab(item.id);
           onClick?.();
         }}
-        className={`block pl-12 pr-4 py-1.5 text-[13px] font-medium transition-all duration-200 ${isActive
+        className={`block pl-4 pr-4 py-1.5 text-[13px] font-medium transition-all duration-200 ${isActive
           ? "text-white"
           : "text-white/55 hover:text-white/80"
           }`}
@@ -336,9 +336,7 @@ export default function Sidebar({
 
         {
           hasPermission("call.record.menu") && filteredCallRecords.length > 0 && (
-            <div className={isMobileView ? 'mt-2 pt-2' : 'mt-6'}>
-              {/* Section divider for mobile */}
-              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
               {!isCollapsed || isMobileView ? (
                 <>
                   <button
@@ -357,25 +355,26 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className={`${isMobileView ? 'space-y-0' : 'space-y-1'} ${isMobileView ? '' : 'mt-1'}`}
+                        className={isMobileView ? '' : 'space-y-1 mt-1'}
                       >
-                        {filteredCallRecords.map((item) => (
-                          isMobileView ? (
-                            <MobileSubLink
-                              key={item.id}
-                              item={item}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                            />
-                          ) : (
+                        {isMobileView ? (
+                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
+                            {filteredCallRecords.map((item) => (
+                              <MobileSubLink
+                                key={item.id}
+                                item={item}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          filteredCallRecords.map((item) => (
                             <NavLink
                               key={item.id}
                               item={item}
-                              onClick={() =>
-                                isMobileView && setIsMobileMenuOpen(false)
-                              }
                             />
-                          )
-                        ))}
+                          ))
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -391,9 +390,7 @@ export default function Sidebar({
 
         {
           hasPermission("radio.management.menu") && filteredRadioMenu.length > 0 && (
-            <div className={isMobileView ? 'mt-2 pt-2' : 'mt-4'}>
-              {/* Section divider for mobile */}
-              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
               {!isCollapsed || isMobileView ? (
                 <>
                   <button
@@ -412,25 +409,26 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className={`${isMobileView ? 'space-y-0' : 'space-y-1'} ${isMobileView ? '' : 'mt-1'}`}
+                        className={isMobileView ? '' : 'space-y-1 mt-1'}
                       >
-                        {filteredRadioMenu.map((item) => (
-                          isMobileView ? (
-                            <MobileSubLink
-                              key={item.id}
-                              item={item}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                            />
-                          ) : (
+                        {isMobileView ? (
+                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
+                            {filteredRadioMenu.map((item) => (
+                              <MobileSubLink
+                                key={item.id}
+                                item={item}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          filteredRadioMenu.map((item) => (
                             <NavLink
                               key={item.id}
                               item={item}
-                              onClick={() =>
-                                isMobileView && setIsMobileMenuOpen(false)
-                              }
                             />
-                          )
-                        ))}
+                          ))
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -447,9 +445,7 @@ export default function Sidebar({
 
         {
           hasPermission("letter.menu") && filteredLetterNumbers.length > 0 && (
-            <div className={isMobileView ? 'mt-2 pt-2' : 'mt-4'}>
-              {/* Section divider for mobile */}
-              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
               {!isCollapsed || isMobileView ? (
                 <>
                   <button
@@ -468,23 +464,26 @@ export default function Sidebar({
                         initial={{ height: 0, opacity: 0 }}
                         animate={{ height: "auto", opacity: 1 }}
                         exit={{ height: 0, opacity: 0 }}
-                        className={`overflow-hidden ${isMobileView ? 'space-y-0' : 'space-y-1'} ${isMobileView ? '' : 'mt-1'}`}
+                        className={isMobileView ? '' : 'overflow-hidden space-y-1 mt-1'}
                       >
-                        {filteredLetterNumbers.map((item) => (
-                          isMobileView ? (
-                            <MobileSubLink
-                              key={item.id}
-                              item={item}
-                              onClick={() => setIsMobileMenuOpen(false)}
-                            />
-                          ) : (
+                        {isMobileView ? (
+                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
+                            {filteredLetterNumbers.map((item) => (
+                              <MobileSubLink
+                                key={item.id}
+                                item={item}
+                                onClick={() => setIsMobileMenuOpen(false)}
+                              />
+                            ))}
+                          </div>
+                        ) : (
+                          filteredLetterNumbers.map((item) => (
                             <NavLink
                               key={item.id}
                               item={item}
-                              onClick={() => isMobileView && setIsMobileMenuOpen(false)}
                             />
-                          )
-                        ))}
+                          ))
+                        )}
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -503,9 +502,7 @@ export default function Sidebar({
             hasPermission("system.user.management.view") ||
             hasPermission("system.division.view") ||
             hasPermission("system.audit.view")) && (
-            <div className={isCollapsed && !isMobileView ? "mt-2" : isMobileView ? "mt-2 pt-2" : "mt-4"}>
-              {/* Section divider for mobile */}
-              {isMobileView && <div className="h-px bg-white/10 mx-4 mb-2" />}
+            <div className={isCollapsed && !isMobileView ? "mt-2" : "mt-3"}>
               <NavLink
                 item={{
                   name: "Settings",
@@ -522,17 +519,16 @@ export default function Sidebar({
 
       {/* Footer / User */}
       <div
-        className={`mt-auto ${isMobileView ? 'pt-3 px-4 pb-2' : 'pt-6 border-t border-white/10'} ${isCollapsed && !isMobileView ? "items-center" : ""
+        className={`mt-auto ${isMobileView ? 'pt-3 px-4 pb-2' : 'pt-4 px-4 pb-6 border-t border-white/10'} ${isCollapsed && !isMobileView ? "items-center px-2" : ""
           }`}
       >
-        {/* Mobile: Card wrapper */}
-        {isMobileView ? (
+        {isMobileView || !isCollapsed ? (
           <div className="bg-white/5 rounded-2xl p-3 space-y-2">
             <Link
               to="/profile"
               onClick={() => {
                 setActiveTab("profile");
-                setIsMobileMenuOpen(false);
+                if (isMobileView) setIsMobileMenuOpen(false);
               }}
               className="flex items-center space-x-3 hover:bg-white/5 rounded-xl px-1 py-1.5 transition-all group"
             >
@@ -540,19 +536,21 @@ export default function Sidebar({
                 <img
                   src={user.photoUrl}
                   alt={user.fullName}
-                  className="w-9 h-9 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
+                  className="w-10 h-10 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
+                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
                   {user?.fullName?.[0] || "U"}
                 </div>
               )}
               <div className="flex-1 min-w-0 text-left">
-                <p className="text-[13px] font-semibold text-white truncate">
+                <p className="text-sm font-semibold text-white truncate">
                   {user?.fullName || "User"}
                 </p>
-                <p className="text-[11px] text-white/60 truncate">
-                  {user?.roleName || "Role"}
+                <p className="text-xs text-white/60 truncate">
+                  {isMobileView
+                    ? (user?.roleName || "Role")
+                    : `${user?.division || "Division"} `}
                 </p>
               </div>
             </Link>
@@ -568,36 +566,25 @@ export default function Sidebar({
             </button>
           </div>
         ) : (
-          /* Desktop: Original style */
+          /* Desktop Collapsed state */
           <>
             <Link
               to="/profile"
               onClick={() => {
                 setActiveTab("profile");
               }}
-              title={isCollapsed ? user?.fullName : ""}
-              className={`flex items-center rounded-xl hover:bg-white/10 transition-all group ${isCollapsed ? "justify-center p-2" : "space-x-3 p-3"
-                }`}
+              title={user?.fullName}
+              className="flex items-center justify-center rounded-xl hover:bg-white/10 transition-all group p-2 mx-auto"
             >
               {user?.photoUrl ? (
                 <img
                   src={user.photoUrl}
                   alt={user.fullName}
-                  className="w-10 h-10 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
+                  className="w-10 h-10 min-w-[40px] rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
+                <div className="w-10 h-10 min-w-[40px] rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform shrink-0">
                   {user?.fullName?.[0] || "U"}
-                </div>
-              )}
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0 text-left">
-                  <p className="text-sm font-semibold text-white truncate">
-                    {user?.fullName || "User"}
-                  </p>
-                  <p className="text-xs text-white/60 truncate">
-                    {user?.roleName || "Role"}
-                  </p>
                 </div>
               )}
             </Link>
@@ -606,16 +593,10 @@ export default function Sidebar({
                 logout();
                 window.location.href = "/";
               }}
-              title={isCollapsed ? "Logout" : ""}
-              className={`w-full flex items-center justify-center mt-2 text-sm font-semibold transition-all ${isCollapsed
-                ? "justify-center p-3 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200"
-                : "space-x-3 px-4 py-3 rounded-xl text-red-300 hover:bg-red-500/20 hover:text-red-200"
-                }`}
+              title="Logout"
+              className="w-full flex items-center justify-center mt-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all p-3"
             >
-              <LogOut
-                className={`${isCollapsed ? "w-6 h-6" : "w-5 h-5"} flex-shrink-0`}
-              />
-              {!isCollapsed && <span>Logout</span>}
+              <LogOut className="w-6 h-6 flex-shrink-0" />
             </button>
           </>
         )}

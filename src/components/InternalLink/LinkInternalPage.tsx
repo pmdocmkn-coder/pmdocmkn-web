@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Plus, Edit, Trash, Search, Eye, Image, Camera, X, Check, ChevronsUpDown,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Wifi, WifiOff, Settings, Activity, Link2, ChevronDown, Filter, RefreshCw,
+    Wifi, WifiOff, Settings, Activity, Link2, ChevronDown, Filter, RefreshCw, Home,
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -914,20 +914,23 @@ const LinkInternalPage: React.FC = () => {
     // ============================================
     return (
         <div className="w-full p-4 md:p-6 pb-20">
-            {/* Mobile Top App Bar */}
-            <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-4">
-                <div className="flex items-center p-4 justify-between">
-                    <div className="flex items-center gap-3">
-                        <button
-                            onClick={() => navigate("/dashboard")}
-                            className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50"
-                        >
-                            <ChevronLeft className="w-5 h-5" />
-                        </button>
-                        <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
+            {/* ====== MOBILE INTEGRATED HEADER ====== */}
+            <div className="md:hidden pt-4 pb-4 mb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl -mx-4 -mt-4 px-4 sticky top-0 z-30">
+                <div className="flex items-start justify-between pb-4">
+                    <div>
+                        <div className="flex items-center gap-1.5 mb-1 opacity-80">
+                            <span className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">Jaringan</span>
+                        </div>
+                        <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
                             Link Internal
-                        </h2>
+                        </h1>
                     </div>
+                    <button
+                        onClick={() => navigate("/dashboard")}
+                        className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors shrink-0"
+                    >
+                        <Home className="h-4 w-4" strokeWidth={2.5} />
+                    </button>
                 </div>
             </div>
 
@@ -969,8 +972,8 @@ const LinkInternalPage: React.FC = () => {
                         <button
                             onClick={() => setActiveTab("links")}
                             className={`relative overflow-hidden rounded-2xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeTab === "links"
-                                    ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-200 ring-2 ring-pink-400 ring-offset-2"
-                                    : "bg-gradient-to-br from-pink-400/80 to-rose-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                ? "bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-lg shadow-pink-200 ring-2 ring-pink-400 ring-offset-2"
+                                : "bg-gradient-to-br from-pink-400/80 to-rose-500/80 text-white/90 shadow-md hover:shadow-lg"
                                 }`}
                         >
                             <span className="text-2xl mb-1.5 opacity-90 block">🔗</span>
@@ -980,8 +983,8 @@ const LinkInternalPage: React.FC = () => {
                         <button
                             onClick={() => setActiveTab("pivot")}
                             className={`relative overflow-hidden rounded-2xl p-4 flex flex-col justify-end min-h-[100px] text-left transition-all duration-200 ${activeTab === "pivot"
-                                    ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-400 ring-offset-2"
-                                    : "bg-gradient-to-br from-emerald-400/80 to-teal-500/80 text-white/90 shadow-md hover:shadow-lg"
+                                ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-lg shadow-emerald-200 ring-2 ring-emerald-400 ring-offset-2"
+                                : "bg-gradient-to-br from-emerald-400/80 to-teal-500/80 text-white/90 shadow-md hover:shadow-lg"
                                 }`}
                         >
                             <span className="text-2xl mb-1.5 opacity-90 block">📊</span>

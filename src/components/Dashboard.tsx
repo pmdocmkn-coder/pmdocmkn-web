@@ -113,8 +113,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       description: "Manajemen Trunking, Konvensional, dll.",
       color: "from-purple-500 to-pink-500",
       tab: "radio-trunking",
-      forAll: true,
-      permission: "radio.view",
+      permission: "radio.management.menu",
     },
     {
       id: "letter-numbers",
@@ -199,7 +198,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
   // Logic to determine available menus based on User Permissions
   const currentActions = allModules.filter((item) => {
-    if (item.forAll) return true;
+    if ((item as any).forAll) return true;
     if (item.checkCustomPermission) return item.checkCustomPermission();
     if (!item.permission) return true;
     return hasPermission(item.permission);

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
+import { MobilePageHeader } from "./ui/MobilePageHeader";
 import { letterNumberApi, companyApi, documentTypeApi } from "../services/letterNumberApi";
 import { gatepassApi, quotationApi } from "../services/gatepassQuotationApi";
 import {
@@ -40,8 +41,8 @@ import {
     Check,
     ChevronsUpDown,
     Menu,
-    Bell,
     Eye,
+    Home,
 } from "lucide-react";
 import { DatePicker } from "./ui/date-picker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
@@ -152,28 +153,60 @@ export default function LetterNumberPage() {
                 </div>
             </div>
 
-            {/* Mobile Header Elements (Removed - superseded by Top App Bar) */}
-
-            {/* Tabs Container */}
-            <div className="mb-6">
-                {/* Tabs - Mobile: Underline Style Header Tab */}
-                <div className="md:hidden flex border-b border-gray-200 mb-4 bg-transparent overflow-x-auto hide-scrollbar">
-                    {tabs.map((tab) => {
-                        const activeColor = tab.color === 'indigo' ? '#4f46e5' : tab.color === 'emerald' ? '#059669' : '#7c3aed';
-                        return (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={`flex flex-1 items-center justify-center whitespace-nowrap min-w-fit px-4 py-3 text-[13px] font-bold transition-all border-b-2`}
-                                style={activeTab === tab.id ? { color: activeColor, borderColor: activeColor } : { borderColor: 'transparent', color: '#64748b' }}
+            {/* ====== MOBILE INTEGRATED HEADER ====== */}
+            <MobilePageHeader
+                label="Document Center"
+                title={
+                    <>
+                        {activeTab === "letters" && "Surat Umum"}
+                        {activeTab === "gatepass" && "Gatepass"}
+                        {activeTab === "quotation" && "Quotation"}
+                    </>
+                }
+                className="px-4"
+                contentAfterTitle={
+                    <div className="px-4 pb-3">
+                        {/* Tabs - Segmented Control (iOS Style) */}
+                        <div className="w-full bg-slate-200/60 p-[4px] rounded-[12px] relative overflow-hidden">
+                            {/* Active Background Indicator */}
+                            <div
+                                className="absolute top-[4px] bottom-[4px] left-[4px] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-0 pointer-events-none"
+                                style={{
+                                    width: 'calc((100% - 8px) / 3)',
+                                    transform: `translateX(${activeTab === 'letters' ? '0%' :
+                                        activeTab === 'gatepass' ? '100%' :
+                                            '200%'
+                                        })`
+                                }}
                             >
-                                {tab.label}
-                            </button>
-                        );
-                    })}
-                </div>
+                                <div className="w-full h-full bg-white rounded-[9px] shadow-[0_1px_3px_rgba(0,0,0,0.08),0_1px_2px_rgba(0,0,0,0.06)]" />
+                            </div>
+
+                            {/* Tab Navigation Buttons */}
+                            <div className="grid grid-cols-3 relative z-10 w-full">
+                                {tabs.map((tab) => {
+                                    const isSelected = activeTab === tab.id;
+                                    const activeColor = tab.color === 'indigo' ? 'text-indigo-700' : tab.color === 'emerald' ? 'text-emerald-700' : 'text-violet-700';
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setActiveTab(tab.id)}
+                                            className={`h-[36px] flex items-center justify-center rounded-[9px] transition-all duration-300 active:scale-[0.96] ${isSelected ? `font-semibold ${activeColor}` : 'font-medium text-slate-500'}`}
+                                        >
+                                            <span className="text-[12.5px] leading-none tracking-[-0.01em]">{tab.label}</span>
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                }
+            />
+
+            {/* Desktop Tabs Container */}
+            <div className="hidden md:block mb-6">
                 {/* Tabs - Desktop: pill style */}
-                <div className="hidden md:flex gap-1 bg-white rounded-lg p-1 shadow-sm border overflow-x-auto hide-scrollbar">
+                <div className="flex gap-1 bg-white rounded-lg p-1 shadow-sm border overflow-x-auto hide-scrollbar">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}

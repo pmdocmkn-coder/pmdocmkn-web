@@ -17,8 +17,10 @@ import {
   FileSpreadsheetIcon,
   ChevronLeft,
   FileText,
+  Home,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { MobilePageHeader } from "../ui/MobilePageHeader";
 import { swrSignalApi } from "@/services/api";
 import { useToast } from "@/hooks/use-toast";
 import SwrSitesTable from "./SwrSitesTable";
@@ -264,62 +266,57 @@ export default function SwrSignalPage() {
 
   return (
     <div className="w-full p-4 md:p-6 pb-20">
-      {/* Mobile Top App Bar */}
-      <div className="md:hidden sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-indigo-100 -mx-4 -mt-4 mb-6">
-        <div className="flex items-center px-4 pt-4 pb-2 justify-between">
-          <div className="flex items-center gap-3">
+      {/* ====== MOBILE INTEGRATED HEADER ====== */}
+      <MobilePageHeader
+        label="Monitoring"
+        title="SWR Signal"
+        className="-mx-4 -mt-4 mb-6"
+        scrollableChips={
+          <div className="flex gap-2">
             <button
-              onClick={() => navigate("/dashboard")}
-              className="text-indigo-600 flex size-10 items-center justify-center rounded-full bg-indigo-50 shadow-sm"
+              onClick={() => setShowImportInstructions(true)}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold whitespace-nowrap hover:bg-gray-100 transition-colors shadow-sm"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <AlertCircle className="w-3.5 h-3.5" />
+              Guide
             </button>
-            <div>
-              <h2 className="text-gray-900 text-lg font-bold leading-tight tracking-tight">
-                SWR Signal
-              </h2>
-              <p className="text-xs text-gray-400 mt-0.5">Monitor & manage sites</p>
-            </div>
+            {hasPermission("swr.import") && (
+              <button
+                onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors shadow-sm"
+              >
+                <Upload className="w-3.5 h-3.5" />
+                Import
+              </button>
+            )}
+            {hasPermission("swr.create") && (
+              <>
+                <button
+                  onClick={() => { setEditingSite(null); setShowSiteDialog(true); }}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Site
+                </button>
+                <button
+                  onClick={() => { setEditingChannel(null); setShowChannelDialog(true); }}
+                  className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold whitespace-nowrap hover:bg-purple-100 transition-colors shadow-sm"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Channel
+                </button>
+              </>
+            )}
+            <button
+              onClick={downloadTemplate}
+              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold whitespace-nowrap hover:bg-amber-100 transition-colors shadow-sm"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Template
+            </button>
           </div>
-        </div>
-        {/* Action chips row */}
-        <div className="flex gap-2 px-4 pb-3 overflow-x-auto no-scrollbar">
-          <button
-            onClick={() => setShowImportInstructions(true)}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold whitespace-nowrap hover:bg-gray-100 transition-colors shadow-sm"
-          >
-            <AlertCircle className="w-3.5 h-3.5" />
-            Guide
-          </button>
-          {hasPermission("swr.import") && (
-            <button
-              onClick={() => setShowImportModal(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors shadow-sm"
-            >
-              <Upload className="w-3.5 h-3.5" />
-              Import
-            </button>
-          )}
-          {hasPermission("swr.create") && (
-            <>
-              <button
-                onClick={() => { setEditingSite(null); setShowSiteDialog(true); }}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Site
-              </button>
-              <button
-                onClick={() => { setEditingChannel(null); setShowChannelDialog(true); }}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold whitespace-nowrap hover:bg-purple-100 transition-colors shadow-sm"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Channel
-              </button>
-            </>
-          )}
-        </div>
-      </div>
+        }
+      />
 
       {/* Desktop Header - Clean, no background */}
       <div className="hidden md:flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
