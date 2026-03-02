@@ -750,17 +750,24 @@ function GatepassTab() {
     const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
     const [expandedItemDetails, setExpandedItemDetails] = useState<Record<number, any>>({});
 
+    // Autocomplete suggestions from existing data
+    const [destinationSuggestions, setDestinationSuggestions] = useState<string[]>([]);
+    const [picSuggestions, setPicSuggestions] = useState<string[]>([]);
+    const [driverSuggestions, setDriverSuggestions] = useState<string[]>([]);
+
     const [formData, setFormData] = useState<GatepassCreate>({
         destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0],
-        notes: "", status: 0, items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }],
+        notes: "", status: 1, items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }],
     });
 
     const [editFormData, setEditFormData] = useState<GatepassUpdate>({
-        destination: "", picName: "", picContact: "", notes: "", status: 0,
+        destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0],
+        notes: "", status: 0,
         items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }],
     });
 
     useEffect(() => { loadItems(); }, [currentPage, searchTerm]);
+    useEffect(() => { loadSuggestions(); }, []);
 
     const loadItems = async () => {
         try {
@@ -772,6 +779,17 @@ function GatepassTab() {
         } catch (error: any) {
             toast({ title: "Error", description: error.message || "Failed to load gatepasses", variant: "destructive" });
         } finally { setLoading(false); }
+    };
+
+    const loadSuggestions = async () => {
+        try {
+            // Load all data (large pageSize) to get unique suggestion values
+            const result = await gatepassApi.getAll({ page: 1, pageSize: 500 });
+            const allItems = result.data || [];
+            setDestinationSuggestions([...new Set(allItems.map(i => i.destination).filter(Boolean))]);
+            setPicSuggestions([...new Set(allItems.map(i => i.picName).filter(Boolean))]);
+            setDriverSuggestions([...new Set(allItems.map(i => i.picContact).filter((v): v is string => Boolean(v)))]);
+        } catch { /* silent */ }
     };
 
     const addItem = () => {
@@ -831,10 +849,18 @@ function GatepassTab() {
         setSelectedItem(item);
         try {
             const detail = await gatepassApi.getById(item.id);
+            // Collect driver suggestions from expanded detail
+            if (detail.picContact) {
+                setDriverSuggestions(prev => [...new Set([...prev, detail.picContact!])]);
+            }
+            const dateStr = detail.gatepassDate
+                ? format(new Date(detail.gatepassDate), "yyyy-MM-dd")
+                : new Date().toISOString().split("T")[0];
             setEditFormData({
                 destination: detail.destination,
                 picName: detail.picName,
                 picContact: detail.picContact || "",
+                gatepassDate: dateStr,
                 notes: detail.notes || "",
                 status: detail.status === "Sent" ? 1 : 0,
                 items: detail.items.map(i => ({
@@ -846,7 +872,7 @@ function GatepassTab() {
                 })),
             });
         } catch {
-            setEditFormData({ destination: item.destination, picName: item.picName, picContact: item.picContact || "", notes: "", status: item.status === "Sent" ? 1 : 0, items: [] });
+            setEditFormData({ destination: item.destination, picName: item.picName, picContact: item.picContact || "", gatepassDate: item.gatepassDate, notes: "", status: item.status === "Sent" ? 1 : 0, items: [] });
         }
         setIsEditDialogOpen(true);
     };
@@ -883,7 +909,7 @@ function GatepassTab() {
     };
 
     const resetForm = () => {
-        setFormData({ destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0], notes: "", status: 0, items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }] });
+        setFormData({ destination: "", picName: "", picContact: "", gatepassDate: new Date().toISOString().split("T")[0], notes: "", status: 1, items: [{ itemName: "", quantity: 1, unit: "EA", description: "", serialNumber: "" }] });
         setSelectedItem(null);
     };
 
@@ -1125,11 +1151,27 @@ function GatepassTab() {
                         <DialogTitle>Buat Gatepass Baru</DialogTitle>
                         <DialogDescription>Isi data untuk membuat gatepass baru.</DialogDescription>
                     </DialogHeader>
+                    {/* Datalist for autocomplete */}
+                    <datalist id="gp-destination-list">
+                        {destinationSuggestions.map((s, i) => <option key={i} value={s} />)}
+                    </datalist>
+                    <datalist id="gp-pic-list">
+                        {picSuggestions.map((s, i) => <option key={i} value={s} />)}
+                    </datalist>
+                    <datalist id="gp-driver-list">
+                        {driverSuggestions.map((s, i) => <option key={i} value={s} />)}
+                    </datalist>
+
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Tujuan *</Label>
-                                <Input value={formData.destination} onChange={(e) => setFormData({ ...formData, destination: e.target.value })} placeholder="Tujuan pengiriman" />
+                                <Input
+                                    list="gp-destination-list"
+                                    value={formData.destination}
+                                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                                    placeholder="Tujuan pengiriman"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>Tanggal *</Label>
@@ -1143,11 +1185,21 @@ function GatepassTab() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Nama PIC *</Label>
-                                <Input value={formData.picName} onChange={(e) => setFormData({ ...formData, picName: e.target.value })} placeholder="Nama PIC" />
+                                <Input
+                                    list="gp-pic-list"
+                                    value={formData.picName}
+                                    onChange={(e) => setFormData({ ...formData, picName: e.target.value })}
+                                    placeholder="Nama PIC"
+                                />
                             </div>
                             <div className="space-y-2">
                                 <Label>Nama Driver / Pembawa Gatepass</Label>
-                                <Input value={formData.picContact || ""} onChange={(e) => setFormData({ ...formData, picContact: e.target.value })} placeholder="Masukkan nama driver / pembawa" />
+                                <Input
+                                    list="gp-driver-list"
+                                    value={formData.picContact || ""}
+                                    onChange={(e) => setFormData({ ...formData, picContact: e.target.value })}
+                                    placeholder="Masukkan nama driver / pembawa"
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
@@ -1214,28 +1266,62 @@ function GatepassTab() {
                         <DialogTitle>Edit Gatepass</DialogTitle>
                         <DialogDescription>Update detail gatepass.</DialogDescription>
                     </DialogHeader>
+                    {/* Datalist for autocomplete */}
+                    <datalist id="gp-edit-destination-list">
+                        {destinationSuggestions.map((s, i) => <option key={i} value={s} />)}
+                    </datalist>
+                    <datalist id="gp-edit-pic-list">
+                        {picSuggestions.map((s, i) => <option key={i} value={s} />)}
+                    </datalist>
+                    <datalist id="gp-edit-driver-list">
+                        {driverSuggestions.map((s, i) => <option key={i} value={s} />)}
+                    </datalist>
+
                     <div className="grid gap-4 py-4">
                         <div className="grid grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Tujuan *</Label>
-                                <Input value={editFormData.destination} onChange={(e) => setEditFormData({ ...editFormData, destination: e.target.value })} placeholder="Tujuan pengiriman" />
+                                <Input
+                                    list="gp-edit-destination-list"
+                                    value={editFormData.destination}
+                                    onChange={(e) => setEditFormData({ ...editFormData, destination: e.target.value })}
+                                    placeholder="Tujuan pengiriman"
+                                />
                             </div>
                             <div className="space-y-2">
-                                <Label>Nama PIC *</Label>
-                                <Input value={editFormData.picName} onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })} placeholder="Nama PIC" />
+                                <Label>Tanggal *</Label>
+                                <DatePicker
+                                    date={editFormData.gatepassDate ? new Date(editFormData.gatepassDate) : undefined}
+                                    onSelect={(d) => setEditFormData({ ...editFormData, gatepassDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                    className="w-full"
+                                />
                             </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
-                                <Label>Nama Driver / Pembawa Gatepass</Label>
-                                <Input value={editFormData.picContact || ""} onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })} placeholder="Masukkan nama driver / pembawa" />
+                                <Label>Nama PIC *</Label>
+                                <Input
+                                    list="gp-edit-pic-list"
+                                    value={editFormData.picName}
+                                    onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })}
+                                    placeholder="Nama PIC"
+                                />
                             </div>
+                            <div className="space-y-2">
+                                <Label>Nama Driver / Pembawa Gatepass</Label>
+                                <Input
+                                    list="gp-edit-driver-list"
+                                    value={editFormData.picContact || ""}
+                                    onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })}
+                                    placeholder="Masukkan nama driver / pembawa"
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Catatan</Label>
                                 <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} placeholder="Catatan tambahan" />
                             </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Status</Label>
                                 <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Upload,
   FileText,
@@ -7,11 +7,15 @@ import {
   AlertCircle,
   ArrowLeft,
   Loader2,
+  UploadCloud,
+  File,
+  Info,
 } from "lucide-react";
 import { callRecordApi } from "../services/api";
 import { UploadCsvResponse } from "../types/callRecord";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier } from "framer-motion";
+import { MobilePageHeader } from "./ui/MobilePageHeader";
 
 interface UploadPageProps {
   onBack: () => void;
@@ -23,59 +27,11 @@ const UploadPage: React.FC<UploadPageProps> = ({ onBack, setActiveTab }) => {
   const [isUploading, setIsUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadResult, setUploadResult] = useState<UploadCsvResponse | null>(
-    null
-  );
+  const [uploadResult, setUploadResult] = useState<UploadCsvResponse | null>(null);
 
-  // Animation variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: cubicBezier(0.25, 0.46, 0.45, 0.94),
-      },
-    },
-  };
-
-  const cardHoverVariants = {
-    rest: {
-      scale: 1,
-      y: 0,
-    },
-    hover: {
-      scale: 1.02,
-      y: -4,
-      transition: {
-        duration: 0.3,
-        ease: cubicBezier(0.25, 0.46, 0.45, 0.94),
-      },
-    },
-  };
-
-  const pulseVariants = {
-    pulse: {
-      scale: [1, 1.05, 1],
-      transition: {
-        duration: 2,
-        repeat: Infinity,
-
-        ease: cubicBezier(0.4, 0, 0.6, 1),
-      },
-    },
-  };
+  useEffect(() => {
+    console.log("UploadPage Mounted - Version 4.0");
+  }, []);
 
   const handleBack = () => {
     onBack?.();
@@ -113,82 +69,31 @@ const UploadPage: React.FC<UploadPageProps> = ({ onBack, setActiveTab }) => {
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-5xl mx-auto flex-1 mt-10 md:mt-12 px-4"
-    >
-      {/* Header */}
-      <motion.div
-        variants={itemVariants}
-        initial="hidden"
-        animate="visible"
-        className="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 mb-8"
-      >
-        <div className="flex items-center justify-between relative">
-          <motion.button
-            whileHover={{ scale: 1.05, x: -2 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={handleBack}
-            className="absolute left-0 p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </motion.button>
-
-          <div className="flex-1 text-center">
-            <motion.h1
-              className="text-3xl font-bold text-gray-900"
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
+    <div className="w-full">
+      {/* ==================== MOBILE VIEW (md:hidden) ==================== */}
+      <div className="md:hidden bg-[#f8f5fc] min-h-screen pb-24 text-slate-900 font-sans -mt-8 -mx-6">
+        <MobilePageHeader
+          label="Call Records"
+          title="Upload CSV"
+          rightAction={
+            <button
+              onClick={handleBack}
+              className="flex items-center justify-center rounded-xl h-9 w-9 bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg active:scale-90 transition-all"
             >
-              Upload Data File
-            </motion.h1>
-            <motion.p
-              className="text-gray-500 mt-2"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.3 }}
-            >
-              Import data (CSV format) untuk dianalisis dalam sistem
-            </motion.p>
-          </div>
+              <ArrowLeft className="w-4 h-4" />
+            </button>
+          }
+        />
 
-          <div className="w-9"></div>
-        </div>
-      </motion.div>
-
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-1 lg:grid-cols-3 gap-8"
-      >
-        {/* Upload Area */}
-        <div className="lg:col-span-2">
-          <motion.div
-            variants={cardHoverVariants}
-            initial="rest"
-            whileHover="hover"
-            whileTap={{ scale: 0.98 }}
-            className={`border-2 border-dashed rounded-2xl p-10 text-center transition-all duration-200 ${
-              dragOver
-                ? "border-blue-500 bg-blue-50 shadow-md"
-                : "border-gray-300 bg-white hover:border-gray-400"
-            } ${isUploading ? "opacity-50" : ""}`}
-            onDrop={handleDrop}
-            onDragOver={(e) => {
-              e.preventDefault();
-              setDragOver(true);
-            }}
-            onDragLeave={() => setDragOver(false)}
-            onClick={() =>
-              !isUploading && document.getElementById("file-input")?.click()
-            }
+        <div className="px-4 space-y-4 pt-4">
+          {/* Upload Area */}
+          <div
+            className={`border-2 border-dashed rounded-3xl p-10 text-center transition-all duration-200 ${dragOver ? "border-purple-500 bg-purple-50/50" : "border-purple-200 bg-white"
+              } ${isUploading ? "opacity-60 pointer-events-none" : ""}`}
+            onClick={() => !isUploading && document.getElementById("file-input-mobile")?.click()}
           >
             <input
-              id="file-input"
+              id="file-input-mobile"
               type="file"
               accept=".csv,.txt"
               onChange={handleFileSelect}
@@ -196,240 +101,247 @@ const UploadPage: React.FC<UploadPageProps> = ({ onBack, setActiveTab }) => {
               disabled={isUploading}
             />
 
-            <AnimatePresence mode="wait">
-              {isUploading ? (
-                <motion.div
-                  key="uploading"
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.8 }}
-                  className="flex flex-col items-center"
+            {isUploading ? (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-16 h-16 rounded-full border-[3px] border-purple-100 border-t-purple-600 animate-spin" />
+                <p className="text-sm font-bold text-slate-700">Mengupload File...</p>
+                <p className="text-[11px] text-slate-500">Memproses: {selectedFile?.name}</p>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center gap-4">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-purple-500/10 to-purple-600/10 flex items-center justify-center">
+                  <UploadCloud className="w-10 h-10 text-purple-600" />
+                </div>
+                <div>
+                  <p className="text-base font-black text-slate-800">Tap untuk pilih file</p>
+                  <p className="text-[11px] text-slate-500 mt-1">Format CSV • Maks 100MB</p>
+                </div>
+                <button
+                  type="button"
+                  className="bg-gradient-to-r from-purple-600 to-purple-700 text-white px-8 py-3 rounded-2xl text-[12px] font-bold shadow-xl shadow-purple-500/20 active:scale-95 transition-all"
                 >
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{
-                      duration: 1,
-                      repeat: Infinity,
-                      ease: "linear",
-                    }}
-                    className="rounded-full h-16 w-16 border-b-2 border-blue-500 mb-4 flex items-center justify-center"
-                  >
-                    <Loader2 className="w-8 h-8 text-blue-500" />
-                  </motion.div>
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="text-lg font-medium text-gray-700"
-                  >
-                    Uploading...
-                  </motion.p>
-                  <motion.p
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-sm text-gray-500 mt-2"
-                  >
-                    Processing {selectedFile?.name}
-                  </motion.p>
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="ready"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="flex flex-col items-center"
-                >
-                  <motion.div
-                    variants={pulseVariants}
-                    animate="pulse"
-                    className="mb-4"
-                  >
-                    <Upload className="w-16 h-16 text-blue-400" />
-                  </motion.div>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="text-xl font-semibold text-gray-700 mb-2"
-                  >
-                    Drag & Drop File
-                  </motion.p>
-                  <motion.p
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ delay: 0.2 }}
-                    className="text-gray-500 mb-4"
-                  >
-                    or click to browse and upload your CSV
-                  </motion.p>
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    type="button"
-                    className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors shadow-md"
-                  >
-                    Select File
-                  </motion.button>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </motion.div>
-
-          {/* Upload Results */}
-          <AnimatePresence>
-            {uploadResult && (
-              <motion.div
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ type: "spring", stiffness: 300, damping: 25 }}
-                className={`mt-8 p-6 rounded-2xl border shadow-sm ${
-                  uploadResult.records.successfulRecords > 0
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
-                }`}
-              >
-                <motion.h3
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: 0.1 }}
-                  className={`text-lg font-semibold mb-4 ${
-                    uploadResult.records.successfulRecords > 0
-                      ? "text-green-800"
-                      : "text-red-800"
-                  }`}
-                >
-                  {uploadResult.records.successfulRecords > 0
-                    ? "Upload Successful!"
-                    : "Upload Completed with Issues"}
-                </motion.h3>
-
-                <motion.div
-                  className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2, staggerChildren: 0.1 }}
-                >
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-green-100 text-green-800 p-3 rounded-lg"
-                  >
-                    <div className="font-semibold">Successful</div>
-                    <div className="text-2xl font-bold">
-                      {uploadResult.records.successfulRecords.toLocaleString()}
-                    </div>
-                  </motion.div>
-                  {uploadResult.records.failedRecords > 0 && (
-                    <motion.div
-                      initial={{ scale: 0.8, opacity: 0 }}
-                      animate={{ scale: 1, opacity: 1 }}
-                      transition={{ delay: 0.4 }}
-                      className="bg-red-100 text-red-800 p-3 rounded-lg"
-                    >
-                      <div className="font-semibold">Failed</div>
-                      <div className="text-2xl font-bold">
-                        {uploadResult.totalTimeMs}ms
-                      </div>
-                    </motion.div>
-                  )}
-                  <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="bg-blue-100 text-blue-800 p-3 rounded-lg"
-                  >
-                    <div className="font-semibold">Total</div>
-                    <div className="text-2xl font-bold">
-                      {(
-                        uploadResult.records.successfulRecords +
-                        uploadResult.records.failedRecords
-                      ).toLocaleString()}
-                    </div>
-                  </motion.div>
-                </motion.div>
-              </motion.div>
+                  Buka File Browser
+                </button>
+              </div>
             )}
-          </AnimatePresence>
+          </div>
+
+          {/* Selected File Info */}
+          {selectedFile && !isUploading && (
+            <div className="bg-white rounded-2xl border border-purple-50 shadow-sm p-4 flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-blue-50 flex items-center justify-center flex-shrink-0">
+                <File className="w-6 h-6 text-blue-500" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] font-bold text-slate-800 truncate">{selectedFile.name}</p>
+                <p className="text-[11px] text-slate-400 font-medium">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+              </div>
+              <div className="w-8 h-8 rounded-full bg-emerald-50 flex items-center justify-center">
+                <CheckCircle className="w-5 h-5 text-emerald-500" />
+              </div>
+            </div>
+          )}
+
+          {/* Upload Result */}
+          {uploadResult && (
+            <div className={`rounded-3xl p-5 border shadow-sm ${uploadResult.records.successfulRecords > 0 ? "bg-emerald-50/50 border-emerald-100" : "bg-red-50/50 border-red-100"
+              }`}>
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${uploadResult.records.successfulRecords > 0 ? "bg-emerald-500" : "bg-red-500"
+                  }`}>
+                  {uploadResult.records.successfulRecords > 0 ? (
+                    <CheckCircle className="w-5 h-5 text-white" />
+                  ) : (
+                    <XCircle className="w-5 h-5 text-white" />
+                  )}
+                </div>
+                <h3 className={`text-[14px] font-black ${uploadResult.records.successfulRecords > 0 ? "text-emerald-800" : "text-red-800"
+                  }`}>
+                  {uploadResult.records.successfulRecords > 0 ? "Upload Selesai!" : "Terjadi Kesalahan"}
+                </h3>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div className="bg-white rounded-2xl p-3 border border-emerald-100/50 text-center shadow-sm">
+                  <p className="text-[9px] font-black text-emerald-400 uppercase tracking-widest mb-1">Sukses</p>
+                  <p className="text-[18px] font-black text-emerald-700">{uploadResult.records.successfulRecords.toLocaleString()}</p>
+                </div>
+                {uploadResult.records.failedRecords > 0 && (
+                  <div className="bg-white rounded-2xl p-3 border border-red-100/50 text-center shadow-sm">
+                    <p className="text-[9px] font-black text-red-400 uppercase tracking-widest mb-1">Gagal</p>
+                    <p className="text-[18px] font-black text-red-700">{uploadResult.records.failedRecords.toLocaleString()}</p>
+                  </div>
+                )}
+                <div className="bg-white rounded-2xl p-3 border border-blue-100/50 text-center shadow-sm">
+                  <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest mb-1">Total</p>
+                  <p className="text-[18px] font-black text-blue-700">
+                    {(uploadResult.records.successfulRecords + uploadResult.records.failedRecords).toLocaleString()}
+                  </p>
+                </div>
+              </div>
+              <p className="mt-3 text-[10px] text-slate-400 text-center font-bold">Waktu Proses: {uploadResult.totalTimeMs}ms</p>
+            </div>
+          )}
+
+          {/* Guidelines */}
+          <div className="bg-white rounded-3xl border border-purple-50 shadow-sm p-5">
+            <h3 className="text-[13px] font-black text-slate-800 mb-4 flex items-center gap-2">
+              <Info className="w-5 h-5 text-purple-500" />
+              Aturan Upload File
+            </h3>
+            <div className="space-y-3.5">
+              {[
+                { text: "Format CSV dengan pemisah koma (,)", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
+                { text: "Ukuran file maksimum 100MB", icon: CheckCircle, color: "text-emerald-500", bg: "bg-emerald-50" },
+                { text: "Validasi otomatis saat import", icon: AlertCircle, color: "text-amber-500", bg: "bg-amber-50" },
+              ].map((item, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-xl ${item.bg} flex items-center justify-center flex-shrink-0`}>
+                    <item.icon className={`w-4 h-4 ${item.color}`} />
+                  </div>
+                  <span className="text-[12px] font-bold text-slate-600">{item.text}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ==================== DESKTOP VIEW (hidden md:block) ==================== */}
+      <div className="hidden md:block max-w-5xl mx-auto flex-1 mt-10 md:mt-12 px-4">
+        <div className="bg-white rounded-3xl shadow-sm border border-gray-100 p-8 mb-8 overflow-hidden relative">
+          {/* Accent gradient */}
+          <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-purple-500 to-indigo-600" />
+
+          <div className="flex items-center justify-between">
+            <button
+              onClick={handleBack}
+              className="p-3 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-2xl transition-all"
+            >
+              <ArrowLeft className="w-6 h-6" />
+            </button>
+
+            <div className="flex-1 text-center">
+              <h1 className="text-3xl font-black text-slate-900 leading-tight">Upload CSV Records</h1>
+              <p className="text-slate-500 mt-2 font-medium">
+                Import data call record terbaru untuk dianalisis dalam sistem
+              </p>
+            </div>
+            <div className="w-12"></div>
+          </div>
         </div>
 
-        {/* File Requirements */}
-        <motion.div
-          variants={itemVariants}
-          className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm"
-        >
-          <motion.h3
-            className="text-lg font-semibold text-gray-900 mb-4 flex items-center"
-            whileHover={{ x: 5 }}
-            transition={{ type: "spring", stiffness: 400 }}
-          >
-            <FileText className="w-5 h-5 mr-2" /> File Guidelines
-          </motion.h3>
-          <motion.ul className="space-y-3 text-sm">
-            {[
-              {
-                text: "CSV format with comma separator",
-                icon: CheckCircle,
-                color: "text-green-600",
-              },
-              {
-                text: "Max file size: 100MB",
-                icon: CheckCircle,
-                color: "text-green-600",
-              },
-              {
-                text: "File will be validated before import",
-                icon: AlertCircle,
-                color: "text-amber-600",
-              },
-            ].map((item, index) => (
-              <motion.li
-                key={index}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.6 + index * 0.1 }}
-                className="flex items-center"
-              >
-                <item.icon className={`w-4 h-4 mr-2 ${item.color}`} />
-                <span className={item.color}>{item.text}</span>
-              </motion.li>
-            ))}
-          </motion.ul>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pb-12">
+          {/* Upload Area */}
+          <div className="lg:col-span-2 space-y-8">
+            <div
+              className={`border-2 border-dashed rounded-3xl p-16 text-center transition-all duration-300 relative group overflow-hidden ${dragOver ? "border-purple-500 bg-purple-50" : "border-slate-200 bg-white hover:border-purple-300"
+                } ${isUploading ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}`}
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onClick={() => !isUploading && document.getElementById("file-input-desktop")?.click()}
+            >
+              <input
+                id="file-input-desktop"
+                type="file"
+                accept=".csv"
+                onChange={handleFileSelect}
+                className="hidden"
+              />
 
-          <AnimatePresence>
-            {selectedFile && !isUploading && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="mt-5 p-4 bg-blue-50 rounded-lg border border-blue-200 flex items-center justify-between overflow-hidden"
-              >
-                <div className="flex items-center">
-                  <FileText className="w-5 h-5 text-blue-600 mr-3" />
-                  <div>
-                    <p className="font-medium text-blue-900">
-                      {selectedFile.name}
-                    </p>
-                    <p className="text-sm text-blue-700">
-                      {(selectedFile.size / 1024 / 1024).toFixed(2)} MB
+              {isUploading ? (
+                <div className="flex flex-col items-center">
+                  <div className="w-16 h-16 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin mb-6" />
+                  <p className="text-xl font-bold text-slate-800">Sedang Mengunggah...</p>
+                  <p className="text-slate-500 mt-2">Memproses {selectedFile?.name}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center group-hover:transform group-hover:scale-105 transition-transform duration-300">
+                  <div className="w-24 h-24 rounded-3xl bg-purple-50 flex items-center justify-center mb-6 group-hover:bg-purple-100 transition-colors">
+                    <UploadCloud className="w-12 h-12 text-purple-600" />
+                  </div>
+                  <h3 className="text-2xl font-black text-slate-900 mb-2">Drag & Drop File CSV</h3>
+                  <p className="text-slate-500 mb-8 max-w-sm mx-auto">
+                    Seret file Anda ke sini atau klik tombol di bawah untuk memilih file dari komputer Anda
+                  </p>
+                  <button className="bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-10 py-4 rounded-2xl font-bold text-lg shadow-xl shadow-purple-500/20 hover:shadow-purple-500/40 active:scale-95 transition-all">
+                    Pilih File CSV
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Results */}
+            {uploadResult && (
+              <div className={`p-8 rounded-3xl border shadow-lg ${uploadResult.records.successfulRecords > 0 ? "bg-emerald-50 border-emerald-100" : "bg-red-50 border-red-100"
+                }`}>
+                <h3 className={`text-xl font-black mb-6 ${uploadResult.records.successfulRecords > 0 ? "text-emerald-900" : "text-red-900"
+                  }`}>
+                  {uploadResult.records.successfulRecords > 0 ? "File Berhasil Diimport!" : "Hasil Import Dengan Peringatan"}
+                </h3>
+                <div className="grid grid-cols-3 gap-6">
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-emerald-100/50">
+                    <p className="text-xs font-bold text-emerald-500 uppercase tracking-widest mb-1">Berhasil</p>
+                    <p className="text-3xl font-black text-emerald-700">{uploadResult.records.successfulRecords.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-red-100/50">
+                    <p className="text-xs font-bold text-red-500 uppercase tracking-widest mb-1">Gagal</p>
+                    <p className="text-3xl font-black text-red-700">{uploadResult.records.failedRecords.toLocaleString()}</p>
+                  </div>
+                  <div className="bg-white rounded-2xl p-5 shadow-sm border border-indigo-100/50">
+                    <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mb-1">Total</p>
+                    <p className="text-3xl font-black text-indigo-700">
+                      {(uploadResult.records.successfulRecords + uploadResult.records.failedRecords).toLocaleString()}
                     </p>
                   </div>
                 </div>
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 500 }}
-                >
-                  <CheckCircle className="w-5 h-5 text-green-500" />
-                </motion.div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
-        </motion.div>
-      </motion.div>
-    </motion.div>
+          </div>
+
+          {/* Guidelines Sidebar */}
+          <div className="space-y-6">
+            <div className="bg-white rounded-3xl p-8 border border-slate-100 shadow-sm sticky top-28">
+              <h3 className="text-xl font-black text-slate-900 mb-6 flex items-center gap-2">
+                <FileText className="w-6 h-6 text-purple-600" />
+                Panduan Import
+              </h3>
+              <ul className="space-y-5">
+                {[
+                  { title: "Format File", text: "Gunakan ekstensi .csv", icon: CheckCircle, color: "text-emerald-500" },
+                  { title: "Ukuran", text: "Maksimal size file 100MB", icon: CheckCircle, color: "text-emerald-500" },
+                  { title: "Validasi", text: "Sistem akan mendeteksi baris ganda", icon: AlertCircle, color: "text-amber-500" },
+                  { title: "Struktur", text: "Pastikan kolom sesuai template", icon: CheckCircle, color: "text-emerald-500" },
+                ].map((item, i) => (
+                  <li key={i} className="flex items-start gap-4">
+                    <div className="mt-1">
+                      <item.icon className={`w-5 h-5 ${item.color}`} />
+                    </div>
+                    <div>
+                      <p className="text-sm font-black text-slate-800">{item.title}</p>
+                      <p className="text-xs text-slate-500 font-medium">{item.text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+
+              {selectedFile && !isUploading && (
+                <div className="mt-8 pt-8 border-t border-slate-100">
+                  <div className="bg-purple-50 rounded-2xl p-4 flex items-center gap-3">
+                    <File className="w-6 h-6 text-purple-600" />
+                    <div className="min-w-0">
+                      <p className="text-xs font-black text-purple-900 truncate">{selectedFile.name}</p>
+                      <p className="text-[10px] text-purple-600/70 font-bold uppercase">SIAP IMPORT</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

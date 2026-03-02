@@ -22,7 +22,9 @@ import {
   RefreshCw,
   X,
   Clock,
+  UploadCloud,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { callRecordApi } from "../services/api";
 import {
   CallRecord,
@@ -60,6 +62,7 @@ interface QueryParams {
 }
 
 const CallRecordsPage: React.FC = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const hasFullAccess = hasPermission("callrecord.view-any");
 
@@ -472,7 +475,7 @@ const CallRecordsPage: React.FC = () => {
         </div>
 
         {/* Date Picker */}
-        <div className="px-4 mb-4">
+        <div className="px-4 mb-3">
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Pilih Tanggal</label>
             <div className="bg-white rounded-xl border border-purple-100/60 shadow-[0_1px_8px_rgba(147,17,212,0.04)] overflow-hidden">
@@ -483,6 +486,30 @@ const CallRecordsPage: React.FC = () => {
               />
             </div>
           </div>
+        </div>
+
+        {/* Shortcut Actions */}
+        <div className="px-4 mb-6 grid grid-cols-2 gap-3">
+          <button
+            onClick={() => navigate('/upload')}
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-purple-50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-2 group-active:bg-purple-100 transition-colors">
+              <UploadCloud className="w-5 h-5 text-purple-600" />
+            </div>
+            <span className="text-[11px] font-black text-slate-800">Upload CSV</span>
+            <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Import Data Panggilan</p>
+          </button>
+          <button
+            onClick={() => navigate('/export')}
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-purple-50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all group"
+          >
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mb-2 group-active:bg-indigo-100 transition-colors">
+              <FileDown className="w-5 h-5 text-indigo-600" />
+            </div>
+            <span className="text-[11px] font-black text-slate-800">Export Data</span>
+            <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Download Laporan</p>
+          </button>
         </div>
 
         {/* Error Banner */}

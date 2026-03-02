@@ -68,6 +68,7 @@ export interface GatepassUpdate {
     destination: string;
     picName: string;
     picContact?: string;
+    gatepassDate?: string;
     signatureQRCode?: string;
     notes?: string;
     status: number;
