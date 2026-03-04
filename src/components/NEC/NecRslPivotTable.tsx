@@ -390,114 +390,117 @@ const NecRslPivotTable: React.FC = () => {
               </div>
 
               {/* Chart */}
-              <div className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4">
-                <ResponsiveContainer width="100%" height={500}>
-                  <LineChart
-                    data={chartData}
-                    margin={{ top: 20, right: 60, left: 20, bottom: 20 }}
-                  >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis
-                      dataKey="month"
-                      angle={0}
-                      textAnchor="middle"
-                      height={30}
-                      tick={{ fontSize: 12, fill: "#6b7280" }}
-                    />
-                    <YAxis
-                      domain={[-70, -30]}
-                      label={{
-                        value: "RSL (dBm)",
-                        angle: -90,
-                        position: "insideLeft",
-                        style: { fontSize: 12, fill: "#6b7280" },
-                      }}
-                      tick={{ fontSize: 11, fill: "#6b7280" }}
-                    />
-                    <Tooltip
-                      formatter={(value) => {
-                        if (value === null || value === undefined)
-                          return "No Data";
-                        return `${value} dBm`;
-                      }}
-                      contentStyle={{
-                        backgroundColor: "rgba(255, 255, 255, 0.96)",
-                        border: "1px solid #e5e7eb",
-                        borderRadius: "8px",
-                        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
-                      }}
-                    />
-
-                    {/* Reference Lines */}
-                    <ReferenceLine
-                      y={-45}
-                      stroke="#10b981"
-                      strokeDasharray="3 3"
-                      strokeWidth={1.5}
-                      label={{
-                        value: "Optimal (-45)",
-                        position: "right",
-                        fill: "#10b981",
-                        fontSize: 10,
-                        fontWeight: 600,
-                      }}
-                    />
-                    <ReferenceLine
-                      y={-55}
-                      stroke="#f59e0b"
-                      strokeDasharray="3 3"
-                      strokeWidth={1.5}
-                      label={{
-                        value: "Warning (-55)",
-                        position: "right",
-                        fill: "#f59e0b",
-                        fontSize: 10,
-                        fontWeight: 600,
-                      }}
-                    />
-                    <ReferenceLine
-                      y={-60}
-                      stroke="#fb923c"
-                      strokeDasharray="3 3"
-                      strokeWidth={1.5}
-                      label={{
-                        value: "Sub-opt (-60)",
-                        position: "right",
-                        fill: "#fb923c",
-                        fontSize: 10,
-                        fontWeight: 600,
-                      }}
-                    />
-                    <ReferenceLine
-                      y={-65}
-                      stroke="#dc2626"
-                      strokeDasharray="3 3"
-                      strokeWidth={1.5}
-                      label={{
-                        value: "Critical (-65)",
-                        position: "right",
-                        fill: "#dc2626",
-                        fontSize: 10,
-                        fontWeight: 600,
-                      }}
-                    />
-
-                    {/* Lines for all links */}
-                    {pivotData.map((link, idx) => (
-                      <Line
-                        key={link.linkName}
-                        type="monotone"
-                        dataKey={link.linkName}
-                        stroke={COLORS[idx % COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 3, strokeWidth: 2 }}
-                        activeDot={{ r: 5 }}
-                        connectNulls={false}
-                        name={link.linkName}
+              <div className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-2 md:p-4 overflow-x-auto no-scrollbar">
+                <div className="min-w-[700px] h-[500px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart
+                      data={chartData}
+                      margin={{ top: 20, right: 60, left: 10, bottom: 20 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                      <XAxis
+                        dataKey="month"
+                        angle={0}
+                        textAnchor="middle"
+                        height={30}
+                        tick={{ fontSize: 10, fill: "#6b7280" }}
+                        interval="preserveStartEnd"
                       />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
+                      <YAxis
+                        domain={[-70, -30]}
+                        label={{
+                          value: "RSL (dBm)",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: { fontSize: 12, fill: "#6b7280" },
+                        }}
+                        tick={{ fontSize: 11, fill: "#6b7280" }}
+                      />
+                      <Tooltip
+                        formatter={(value) => {
+                          if (value === null || value === undefined)
+                            return "No Data";
+                          return `${value} dBm`;
+                        }}
+                        contentStyle={{
+                          backgroundColor: "rgba(255, 255, 255, 0.96)",
+                          border: "1px solid #e5e7eb",
+                          borderRadius: "8px",
+                          boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
+                        }}
+                      />
+
+                      {/* Reference Lines */}
+                      <ReferenceLine
+                        y={-45}
+                        stroke="#10b981"
+                        strokeDasharray="3 3"
+                        strokeWidth={1.5}
+                        label={{
+                          value: "Optimal (-45)",
+                          position: "right",
+                          fill: "#10b981",
+                          fontSize: 10,
+                          fontWeight: 600,
+                        }}
+                      />
+                      <ReferenceLine
+                        y={-55}
+                        stroke="#f59e0b"
+                        strokeDasharray="3 3"
+                        strokeWidth={1.5}
+                        label={{
+                          value: "Warning (-55)",
+                          position: "right",
+                          fill: "#f59e0b",
+                          fontSize: 10,
+                          fontWeight: 600,
+                        }}
+                      />
+                      <ReferenceLine
+                        y={-60}
+                        stroke="#fb923c"
+                        strokeDasharray="3 3"
+                        strokeWidth={1.5}
+                        label={{
+                          value: "Sub-opt (-60)",
+                          position: "right",
+                          fill: "#fb923c",
+                          fontSize: 10,
+                          fontWeight: 600,
+                        }}
+                      />
+                      <ReferenceLine
+                        y={-65}
+                        stroke="#dc2626"
+                        strokeDasharray="3 3"
+                        strokeWidth={1.5}
+                        label={{
+                          value: "Critical (-65)",
+                          position: "right",
+                          fill: "#dc2626",
+                          fontSize: 10,
+                          fontWeight: 600,
+                        }}
+                      />
+
+                      {/* Lines for all links */}
+                      {pivotData.map((link, idx) => (
+                        <Line
+                          key={link.linkName}
+                          type="monotone"
+                          dataKey={link.linkName}
+                          stroke={COLORS[idx % COLORS.length]}
+                          strokeWidth={2}
+                          dot={{ r: 3, strokeWidth: 2 }}
+                          activeDot={{ r: 5 }}
+                          connectNulls={false}
+                          name={link.linkName}
+                        />
+                      ))}
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
 
               {/* Scrollable Legend */}
@@ -544,19 +547,33 @@ const NecRslPivotTable: React.FC = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
               {/* Chart */}
               <div className="flex justify-center">
-                <ResponsiveContainer width="100%" height={320}>
+                <ResponsiveContainer width="100%" height={260}>
                   <PieChart>
                     <Pie
                       data={generatePieChartData()}
                       cx="50%"
                       cy="50%"
-                      labelLine={true}
-                      label={(entry) =>
-                        `${entry.name}: ${((entry.percent ?? 0) * 100).toFixed(
-                          0
-                        )}%`
-                      }
-                      outerRadius={100}
+                      labelLine={false}
+                      label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                        const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+
+                        return percent > 0 ? (
+                          <text
+                            x={x}
+                            y={y}
+                            fill="white"
+                            textAnchor="middle"
+                            dominantBaseline="central"
+                            fontSize="12"
+                            fontWeight="bold"
+                          >
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        ) : null;
+                      }}
+                      outerRadius="95%"
                       fill="#8884d8"
                       dataKey="value"
                     >
@@ -612,7 +629,91 @@ const NecRslPivotTable: React.FC = () => {
             </div>
           ) : pivotData.length > 0 ? (
             <>
-              <div className="overflow-x-auto rounded-md border">
+              {/* === MOBILE PIVOT VIEW === */}
+              <div className="md:hidden space-y-4 mb-4">
+                {pivotData.map((row, rowIdx) => (
+                  <div key={rowIdx} className="bg-white rounded-xl shadow-[0_2px_12px_rgba(0,0,0,0.03)] border border-blue-50 overflow-hidden">
+                    <div className="px-4 py-3 bg-gradient-to-r from-blue-600 to-indigo-700">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <h4 className="font-bold text-white text-sm">{row.linkName}</h4>
+                          <p className="text-[10px] text-blue-100 font-medium tracking-wide uppercase mt-0.5">TOWER: {row.tower}</p>
+                        </div>
+                        <span className="text-[10px] font-black text-blue-700 bg-white px-2 py-0.5 rounded-full shadow-sm">
+                          #{rowIdx + 1}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="p-3">
+                      <div className="grid grid-cols-4 gap-2">
+                        {months.map((month, monthIdx) => {
+                          const key = formatMonthKey(month);
+                          const value = row.monthlyValues[key];
+                          const note = row.notes?.[key];
+                          const isDataPresent = value !== null && value !== undefined;
+
+                          return (
+                            <div
+                              key={monthIdx}
+                              className={`relative flex flex-col items-center justify-center pt-2 pb-1.5 px-0.5 rounded-lg border ${isDataPresent
+                                ? `${getRslColor(value)} ${getRslTextColor(value)} shadow-sm`
+                                : "bg-gray-50 border-gray-100"
+                                } cursor-pointer hover:opacity-80 transition-opacity active:scale-95`}
+                              onClick={() => {
+                                if (hasPermission('nec.update')) {
+                                  openNoteModal(row.linkName, key, note);
+                                }
+                              }}
+                            >
+                              {note && (
+                                <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-amber-400 text-[8px] rounded-full flex items-center justify-center shadow-sm z-10">
+                                  📝
+                                </div>
+                              )}
+                              <span className="text-[9px] font-bold uppercase tracking-wider opacity-60 mb-1">
+                                {month}
+                              </span>
+                              {isDataPresent ? (
+                                <span className="font-mono text-[11px] font-extrabold tracking-tighter">
+                                  {value.toFixed(1)}
+                                </span>
+                              ) : (
+                                <span className="text-gray-300 text-xs font-bold">-</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {months.some(m => row.notes?.[formatMonthKey(m)]) && (
+                      <div className="px-3 pb-3">
+                        <div className="bg-amber-50/70 rounded-lg p-3 border border-amber-100/50">
+                          <p className="text-[10px] font-bold text-amber-800 mb-2 flex items-center gap-1.5 uppercase tracking-wider">
+                            <span>📝</span> Catatan Bulanan
+                          </p>
+                          <div className="space-y-1.5">
+                            {months.map(m => {
+                              const note = row.notes?.[formatMonthKey(m)];
+                              if (note) return (
+                                <div key={m} className="flex gap-2 text-[11px] items-start bg-white p-2 rounded-md border border-amber-100/30">
+                                  <span className="font-extrabold text-amber-600 w-8 shrink-0">{m}</span>
+                                  <span className="text-slate-700 leading-tight font-medium">{note}</span>
+                                </div>
+                              );
+                              return null;
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              {/* === DESKTOP PIVOT VIEW === */}
+              <div className="hidden md:block overflow-x-auto rounded-md border">
                 <table className="w-full border-collapse text-sm bg-white">
                   <thead>
                     <tr className="bg-blue-600 text-white">
@@ -672,10 +773,10 @@ const NecRslPivotTable: React.FC = () => {
                               }
                               onMouseLeave={() => setHoveredCell(null)}
                               className={`border px-2 py-2 text-center font-mono relative cursor-pointer ${isDataPresent
-                                  ? `${getRslColor(value)} ${getRslTextColor(
-                                    value
-                                  )}`
-                                  : "bg-gray-50"
+                                ? `${getRslColor(value)} ${getRslTextColor(
+                                  value
+                                )}`
+                                : "bg-gray-50"
                                 } ${hoveredCell?.rowIdx === rowIdx &&
                                   hoveredCell?.colIdx === monthIdx
                                   ? "ring-2 ring-blue-500"
@@ -708,15 +809,15 @@ const NecRslPivotTable: React.FC = () => {
                                 hoveredCell?.colIdx === monthIdx && (
                                   <div
                                     className={`absolute left-1/2 transform -translate-x-1/2 ${rowIdx < 3
-                                        ? "top-full mt-2"
-                                        : "bottom-full mb-2"
+                                      ? "top-full mt-2"
+                                      : "bottom-full mb-2"
                                       } w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50`}
                                   >
                                     <div className="relative">
                                       <div
                                         className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${rowIdx < 3
-                                            ? "-top-2 border-b-8 border-b-gray-900"
-                                            : "-bottom-2 border-t-8 border-t-gray-900"
+                                          ? "-top-2 border-b-8 border-b-gray-900"
+                                          : "-bottom-2 border-t-8 border-t-gray-900"
                                           }`}
                                       />
                                       <div className="mb-2">

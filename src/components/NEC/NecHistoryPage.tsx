@@ -650,6 +650,92 @@ const NecHistoryPage: React.FC = () => {
     return false;
   };
 
+  const getRslBarPercent = (value: number | null | undefined): number => {
+    if (value === null || value === undefined) return 0;
+    return Math.max(0, Math.min(100, ((value + 70) / 40) * 100));
+  };
+  const getRslBarColor = (value: number | null | undefined): string => {
+    const status = getRslStatus(value ?? null);
+    const colors: Record<string, string> = { too_strong: 'bg-red-500', optimal: 'bg-green-500', warning: 'bg-yellow-500', sub_optimal: 'bg-orange-500', critical: 'bg-red-700', no_data: 'bg-gray-300' };
+    return colors[status] || colors.no_data;
+  };
+  const getRslBadgeStyle = (value: number | null | undefined): string => {
+    const status = getRslStatus(value ?? null);
+    const styles: Record<string, string> = { too_strong: 'bg-red-100 text-red-800', optimal: 'bg-green-100 text-green-800', warning: 'bg-yellow-100 text-yellow-800', sub_optimal: 'bg-orange-100 text-orange-800', critical: 'bg-red-200 text-red-900', no_data: 'bg-gray-100 text-gray-500' };
+    return styles[status] || styles.no_data;
+  };
+
+  // ===================== MOBILE MONTHLY CHART =====================
+  const renderMobileMonthlyChart = () => {
+    if (!monthlyData)
+      return (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-10 h-10 rounded-full border-[3px] border-violet-200 border-t-violet-600 animate-spin mb-3" />
+          <p className="text-xs font-medium text-slate-500">Memuat data grafik...</p>
+        </div>
+      );
+    const pieData = generatePieChartData();
+    const barData = generateMonthlyBarChartData();
+    return (
+      <div className="space-y-4">
+        <div className="bg-gradient-to-r from-violet-600 to-purple-700 rounded-2xl p-4 text-white">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-violet-200 mb-1">Periode</p>
+          <h3 className="text-lg font-black tracking-tight">{monthlyData.period}</h3>
+          <p className="text-[11px] text-violet-200 mt-1">{barData.length} link aktif dipantau</p>
+        </div>
+        {pieData.length > 0 && (
+          <div className="bg-white rounded-2xl border border-purple-50 shadow-sm p-4">
+            <h4 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 mb-3">Distribusi Status Link</h4>
+            <div className="flex flex-wrap gap-2">
+              {pieData.map((item, i) => (
+                <div key={i} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold" style={{ backgroundColor: item.fill + '20', color: item.fill }}>
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: item.fill }} />
+                  {item.name}: {item.value}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <h4 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70">Detail Per Link</h4>
+        <div className="space-y-3">
+          {monthlyData.data.map((tower, tIdx) =>
+            tower.links.map((link, lIdx) => (
+              <div key={`${tIdx}-${lIdx}`} className="bg-white rounded-2xl border border-purple-50 shadow-sm p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 pr-2">
+                    <p className="text-[11px] font-bold text-purple-600/70 uppercase tracking-wider">{tower.towerName}</p>
+                    <h5 className="text-[13px] font-black text-slate-800 leading-tight mt-0.5">{link.linkName}</h5>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getRslBadgeStyle(link.avgRsl)}`}>
+                    {getRslStatusLabel(link.avgRsl)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] text-slate-500 font-medium">Rata-rata RSL</span>
+                  <span className={`text-[16px] font-black font-mono ${getRslTextColor(link.avgRsl)}`}>
+                    {link.avgRsl.toFixed(1)} <span className="text-[11px] font-bold">dBm</span>
+                  </span>
+                </div>
+                <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`absolute left-0 top-0 h-full rounded-full ${getRslBarColor(link.avgRsl)}`}
+                    style={{ width: `${getRslBarPercent(link.avgRsl)}%` }} />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[9px] text-slate-400">-70 dBm</span>
+                  <span className="text-[9px] text-slate-400">-30 dBm</span>
+                </div>
+                {link.warningMessage && (
+                  <p className="mt-2 text-[10px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 font-medium">⚠️ {link.warningMessage}</p>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ===================== DESKTOP MONTHLY CHART =====================
   const renderMonthlyChart = () => {
     if (!monthlyData)
       return <div className="text-center text-gray-500">Memuat data...</div>;
@@ -835,6 +921,110 @@ const NecHistoryPage: React.FC = () => {
     );
   };
 
+  // ===================== MOBILE YEARLY CHART =====================
+  const renderMobileYearlyChart = () => {
+    if (!yearlyData)
+      return (
+        <div className="flex flex-col items-center justify-center py-16">
+          <div className="w-10 h-10 rounded-full border-[3px] border-amber-200 border-t-amber-600 animate-spin mb-3" />
+          <p className="text-xs font-medium text-slate-500">Memuat data grafik...</p>
+        </div>
+      );
+    const yearlyChartData = generateYearlyChartData();
+    return (
+      <div className="space-y-4">
+        <div className="bg-gradient-to-r from-amber-500 to-orange-600 rounded-2xl p-4 text-white">
+          <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-amber-100 mb-1">Ringkasan</p>
+          <h3 className="text-lg font-black tracking-tight">Tahun {yearlyData.year}</h3>
+          <p className="text-[11px] text-amber-100 mt-1">Rata-rata RSL bulanan semua link</p>
+        </div>
+        {yearlyChartData.length > 0 && (
+          <div className="bg-white rounded-2xl border border-orange-50 shadow-sm p-4">
+            <h4 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-amber-600/70 mb-3">Tren RSL Bulanan</h4>
+            <ResponsiveContainer width="100%" height={180}>
+              <AreaChart data={yearlyChartData} margin={{ top: 5, right: 10, left: -20, bottom: 5 }}>
+                <defs>
+                  <linearGradient id="rslGradMob" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#a855f7" stopOpacity={0.4} />
+                    <stop offset="95%" stopColor="#a855f7" stopOpacity={0.05} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                <XAxis dataKey="date" tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <YAxis domain={[-70, -30]} tick={{ fontSize: 9, fill: '#94a3b8' }} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ fontSize: 11, borderRadius: 8 }} formatter={(value: any) => [`${value} dBm`, 'Avg RSL']} />
+                <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="4 4" strokeWidth={1} />
+                <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="4 4" strokeWidth={1} />
+                <ReferenceLine y={-65} stroke="#dc2626" strokeDasharray="4 4" strokeWidth={1} />
+                <Area type="monotone" dataKey="value" stroke="#a855f7" strokeWidth={2} fill="url(#rslGradMob)" dot={{ r: 3, fill: '#a855f7', strokeWidth: 0 }} />
+              </AreaChart>
+            </ResponsiveContainer>
+            <div className="flex gap-3 mt-2 flex-wrap">
+              {[{ color: '#10b981', label: 'Optimal (-45)' }, { color: '#f59e0b', label: 'Warning (-55)' }, { color: '#dc2626', label: 'Critical (-65)' }].map(t => (
+                <div key={t.label} className="flex items-center gap-1">
+                  <div className="w-4 h-0.5 rounded" style={{ backgroundColor: t.color }} />
+                  <span className="text-[9px] text-slate-500 font-medium">{t.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+        <h4 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-amber-600/70">Statistik Per Link</h4>
+        <div className="space-y-3">
+          {yearlyData.towers.map((tower, towerIdx) =>
+            Object.entries(tower.links).map(([linkName, linkData], linkIdx) => (
+              <div key={`${towerIdx}-${linkIdx}`} className="bg-white rounded-2xl border border-orange-50 shadow-sm p-4">
+                <div className="flex items-start justify-between mb-3">
+                  <div className="flex-1 pr-2">
+                    <p className="text-[11px] font-bold text-amber-600/70 uppercase tracking-wider">{tower.towerName}</p>
+                    <h5 className="text-[13px] font-black text-slate-800 leading-tight mt-0.5">{linkName}</h5>
+                  </div>
+                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black ${getRslBadgeStyle(linkData.yearlyAvg)}`}>
+                    {getRslStatusLabel(linkData.yearlyAvg)}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] text-slate-500 font-medium">Rata-rata Tahunan</span>
+                  <span className={`text-[16px] font-black font-mono ${getRslTextColor(linkData.yearlyAvg)}`}>
+                    {linkData.yearlyAvg.toFixed(1)} <span className="text-[11px] font-bold">dBm</span>
+                  </span>
+                </div>
+                <div className="relative h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div className={`absolute left-0 top-0 h-full rounded-full ${getRslBarColor(linkData.yearlyAvg)}`}
+                    style={{ width: `${getRslBarPercent(linkData.yearlyAvg)}%` }} />
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-[9px] text-slate-400">-70 dBm</span>
+                  <span className="text-[9px] text-slate-400">-30 dBm</span>
+                </div>
+                {Object.keys(linkData.monthlyAvg).length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-slate-50">
+                    <p className="text-[9px] font-extrabold uppercase tracking-wider text-slate-400 mb-2">Bulanan</p>
+                    <div className="flex gap-1 flex-wrap">
+                      {Object.entries(linkData.monthlyAvg).map(([month, val]) => (
+                        <div key={month} className={`px-2 py-0.5 rounded-md text-[9px] font-bold ${getRslBadgeStyle(val)}`}>
+                          {month}: {val.toFixed(1)}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {linkData.warnings.length > 0 && (
+                  <div className="mt-2 pt-2 border-t border-slate-50">
+                    {linkData.warnings.map((w: string, wIdx: number) => (
+                      <p key={wIdx} className="text-[10px] text-amber-700 bg-amber-50 rounded-lg px-2.5 py-1.5 font-medium mt-1">⚠️ {w}</p>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // ===================== DESKTOP YEARLY CHART =====================
   const renderYearlyChart = () => {
     if (!yearlyData)
       return <div className="text-center text-gray-500">Memuat data...</div>;
@@ -1556,131 +1746,120 @@ const NecHistoryPage: React.FC = () => {
         </TabsContent>
 
         <TabsContent value="pivot">
-          <NecRslPivotTable />
+          {/* Mobile pivot - wrapped in a scrollable container */}
+          <div className="md:hidden">
+            <NecRslPivotTable />
+          </div>
+          {/* Desktop pivot */}
+          <div className="hidden md:block">
+            <NecRslPivotTable />
+          </div>
         </TabsContent>
 
+
         <TabsContent value="monthly">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <CardTitle>Grafik Performa Bulanan</CardTitle>
-
-                {/* Desktop Filters */}
-                <div className="hidden md:flex space-x-4">
-                  <Select
-                    value={selectedYear.toString()}
-                    onValueChange={(value) => setSelectedYear(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Tahun" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {getAvailableYears(histories).map((year) => (
-                        <SelectItem
-                          key={year.toString()}
-                          value={year.toString()}
-                        >
-                          {year}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select
-                    value={selectedMonth.toString()}
-                    onValueChange={(value) => setSelectedMonth(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Bulan" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Array.from({ length: 12 }, (_, i) => i + 1).map(
-                        (month) => (
+          {/* ---- MOBILE monthly view ---- */}
+          <div className="md:hidden space-y-4">
+            <div className="flex gap-2 pb-1">
+              <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                <SelectTrigger className="w-[100px] h-8 rounded-full bg-violet-50 border-violet-200 text-violet-700 text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {getAvailableYears(histories).map((year) => (
+                    <SelectItem key={year.toString()} value={year.toString()}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
+                <SelectTrigger className="w-[130px] h-8 rounded-full bg-violet-50 border-violet-200 text-violet-700 text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                    <SelectItem key={month} value={month.toString()}>
+                      {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {renderMobileMonthlyChart()}
+          </div>
+          {/* ---- DESKTOP monthly view ---- */}
+          <div className="hidden md:block">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-row justify-between items-center gap-4">
+                  <CardTitle>Grafik Performa Bulanan</CardTitle>
+                  <div className="flex space-x-4">
+                    <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                      <SelectTrigger className="w-[120px]"><SelectValue placeholder="Tahun" /></SelectTrigger>
+                      <SelectContent>
+                        {getAvailableYears(histories).map((year) => (
+                          <SelectItem key={year.toString()} value={year.toString()}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={selectedMonth.toString()} onValueChange={(value) => setSelectedMonth(parseInt(value))}>
+                      <SelectTrigger className="w-[120px]"><SelectValue placeholder="Bulan" /></SelectTrigger>
+                      <SelectContent>
+                        {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
                           <SelectItem key={month} value={month.toString()}>
-                            {new Date(0, month - 1).toLocaleString("id-ID", {
-                              month: "long",
-                            })}
+                            {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
                           </SelectItem>
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {/* Mobile Filters */}
-                <div className="md:hidden flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1 w-full">
-                  <div className="relative shrink-0">
-                    <button
-                      onClick={() => document.getElementById("mobile-dropdown-monthly-year")?.classList.remove("hidden")}
-                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[90px]"
-                    >
-                      <span className="truncate">{selectedYear}</span>
-                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-                    </button>
-                  </div>
-                  <div className="relative shrink-0">
-                    <button
-                      onClick={() => document.getElementById("mobile-dropdown-monthly-month")?.classList.remove("hidden")}
-                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[120px]"
-                    >
-                      <span className="truncate">
-                        {new Date(0, selectedMonth - 1).toLocaleString("id-ID", { month: "long" })}
-                      </span>
-                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-                    </button>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                 </div>
-              </div>
-            </CardHeader>
-            <CardContent>{renderMonthlyChart()}</CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>{renderMonthlyChart()}</CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="yearly">
-          <Card>
-            <CardHeader>
-              <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                <CardTitle>Grafik Ringkasan Tahunan</CardTitle>
-
-                {/* Desktop Filters */}
-                <div className="hidden md:block">
-                  <Select
-                    value={selectedYear.toString()}
-                    onValueChange={(value) => setSelectedYear(parseInt(value))}
-                  >
-                    <SelectTrigger className="w-[120px]">
-                      <SelectValue placeholder="Tahun" />
-                    </SelectTrigger>
+          {/* ---- MOBILE yearly view ---- */}
+          <div className="md:hidden space-y-4">
+            <div className="flex gap-2 pb-1">
+              <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
+                <SelectTrigger className="w-[100px] h-8 rounded-full bg-amber-50 border-amber-200 text-amber-700 text-xs font-semibold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[...Array(5)].map((_, i) => {
+                    const year = new Date().getFullYear() - i;
+                    return <SelectItem key={year} value={year.toString()}>{year}</SelectItem>;
+                  })}
+                </SelectContent>
+              </Select>
+            </div>
+            {renderMobileYearlyChart()}
+          </div>
+          {/* ---- DESKTOP yearly view ---- */}
+          <div className="hidden md:block">
+            <Card>
+              <CardHeader>
+                <div className="flex flex-row justify-between items-center gap-4">
+                  <CardTitle>Grafik Ringkasan Tahunan</CardTitle>
+                  <Select value={selectedYear.toString()} onValueChange={(value) => setSelectedYear(parseInt(value))}>
+                    <SelectTrigger className="w-[120px]"><SelectValue placeholder="Tahun" /></SelectTrigger>
                     <SelectContent>
                       {[...Array(5)].map((_, i) => {
                         const year = new Date().getFullYear() - i;
-                        return (
-                          <SelectItem key={year} value={year.toString()}>
-                            {year}
-                          </SelectItem>
-                        );
+                        return <SelectItem key={year} value={year.toString()}>{year}</SelectItem>;
                       })}
                     </SelectContent>
                   </Select>
                 </div>
-
-                {/* Mobile Filters */}
-                <div className="md:hidden flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1 w-full">
-                  <div className="relative shrink-0">
-                    <button
-                      onClick={() => document.getElementById("mobile-dropdown-yearly-year")?.classList.remove("hidden")}
-                      className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[90px]"
-                    >
-                      <span className="truncate">{selectedYear}</span>
-                      <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>{renderYearlyChart()}</CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>{renderYearlyChart()}</CardContent>
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
+
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-lg">
@@ -2058,7 +2237,7 @@ const NecHistoryPage: React.FC = () => {
         </div>
       </div>
 
-    </div>
+    </div >
   );
 };
 
