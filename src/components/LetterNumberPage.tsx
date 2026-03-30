@@ -170,7 +170,7 @@ export default function LetterNumberPage() {
                         <div className="w-full bg-slate-200/60 p-[4px] rounded-[12px] relative overflow-hidden">
                             {/* Active Background Indicator */}
                             <div
-                                className="absolute top-[4px] bottom-[4px] left-[4px] transition-transform duration-300 ease-[cubic-bezier(0.4,0,0.2,1)] z-0 pointer-events-none"
+                                className="absolute top-[4px] bottom-[4px] left-[4px] transition-transform duration-300 ease-in-out z-0 pointer-events-none"
                                 style={{
                                     width: 'calc((100% - 8px) / 3)',
                                     transform: `translateX(${activeTab === 'letters' ? '0%' :
