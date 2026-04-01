@@ -7,8 +7,11 @@ import {
   TemuanKPC,
   InspeksiQueryParams,
 } from "../services/inspeksiApi";
-import { format } from "date-fns";
+import { format, eachDayOfInterval } from "date-fns";
 import { motion, AnimatePresence } from "framer-motion";
+import { DayPicker, DateRange } from "react-day-picker";
+import "react-day-picker/style.css";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import {
   Plus,
   Edit,
@@ -37,7 +40,8 @@ import {
   Bell,
   Home,
 } from "lucide-react";
-import { id } from "date-fns/locale";
+import { id as idLocale } from "date-fns/locale";
+import { id } from "react-day-picker/locale";
 import { formatCompactDate, formatDateTime } from "../utils/dateUtils";
 
 // ImageUploadZone Component (unchanged)
@@ -314,6 +318,34 @@ export default function InspeksiKPCPage() {
   const [endDate, setEndDate] = useState("");
   const [showHistory, setShowHistory] = useState(false);
 
+  // State untuk kalender range picker
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
+  const [mobDateRangeOpen, setMobDateRangeOpen] = useState(false);
+  
+  const deskCalRef = useRef<HTMLDivElement>(null);
+  const mobCalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deskCalRef.current && !deskCalRef.current.contains(e.target as Node)) {
+        setDateRangeOpen(false);
+      }
+      if (mobCalRef.current && !mobCalRef.current.contains(e.target as Node)) {
+        setMobDateRangeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const formatRangeLabel = () => {
+    if (!startDate && !endDate) return "Pilih Rentang Tanggal";
+    if (startDate && !endDate) return format(new Date(startDate), "d MMM yyyy", { locale: idLocale });
+    if (startDate === endDate) return format(new Date(startDate), "d MMM yyyy", { locale: idLocale });
+    return `${format(new Date(startDate), "d MMM yyyy", { locale: idLocale })} – ${format(new Date(endDate), "d MMM yyyy", { locale: idLocale })}`;
+  };
+
   // State untuk modal
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<"create" | "edit" | "update">(
@@ -376,7 +408,7 @@ export default function InspeksiKPCPage() {
       if (formatStr === "dd/MM/yyyy") {
         return format(wibDate, "dd/MM/yyyy");
       } else if (formatStr === "dd MMM yyyy") {
-        return format(wibDate, "dd MMM yyyy", { locale: id });
+        return format(wibDate, "dd MMM yyyy", { locale: idLocale });
       } else {
         return format(wibDate, formatStr);
       }
@@ -1088,6 +1120,7 @@ export default function InspeksiKPCPage() {
     setSearchTerm("");
     setStartDate("");
     setEndDate("");
+    setDateRange(undefined);
     setCurrentPage(1);
   };
 
@@ -1186,6 +1219,56 @@ export default function InspeksiKPCPage() {
                 <span>{selectedStatus || "Status"}</span>
                 <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
               </button>
+            </div>
+
+            <div className="relative shrink-0 flex items-center" ref={mobCalRef}>
+              <button 
+                onClick={() => setMobDateRangeOpen(prev => !prev)}
+                className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[120px]"
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <Calendar className="w-3.5 h-3.5 opacity-70" />
+                  <span className="truncate max-w-[150px]">{formatRangeLabel()}</span>
+                </div>
+                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+              </button>
+              
+              {mobDateRangeOpen && (
+                <div className="absolute top-full right-0 mt-2 z-[110] bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
+                  <DayPicker
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(r) => setDateRange(r)}
+                    locale={id}
+                    showOutsideDays
+                    disabled={{ after: new Date() }}
+                    footer={
+                      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3 text-sm">
+                        <div className="flex gap-4">
+                          <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
+                          <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-blue-600 font-bold hover:text-blue-800 transition-colors">Hari ini</button>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
+                            else setStartDate("");
+                            
+                            if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
+                            else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
+                            else setEndDate("");
+                            
+                            setMobDateRangeOpen(false);
+                            setCurrentPage(1);
+                          }} 
+                          className="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                        >
+                          Terapkan
+                        </button>
+                      </div>
+                    }
+                  />
+                </div>
+              )}
             </div>
             <button
               onClick={() => { setShowHistory(!showHistory); setCurrentPage(1); }}
@@ -1300,34 +1383,58 @@ export default function InspeksiKPCPage() {
             </select>
           </div>
 
-          <div>
+          <div className="md:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              Dari Tanggal
+              Rentang Waktu
             </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => {
-                setStartDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Sampai Tanggal
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => {
-                setEndDate(e.target.value);
-                setCurrentPage(1);
-              }}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
-            />
+            <div className="relative" ref={deskCalRef}>
+              <button 
+                onClick={() => setDateRangeOpen(prev => !prev)}
+                className="w-full bg-white border border-gray-300 hover:border-blue-400 rounded-lg px-3 py-2 flex items-center justify-between text-sm text-gray-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-gray-400" />
+                  {formatRangeLabel()}
+                </div>
+              </button>
+              
+              {dateRangeOpen && (
+                <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
+                  <DayPicker
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(r) => setDateRange(r)}
+                    locale={id}
+                    showOutsideDays
+                    disabled={{ after: new Date() }}
+                    footer={
+                      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3 text-sm">
+                        <div className="flex gap-4">
+                          <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
+                          <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-blue-600 font-bold hover:text-blue-800 transition-colors">Hari ini</button>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
+                            else setStartDate("");
+                            
+                            if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
+                            else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
+                            else setEndDate("");
+                            
+                            setDateRangeOpen(false);
+                            setCurrentPage(1);
+                          }} 
+                          className="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                        >
+                          Terapkan
+                        </button>
+                      </div>
+                    }
+                  />
+                </div>
+              )}
+            </div>
           </div>
 
           <div>

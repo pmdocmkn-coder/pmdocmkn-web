@@ -5,7 +5,12 @@ import { callRecordApi } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { MobilePageHeader } from "./ui/MobilePageHeader";
 import { DatePicker } from "./ui/date-picker";
-import { format } from "date-fns";
+import { format, eachDayOfInterval } from "date-fns";
+import { id as dateFnsLocale } from "date-fns/locale";
+import { id as localeId } from "react-day-picker/locale";
+import { DayPicker, DateRange } from "react-day-picker";
+import "react-day-picker/style.css";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 
 interface ExportPageProps {
   onBack: () => void;
@@ -43,15 +48,29 @@ const combinedCardVariants: Variants = {
 
 const ExportPage: React.FC<ExportPageProps> = ({ onBack, setActiveTab }) => {
   const navigate = useNavigate();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split("T")[0]
+    format(today, 'yyyy-MM-dd')
   );
-  const [startDate, setStartDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
-  const [endDate, setEndDate] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  
+  const [range, setRange] = useState<DateRange | undefined>({ from: today, to: today });
+  const [mobRangeOpen, setMobRangeOpen] = useState(false);
+  const [deskRangeOpen, setDeskRangeOpen] = useState(false);
+
+  const dayCount = range?.from && range?.to
+    ? eachDayOfInterval({ start: range.from, end: range.to }).length
+    : 1;
+
+  const formatRangeLabel = () => {
+    if (!range?.from) return 'Pilih Rentang Tanggal';
+    const fmt = (d: Date) => format(d, 'd MMM yyyy', { locale: dateFnsLocale });
+    if (!range.to || range.from.toDateString() === range.to.toDateString()) return fmt(range.from);
+    return `${fmt(range.from)} – ${fmt(range.to)}`;
+  };
+  
+  const toIso = (d: Date | undefined) => d ? format(d, 'yyyy-MM-dd') : '';
 
   // 🎯 Loading state per tombol (independen)
   const [isLoading, setIsLoading] = useState({
@@ -170,40 +189,57 @@ const ExportPage: React.FC<ExportPageProps> = ({ onBack, setActiveTab }) => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 mb-3">
-              <div>
-                <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Dari</label>
-                <div className="mt-1 bg-slate-50 rounded-xl border border-purple-100/60 overflow-hidden">
-                  <DatePicker
-                    date={startDate ? new Date(startDate) : undefined}
-                    onSelect={(d) => setStartDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                    className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
-                  />
-                </div>
-              </div>
-              <div>
-                <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Sampai</label>
-                <div className="mt-1 bg-slate-50 rounded-xl border border-purple-100/60 overflow-hidden">
-                  <DatePicker
-                    date={endDate ? new Date(endDate) : undefined}
-                    onSelect={(d) => setEndDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                    className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
-                  />
-                </div>
+            <div className="mb-3">
+              <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Pilih Rentang</label>
+              <div className="mt-1">
+                <Popover open={mobRangeOpen} onOpenChange={setMobRangeOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="w-full bg-slate-50 border border-purple-100/60 rounded-xl px-3 h-10 flex items-center justify-between text-[12px] font-bold text-slate-700 hover:bg-slate-100 transition-colors">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        {formatRangeLabel()}
+                      </div>
+                      {dayCount > 1 && (
+                        <span className="text-[10px] bg-indigo-100 text-indigo-700 font-bold px-1.5 py-0.5 rounded-md">
+                          {dayCount} hari
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-3 z-[110]" align="start">
+                    <DayPicker
+                      mode="range"
+                      selected={range}
+                      onSelect={(r) => setRange(r)}
+                      locale={localeId}
+                      showOutsideDays
+                      disabled={{ after: new Date() }}
+                      footer={
+                        <div className="flex justify-between items-center pt-3 border-t mt-3 text-sm">
+                          <div className="flex gap-4">
+                            <button onClick={() => setRange(undefined)} className="text-gray-400 hover:text-red-500">Hapus</button>
+                            <button onClick={() => setRange({ from: new Date(), to: new Date() })} className="text-blue-500 font-semibold">Hari ini</button>
+                          </div>
+                          <button onClick={() => setMobRangeOpen(false)} className="bg-indigo-600 text-white px-4 py-1.5 rounded-md text-xs font-bold">Selesai</button>
+                        </div>
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => handleExport("rangeCsv", () => callRecordApi.exportCsv(startDate, endDate))}
-                disabled={isLoading.rangeCsv}
+                onClick={() => handleExport("rangeCsv", () => callRecordApi.exportCsv(toIso(range?.from), toIso(range?.to ?? range?.from)))}
+                disabled={isLoading.rangeCsv || !range?.from}
                 className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-emerald-500/15 disabled:opacity-60 active:scale-[0.97] transition-all"
               >
                 {isLoading.rangeCsv ? <MobileSpinner /> : (<><Download className="w-3.5 h-3.5" />CSV</>)}
               </button>
               <button
-                onClick={() => handleExport("rangeExcel", () => callRecordApi.exportOverallSummaryExcel(startDate, endDate))}
-                disabled={isLoading.rangeExcel}
+                onClick={() => handleExport("rangeExcel", () => callRecordApi.exportOverallSummaryExcel(toIso(range?.from), toIso(range?.to ?? range?.from)))}
+                disabled={isLoading.rangeExcel || !range?.from}
                 className="bg-gradient-to-r from-purple-500 to-purple-600 text-white py-3 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5 shadow-lg shadow-purple-500/15 disabled:opacity-60 active:scale-[0.97] transition-all"
               >
                 {isLoading.rangeExcel ? <MobileSpinner /> : (<><FileDown className="w-3.5 h-3.5" />Excel</>)}
@@ -352,40 +388,57 @@ const ExportPage: React.FC<ExportPageProps> = ({ onBack, setActiveTab }) => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-6">
-                <div>
-                  <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">
-                    Dari Tanggal
-                  </label>
-                  <DatePicker
-                    date={startDate ? new Date(startDate) : undefined}
-                    onSelect={(d) => setStartDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                    className="w-full"
-                  />
-                </div>
-                <div>
-                  <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">
-                    Sampai Tanggal
-                  </label>
-                  <DatePicker
-                    date={endDate ? new Date(endDate) : undefined}
-                    onSelect={(d) => setEndDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                    className="w-full"
-                  />
-                </div>
+              <div className="mb-6">
+                <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">
+                  Pilih Rentang Waktu
+                </label>
+                <Popover open={deskRangeOpen} onOpenChange={setDeskRangeOpen}>
+                  <PopoverTrigger asChild>
+                    <button className="w-full bg-white border border-slate-200 hover:border-indigo-300 rounded-2xl px-4 h-12 flex items-center justify-between text-sm font-semibold text-slate-700 transition-all shadow-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="w-4 h-4 text-slate-400" />
+                        {formatRangeLabel()}
+                      </div>
+                      {dayCount > 1 && (
+                        <span className="text-[11px] bg-indigo-50 border border-indigo-100 text-indigo-700 font-bold px-2 py-0.5 rounded-lg">
+                          {dayCount} hari
+                        </span>
+                      )}
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-4 z-[110] rounded-2xl shadow-xl border border-slate-100" align="start">
+                    <DayPicker
+                      mode="range"
+                      selected={range}
+                      onSelect={(r) => setRange(r)}
+                      locale={localeId}
+                      showOutsideDays
+                      disabled={{ after: new Date() }}
+                      footer={
+                        <div className="flex justify-between items-center pt-3 border-t mt-3 text-sm">
+                          <div className="flex gap-4">
+                            <button onClick={() => setRange(undefined)} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
+                            <button onClick={() => setRange({ from: new Date(), to: new Date() })} className="text-indigo-600 font-bold hover:text-indigo-800 transition-colors">Hari ini</button>
+                          </div>
+                          <button onClick={() => setDeskRangeOpen(false)} className="bg-gradient-to-r from-indigo-500 to-indigo-600 text-white px-5 py-2 rounded-lg text-xs font-black shadow-md hover:shadow-lg transition-all active:scale-95">Selesai</button>
+                        </div>
+                      }
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <button
-                  onClick={() => handleExport("rangeCsv", () => callRecordApi.exportCsv(startDate, endDate))}
-                  disabled={isLoading.rangeCsv}
+                  onClick={() => handleExport("rangeCsv", () => callRecordApi.exportCsv(toIso(range?.from), toIso(range?.to ?? range?.from)))}
+                  disabled={isLoading.rangeCsv || !range?.from}
                   className="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 disabled:opacity-60 active:scale-95 transition-all relative overflow-hidden"
                 >
                   {isLoading.rangeCsv ? <LoadingSpinner /> : (<><Download className="w-4 h-4" />Download CSV</>)}
                 </button>
                 <button
-                  onClick={() => handleExport("rangeExcel", () => callRecordApi.exportOverallSummaryExcel(startDate, endDate))}
-                  disabled={isLoading.rangeExcel}
+                  onClick={() => handleExport("rangeExcel", () => callRecordApi.exportOverallSummaryExcel(toIso(range?.from), toIso(range?.to ?? range?.from)))}
+                  disabled={isLoading.rangeExcel || !range?.from}
                   className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white py-3.5 px-6 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 disabled:opacity-60 active:scale-95 transition-all relative overflow-hidden"
                 >
                   {isLoading.rangeExcel ? <LoadingSpinner /> : (<><FileDown className="w-4 h-4" />Download Excel</>)}

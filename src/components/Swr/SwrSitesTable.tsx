@@ -16,8 +16,15 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-import { Edit2, Trash2, Search, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Edit2, Trash2, Search, ChevronLeft, ChevronRight, Check, ChevronDown, Filter, Layers } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { SwrSiteListDto } from "@/types/swr";
 
 interface Props {
@@ -35,6 +42,7 @@ export default function SwrSitesTable({
 }: Props) {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedType, setSelectedType] = useState<string>("all");
+  const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const sitesPerPage = 10;
 
@@ -95,28 +103,49 @@ export default function SwrSitesTable({
         {loading ? (
           <Skeleton className="h-10 w-full md:w-[200px]" />
         ) : (
-          <Select
-            value={selectedType}
-            onValueChange={(v) => {
-              setSelectedType(v);
-              setCurrentPage(1);
-            }}
-          >
-            <SelectTrigger className="w-full md:w-[200px] bg-white border-gray-300 text-gray-900">
-              <SelectValue placeholder="Filter by Type" />
-            </SelectTrigger>
-            <SelectContent className="bg-white border-gray-200">
-              <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
-                All Types
-              </SelectItem>
-              <SelectItem value="Trunking" className="text-gray-900 hover:bg-gray-50">
-                Trunking
-              </SelectItem>
-              <SelectItem value="Conventional" className="text-gray-900 hover:bg-gray-50">
-                Conventional
-              </SelectItem>
-            </SelectContent>
-          </Select>
+          <>
+            {/* Mobile Filter Button */}
+            <div className="md:hidden flex overflow-x-auto gap-2 pb-1 no-scrollbar">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setActiveMobileFilter("type")}
+                className={cn(
+                  "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors border-gray-200",
+                  selectedType !== "all" ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600 hover:bg-gray-50 shadow-sm"
+                )}
+              >
+                <span>Tipe: {selectedType === "all" ? "Semua Tipe" : selectedType}</span>
+                <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+              </Button>
+            </div>
+
+            {/* Desktop Filter Dropdown */}
+            <div className="hidden md:block">
+              <Select
+                value={selectedType}
+                onValueChange={(v) => {
+                  setSelectedType(v);
+                  setCurrentPage(1);
+                }}
+              >
+                <SelectTrigger className="w-[200px] bg-white border-gray-300 text-gray-900">
+                  <SelectValue placeholder="Filter by Type" />
+                </SelectTrigger>
+                <SelectContent className="bg-white border-gray-200">
+                  <SelectItem value="all" className="text-gray-900 hover:bg-gray-50">
+                    All Types
+                  </SelectItem>
+                  <SelectItem value="Trunking" className="text-gray-900 hover:bg-gray-50">
+                    Trunking
+                  </SelectItem>
+                  <SelectItem value="Conventional" className="text-gray-900 hover:bg-gray-50">
+                    Conventional
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </>
         )}
       </div>
 
@@ -328,6 +357,33 @@ export default function SwrSitesTable({
           </p>
         </div>
       )}
+
+      {/* Mobile Drawer */}
+      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
+        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300">
+          <DialogHeader className="p-4 border-b bg-gray-50/80">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              <Filter className="w-5 h-5 text-blue-600" />
+              Pilih Tipe Site
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
+            <div className="grid grid-cols-1 gap-2">
+              {["all", "Trunking", "Conventional"].map((t) => (
+                <button key={t} onClick={() => { setSelectedType(t); setCurrentPage(1); setActiveMobileFilter(null); }}
+                  className={cn(
+                    "w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center",
+                    selectedType === t ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                  )}>
+                  {t === "all" ? "Semua Tipe" : t}
+                  {selectedType === t && <Check className="w-5 h-5 shrink-0" />}
+                </button>
+              ))}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

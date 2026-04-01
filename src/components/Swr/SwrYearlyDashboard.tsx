@@ -1445,7 +1445,10 @@ const SwrYearlyDashboard: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={() => setActiveMobileFilter("year")}
-              className="rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 bg-white text-gray-600 border-gray-200 hover:bg-gray-50 shadow-sm text-sm font-medium transition-colors"
+              className={cn(
+                  "rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium transition-colors",
+                  "bg-blue-50 text-blue-700 border-blue-200 font-bold"
+              )}
             >
               <Calendar className="w-3.5 h-3.5" />
               <span>Tahun: {selectedYear}</span>

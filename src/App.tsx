@@ -13,6 +13,7 @@ import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import CallRecordsPage from "./components/CallRecordsPage";
+import CallRecordPrintPage from "./components/CallRecordPrintPage";
 import UploadPage from "./components/UploadPage";
 import ExportPage from "./components/ExportPage";
 import FleetStatisticsPage from "./components/FleetStatisticsPage";
@@ -153,6 +154,15 @@ function AppContent() {
             element={
               <PermissionGuard permission="call.record.menu">
                 <CallRecordsPage />
+              </PermissionGuard>
+            }
+          />
+
+          <Route
+            path="/callrecord-print"
+            element={
+              <PermissionGuard permission="call.record.menu">
+                <CallRecordPrintPage />
               </PermissionGuard>
             }
           />

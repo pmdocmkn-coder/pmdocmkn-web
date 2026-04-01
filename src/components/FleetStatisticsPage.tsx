@@ -1,12 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X, RefreshCw, ChevronRight } from 'lucide-react';
 import { MobilePageHeader } from './ui/MobilePageHeader';
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion';
 import { callRecordApi } from '../services/api';
 import { hasPermission } from '../utils/permissionUtils';
 import { FleetStatisticsDto, FleetStatisticType, TopCallerFleetDto, TopCalledFleetDto, UniqueCallerDetailDto, UniqueCalledDetailDto } from '../types/callRecord';
-import { DatePicker } from './ui/date-picker';
 import { format } from 'date-fns';
+import { id as dateFnsLocale } from 'date-fns/locale';
+import { DayPicker, DateRange } from "react-day-picker";
+import "react-day-picker/style.css";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { id as localeId } from "react-day-picker/locale";
 
 // Animation Variants
 const containerVariants = {
@@ -77,6 +81,34 @@ const FleetStatisticsPage: React.FC = () => {
   // Date range state
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // State Date Range Popover
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
+  const [mobDateRangeOpen, setMobDateRangeOpen] = useState(false);
+
+  const deskCalRef = useRef<HTMLDivElement>(null);
+  const mobCalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deskCalRef.current && !deskCalRef.current.contains(e.target as Node)) {
+        setDateRangeOpen(false);
+      }
+      if (mobCalRef.current && !mobCalRef.current.contains(e.target as Node)) {
+        setMobDateRangeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const formatRangeLabel = () => {
+    if (!startDate && !endDate) return "Pilih Rentang Tanggal";
+    if (startDate && !endDate) return format(new Date(startDate), "d MMM yyyy", { locale: dateFnsLocale });
+    if (startDate === endDate) return format(new Date(startDate), "d MMM yyyy", { locale: dateFnsLocale });
+    return `${format(new Date(startDate), "d MMM yyyy", { locale: dateFnsLocale })} – ${format(new Date(endDate), "d MMM yyyy", { locale: dateFnsLocale })}`;
+  };
 
   const [topCount, setTopCount] = useState<number>(10);
   const [statisticType, setStatisticType] = useState<FleetStatisticType>(FleetStatisticType.All);
@@ -246,55 +278,59 @@ const FleetStatisticsPage: React.FC = () => {
 
         {/* Filter Section */}
         <section className="px-4 space-y-5 mt-2">
-          {/* Date Range Quick Buttons */}
-          <div>
+          {/* Date Range Dropdown */}
+          <div className="mb-4">
             <h3 className="text-slate-600 text-[10px] font-extrabold uppercase tracking-[0.15em] mb-2.5 flex items-center gap-1.5">
               <Calendar className="w-3 h-3 text-purple-400" />
               Date Range
             </h3>
-            <div className="flex gap-2 overflow-x-auto pb-1 no-scrollbar">
-              <button
-                onClick={() => { const today = new Date().toISOString().split('T')[0]; setStartDate(today); setEndDate(today); }}
-                className={`flex h-[36px] shrink-0 items-center justify-center rounded-full px-5 text-[11px] font-bold transition-all duration-200 ${startDate === endDate ? 'bg-gradient-to-r from-purple-600 to-purple-700 shadow-lg shadow-purple-500/25 text-white scale-[1.02]' : 'bg-white border border-purple-100 text-purple-600 hover:bg-purple-50'}`}
-              >Today</button>
-              <button
-                onClick={() => {
-                  const end = new Date(); const start = new Date(); start.setDate(end.getDate() - 6);
-                  setEndDate(end.toISOString().split('T')[0]); setStartDate(start.toISOString().split('T')[0]);
-                }}
-                className={`flex h-[36px] shrink-0 items-center justify-center rounded-full px-5 text-[11px] font-bold transition-all duration-200 ${startDate !== endDate && (new Date(endDate).getTime() - new Date(startDate).getTime()) <= 7 * 24 * 60 * 60 * 1000 ? 'bg-gradient-to-r from-purple-600 to-purple-700 shadow-lg shadow-purple-500/25 text-white scale-[1.02]' : 'bg-white border border-purple-100 text-purple-600 hover:bg-purple-50'}`}
-              >Last 7 Days</button>
-              <button
-                onClick={() => {
-                  const end = new Date(); const start = new Date(); start.setDate(end.getDate() - 29);
-                  setEndDate(end.toISOString().split('T')[0]); setStartDate(start.toISOString().split('T')[0]);
-                }}
-                className={`flex h-[36px] shrink-0 items-center justify-center rounded-full px-5 text-[11px] font-bold transition-all duration-200 ${(new Date(endDate).getTime() - new Date(startDate).getTime()) > 7 * 24 * 60 * 60 * 1000 ? 'bg-gradient-to-r from-purple-600 to-purple-700 shadow-lg shadow-purple-500/25 text-white scale-[1.02]' : 'bg-white border border-purple-100 text-purple-600 hover:bg-purple-50'}`}
-              >Last 30 Days</button>
-            </div>
-          </div>
-
-          {/* Date Picker */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">From</label>
-              <div className="bg-white rounded-xl border border-purple-100/60 shadow-[0_1px_8px_rgba(147,17,212,0.04)] overflow-hidden">
-                <DatePicker
-                  date={startDate ? new Date(startDate) : undefined}
-                  onSelect={(d) => setStartDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                  className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
-                />
-              </div>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">To</label>
-              <div className="bg-white rounded-xl border border-purple-100/60 shadow-[0_1px_8px_rgba(147,17,212,0.04)] overflow-hidden">
-                <DatePicker
-                  date={endDate ? new Date(endDate) : undefined}
-                  onSelect={(d) => setEndDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                  className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
-                />
-              </div>
+            <div className="relative" ref={mobCalRef}>
+              <button 
+                onClick={() => setMobDateRangeOpen(prev => !prev)}
+                className="w-full bg-white border border-purple-100/60 shadow-[0_1px_8px_rgba(147,17,212,0.04)] hover:border-purple-300 rounded-xl px-4 py-3 flex items-center justify-between text-sm font-bold text-slate-700 transition-all focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <div className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-purple-400" />
+                  {formatRangeLabel()}
+                </div>
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              </button>
+              
+              {mobDateRangeOpen && (
+                <div className="absolute top-full left-0 mt-2 z-[110] bg-white rounded-2xl shadow-xl border border-purple-100 p-4">
+                  <DayPicker
+                    mode="range"
+                    selected={dateRange}
+                    onSelect={(r) => setDateRange(r)}
+                    locale={localeId}
+                    showOutsideDays
+                    disabled={{ after: new Date() }}
+                    footer={
+                      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3 text-sm">
+                        <div className="flex gap-4">
+                          <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
+                          <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-purple-600 font-bold hover:text-purple-800 transition-colors">Hari ini</button>
+                        </div>
+                        <button 
+                          onClick={() => {
+                            if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
+                            else setStartDate("");
+                            
+                            if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
+                            else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
+                            else setEndDate("");
+                            
+                            setMobDateRangeOpen(false);
+                          }} 
+                          className="bg-purple-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
+                        >
+                          Selesai
+                        </button>
+                      </div>
+                    }
+                  />
+                </div>
+              )}
             </div>
           </div>
 
@@ -652,32 +688,54 @@ const FleetStatisticsPage: React.FC = () => {
                       <Calendar className="w-4 h-4 mr-2 text-blue-500" />
                       Date Range
                     </label>
-                    <div className="flex items-center gap-2">
-                      <div className="relative flex-1">
-                        <motion.input
-                          whileFocus={{ scale: 1.02 }}
-                          type="date"
-                          value={startDate}
-                          onChange={(e) => setStartDate(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:border-gray-400"
-                        />
-                      </div>
-                      <span className="text-gray-500 font-medium">to</span>
-                      <div className="relative flex-1">
-                        <motion.input
-                          whileFocus={{ scale: 1.02 }}
-                          type="date"
-                          value={endDate}
-                          onChange={(e) => setEndDate(e.target.value)}
-                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-sm hover:border-gray-400"
-                        />
-                      </div>
+                    <div className="relative" ref={deskCalRef}>
+                      <button 
+                        onClick={() => setDateRangeOpen(prev => !prev)}
+                        className="w-full bg-white border border-gray-300 hover:border-blue-500 rounded-lg px-4 py-3 flex items-center justify-between text-sm text-gray-700 shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      >
+                        <div className="flex items-center gap-2 font-medium">
+                          <Calendar className="w-4 h-4 text-blue-500" />
+                          {formatRangeLabel()}
+                        </div>
+                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                      </button>
+                      
+                      {dateRangeOpen && (
+                        <div className="absolute top-full left-0 mt-2 z-[110] bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
+                          <DayPicker
+                            mode="range"
+                            selected={dateRange}
+                            onSelect={(r) => setDateRange(r)}
+                            locale={localeId}
+                            showOutsideDays
+                            disabled={{ after: new Date() }}
+                            footer={
+                              <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3 text-sm">
+                                <div className="flex gap-4">
+                                  <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
+                                  <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-blue-600 font-bold hover:text-blue-800 transition-colors">Hari ini</button>
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
+                                    else setStartDate("");
+                                    
+                                    if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
+                                    else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
+                                    else setEndDate("");
+                                    
+                                    setDateRangeOpen(false);
+                                  }} 
+                                  className="bg-purple-600 text-white px-5 py-2 rounded-lg text-xs font-bold shadow hover:shadow-md hover:bg-purple-700 transition-all"
+                                >
+                                  Selesai
+                                </button>
+                              </div>
+                            }
+                          />
+                        </div>
+                      )}
                     </div>
-                    <p className="text-xs text-gray-500">
-                      {startDate === endDate
-                        ? formatDisplayDate(startDate)
-                        : `${formatDisplayDate(startDate)} - ${formatDisplayDate(endDate)}`}
-                    </p>
                   </div>
 
                   {/* Sort Order */}

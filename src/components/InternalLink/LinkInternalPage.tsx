@@ -579,8 +579,21 @@ const LinkInternalPage: React.FC = () => {
                     <div className="flex flex-wrap gap-2">
                         <Input placeholder="Cari link..." className="w-[160px]" value={chartLinkFilter ?? ""}
                             onChange={(e) => setChartLinkFilter(e.target.value || null)} />
+                        {/* Mobile pill button for type filter */}
+                        <Button
+                            variant="outline" size="sm"
+                            onClick={() => setActiveMobileFilter("chart-type")}
+                            className={cn(
+                                "md:hidden rounded-full flex items-center gap-1.5 h-9 px-3 text-sm font-medium border-gray-200",
+                                chartTypeFilter ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600"
+                            )}
+                        >
+                            <span>{chartTypeFilter ? LINK_TYPE_OPTIONS.find(o => o.value === chartTypeFilter)?.label : "Semua Tipe"}</span>
+                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                        </Button>
+                        {/* Desktop Select */}
                         <Select value={chartTypeFilter ?? "all"} onValueChange={(v) => setChartTypeFilter(v === "all" ? null : v)}>
-                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Tipe" /></SelectTrigger>
+                            <SelectTrigger className="hidden md:flex w-[120px]"><SelectValue placeholder="Tipe" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Semua Tipe</SelectItem>
                                 {LINK_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
@@ -736,8 +749,21 @@ const LinkInternalPage: React.FC = () => {
                     <div className="flex flex-wrap gap-2">
                         <Input placeholder="Cari link..." className="w-[160px]" value={chartLinkFilter ?? ""}
                             onChange={(e) => setChartLinkFilter(e.target.value || null)} />
+                        {/* Mobile pill button for type filter */}
+                        <Button
+                            variant="outline" size="sm"
+                            onClick={() => setActiveMobileFilter("chart-type")}
+                            className={cn(
+                                "md:hidden rounded-full flex items-center gap-1.5 h-9 px-3 text-sm font-medium border-gray-200",
+                                chartTypeFilter ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600"
+                            )}
+                        >
+                            <span>{chartTypeFilter ? LINK_TYPE_OPTIONS.find(o => o.value === chartTypeFilter)?.label : "Semua Tipe"}</span>
+                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                        </Button>
+                        {/* Desktop Select */}
                         <Select value={chartTypeFilter ?? "all"} onValueChange={(v) => setChartTypeFilter(v === "all" ? null : v)}>
-                            <SelectTrigger className="w-[120px]"><SelectValue placeholder="Tipe" /></SelectTrigger>
+                            <SelectTrigger className="hidden md:flex w-[120px]"><SelectValue placeholder="Tipe" /></SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">Semua Tipe</SelectItem>
                                 {LINK_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
@@ -1948,15 +1974,35 @@ const LinkInternalPage: React.FC = () => {
                 <TabsContent value="monthly">
                     <Card>
                         <CardHeader>
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                                 <CardTitle>Grafik Performa Bulanan</CardTitle>
                                 <div className="flex items-center gap-2">
+                                    {/* Mobile pill buttons */}
+                                    <div className="flex sm:hidden gap-2 overflow-x-auto no-scrollbar">
+                                        <Button
+                                            variant="outline" size="sm"
+                                            onClick={() => setActiveMobileFilter("chart-year")}
+                                            className={cn("rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium border-gray-200 bg-blue-50 text-blue-700 border-blue-200")}
+                                        >
+                                            <span>Tahun: {selectedYear}</span>
+                                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                        </Button>
+                                        <Button
+                                            variant="outline" size="sm"
+                                            onClick={() => setActiveMobileFilter("chart-month")}
+                                            className={cn("rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium border-gray-200 bg-blue-50 text-blue-700 border-blue-200")}
+                                        >
+                                            <span>Bulan: {["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"][selectedMonth - 1]}</span>
+                                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                        </Button>
+                                    </div>
+                                    {/* Desktop selects */}
                                     <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
-                                        className="border rounded-md px-3 py-1.5 text-sm">
+                                        className="hidden sm:block border rounded-md px-3 py-1.5 text-sm">
                                         {availableYears().map(y => <option key={y} value={y}>{y}</option>)}
                                     </select>
                                     <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                                        className="border rounded-md px-3 py-1.5 text-sm">
+                                        className="hidden sm:block border rounded-md px-3 py-1.5 text-sm">
                                         {["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"].map((m, i) => (
                                             <option key={i} value={i + 1}>{m}</option>
                                         ))}
@@ -1974,12 +2020,24 @@ const LinkInternalPage: React.FC = () => {
                 <TabsContent value="yearly">
                     <Card>
                         <CardHeader>
-                            <div className="flex justify-between items-center">
+                            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                                 <CardTitle>Grafik Ringkasan Tahunan</CardTitle>
-                                <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
-                                    className="border rounded-md px-3 py-1.5 text-sm">
-                                    {availableYears().map(y => <option key={y} value={y}>{y}</option>)}
-                                </select>
+                                <div className="flex items-center gap-2">
+                                    {/* Mobile pill button */}
+                                    <Button
+                                        variant="outline" size="sm"
+                                        onClick={() => setActiveMobileFilter("chart-year")}
+                                        className={cn("sm:hidden rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium border-blue-200 bg-blue-50 text-blue-700")}
+                                    >
+                                        <span>Tahun: {selectedYear}</span>
+                                        <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                    </Button>
+                                    {/* Desktop select */}
+                                    <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
+                                        className="hidden sm:block border rounded-md px-3 py-1.5 text-sm">
+                                        {availableYears().map(y => <option key={y} value={y}>{y}</option>)}
+                                    </select>
+                                </div>
                             </div>
                         </CardHeader>
                         <CardContent>{renderYearlyChart()}</CardContent>
@@ -2457,6 +2515,9 @@ const LinkInternalPage: React.FC = () => {
                                     case "history-link": return "Pilih Link (History)";
                                     case "pivot-type": return "Pilih Tipe Link";
                                     case "pivot-year": return "Pilih Tahun";
+                                    case "chart-year": return "Pilih Tahun Grafik";
+                                    case "chart-month": return "Pilih Bulan Grafik";
+                                    case "chart-type": return "Pilih Tipe Link";
                                     case "links-group": return "Pilih Group Link";
                                     case "links-type": return "Pilih Tipe Link";
                                     case "links-direction": return "Pilih Direction";
@@ -2504,6 +2565,40 @@ const LinkInternalPage: React.FC = () => {
                                         Tahun {y}
                                     </button>
                                 ))
+                            )}
+                            {activeMobileFilter === "chart-year" && (
+                                availableYears().map(y => (
+                                    <button key={y} onClick={() => { setSelectedYear(y); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", selectedYear === y ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        <span>Tahun {y}</span>
+                                        {selectedYear === y && <Check className="w-5 h-5 shrink-0" />}
+                                    </button>
+                                ))
+                            )}
+                            {activeMobileFilter === "chart-month" && (
+                                ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"].map((m, i) => (
+                                    <button key={i} onClick={() => { setSelectedMonth(i + 1); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", selectedMonth === i + 1 ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        <span>{m}</span>
+                                        {selectedMonth === i + 1 && <Check className="w-5 h-5 shrink-0" />}
+                                    </button>
+                                ))
+                            )}
+                            {activeMobileFilter === "chart-type" && (
+                                <>
+                                    <button onClick={() => { setChartTypeFilter(null); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", !chartTypeFilter ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        <span>Semua Tipe</span>
+                                        {!chartTypeFilter && <Check className="w-5 h-5 shrink-0" />}
+                                    </button>
+                                    {LINK_TYPE_OPTIONS.map(opt => (
+                                        <button key={opt.value} onClick={() => { setChartTypeFilter(opt.value); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", chartTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            <span>{opt.label}</span>
+                                            {chartTypeFilter === opt.value && <Check className="w-5 h-5 shrink-0" />}
+                                        </button>
+                                    ))}
+                                </>
                             )}
                             {activeMobileFilter === "links-group" && (
                                 <>

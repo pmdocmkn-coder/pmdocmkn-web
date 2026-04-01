@@ -54,6 +54,7 @@ import {
   ChevronsUpDown,
   Loader2,
   Home,
+  Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -211,6 +212,7 @@ const NecHistoryPage: React.FC = () => {
   );
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [importFile, setImportFile] = useState<File | null>(null);
   const [towers, setTowers] = useState<{ id: number; name: string }[]>([]);
@@ -1443,7 +1445,7 @@ const NecHistoryPage: React.FC = () => {
                 <div className="flex gap-2 overflow-x-auto no-scrollbar relative z-30 pb-1">
                   <div className="relative shrink-0">
                     <button
-                      onClick={() => document.getElementById("mobile-dropdown-neclink")?.classList.remove("hidden")}
+                      onClick={() => setActiveMobileFilter("neclink")}
                       className="flex items-center justify-between h-8 rounded-full bg-blue-50 pl-3 pr-2 border border-blue-200 text-blue-700 text-xs font-semibold select-none min-w-[120px]"
                     >
                       <span className="truncate max-w-[140px]">
@@ -1760,29 +1762,18 @@ const NecHistoryPage: React.FC = () => {
         <TabsContent value="monthly">
           {/* ---- MOBILE monthly view ---- */}
           <div className="md:hidden space-y-4">
-            <div className="flex gap-2 pb-1">
-              <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
-                <SelectTrigger className="w-[100px] h-8 rounded-full bg-violet-50 border-violet-200 text-violet-700 text-xs font-semibold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {getAvailableYears(histories).map((year) => (
-                    <SelectItem key={year.toString()} value={year.toString()}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={selectedMonth.toString()} onValueChange={(v) => setSelectedMonth(parseInt(v))}>
-                <SelectTrigger className="w-[130px] h-8 rounded-full bg-violet-50 border-violet-200 text-violet-700 text-xs font-semibold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                    <SelectItem key={month} value={month.toString()}>
-                      {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar">
+              <button onClick={() => setActiveMobileFilter("monthly-year")} className="flex items-center gap-1 h-8 px-3 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold whitespace-nowrap">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>{selectedYear}</span>
+                <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
+              </button>
+              <button onClick={() => setActiveMobileFilter("monthly-month")} className="flex items-center gap-1 h-8 px-3 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold whitespace-nowrap">
+                <span className="truncate max-w-[80px]">
+                  {new Date(0, selectedMonth - 1).toLocaleString("id-ID", { month: "short" })}
+                </span>
+                <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
+              </button>
             </div>
             {renderMobileMonthlyChart()}
           </div>
@@ -1822,18 +1813,12 @@ const NecHistoryPage: React.FC = () => {
         <TabsContent value="yearly">
           {/* ---- MOBILE yearly view ---- */}
           <div className="md:hidden space-y-4">
-            <div className="flex gap-2 pb-1">
-              <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
-                <SelectTrigger className="w-[100px] h-8 rounded-full bg-amber-50 border-amber-200 text-amber-700 text-xs font-semibold">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {[...Array(5)].map((_, i) => {
-                    const year = new Date().getFullYear() - i;
-                    return <SelectItem key={year} value={year.toString()}>{year}</SelectItem>;
-                  })}
-                </SelectContent>
-              </Select>
+            <div className="flex gap-2 pb-1 overflow-x-auto no-scrollbar">
+              <button onClick={() => setActiveMobileFilter("yearly-year")} className="flex items-center gap-1 h-8 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold whitespace-nowrap">
+                <Calendar className="w-3.5 h-3.5" />
+                <span>Tahun: {selectedYear}</span>
+                <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
+              </button>
             </div>
             {renderMobileYearlyChart()}
           </div>
@@ -2153,89 +2138,76 @@ const NecHistoryPage: React.FC = () => {
         </DialogContent>
       </Dialog>
 
-      {/* ========== MOBILE FILTER MODALS ========== */}
-      <div id="mobile-dropdown-neclink" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
-        onClick={() => document.getElementById("mobile-dropdown-neclink")?.classList.add("hidden")}>
-        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Link</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!selectedLink ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-              onClick={() => { setSelectedLink(null); setCurrentPage(1); fetchHistories(1, searchTerm, undefined); document.getElementById("mobile-dropdown-neclink")?.classList.add("hidden"); }}>
-              Semua Link {!selectedLink && <Check className="w-4 h-4" />}
+      {/* ========== MOBILE FILTER MODALS (Unified Bottom Sheet) ========== */}
+      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
+        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300">
+          <DialogHeader className="p-4 border-b bg-gray-50/80">
+            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
+            <DialogTitle className="text-lg font-bold flex items-center gap-2">
+              {activeMobileFilter === 'neclink' && "Pilih Link"}
+              {(activeMobileFilter === 'monthly-year' || activeMobileFilter === 'yearly-year') && "Pilih Tahun"}
+              {activeMobileFilter === 'monthly-month' && "Pilih Bulan"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
+            <div className="grid grid-cols-1 gap-2">
+              
+              {activeMobileFilter === 'neclink' && (
+                <>
+                  <button onClick={() => { setSelectedLink(null); setCurrentPage(1); fetchHistories(1, searchTerm, undefined); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !selectedLink ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                    Semua Link
+                    {!selectedLink && <Check className="w-4 h-4" />}
+                  </button>
+                  {links.map((l) => (
+                    <button key={l.id} onClick={() => { setSelectedLink(l.id); setCurrentPage(1); fetchHistories(1, searchTerm, l.id); setActiveMobileFilter(null); }}
+                      className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedLink === l.id ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                      <span className="truncate pr-2">{l.name}</span>
+                      {selectedLink === l.id && <Check className="w-4 h-4 shrink-0" />}
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {activeMobileFilter === 'monthly-year' && (
+                getAvailableYears(histories).map((year) => (
+                  <button key={year} onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                    {year}
+                    {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
+                  </button>
+                ))
+              )}
+
+              {activeMobileFilter === 'monthly-month' && (
+                Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                  <button key={month} onClick={() => { setSelectedMonth(month); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedMonth === month ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                    <span className="truncate pr-2">
+                      {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
+                    </span>
+                    {selectedMonth === month && <Check className="w-4 h-4 shrink-0" />}
+                  </button>
+                ))
+              )}
+
+              {activeMobileFilter === 'yearly-year' && (
+                [...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - i;
+                  return (
+                    <button key={year} onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
+                      className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                      {year}
+                      {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
+                    </button>
+                  );
+                })
+              )}
+
             </div>
-            {links.map((l) => (
-              <div key={l.id} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedLink === l.id ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-                onClick={() => { setSelectedLink(l.id); setCurrentPage(1); fetchHistories(1, searchTerm, l.id); document.getElementById("mobile-dropdown-neclink")?.classList.add("hidden"); }}>
-                <span className="truncate pr-2">{l.name}</span>
-                {selectedLink === l.id && <Check className="w-4 h-4 shrink-0" />}
-              </div>
-            ))}
           </div>
-        </div>
-      </div>
-
-      <div id="mobile-dropdown-monthly-year" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
-        onClick={() => document.getElementById("mobile-dropdown-monthly-year")?.classList.add("hidden")}>
-        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Tahun</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            {getAvailableYears(histories).map((year) => (
-              <div key={year} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedYear === year ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-                onClick={() => { setSelectedYear(year); document.getElementById("mobile-dropdown-monthly-year")?.classList.add("hidden"); }}>
-                {year} {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div id="mobile-dropdown-monthly-month" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
-        onClick={() => document.getElementById("mobile-dropdown-monthly-month")?.classList.add("hidden")}>
-        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Bulan</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            {Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-              <div key={month} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedMonth === month ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-                onClick={() => { setSelectedMonth(month); document.getElementById("mobile-dropdown-monthly-month")?.classList.add("hidden"); }}>
-                <span className="truncate pr-2">
-                  {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
-                </span>
-                {selectedMonth === month && <Check className="w-4 h-4 shrink-0" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <div id="mobile-dropdown-yearly-year" className="hidden fixed inset-0 z-[100] flex items-end justify-center p-0 sm:items-center sm:p-4 bg-black/40 backdrop-blur-sm transition-opacity"
-        onClick={() => document.getElementById("mobile-dropdown-yearly-year")?.classList.add("hidden")}>
-        <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200"
-          onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Tahun</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            {[...Array(5)].map((_, i) => {
-              const year = new Date().getFullYear() - i;
-              return (
-                <div key={year} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${selectedYear === year ? 'font-bold text-blue-700 bg-blue-50' : 'text-gray-700 hover:bg-gray-50'}`}
-                  onClick={() => { setSelectedYear(year); document.getElementById("mobile-dropdown-yearly-year")?.classList.add("hidden"); }}>
-                  {year} {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+        </DialogContent>
+      </Dialog>
 
     </div >
   );

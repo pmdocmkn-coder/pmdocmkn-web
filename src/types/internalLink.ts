@@ -128,6 +128,7 @@ export const STATUS_OPTIONS = [
 export const LINK_TYPE_OPTIONS = [
     { value: "Main", label: "Main" },
     { value: "Backup", label: "Backup" },
+    { value: "Last Mile", label: "Last Mile" },
 ];
 
 export const DIRECTION_OPTIONS = [
@@ -191,6 +192,7 @@ export function getLinkTypeBadgeClass(type: string | null | undefined): string {
     switch (type) {
         case "Main": return "bg-blue-100 text-blue-700 border border-blue-300";
         case "Backup": return "bg-gray-100 text-gray-600 border border-gray-300";
+        case "Last Mile": return "bg-purple-100 text-purple-700 border border-purple-300";
         default: return "bg-gray-50 text-gray-400 border border-gray-200";
     }
 }

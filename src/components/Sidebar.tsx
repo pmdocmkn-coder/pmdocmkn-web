@@ -7,6 +7,7 @@ import {
   Phone,
   Upload,
   Download,
+  Printer,
   TrendingUp,
   BookOpen,
   Settings,
@@ -154,6 +155,13 @@ const callRecordsMenu: NavItem[] = [
     icon: Download,
     id: "export",
     permission: "callrecord.view-any",
+  },
+  {
+    name: "Print Report",
+    path: "/callrecord-print",
+    icon: Printer,
+    id: "callrecord-print",
+    permission: "callrecord.view",
   },
 ];
 
