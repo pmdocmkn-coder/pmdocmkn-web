@@ -9,6 +9,8 @@ import {
   Title,
   Tooltip,
   Legend,
+  LineController,
+  BarController,
   type ChartOptions,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
@@ -21,7 +23,18 @@ import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { Printer, Calendar, RefreshCw, AlertCircle, Download, ChevronDown } from "lucide-react";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, LineElement, PointElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale, 
+  LinearScale, 
+  BarElement, 
+  LineElement, 
+  PointElement, 
+  LineController,
+  BarController,
+  Title, 
+  Tooltip, 
+  Legend
+);
 
 const formatDate = (dateStr: string): string => {
   try {
@@ -318,7 +331,7 @@ const CallRecordPrintPage: React.FC = () => {
 
             {/* Calendar Popup */}
             {calOpen && (
-              <div className="absolute top-full left-0 mt-2 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-3">
+              <div className="absolute top-full right-0 origin-top-right mt-2 z-50 bg-white rounded-xl shadow-2xl border border-gray-200 p-3">
                 <DayPicker
                   mode="range"
                   selected={range}

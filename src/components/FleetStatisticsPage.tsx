@@ -297,39 +297,48 @@ const FleetStatisticsPage: React.FC = () => {
               </button>
               
               {mobDateRangeOpen && (
-                <div className="absolute top-full left-0 mt-2 z-[110] bg-white rounded-2xl shadow-xl border border-purple-100 p-4">
-                  <DayPicker
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={(r) => setDateRange(r)}
-                    locale={localeId}
-                    showOutsideDays
-                    disabled={{ after: new Date() }}
-                    footer={
-                      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3 text-sm">
-                        <div className="flex gap-4">
-                          <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
-                          <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-purple-600 font-bold hover:text-purple-800 transition-colors">Hari ini</button>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
-                            else setStartDate("");
-                            
-                            if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
-                            else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
-                            else setEndDate("");
-                            
-                            setMobDateRangeOpen(false);
-                          }} 
-                          className="bg-purple-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
-                        >
-                          Selesai
-                        </button>
-                      </div>
-                    }
+                <>
+                  <div 
+                    className="fixed inset-0 bg-slate-900/40 z-[100] backdrop-blur-sm"
+                    onClick={() => setMobDateRangeOpen(false)}
                   />
-                </div>
+                  <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white rounded-2xl shadow-2xl border border-purple-100 p-4 w-[90%] max-w-[360px] max-h-[85vh] overflow-y-auto flex flex-col">
+                    <div className="flex-1 overflow-y-auto no-scrollbar">
+                      <div className="flex justify-center">
+                        <DayPicker
+                          mode="range"
+                          selected={dateRange}
+                          onSelect={(r) => setDateRange(r)}
+                          locale={localeId}
+                          showOutsideDays
+                          disabled={{ after: new Date() }}
+                        />
+                      </div>
+                    </div>
+                    {/* Fixed Footer */}
+                    <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2 text-sm bg-white shrink-0">
+                      <div className="flex gap-4">
+                        <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
+                        <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-purple-600 font-bold hover:text-purple-800 transition-colors">Hari ini</button>
+                      </div>
+                      <button 
+                        onClick={() => {
+                          if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
+                          else setStartDate("");
+                          
+                          if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
+                          else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
+                          else setEndDate("");
+                          
+                          setMobDateRangeOpen(false);
+                        }} 
+                        className="bg-purple-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-purple-700 transition-colors"
+                      >
+                        Selesai
+                      </button>
+                    </div>
+                  </div>
+                </>
               )}
             </div>
           </div>
@@ -637,12 +646,12 @@ const FleetStatisticsPage: React.FC = () => {
         {/* Filters Section */}
         <motion.div
           variants={itemVariants}
-          className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
+          className="bg-white rounded-xl shadow-sm border border-gray-200 relative z-50"
         >
           {/* Filter Header */}
           <motion.div
             whileHover={{ backgroundColor: "rgba(239, 246, 255, 0.8)" }}
-            className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 cursor-pointer"
+            className="px-6 py-4 border-b border-gray-100 bg-gradient-to-r from-blue-50 to-indigo-50 cursor-pointer rounded-t-xl"
             onClick={() => setIsFilterExpanded(!isFilterExpanded)}
           >
             <div className="flex items-center justify-between">
@@ -679,7 +688,7 @@ const FleetStatisticsPage: React.FC = () => {
                 initial="collapsed"
                 animate="expanded"
                 exit="collapsed"
-                className="p-6 overflow-hidden"
+                className="p-6 overflow-visible"
               >
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                   {/* Date Range Filter */}
