@@ -51,6 +51,7 @@ import {
 } from "../../types/radio";
 import RadioHistoryModal from "./RadioHistoryModal";
 import ScrapRadioModal from "./ScrapRadioModal";
+import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
 
 export default function RadioConventionalPage() {
@@ -77,6 +78,7 @@ export default function RadioConventionalPage() {
     const [isEditOpen, setIsEditOpen] = useState(false);
     const [isHistoryOpen, setIsHistoryOpen] = useState(false);
     const [isScrapOpen, setIsScrapOpen] = useState(false);
+    const [isImportOpen, setIsImportOpen] = useState(false);
     const [selectedRadio, setSelectedRadio] = useState<RadioConventional | null>(null);
 
     // Form State
@@ -166,6 +168,21 @@ export default function RadioConventionalPage() {
         }
     };
 
+    const handleClearAll = async () => {
+        if (!window.confirm("WARNING: Are you sure you want to delete ALL radio conventional data? This cannot be undone.")) return;
+        try {
+            await radioConventionalApi.clearAll();
+            toast({ title: "Success", description: "All radio conventional data deleted successfully" });
+            loadData();
+        } catch (error) {
+            toast({
+                title: "Error",
+                description: "Failed to clear radio conventional data",
+                variant: "destructive",
+            });
+        }
+    };
+
     const handleScrap = async (data: ScrapFromRadioDto) => {
         if (!selectedRadio) return;
         try {
@@ -212,27 +229,7 @@ export default function RadioConventionalPage() {
         setSelectedRadio(null);
     };
 
-    const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        if (e.target.files && e.target.files[0]) {
-            const file = e.target.files[0];
-            try {
-                const response = await radioConventionalApi.importCsv(file);
-                const { success, failed, errors } = response.data;
-                toast({
-                    title: "Import Completed",
-                    description: `Success: ${success}, Failed: ${failed}`,
-                    variant: failed > 0 ? "destructive" : "default",
-                });
-                loadData();
-            } catch (error) {
-                toast({
-                    title: "Error",
-                    description: "Import failed",
-                    variant: "destructive",
-                });
-            }
-        }
-    };
+    // handleImport is now handled by RadioImportModal
 
     const handleExport = async () => {
         try {
@@ -278,20 +275,17 @@ export default function RadioConventionalPage() {
                     <p className="text-muted-foreground">Manage conventional radio assets</p>
                 </div>
                 <div className="flex gap-2">
+                    {hasPermission("radio.delete") && (
+                        <Button variant="destructive" onClick={handleClearAll}>
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Hapus Semua
+                        </Button>
+                    )}
                     {hasPermission("radio.import") && (
-                        <div className="relative">
-                            <input
-                                type="file"
-                                id="import-conventional"
-                                className="hidden"
-                                accept=".csv"
-                                onChange={handleImport}
-                            />
-                            <Button variant="outline" onClick={() => document.getElementById('import-conventional')?.click()}>
-                                <Upload className="w-4 h-4 mr-2" />
-                                Import CSV
-                            </Button>
-                        </div>
+                        <Button variant="outline" onClick={() => setIsImportOpen(true)}>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Import
+                        </Button>
                     )}
                     {hasPermission("radio.export") && (
                         <Button variant="outline" onClick={handleExport}>
@@ -315,21 +309,36 @@ export default function RadioConventionalPage() {
             </div>
 
             {/* Filters */}
-            <div className="flex gap-4 items-center bg-white p-4 rounded-lg border shadow-sm">
-                <div className="relative flex-1 max-w-sm">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 items-center bg-white p-4 rounded-lg border shadow-sm">
+                <div className="relative">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
-                        placeholder="Search unit number, radio id..."
+                        placeholder="Search unit, ID..."
                         className="pl-8"
                         value={queryParams.search}
                         onChange={(e) => setQueryParams({ ...queryParams, search: e.target.value, page: 1 })}
                     />
                 </div>
+                <Input
+                    placeholder="Filter Dept..."
+                    value={queryParams.dept || ""}
+                    onChange={(e) => setQueryParams({ ...queryParams, dept: e.target.value, page: 1 })}
+                />
+                <Input
+                    placeholder="Filter Fleet..."
+                    value={queryParams.fleet || ""}
+                    onChange={(e) => setQueryParams({ ...queryParams, fleet: e.target.value, page: 1 })}
+                />
+                <Input
+                    placeholder="Filter Radio Type..."
+                    value={queryParams.radioType || ""}
+                    onChange={(e) => setQueryParams({ ...queryParams, radioType: e.target.value, page: 1 })}
+                />
                 <Select
                     value={queryParams.status || "all"}
                     onValueChange={(val) => setQueryParams({ ...queryParams, status: val === "all" ? undefined : val, page: 1 })}
                 >
-                    <SelectTrigger className="w-[180px]">
+                    <SelectTrigger>
                         <SelectValue placeholder="Status" />
                     </SelectTrigger>
                     <SelectContent>
@@ -445,11 +454,34 @@ export default function RadioConventionalPage() {
                     >
                         Previous
                     </Button>
+                    
+                    <div className="hidden sm:flex gap-1">
+                        {Array.from({ length: totalPages }, (_, i) => i + 1)
+                            .filter(p => p === 1 || p === totalPages || Math.abs(p - queryParams.page!) <= 1)
+                            .reduce((acc: React.ReactNode[], p, i, arr) => {
+                                if (i > 0 && p - arr[i - 1] > 1) {
+                                    acc.push(<span key={`ellipsis-${p}`} className="px-2 text-muted-foreground self-center">...</span>);
+                                }
+                                acc.push(
+                                    <Button
+                                        key={p}
+                                        variant={p === queryParams.page ? "default" : "outline"}
+                                        size="sm"
+                                        onClick={() => setQueryParams({ ...queryParams, page: p })}
+                                        className={p === queryParams.page ? "bg-black text-white px-3" : "px-3"}
+                                    >
+                                        {p}
+                                    </Button>
+                                );
+                                return acc;
+                            }, [])}
+                    </div>
+
                     <Button
                         variant="outline"
                         size="sm"
                         onClick={() => setQueryParams({ ...queryParams, page: queryParams.page! + 1 })}
-                        disabled={queryParams.page === totalPages}
+                        disabled={queryParams.page === totalPages || totalPages === 0}
                     >
                         Next
                     </Button>
@@ -586,6 +618,14 @@ export default function RadioConventionalPage() {
                 onClose={() => setIsScrapOpen(false)}
                 onConfirm={handleScrap}
                 radioUnitNumber={selectedRadio?.unitNumber}
+            />
+
+            <RadioImportModal
+                isOpen={isImportOpen}
+                onClose={() => setIsImportOpen(false)}
+                title="Import Radio Conventional"
+                onImportSuccess={() => loadData()}
+                importApiCall={radioConventionalApi.importCsv}
             />
         </div>
     );

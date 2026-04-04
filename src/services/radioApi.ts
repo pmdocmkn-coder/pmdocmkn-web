@@ -32,6 +32,10 @@ export const radioTrunkingApi = {
         return api.delete(`/api/radio-trunking/${id}`);
     },
 
+    clearAll: () => {
+        return api.delete("/api/radio-trunking/clear");
+    },
+
     getHistory: (id: number) => {
         return api.get<RadioHistory[]>(`/api/radio-trunking/${id}/history`);
     },
@@ -81,6 +85,10 @@ export const radioConventionalApi = {
         return api.delete(`/api/radio-conventional/${id}`);
     },
 
+    clearAll: () => {
+        return api.delete("/api/radio-conventional/clear");
+    },
+
     getHistory: (id: number) => {
         return api.get<RadioHistory[]>(`/api/radio-conventional/${id}/history`);
     },
@@ -128,6 +136,10 @@ export const radioGrafirApi = {
 
     delete: (id: number) => {
         return api.delete(`/api/radio-grafir/${id}`);
+    },
+
+    clearAll: () => {
+        return api.delete("/api/radio-grafir/clear");
     },
 
     getLinkedTrunking: (id: number) => {

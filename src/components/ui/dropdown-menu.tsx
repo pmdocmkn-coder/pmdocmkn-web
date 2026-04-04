@@ -101,11 +101,21 @@ const DropdownMenuContent = React.forwardRef<
 
   if (!open) return null
 
+  const getAlignClass = () => {
+    switch (align) {
+      case 'center': return 'left-1/2 -translate-x-1/2';
+      case 'end': return 'right-0';
+      case 'start':
+      default: return 'left-0';
+    }
+  }
+
   return (
     <div
       ref={contentRef}
       className={cn(
-        "absolute z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white p-1 shadow-md animate-in fade-in-0 zoom-in-95",
+        "absolute top-full mt-1 z-50 min-w-[8rem] overflow-hidden rounded-md border bg-white p-1 shadow-md animate-in fade-in-0 zoom-in-95",
+        getAlignClass(),
         className
       )}
       {...props}

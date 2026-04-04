@@ -79,6 +79,7 @@ export interface RadioTrunkingQuery extends BaseQuery {
     status?: string;
     dept?: string;
     fleet?: string;
+    radioType?: string;
 }
 
 // ==========================================
@@ -121,6 +122,7 @@ export interface RadioConventionalQuery extends BaseQuery {
     status?: string;
     dept?: string;
     fleet?: string;
+    radioType?: string;
 }
 
 // ==========================================
@@ -168,6 +170,8 @@ export interface RadioGrafirQuery extends BaseQuery {
     status?: string;
     div?: string;
     dept?: string;
+    fleetId?: string;
+    typeRadio?: string;
 }
 
 // ==========================================

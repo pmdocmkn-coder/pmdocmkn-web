@@ -196,14 +196,18 @@ const FleetStatisticsPage: React.FC = () => {
     }
   };
 
+  const [isExporting, setIsExporting] = useState(false);
+
   const handleExportUniqueCallers = async () => {
     if (!detailModal.fleet) return;
 
+    setIsExporting(true);
     try {
       await callRecordApi.exportUniqueCallersExcel(detailModal.fleet, startDate, endDate);
     } catch (err) {
       console.error('Failed to export unique callers:', err);
-      // Optional: Add toast notification here
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -1402,13 +1406,18 @@ const FleetStatisticsPage: React.FC = () => {
                 <div className="flex items-center gap-2 flex-shrink-0 ml-2">
                   {canExport && (
                     <motion.button
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
+                      whileHover={{ scale: isExporting ? 1 : 1.05 }}
+                      whileTap={{ scale: isExporting ? 1 : 0.95 }}
                       onClick={handleExportUniqueCallers}
-                      className="px-2.5 md:px-3 py-1.5 bg-green-600 text-white text-xs md:text-sm rounded-lg hover:bg-green-700 transition-colors flex items-center shadow-sm"
+                      disabled={isExporting}
+                      className={`px-2.5 md:px-3 py-1.5 ${isExporting ? 'bg-green-500 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'} text-white text-xs md:text-sm rounded-lg transition-colors flex items-center shadow-sm`}
                     >
-                      <Download className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1" />
-                      Export
+                      {isExporting ? (
+                        <RefreshCw className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-1.5 animate-spin" />
+                      ) : (
+                        <Download className="w-3.5 h-3.5 md:w-4 md:h-4 mr-1 md:mr-1.5" />
+                      )}
+                      {isExporting ? 'Memproses...' : 'Export'}
                     </motion.button>
                   )}
                   <motion.button
