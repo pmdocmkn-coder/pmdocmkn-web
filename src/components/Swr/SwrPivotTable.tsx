@@ -233,9 +233,7 @@ const SwrPivotTable: React.FC = () => {
   const handleExport = async () => {
     try {
       setIsExporting(true);
-      // Export still uses the exact selection for the file size
-      const siteParam = selectedSites.length === 1 ? selectedSites[0] : undefined;
-      await swrSignalApi.exportYearlyExcel(selectedYear, siteParam);
+      await swrSignalApi.exportYearlyExcel(selectedYear, selectedSites, selectedType, searchTerm);
       toast({
         title: "Export Berhasil",
         description: `Data tahun ${selectedYear} berhasil diexport`,

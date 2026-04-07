@@ -123,6 +123,9 @@ const FleetStatisticsPage: React.FC = () => {
   const [callerSearch, setCallerSearch] = useState('');
   const [calledSearch, setCalledSearch] = useState('');
 
+  const [currentPageCaller, setCurrentPageCaller] = useState(1);
+  const [currentPageCalled, setCurrentPageCalled] = useState(1);
+
   const [detailModal, setDetailModal] = useState<{
     isOpen: boolean;
     type: 'caller' | 'called';
@@ -152,7 +155,7 @@ const FleetStatisticsPage: React.FC = () => {
       const data = await callRecordApi.getFleetStatistics(
         startDate,
         endDate,
-        topCount,
+        10000,
         statisticType,
         sortOrder,
         sortBy,
@@ -160,6 +163,8 @@ const FleetStatisticsPage: React.FC = () => {
         calledSearch || undefined
       );
       setStatistics(data);
+      setCurrentPageCaller(1);
+      setCurrentPageCalled(1);
     } catch (err: any) {
       console.error('❌ Error loading fleet statistics:', err);
       setError(err.response?.data?.message || err.message || 'Failed to load fleet statistics');
@@ -467,7 +472,7 @@ const FleetStatisticsPage: React.FC = () => {
               <span className="text-[10px] font-bold text-purple-600 uppercase tracking-widest">{statistics.topCallers.length} fleet</span>
             </div>
             <div className="space-y-3">
-              {statistics.topCallers.map((caller, i) => {
+              {statistics.topCallers.slice((currentPageCaller - 1) * topCount, currentPageCaller * topCount).map((caller, i) => {
                 const maxCalls = statistics.topCallers[0]?.totalCalls || 1;
                 const pct = Math.round((caller.totalCalls / maxCalls) * 100);
                 const rankColor = caller.rank === 1 ? 'from-amber-400 to-amber-500 text-amber-900' : caller.rank === 2 ? 'from-slate-300 to-slate-400 text-slate-700' : caller.rank === 3 ? 'from-orange-300 to-orange-400 text-orange-800' : 'from-purple-100 to-purple-200 text-purple-700';
@@ -516,6 +521,13 @@ const FleetStatisticsPage: React.FC = () => {
                 </div>
               )}
             </div>
+            {statistics.topCallers.length > topCount && (
+              <div className="flex justify-between items-center mt-4">
+                <button disabled={currentPageCaller === 1} onClick={() => setCurrentPageCaller(prev => Math.max(1, prev - 1))} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium disabled:opacity-50 shadow-sm active:scale-95 transition-all">Previous</button>
+                <span className="text-[11px] font-bold text-slate-500">Page {currentPageCaller} of {Math.ceil(statistics.topCallers.length / topCount)}</span>
+                <button disabled={currentPageCaller >= Math.ceil(statistics.topCallers.length / topCount)} onClick={() => setCurrentPageCaller(prev => prev + 1)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium disabled:opacity-50 shadow-sm active:scale-95 transition-all">Next</button>
+              </div>
+            )}
           </section>
         )}
 
@@ -532,7 +544,7 @@ const FleetStatisticsPage: React.FC = () => {
               <span className="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">{statistics.topCalledFleets.length} fleet</span>
             </div>
             <div className="space-y-3">
-              {statistics.topCalledFleets.map((called) => {
+              {statistics.topCalledFleets.slice((currentPageCalled - 1) * topCount, currentPageCalled * topCount).map((called) => {
                 const maxCalls = statistics.topCalledFleets[0]?.totalCalls || 1;
                 const pct = Math.round((called.totalCalls / maxCalls) * 100);
                 const rankColor = called.rank === 1 ? 'from-amber-400 to-amber-500 text-amber-900' : called.rank === 2 ? 'from-slate-300 to-slate-400 text-slate-700' : called.rank === 3 ? 'from-orange-300 to-orange-400 text-orange-800' : 'from-indigo-100 to-indigo-200 text-indigo-700';
@@ -581,6 +593,13 @@ const FleetStatisticsPage: React.FC = () => {
                 </div>
               )}
             </div>
+            {statistics.topCalledFleets.length > topCount && (
+              <div className="flex justify-between items-center mt-4">
+                <button disabled={currentPageCalled === 1} onClick={() => setCurrentPageCalled(prev => Math.max(1, prev - 1))} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium disabled:opacity-50 shadow-sm active:scale-95 transition-all">Previous</button>
+                <span className="text-[11px] font-bold text-slate-500">Page {currentPageCalled} of {Math.ceil(statistics.topCalledFleets.length / topCount)}</span>
+                <button disabled={currentPageCalled >= Math.ceil(statistics.topCalledFleets.length / topCount)} onClick={() => setCurrentPageCalled(prev => prev + 1)} className="px-4 py-2 bg-white border border-gray-200 text-gray-700 rounded-lg text-sm font-medium disabled:opacity-50 shadow-sm active:scale-95 transition-all">Next</button>
+              </div>
+            )}
           </section>
         )}
 
@@ -829,26 +848,30 @@ const FleetStatisticsPage: React.FC = () => {
                   <div className="space-y-2">
                     <label className="block text-sm font-medium text-gray-700 flex items-center">
                       <Users className="w-4 h-4 mr-2 text-purple-500" />
-                      Top Records
+                      Items Per Page
                     </label>
                     <div className="relative">
                       <motion.select
                         whileFocus={{ scale: 1.02 }}
                         value={topCount}
-                        onChange={(e) => setTopCount(Number(e.target.value))}
+                        onChange={(e) => {
+                          setTopCount(Number(e.target.value));
+                          setCurrentPageCaller(1);
+                          setCurrentPageCalled(1);
+                        }}
                         className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 appearance-none transition-all shadow-sm hover:border-gray-400 bg-white"
                       >
-                        <option value={5}>Top 5 Records</option>
-                        <option value={10}>Top 10 Records</option>
-                        <option value={20}>Top 20 Records</option>
-                        <option value={50}>Top 50 Records</option>
+                        <option value={5}>5 Records Per Page</option>
+                        <option value={10}>10 Records Per Page</option>
+                        <option value={20}>20 Records Per Page</option>
+                        <option value={50}>50 Records Per Page</option>
                       </motion.select>
                       <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
                         <ChevronDown className="w-4 h-4" />
                       </div>
                     </div>
                     <p className="text-xs text-gray-500">
-                      Display top {topCount} performing fleets
+                      Display {topCount} performing fleets per page
                     </p>
                   </div>
 
@@ -1138,7 +1161,7 @@ const FleetStatisticsPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {statistics.topCallers.map((caller, index) => (
+                      {statistics.topCallers.slice((currentPageCaller - 1) * topCount, currentPageCaller * topCount).map((caller, index) => (
                         <motion.tr
                           key={caller.rank}
                           custom={index}
@@ -1177,7 +1200,7 @@ const FleetStatisticsPage: React.FC = () => {
 
                 {/* Mobile Cards */}
                 <div className="md:hidden flex flex-col gap-3 p-4">
-                  {statistics.topCallers.map((caller) => (
+                  {statistics.topCallers.slice((currentPageCaller - 1) * topCount, currentPageCaller * topCount).map((caller) => (
                     <div key={caller.rank} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
                       <div className={`absolute top-0 left-0 w-1.5 h-full ${caller.rank === 1 ? 'bg-yellow-400' :
                         caller.rank === 2 ? 'bg-gray-400' :
@@ -1209,6 +1232,28 @@ const FleetStatisticsPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                {/* Pagination Controls */}
+                {statistics.topCallers.length > topCount && (
+                  <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <button
+                      onClick={() => setCurrentPageCaller(p => Math.max(1, p - 1))}
+                      disabled={currentPageCaller === 1}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-600 font-medium">
+                      Page {currentPageCaller} of {Math.ceil(statistics.topCallers.length / topCount)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPageCaller(p => p + 1)}
+                      disabled={currentPageCaller >= Math.ceil(statistics.topCallers.length / topCount)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="px-6 py-12 text-center text-gray-500">
@@ -1252,7 +1297,7 @@ const FleetStatisticsPage: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                      {statistics.topCalledFleets.map((called, index) => (
+                      {statistics.topCalledFleets.slice((currentPageCalled - 1) * topCount, currentPageCalled * topCount).map((called, index) => (
                         <motion.tr
                           key={called.rank}
                           custom={index}
@@ -1301,7 +1346,7 @@ const FleetStatisticsPage: React.FC = () => {
 
                 {/* Mobile Cards */}
                 <div className="md:hidden flex flex-col gap-3 p-4">
-                  {statistics.topCalledFleets.map((called) => (
+                  {statistics.topCalledFleets.slice((currentPageCalled - 1) * topCount, currentPageCalled * topCount).map((called) => (
                     <div key={called.rank} className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 relative overflow-hidden">
                       <div className={`absolute top-0 left-0 w-1.5 h-full ${called.rank === 1 ? 'bg-yellow-400' :
                         called.rank === 2 ? 'bg-gray-400' :
@@ -1343,6 +1388,28 @@ const FleetStatisticsPage: React.FC = () => {
                     </div>
                   ))}
                 </div>
+                {/* Pagination Controls */}
+                {statistics.topCalledFleets.length > topCount && (
+                  <div className="px-6 py-4 border-t border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <button
+                      onClick={() => setCurrentPageCalled(p => Math.max(1, p - 1))}
+                      disabled={currentPageCalled === 1}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-gray-600 font-medium">
+                      Page {currentPageCalled} of {Math.ceil(statistics.topCalledFleets.length / topCount)}
+                    </span>
+                    <button
+                      onClick={() => setCurrentPageCalled(p => p + 1)}
+                      disabled={currentPageCalled >= Math.ceil(statistics.topCalledFleets.length / topCount)}
+                      className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
               </>
             ) : (
               <div className="px-6 py-12 text-center text-gray-500">

@@ -1008,12 +1008,23 @@ export const swrSignalApi = {
     return response.data.data;
   },
 
-  exportYearlyExcel: async (year: number, site?: string) => {
-    const params: any = { year };
-    if (site) params.site = site;
+  exportYearlyExcel: async (year: number, sites?: string[], type?: string, search?: string) => {
+    const params = new URLSearchParams();
+    params.append('year', year.toString());
+    
+    if (sites && sites.length > 0) {
+      sites.forEach(site => params.append('sites', site));
+    }
+    
+    if (type && type !== "all") {
+      params.append('type', type);
+    }
+    
+    if (search) {
+      params.append('search', search);
+    }
 
-    const response = await api.get("/api/swr-signal/export-yearly-excel", {
-      params,
+    const response = await api.get(`/api/swr-signal/export-yearly-excel?${params.toString()}`, {
       responseType: "blob",
     });
 
@@ -1024,8 +1035,8 @@ export const swrSignalApi = {
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    const filename = site
-      ? `SWR_Yearly_${year}_${site}.xlsx`
+    const filename = sites && sites.length > 0 
+      ? `SWR_Yearly_${year}_Filtered.xlsx`
       : `SWR_Yearly_${year}.xlsx`;
     link.setAttribute("download", filename);
     document.body.appendChild(link);
