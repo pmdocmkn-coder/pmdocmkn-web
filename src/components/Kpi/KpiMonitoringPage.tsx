@@ -6,7 +6,7 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { 
-    Search, Plus, Calendar, Edit2, Clock, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Upload
+    Search, Plus, Calendar, Edit2, Clock, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Upload, Link2
 } from "lucide-react";
 import { kpiApi } from "../../services/kpiApi";
 import { KpiDocument, KpiDocumentQuery } from "../../types/kpi";
@@ -169,8 +169,10 @@ export default function KpiMonitoringPage() {
                 return <Badge className="bg-green-100 text-green-700 hover:bg-green-200">Selesai</Badge>;
             case "Approved":
                 return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">Approved</Badge>;
-            case "Dikirim Email (Menunggu Balasan)":
-                return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200">Menunggu Balasan</Badge>;
+            case "Menunggu Balasan (Email)":
+                return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200">Menunggu Balasan Email</Badge>;
+            case "Menunggu Sign (Office)":
+                return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200">Menunggu Sign Office</Badge>;
             case "Data Diterima":
                 return <Badge className="bg-sky-100 text-sky-700 hover:bg-sky-200">Data Diterima</Badge>;
             case "Menunggu Data":
@@ -219,7 +221,7 @@ export default function KpiMonitoringPage() {
         sorted.forEach(item => {
             const tag = item.groupTag?.trim() || null;
 
-            // Rows without a groupTag are ALWAYS standalone
+            // Rows without a groupTag are ALWAYS standalone (tidak di-merge)
             if (!tag) {
                 groups.push({
                     dataSource: item.dataSource,
@@ -237,10 +239,6 @@ export default function KpiMonitoringPage() {
                 groups.push({ dataSource: item.dataSource, groupTag: tag, items: [item] });
             }
         });
-
-        // DEBUG - remove after fixing
-        console.log("[KPI Merge Debug] items:", items.map(i => ({ id: i.id, name: i.documentName, tag: i.groupTag })));
-        console.log("[KPI Merge Debug] groups output:", groups.map(g => ({ tag: g.groupTag, count: g.items.length, names: g.items.map(i => i.documentName) })));
 
         return groups;
     };
