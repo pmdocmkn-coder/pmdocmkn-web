@@ -169,10 +169,10 @@ export default function KpiMonitoringPage() {
                 return <Badge className="bg-green-100 text-green-700 hover:bg-green-200">Selesai</Badge>;
             case "Approved":
                 return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">Approved</Badge>;
-            case "Menunggu Balasan (Email)":
-                return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200">Menunggu Balasan Email</Badge>;
-            case "Menunggu Sign (Office)":
-                return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200">Menunggu Sign Office</Badge>;
+            case "Menunggu Sign User ( Email )":
+                return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-200">Menunggu Sign User ( Email )</Badge>;
+            case "Menunggu Sign User":
+                return <Badge className="bg-orange-100 text-orange-700 hover:bg-orange-200">Menunggu Sign User</Badge>;
             case "Data Diterima":
                 return <Badge className="bg-sky-100 text-sky-700 hover:bg-sky-200">Data Diterima</Badge>;
             case "Menunggu Data":
