@@ -35,6 +35,7 @@ import RadioConventionalPage from "./components/Radio/RadioConventionalPage";
 import RadioGrafirPage from "./components/Radio/RadioGrafirPage";
 import RadioScrapPage from "./components/Radio/RadioScrapPage";
 import VerifyPage from "./components/VerifyPage";
+import KpiMonitoringPage from "./components/Kpi/KpiMonitoringPage";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -268,6 +269,15 @@ function AppContent() {
             element={
               <PermissionGuard permission="letter.view">
                 <DocumentTypePage />
+              </PermissionGuard>
+            }
+          />
+
+          <Route
+            path="/kpi-tracking"
+            element={
+              <PermissionGuard permission="kpi.view">
+                <KpiMonitoringPage />
               </PermissionGuard>
             }
           />

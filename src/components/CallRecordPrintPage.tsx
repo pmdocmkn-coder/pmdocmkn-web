@@ -24,15 +24,15 @@ import "react-day-picker/style.css";
 import { Printer, Calendar, RefreshCw, AlertCircle, Download, ChevronDown } from "lucide-react";
 
 ChartJS.register(
-  CategoryScale, 
-  LinearScale, 
-  BarElement, 
-  LineElement, 
-  PointElement, 
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  LineElement,
+  PointElement,
   LineController,
   BarController,
-  Title, 
-  Tooltip, 
+  Title,
+  Tooltip,
   Legend
 );
 
@@ -111,6 +111,19 @@ const legendMarginPlugin = {
   }
 };
 
+// Plugin: Paksa background putih pekat agar PDF mem-bypass transparent PNG dan menggunakan JPEG compression (UKURAN FILE JADI SANGAT KECIL!)
+const whiteBackgroundPlugin = {
+  id: 'customCanvasBackgroundColor',
+  beforeDraw: (chart: any) => {
+    const { ctx } = chart;
+    ctx.save();
+    ctx.globalCompositeOperation = 'destination-over';
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, chart.width, chart.height);
+    ctx.restore();
+  }
+};
+
 const PrintChart: React.FC<PrintChartProps> = ({ hourlyData }) => {
   const labels = hourlyData.map((h) => h.timeRange);
   const chartData = {
@@ -148,7 +161,7 @@ const PrintChart: React.FC<PrintChartProps> = ({ hourlyData }) => {
 
   const options: ChartOptions<"bar"> = {
     responsive: true, maintainAspectRatio: false, animation: false,
-    devicePixelRatio: 4, // Force resolusi 4x lipat (membuat grafik tajam saat di-print/PDF)
+    devicePixelRatio: 1.5, // 1.5x — tajam & hemat (sweet spot kualitas vs ukuran)
     plugins: {
       legend: {
         position: "top", align: "start",
@@ -176,26 +189,23 @@ const PrintChart: React.FC<PrintChartProps> = ({ hourlyData }) => {
       },
       yRight: {
         type: "linear", position: "right", beginAtZero: true, max: 100,
-        // Judul vertikal aktif - aman karena label custom ada di dalam chart area (zona berbeda)
         title: { display: true, text: "TE Busy %, Sys Busy % and Others %", font: { size: 9, weight: "bold" }, color: "#444" },
-        // Padding kecil agar angka % mepet
         ticks: { font: { size: 8 }, color: "#555", callback: (v: any) => `${v}%`, stepSize: 20, padding: 4 },
         grid: { drawOnChartArea: false },
         border: { display: false },
       },
     },
-    // Menghilangkan layout padding top tambahan, chart area kini dimaksimalkan menempel di kotak boundary
     layout: { padding: { bottom: 0, top: 0, left: 0, right: 0 } },
   };
 
-  return <Bar plugins={[lineEndLabelPlugin as any, legendMarginPlugin as any]} options={options} data={chartData as any} />;
+  return <Bar plugins={[whiteBackgroundPlugin as any, lineEndLabelPlugin as any, legendMarginPlugin as any]} options={options} data={chartData as any} />;
 };
 
 // ─── Main Page ────────────────────────────────────────────────────────────
 
 const CallRecordPrintPage: React.FC = () => {
   const today = new Date();
-  today.setHours(0, 0, 0, 0); // Normalize to midnight local time
+  today.setHours(0, 0, 0, 0);
   const [range, setRange] = useState<DateRange | undefined>({ from: today, to: today });
   const [calOpen, setCalOpen] = useState(false);
   const calRef = useRef<HTMLDivElement>(null);
@@ -212,6 +222,7 @@ const CallRecordPrintPage: React.FC = () => {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
+
   const handleRangeSelect = (r: DateRange | undefined) => {
     setRange(r);
     setSummaries([]); setHasLoaded(false);
@@ -250,6 +261,31 @@ const CallRecordPrintPage: React.FC = () => {
       setSummaries([]);
     } finally { setIsLoading(false); }
   }, [range]);
+
+  // ── Isi src JPEG overlay sebelum print. Canvas disembunyikan via @media print CSS (lebih reliable).
+  const printWithJpeg = useCallback(() => {
+    const containers = document.querySelectorAll<HTMLElement>('#print-pages .chart-print-container');
+
+    containers.forEach((container) => {
+      const canvas = container.querySelector<HTMLCanvasElement>('canvas');
+      const overlay = container.querySelector<HTMLImageElement>('.chart-jpeg-overlay');
+      if (!canvas || !overlay) return;
+
+      // Capture JPEG dari canvas sebelum @media print menyembunyikannya
+      overlay.src = canvas.toDataURL('image/jpeg', 0.7);
+    });
+
+    const afterPrint = () => {
+      // Reset overlay src setelah print selesai
+      document.querySelectorAll<HTMLImageElement>('#print-pages .chart-jpeg-overlay').forEach((img) => {
+        img.src = '';
+      });
+      window.removeEventListener('afterprint', afterPrint);
+    };
+    window.addEventListener('afterprint', afterPrint);
+    // Delay 200ms: beri browser waktu decode JPEG data URL sebelum print dialog buka
+    setTimeout(() => window.print(), 200);
+  }, []);
 
   return (
     <>
@@ -297,6 +333,9 @@ const CallRecordPrintPage: React.FC = () => {
           .no-print { display: none !important; }
           @page { size: A4 landscape; margin: 0; }
           * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+          /* Sembunyikan canvas Chart.js & tampilkan JPEG overlay saat print/PDF */
+          .chart-print-container canvas { display: none !important; }
+          .chart-jpeg-overlay { display: block !important; }
         }
       `}</style>
 
@@ -372,7 +411,7 @@ const CallRecordPrintPage: React.FC = () => {
 
           {hasLoaded && summaries.length > 0 && (
             <button
-              onClick={() => window.print()}
+              onClick={printWithJpeg}
               className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white text-sm font-semibold rounded-lg hover:bg-emerald-700 transition-colors"
             >
               <Printer className="w-3.5 h-3.5" /> Print / PDF
@@ -510,11 +549,22 @@ const PrintContent = React.forwardRef<HTMLDivElement, PrintContentProps>(
             </table>
           </div>
 
-          {/* Chart */}
+          {/* Chart — wrapper dengan class chart-print-container untuk JPEG overlay trick */}
           <div style={{ flex: 1, border: '1px solid #e2e8f0', padding: '16px', minWidth: 0, borderRadius: '8px' }}>
-            {/* Height grafik 400px agar sejajar dengan tinggi tabel dan muat di A4 landscape */}
-            <div style={{ width: '100%', height: '400px' }}>
+            <div className="chart-print-container" style={{ width: '100%', height: '400px', position: 'relative' }}>
               <PrintChart hourlyData={summary.hourlyData} />
+              {/* img overlay: hanya tampil saat print (diisi JPEG oleh printWithJpeg()) */}
+              <img
+                className="chart-jpeg-overlay"
+                alt="chart"
+                style={{
+                  display: 'none',
+                  position: 'absolute',
+                  top: 0, left: 0,
+                  width: '100%', height: '100%',
+                  pointerEvents: 'none',
+                }}
+              />
             </div>
           </div>
         </div>

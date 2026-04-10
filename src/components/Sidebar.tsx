@@ -74,6 +74,13 @@ const navItems: NavItem[] = [
     permission: "docs.view",
   },
   {
+    name: "KPI Tracking",
+    path: "/kpi-tracking",
+    icon: ClipboardList,
+    id: "kpi-tracking",
+    permission: "kpi.view",
+  },
+  {
     name: "Inspeksi KPC",
     path: "/inspeksi-kpc",
     icon: ClipboardList,

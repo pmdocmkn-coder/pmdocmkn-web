@@ -111,20 +111,20 @@ export default function RadioImportModal({
         setStatus('uploading');
         try {
             const response = await importApiCall(file);
-            // Expected response format from backend ImportResult: { success: x, failed: y, errors: [] }
-            const resData = response.data;
+            // Backend wraps result in ApiResponse: { data: { success, failed, errors }, message: "..." }
+            // Unwrap: response.data is the ApiResponse body, response.data.data is the actual payload
+            const importData = response.data?.data ?? response.data;
             
-            // Assume the top-level keys exist based on previous code implementation
             setResult({
-                success: resData.success || 0,
-                failed: resData.failed || 0,
-                errors: resData.errors || []
+                success: importData?.success ?? 0,
+                failed: importData?.failed ?? 0,
+                errors: importData?.errors || []
             });
 
-            if (resData.failed > 0 && resData.success === 0) {
+            if ((importData?.failed ?? 0) > 0 && (importData?.success ?? 0) === 0) {
                 setStatus('error');
                 setErrorMessage("Seluruh data gagal diimpor. Periksa format atau data duplikat.");
-            } else if (resData.failed > 0) {
+            } else if ((importData?.failed ?? 0) > 0) {
                 setStatus('success'); // Partial success is still a success, we just show warnings
                 onImportSuccess();
             } else {
