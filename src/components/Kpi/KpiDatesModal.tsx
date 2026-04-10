@@ -8,6 +8,7 @@ import { KpiDocument, UpdateKpiDocumentDatesDto } from "../../types/kpi";
 import { kpiApi } from "../../services/kpiApi";
 import { useToast } from "../../hooks/use-toast";
 import { format, parseISO } from "date-fns";
+import { DatePicker } from "../ui/date-picker";
 
 interface KpiDatesModalProps {
     isOpen: boolean;
@@ -51,6 +52,21 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
 
     const handleChange = (field: keyof UpdateKpiDocumentDatesDto, value: string) => {
         setDates(prev => ({ ...prev, [field]: value === "" ? null : value }));
+    };
+
+    const handleDateChange = (field: keyof UpdateKpiDocumentDatesDto, date: Date | undefined) => {
+        const value = date ? format(date, "yyyy-MM-dd") : null;
+        setDates(prev => ({ ...prev, [field]: value }));
+    };
+
+    const parseDateString = (dateStr: string | null | undefined): Date | undefined => {
+        if (!dateStr) return undefined;
+        try {
+            const d = parseISO(dateStr);
+            return isNaN(d.getTime()) ? undefined : d;
+        } catch {
+            return undefined;
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -109,10 +125,9 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
                                 <Label className="text-xs font-semibold text-gray-500 uppercase">1. Date Received (Terima Laporan)</Label>
                                 <button type="button" onClick={() => setToday('dateReceived')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
                             </div>
-                            <Input 
-                                type="date" 
-                                value={dates.dateReceived || ""} 
-                                onChange={(e) => handleChange("dateReceived", e.target.value)} 
+                            <DatePicker 
+                                date={parseDateString(dates.dateReceived)} 
+                                onSelect={(d) => handleDateChange("dateReceived", d)} 
                                 className={dates.dateReceived ? "border-indigo-200 bg-indigo-50" : ""}
                             />
                         </div>
@@ -122,10 +137,9 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
                                 <Label className="text-xs font-semibold text-gray-500 uppercase">2. Submitted To User (Dikirim via Email)</Label>
                                 <button type="button" onClick={() => setToday('dateSubmittedToReviewer')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
                             </div>
-                            <Input 
-                                type="date" 
-                                value={dates.dateSubmittedToReviewer || ""} 
-                                onChange={(e) => handleChange("dateSubmittedToReviewer", e.target.value)} 
+                            <DatePicker 
+                                date={parseDateString(dates.dateSubmittedToReviewer)} 
+                                onSelect={(d) => handleDateChange("dateSubmittedToReviewer", d)} 
                                 className={dates.dateSubmittedToReviewer ? "border-indigo-200 bg-indigo-50" : ""}
                             />
                         </div>
@@ -135,10 +149,9 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
                                 <Label className="text-xs font-semibold text-gray-500 uppercase">3. Approved By User (Email dibalas ACC)</Label>
                                 <button type="button" onClick={() => setToday('dateApproved')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
                             </div>
-                            <Input 
-                                type="date" 
-                                value={dates.dateApproved || ""} 
-                                onChange={(e) => handleChange("dateApproved", e.target.value)} 
+                            <DatePicker 
+                                date={parseDateString(dates.dateApproved)} 
+                                onSelect={(d) => handleDateChange("dateApproved", d)} 
                                 className={dates.dateApproved ? "border-indigo-200 bg-indigo-50" : ""}
                             />
                         </div>
@@ -148,10 +161,9 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
                                 <Label className="text-xs font-semibold text-gray-500 uppercase">4. Submitted RQM (Diserahkan ke Fin)</Label>
                                 <button type="button" onClick={() => setToday('dateSubmittedToRqm')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
                             </div>
-                            <Input 
-                                type="date" 
-                                value={dates.dateSubmittedToRqm || ""} 
-                                onChange={(e) => handleChange("dateSubmittedToRqm", e.target.value)} 
+                            <DatePicker 
+                                date={parseDateString(dates.dateSubmittedToRqm)} 
+                                onSelect={(d) => handleDateChange("dateSubmittedToRqm", d)} 
                                 className={dates.dateSubmittedToRqm ? "border-green-200 bg-green-50" : ""}
                             />
                         </div>
