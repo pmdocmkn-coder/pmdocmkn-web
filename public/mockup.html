@@ -3,50 +3,195 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Inter', sans-serif; background-color: #e2e8f0; } </style>
+    <title>Mockup Tabel KPI Multi-level</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 2rem;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+        .table-container {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            overflow: hidden;
+            border: 1px solid #e2e8f0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 14px;
+        }
+        th {
+            background-color: #f1f5f9;
+            padding: 12px 16px;
+            font-weight: 600;
+            border-bottom: 2px solid #cbd5e1;
+            border-right: 1px solid #e2e8f0;
+            text-align: center;
+        }
+        td {
+            padding: 12px 16px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            vertical-align: middle;
+        }
+        .header-row {
+            background-color: #eef2ff;
+            color: #3730a3;
+            font-weight: 700;
+            text-align: center;
+            letter-spacing: 1px;
+            font-size: 12px;
+        }
+        .center {
+            text-align: center;
+        }
+        .bg-gray {
+            background-color: #f8fafc;
+        }
+        .badge-green {
+            background-color: #dcfce7;
+            color: #166534;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .badge-blue {
+            background-color: #dbeafe;
+            color: #1e40af;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-block;
+        }
+        .group-hover:hover {
+            background-color: #f1f5f9;
+            cursor: pointer;
+        }
+        .merged-cell {
+            background-color: #ffffff;
+            transition: background-color 0.2s;
+        }
+        .merged-cell:hover {
+            background-color: #eef2ff;
+            cursor: pointer;
+        }
+    </style>
 </head>
-<body class="flex justify-center p-4 sm:p-8">
+<body>
 
-    <div class="w-full max-w-[400px] h-[750px] bg-[#f7f6f8] rounded-[2.5rem] shadow-2xl overflow-hidden border-8 border-slate-900 relative flex flex-col">
-        
-        <header class="sticky top-0 z-10 flex items-center bg-[#f7f6f8] p-4 border-b border-[#9311d4]/10 justify-between">
-            <button class="text-[#9311d4] flex size-10 shrink-0 items-center justify-center rounded-xl hover:bg-[#9311d4]/10 transition-colors cursor-pointer bg-white shadow-sm border border-[#9311d4]/10 active:scale-95">
-                <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
-            </button>
-            
-            <div class="flex-1 text-center">
-                <h2 class="text-slate-900 text-[17px] font-bold leading-tight tracking-tight">Surat Umum</h2>
-                <p class="text-[11px] text-[#9311d4] font-bold uppercase tracking-widest mt-0.5">Administrasi</p>
-            </div>
-            
-            <div class="flex size-10 items-center justify-end"></div>
-        </header>
+    <h2 style="margin-bottom: 24px;">Simulasi Tabel: Multi-Level Merging</h2>
+    <p style="margin-bottom: 24px; color: #64748b; line-height: 1.5;">
+        Ini adalah simulasi bagaimana HTML Table bekerja dengan rowspan bertingkat. <br/>
+        Kolom <b>Submitted, Approved, RQM, dan Status</b> digabung menjadi 1 kotak besar (Level 1) per-Tag Grup. <br/>
+        Kolom <b>Asal Data dan Date Received</b> digabung parsial (Level 2).
+    </p>
 
-        <div class="flex bg-white px-2 pt-1 shadow-sm relative z-0">
-            <button class="flex-1 pb-3 pt-3 px-1 text-[13px] font-bold text-[#9311d4] border-b-[3px] border-[#9311d4] transition-all">
-                Surat Umum
-            </button>
-            <button class="flex-1 pb-3 pt-3 px-1 text-[13px] font-bold text-slate-400 border-b-[3px] border-transparent hover:text-slate-600 transition-all">
-                Gatepass
-            </button>
-            <button class="flex-1 pb-3 pt-3 px-1 text-[13px] font-bold text-slate-400 border-b-[3px] border-transparent hover:text-slate-600 transition-all">
-                Quotation
-            </button>
-        </div>
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th width="5%">No</th>
+                    <th width="20%">Nama Data</th>
+                    <th width="15%">Asal Data</th>
+                    <th width="10%">Date Received</th>
+                    <th width="10%">Submitted To User</th>
+                    <th width="10%">Approved By User</th>
+                    <th width="10%">Submitted RQM</th>
+                    <th width="10%">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Area Group Header -->
+                <tr>
+                    <td colspan="8" class="header-row">GENERAL</td>
+                </tr>
 
-        <div class="flex-1 p-4 overflow-y-auto pb-24 space-y-3">
-            <div class="w-full h-12 bg-white rounded-xl shadow-sm border border-[#9311d4]/10 flex items-center px-4 mb-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-[#9311d4] mr-3"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                <span class="text-slate-400 text-sm font-medium">Cari sesuatu...</span>
-            </div>
-            
-            <div class="w-full h-32 bg-white rounded-xl shadow-sm border border-[#9311d4]/10 p-4"></div>
-            <div class="w-full h-32 bg-white rounded-xl shadow-sm border border-[#9311d4]/10 p-4"></div>
-            <div class="w-full h-32 bg-white rounded-xl shadow-sm border border-[#9311d4]/10 p-4"></div>
-        </div>
+                <!-- ================= NO 3 (CONTOH MERGE COMPLEX) ================= -->
+                <!-- Baris 1: Bpk Bronson - DATA RADIO SCRAP -->
+                <tr>
+                    <!-- LEVEL 1 MERGE (ROWSPAN 7 baris untuk grup ini) -->
+                    <td rowspan="7" class="center bg-gray font-bold">3</td>
+                    
+                    <td>DATA RADIO SCRAP</td>
+                    
+                    <!-- LEVEL 2 MERGE (ROWSPAN 3 baris khusus utk Bronson) -->
+                    <td rowspan="3">Bpk. Bronson</td>
+                    <td rowspan="3" class="center">-</td>
+                    
+                    <!-- LEVEL 1 MERGE: Progres & Status Gabungan (Rowspan 7) -->
+                    <td rowspan="7" class="center merged-cell font-bold">07/04/2026<br/><span style="font-size:10px; color:#64748b; font-weight:normal;">(Klik utk edit semua)</span></td>
+                    <td rowspan="7" class="center merged-cell font-bold">08/04/2026</td>
+                    <td rowspan="7" class="center merged-cell font-bold">09/04/2026</td>
+                    <td rowspan="7" class="center"><span class="badge-green">Selesai</span></td>
+                </tr>
+                
+                <!-- Baris 2: Bpk Bronson - LIST GRAFIR -->
+                <tr>
+                    <td>LIST GRAFIR RADIO KPC</td>
+                    <!-- Asal data & progres sudah di-merge dari atas -->
+                </tr>
+                
+                <!-- Baris 3: Bpk Bronson - REGISTER RADIO -->
+                <tr>
+                    <td>REGISTER RADIO TRUNKING TAIT KPC</td>
+                    <!-- Asal data & progres sudah di-merge dari atas -->
+                </tr>
 
+                <!-- Baris 4: Belinda - REPORT PIT -->
+                <tr>
+                    <td>REPORT PIT (LKRK)</td>
+                    <td rowspan="1">Mbak. Belinda</td>
+                    <td rowspan="1" class="center">-</td>
+                    <!-- progres sudah di-merge dari atas -->
+                </tr>
+
+                <!-- Baris 5: Rachmani - REPORT HSE -->
+                <tr>
+                    <td>REPORT HSE</td>
+                    <td rowspan="1">Bpk. Rachmani</td>
+                    <td rowspan="1" class="center font-bold">06/04/2026</td>
+                    <!-- progres sudah di-merge dari atas -->
+                </tr>
+
+                <!-- Baris 6: Mira - REPORT HR -->
+                <tr>
+                    <td>REPORT HR</td>
+                    <td rowspan="1">Ibu. Mira</td>
+                    <td rowspan="1" class="center">-</td>
+                    <!-- progres sudah di-merge dari atas -->
+                </tr>
+
+                <!-- Baris 7: Azemy - KPI WAREHOUSE -->
+                <tr>
+                    <td>KPI WAREHOUSE</td>
+                    <td rowspan="1">Bpk. Akhmad Azemy</td>
+                    <td rowspan="1" class="center">-</td>
+                    <!-- progres sudah di-merge dari atas -->
+                </tr>
+
+
+                <!-- ================= NO 4 ================= -->
+                <tr>
+                    <td rowspan="1" class="center bg-gray font-bold">4</td>
+                    <td>KPI ISD</td>
+                    <td rowspan="1">Mbak. Rini Eka</td>
+                    <td rowspan="1" class="center">-</td>
+                    
+                    <td rowspan="1" class="center merged-cell font-bold">09/04/2026</td>
+                    <td rowspan="1" class="center merged-cell font-bold">09/04/2026</td>
+                    <td rowspan="1" class="center merged-cell font-bold">-</td>
+                    <td rowspan="1" class="center"><span class="badge-blue">Approved</span></td>
+                </tr>
+
+            </tbody>
+        </table>
     </div>
 
 </body>

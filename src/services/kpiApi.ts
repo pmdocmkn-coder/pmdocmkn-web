@@ -35,6 +35,12 @@ export const kpiApi = {
         });
     },
 
+    deleteMonth: (targetMonth: string) => {
+        return api.delete("/api/kpi-documents/clone", {
+            params: { targetMonth }
+        });
+    },
+
     exportExcel: (params: KpiDocumentQuery) => {
         return api.get("/api/kpi-documents/export", { 
             params, 

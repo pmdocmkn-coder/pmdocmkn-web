@@ -13,11 +13,11 @@ import { DatePicker } from "../ui/date-picker";
 interface KpiDatesModalProps {
     isOpen: boolean;
     onClose: () => void;
-    document: KpiDocument | null;
+    documents: KpiDocument[];
     onSuccess: () => void;
 }
 
-export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: KpiDatesModalProps) {
+export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }: KpiDatesModalProps) {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
     
@@ -29,17 +29,20 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
         remarks: ""
     });
 
+    const isMultiple = documents && documents.length > 1;
+
     useEffect(() => {
-        if (isOpen && document) {
+        if (isOpen && documents && documents.length > 0) {
+            const firstDoc = documents[0];
             setDates({
-                dateReceived: formatDateForInput(document.dateReceived),
-                dateSubmittedToReviewer: formatDateForInput(document.dateSubmittedToReviewer),
-                dateApproved: formatDateForInput(document.dateApproved),
-                dateSubmittedToRqm: formatDateForInput(document.dateSubmittedToRqm),
-                remarks: document.remarks || ""
+                dateReceived: formatDateForInput(firstDoc.dateReceived),
+                dateSubmittedToReviewer: formatDateForInput(firstDoc.dateSubmittedToReviewer),
+                dateApproved: formatDateForInput(firstDoc.dateApproved),
+                dateSubmittedToRqm: formatDateForInput(firstDoc.dateSubmittedToRqm),
+                remarks: firstDoc.remarks || ""
             });
         }
-    }, [isOpen, document]);
+    }, [isOpen, documents]);
 
     const formatDateForInput = (dateStr?: string | null) => {
         if (!dateStr) return "";
@@ -71,11 +74,10 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!document) return;
+        if (!documents || documents.length === 0) return;
 
         setLoading(true);
         try {
-            // Nullify empty strings to match DTO expectations
             const payload = {
                 dateReceived: dates.dateReceived || null,
                 dateSubmittedToReviewer: dates.dateSubmittedToReviewer || null,
@@ -84,7 +86,13 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
                 remarks: dates.remarks || null
             };
 
-            await kpiApi.updateDates(document.id, payload);
+            if (isMultiple) {
+                // If updating in bulk, WE DO NOT update Date Received to avoid overwriting individual dates
+                delete (payload as any).dateReceived;
+            }
+
+            await Promise.all(documents.map(doc => kpiApi.updateDates(doc.id, payload)));
+            
             toast({ title: "Progress berhasil diupdate" });
             onSuccess();
             onClose();
@@ -104,33 +112,36 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
         setDates(prev => ({ ...prev, [field]: format(new Date(), "yyyy-MM-dd") }));
     };
 
-    if (!document) return null;
+    if (!documents || documents.length === 0) return null;
+    const firstDoc = documents[0];
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-md rounded-2xl">
                 <DialogHeader>
-                    <DialogTitle className="text-xl">Update Progres Dokumen</DialogTitle>
+                    <DialogTitle className="text-xl"> Update Progres {isMultiple ? `Massal (${documents.length})` : "Dokumen"} </DialogTitle>
                 </DialogHeader>
                 <div className="bg-gray-50 -mx-6 px-6 py-3 border-y mb-4">
                     <p className="text-sm text-gray-500 font-medium">Dokumen</p>
-                    <p className="font-semibold text-gray-900">{document.documentName}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">Asal: {document.dataSource}</p>
+                    <p className="font-semibold text-gray-900">{isMultiple ? `Grup Data Terpilih (${documents.length} dokumen)` : firstDoc.documentName}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">Asal: {isMultiple ? "Multi Data Source" : firstDoc.dataSource}</p>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div className="space-y-3">
-                        <div className="space-y-1.5">
-                            <div className="flex justify-between items-center">
-                                <Label className="text-xs font-semibold text-gray-500 uppercase">1. Date Received (Terima Laporan)</Label>
-                                <button type="button" onClick={() => setToday('dateReceived')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
+                        {!isMultiple && (
+                            <div className="space-y-1.5">
+                                <div className="flex justify-between items-center">
+                                    <Label className="text-xs font-semibold text-gray-500 uppercase">1. Date Received (Terima Laporan)</Label>
+                                    <button type="button" onClick={() => setToday('dateReceived')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
+                                </div>
+                                <DatePicker 
+                                    date={parseDateString(dates.dateReceived)} 
+                                    onSelect={(d) => handleDateChange("dateReceived", d)} 
+                                    className={dates.dateReceived ? "border-indigo-200 bg-indigo-50" : ""}
+                                />
                             </div>
-                            <DatePicker 
-                                date={parseDateString(dates.dateReceived)} 
-                                onSelect={(d) => handleDateChange("dateReceived", d)} 
-                                className={dates.dateReceived ? "border-indigo-200 bg-indigo-50" : ""}
-                            />
-                        </div>
+                        )}
 
                         <div className="space-y-1.5">
                             <div className="flex justify-between items-center">
@@ -169,7 +180,24 @@ export default function KpiDatesModal({ isOpen, onClose, document, onSuccess }: 
                         </div>
 
                         <div className="space-y-1.5 pt-2">
-                            <Label className="text-xs font-semibold text-red-500 uppercase">Remarks / Notes Khusus</Label>
+                            <div className="flex justify-between items-center">
+                                <Label className="text-xs font-semibold text-red-500 uppercase">Remarks / Notes Khusus</Label>
+                                <label className="flex items-center gap-2 cursor-pointer group">
+                                    <input 
+                                        type="checkbox" 
+                                        className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 w-3.5 h-3.5 cursor-pointer"
+                                        checked={(dates.remarks || "").toUpperCase().includes("TIDAK SUBMIT")}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                handleChange("remarks", "Tidak Submit RQM");
+                                            } else {
+                                                handleChange("remarks", "");
+                                            }
+                                        }}
+                                    />
+                                    <span className="text-xs font-medium text-gray-500 group-hover:text-indigo-600 transition-colors">Tandai Selesai (Tanpa RQM)</span>
+                                </label>
+                            </div>
                             <Input 
                                 placeholder="Cth: tidak submit ke rqm, direvisi, dll" 
                                 value={dates.remarks || ""} 

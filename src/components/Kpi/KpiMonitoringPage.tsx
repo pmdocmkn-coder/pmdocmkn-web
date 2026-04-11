@@ -32,6 +32,7 @@ export default function KpiMonitoringPage() {
     const [isFormOpen, setIsFormOpen] = useState(false);
     const [isDatesOpen, setIsDatesOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<KpiDocument | null>(null);
+    const [selectedGroupDocs, setSelectedGroupDocs] = useState<KpiDocument[]>([]);
 
     const [queryParams, setQueryParams] = useState<KpiDocumentQuery>({
         page: 1,
@@ -91,6 +92,23 @@ export default function KpiMonitoringPage() {
             } catch (error: any) {
                 toast({
                     title: "Gagal Clone",
+                    description: error.response?.data?.message || "Terjadi kesalahan.",
+                    variant: "destructive"
+                });
+            }
+        }
+    };
+
+    const handleDeleteMonth = async () => {
+        const targetDate = parseISO(currentMonth);
+        if (window.confirm(`Yakin ingin membatalkan/menghapus seluruh data kosong di bulan ${format(targetDate, "MMM yyyy")}?\n\nCATATAN: Jika sudah ada dokumen yang diisi progresnya, penghapusan akan dibatalkan otomatis.`)) {
+            try {
+                await kpiApi.deleteMonth(currentMonth);
+                toast({ title: "Berhasil dihapus!" });
+                fetchData();
+            } catch (error: any) {
+                toast({
+                    title: "Batal Menghapus",
                     description: error.response?.data?.message || "Terjadi kesalahan.",
                     variant: "destructive"
                 });
@@ -166,6 +184,7 @@ export default function KpiMonitoringPage() {
     const getStatusBadge = (status: string) => {
         switch (status) {
             case "Selesai (Submitted RQM)":
+            case "Selesai (Approved)":
                 return <Badge className="bg-green-100 text-green-700 hover:bg-green-200">Selesai</Badge>;
             case "Approved":
                 return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200">Approved</Badge>;
@@ -243,6 +262,64 @@ export default function KpiMonitoringPage() {
         return groups;
     };
 
+    interface SubGroup {
+        dataSource: string;
+        items: KpiDocument[];
+    }
+
+    interface TopLevelGroup {
+        groupKey: string;
+        groupTag: string | null;
+        subGroups: SubGroup[];
+        totalItemsCount: number;
+    }
+
+    const processMultiLevelGroups = (items: KpiDocument[]): TopLevelGroup[] => {
+        const topGroups: TopLevelGroup[] = [];
+
+        // Sort: tagged groups first (sorted by tag), then standalone by id
+        const sorted = [...items].sort((a, b) => {
+            const tagA = a.groupTag ?? "";
+            const tagB = b.groupTag ?? "";
+            if (tagA && tagB) return tagA.localeCompare(tagB);
+            if (tagA) return -1;
+            if (tagB) return 1;
+            return a.id - b.id;
+        });
+
+        sorted.forEach(item => {
+            const tag = item.groupTag?.trim() || null;
+            
+            const uniqueKey = tag ? `TAG_${tag}` : `ID_${item.id}`;
+
+            let existingTop = topGroups.find(g => g.groupKey === uniqueKey);
+            if (!existingTop) {
+                existingTop = {
+                    groupKey: uniqueKey,
+                    groupTag: tag,
+                    subGroups: [],
+                    totalItemsCount: 0
+                };
+                topGroups.push(existingTop);
+            }
+
+            const dsKey = item.dataSource.toLowerCase();
+            let existingSub = existingTop.subGroups.find(s => s.dataSource.toLowerCase() === dsKey);
+            if (!existingSub) {
+                existingSub = {
+                    dataSource: item.dataSource,
+                    items: []
+                };
+                existingTop.subGroups.push(existingSub);
+            }
+
+            existingSub.items.push(item);
+            existingTop.totalItemsCount += 1;
+        });
+
+        return topGroups;
+    };
+
     // Extract unique group tags for autocomplete
     const existingTags = Array.from(new Set(data.filter(d => !!d.groupTag).map(d => d.groupTag!))).sort();
 
@@ -287,6 +364,12 @@ export default function KpiMonitoringPage() {
                                 <Copy className="w-4 h-4 mr-2" />
                                 Clone Bulan Lalu
                             </Button>
+                            {data.length > 0 && (
+                                <Button variant="outline" onClick={handleDeleteMonth} className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100" title="Hapus seluruh data pada bulan ini (Batal Clone)">
+                                    <Trash2 className="w-4 h-4 mr-2" />
+                                    Hapus Bulan Ini
+                                </Button>
+                            )}
                             <Button onClick={() => { setSelectedDoc(null); setIsFormOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700">
                                 <Plus className="w-4 h-4 mr-2" />
                                 Tambah Baru
@@ -407,7 +490,8 @@ export default function KpiMonitoringPage() {
                                 </TableRow>
                             ) : (
                                 Object.entries(groupedData).map(([group, items]) => {
-                                    const dsGroups = processGroupsForMerge(items);
+                                    const isGeneralGroup = group.toUpperCase() === "GENERAL";
+
                                     return (
                                         <React.Fragment key={group}>
                                             {/* Area Group Header */}
@@ -417,67 +501,143 @@ export default function KpiMonitoringPage() {
                                                 </TableCell>
                                             </TableRow>
 
-                                            {/* Data rows with rowspan merging */}
-                                            {dsGroups.map((dsGroup, groupIdx) => (
+                                            {/* RENDER FOR GENERAL = MULTI-LEVEL MERGING */}
+                                            {isGeneralGroup && processMultiLevelGroups(items).map((topGroup, topIdx) => (
+                                                topGroup.subGroups.map((subGroup, subIdx) => (
+                                                    subGroup.items.map((item, itemIdx) => {
+                                                        const isFirstInTopGroup = subIdx === 0 && itemIdx === 0;
+                                                        const isFirstInSubGroup = itemIdx === 0;
+                                                        const refDoc = topGroup.subGroups[0].items[0];
+
+                                                        return (
+                                                            <TableRow key={item.id} className="hover:bg-indigo-50/30 transition-colors border-b border-gray-100 group">
+                                                                {/* No */}
+                                                                {isFirstInTopGroup && (
+                                                                    <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-gray-500 font-semibold border-r align-middle bg-gray-50/60">
+                                                                        {topIdx + 1}
+                                                                    </TableCell>
+                                                                )}
+                                                                {/* Nama Data */}
+                                                                <TableCell className="font-medium text-gray-900 py-2.5">
+                                                                    {item.documentName}
+                                                                </TableCell>
+                                                                {/* Asal Data & Tag */}
+                                                                {isFirstInSubGroup && (
+                                                                    <TableCell rowSpan={subGroup.items.length} className="text-gray-600 text-sm border-l border-r align-middle bg-white">
+                                                                        <span className="font-medium">{subGroup.dataSource}</span>
+                                                                        {isFirstInTopGroup && topGroup.groupTag && (
+                                                                            <div className="mt-1 block px-1.5 py-0.5 rounded-md bg-indigo-50 text-[10px] font-semibold text-indigo-600 border border-indigo-100 max-w-fit" title="Tag Grup (Tergabung)">
+                                                                                <Link2 className="w-3 h-3 inline mr-1" /> {topGroup.groupTag}
+                                                                            </div>
+                                                                        )}
+                                                                    </TableCell>
+                                                                )}
+                                                                {/* Date Received - INDIVIDUAL */}
+                                                                <TableCell
+                                                                    className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r"
+                                                                    onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}
+                                                                >
+                                                                    {formatDateStr(item.dateReceived)}
+                                                                </TableCell>
+                                                                {/* Submitted To User */}
+                                                                {isFirstInTopGroup && (
+                                                                    <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors border-r" onClick={() => { setSelectedGroupDocs(topGroup.subGroups.flatMap(sg => sg.items)); setIsDatesOpen(true); }}>
+                                                                        {formatDateStr(refDoc.dateSubmittedToReviewer)}
+                                                                    </TableCell>
+                                                                )}
+                                                                {/* Approved By User */}
+                                                                {isFirstInTopGroup && (
+                                                                    <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors border-r" onClick={() => { setSelectedGroupDocs(topGroup.subGroups.flatMap(sg => sg.items)); setIsDatesOpen(true); }}>
+                                                                        {formatDateStr(refDoc.dateApproved)}
+                                                                    </TableCell>
+                                                                )}
+                                                                {/* Submitted RQM */}
+                                                                {isFirstInTopGroup && (
+                                                                    <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors border-r" onClick={() => { setSelectedGroupDocs(topGroup.subGroups.flatMap(sg => sg.items)); setIsDatesOpen(true); }}>
+                                                                        <div className="flex flex-col items-center">
+                                                                            <span>{formatDateStr(refDoc.dateSubmittedToRqm)}</span>
+                                                                            {refDoc.remarks && <span className="text-[10px] text-red-500 font-bold">{refDoc.remarks}</span>}
+                                                                        </div>
+                                                                    </TableCell>
+                                                                )}
+                                                                {/* Status */}
+                                                                {isFirstInTopGroup && (
+                                                                    <TableCell rowSpan={topGroup.totalItemsCount} className="text-center border-r">
+                                                                        {getStatusBadge(refDoc.status)}
+                                                                    </TableCell>
+                                                                )}
+                                                                {/* Actions */}
+                                                                <TableCell className="text-right">
+                                                                    <div className="flex justify-end gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
+                                                                        {hasPermission("kpi.update") && (
+                                                                            <>
+                                                                                <Button variant="ghost" size="icon" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }} className="h-8 w-8 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 focus:ring-0" title="Edit Data Ini Saja">
+                                                                                    <Clock className="w-4 h-4" />
+                                                                                </Button>
+                                                                                <Button variant="ghost" size="icon" onClick={() => { setSelectedDoc(item); setIsFormOpen(true); }} className="h-8 w-8 text-gray-600 hover:text-indigo-600 focus:ring-0">
+                                                                                    <Edit2 className="w-4 h-4" />
+                                                                                </Button>
+                                                                            </>
+                                                                        )}
+                                                                        {hasPermission("kpi.delete") && (
+                                                                            <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)} className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 focus:ring-0">
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </Button>
+                                                                        )}
+                                                                    </div>
+                                                                </TableCell>
+                                                            </TableRow>
+                                                        );
+                                                    })
+                                                ))
+                                            ))}
+
+                                            {/* RENDER FOR STANDARD GROUP */}
+                                            {!isGeneralGroup && processGroupsForMerge(items).map((dsGroup, groupIdx) => (
                                                 dsGroup.items.map((item, itemIdx) => (
                                                     <TableRow
                                                         key={item.id}
-                                                        className="hover:bg-indigo-50/30 transition-colors border-b border-gray-100"
+                                                        className="hover:bg-indigo-50/30 transition-colors border-b border-gray-100 group"
                                                     >
                                                         {/* No — merged across the group */}
                                                         {itemIdx === 0 && (
-                                                            <TableCell
-                                                                rowSpan={dsGroup.items.length}
-                                                                className="text-center text-gray-500 font-semibold border-r align-middle bg-gray-50/60"
-                                                            >
+                                                            <TableCell rowSpan={dsGroup.items.length} className="text-center text-gray-500 font-semibold border-r align-middle bg-gray-50/60">
                                                                 {groupIdx + 1}
                                                             </TableCell>
                                                         )}
-
                                                         {/* Nama Data — individual per row */}
                                                         <TableCell className="font-medium text-gray-900 py-2.5">
                                                             {item.documentName}
                                                         </TableCell>
-
                                                         {/* Asal Data — merged when same dataSource */}
                                                         {itemIdx === 0 && (
-                                                            <TableCell
-                                                                rowSpan={dsGroup.items.length}
-                                                                className="text-gray-600 text-sm border-l border-r align-middle bg-white"
-                                                            >
+                                                            <TableCell rowSpan={dsGroup.items.length} className="text-gray-600 text-sm border-l border-r align-middle bg-white">
                                                                 <span className="font-medium">{dsGroup.dataSource}</span>
+                                                                {dsGroup.groupTag && (
+                                                                    <div className="mt-1 block px-1.5 py-0.5 rounded-md bg-indigo-50 text-[10px] font-semibold text-indigo-600 border border-indigo-100 max-w-fit" title="Tag Grup">
+                                                                        <Link2 className="w-3 h-3 inline mr-1" /> {dsGroup.groupTag}
+                                                                    </div>
+                                                                )}
                                                             </TableCell>
                                                         )}
-
+                                                        
                                                         {/* Date Received — Always per row */}
-                                                        <TableCell
-                                                            className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r"
-                                                            onClick={() => { setSelectedDoc(item); setIsDatesOpen(true); }}
-                                                        >
+                                                        <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
                                                             {formatDateStr(item.dateReceived)}
                                                         </TableCell>
 
                                                         {/* Submitted To User — Always per row */}
-                                                        <TableCell
-                                                            className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r"
-                                                            onClick={() => { setSelectedDoc(item); setIsDatesOpen(true); }}
-                                                        >
+                                                        <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
                                                             {formatDateStr(item.dateSubmittedToReviewer)}
                                                         </TableCell>
 
                                                         {/* Approved By User — Always per row */}
-                                                        <TableCell
-                                                            className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r"
-                                                            onClick={() => { setSelectedDoc(item); setIsDatesOpen(true); }}
-                                                        >
+                                                        <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
                                                             {formatDateStr(item.dateApproved)}
                                                         </TableCell>
 
                                                         {/* Submitted RQM — Always per row */}
-                                                        <TableCell
-                                                            className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r"
-                                                            onClick={() => { setSelectedDoc(item); setIsDatesOpen(true); }}
-                                                        >
+                                                        <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
                                                             <div className="flex flex-col items-center">
                                                                 <span>{formatDateStr(item.dateSubmittedToRqm)}</span>
                                                                 {item.remarks && <span className="text-[10px] text-red-500 font-bold">{item.remarks}</span>}
@@ -489,10 +649,10 @@ export default function KpiMonitoringPage() {
 
                                                         {/* Actions */}
                                                         <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-1">
+                                                            <div className="flex justify-end gap-1 opacity-20 group-hover:opacity-100 transition-opacity">
                                                                 {hasPermission("kpi.update") && (
                                                                     <>
-                                                                        <Button variant="ghost" size="icon" onClick={() => { setSelectedDoc(item); setIsDatesOpen(true); }} className="text-indigo-600 hover:text-indigo-800 focus:ring-0">
+                                                                        <Button variant="ghost" size="icon" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }} className="text-indigo-600 hover:text-indigo-800 focus:ring-0">
                                                                             <Clock className="w-4 h-4" />
                                                                         </Button>
                                                                         <Button variant="ghost" size="icon" onClick={() => { setSelectedDoc(item); setIsFormOpen(true); }} className="text-gray-600 hover:text-indigo-600 focus:ring-0">
@@ -531,7 +691,7 @@ export default function KpiMonitoringPage() {
             <KpiDatesModal 
                 isOpen={isDatesOpen} 
                 onClose={() => setIsDatesOpen(false)} 
-                document={selectedDoc} 
+                documents={selectedGroupDocs} 
                 onSuccess={fetchData} 
             />
         </div>
