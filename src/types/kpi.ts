@@ -10,6 +10,9 @@ export interface KpiDocument {
     dateApproved?: string | null;
     dateSubmittedToRqm?: string | null;
     remarks?: string | null;
+    remarksSubmittedToReviewer?: string | null;
+    remarksApproved?: string | null;
+    remarksSubmittedToRqm?: string | null;
     createdAt: string;
     updatedAt?: string | null;
     status: string;
@@ -45,4 +48,7 @@ export interface UpdateKpiDocumentDatesDto {
     dateApproved?: string | null;
     dateSubmittedToRqm?: string | null;
     remarks?: string | null;
+    remarksSubmittedToReviewer?: string | null;
+    remarksApproved?: string | null;
+    remarksSubmittedToRqm?: string | null;
 }

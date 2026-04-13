@@ -542,13 +542,19 @@ export default function KpiMonitoringPage() {
                                                                 {/* Submitted To User */}
                                                                 {isFirstInTopGroup && (
                                                                     <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors border-r" onClick={() => { setSelectedGroupDocs(topGroup.subGroups.flatMap(sg => sg.items)); setIsDatesOpen(true); }}>
-                                                                        {formatDateStr(refDoc.dateSubmittedToReviewer)}
+                                                                        <div className="flex flex-col items-center">
+                                                                            <span>{formatDateStr(refDoc.dateSubmittedToReviewer)}</span>
+                                                                            {refDoc.remarksSubmittedToReviewer && <span className="text-[10px] text-gray-500 mt-0.5">{refDoc.remarksSubmittedToReviewer}</span>}
+                                                                        </div>
                                                                     </TableCell>
                                                                 )}
                                                                 {/* Approved By User */}
                                                                 {isFirstInTopGroup && (
                                                                     <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors border-r" onClick={() => { setSelectedGroupDocs(topGroup.subGroups.flatMap(sg => sg.items)); setIsDatesOpen(true); }}>
-                                                                        {formatDateStr(refDoc.dateApproved)}
+                                                                        <div className="flex flex-col items-center">
+                                                                            <span>{formatDateStr(refDoc.dateApproved)}</span>
+                                                                            {refDoc.remarksApproved && <span className="text-[10px] text-gray-500 mt-0.5">{refDoc.remarksApproved}</span>}
+                                                                        </div>
                                                                     </TableCell>
                                                                 )}
                                                                 {/* Submitted RQM */}
@@ -556,6 +562,7 @@ export default function KpiMonitoringPage() {
                                                                     <TableCell rowSpan={topGroup.totalItemsCount} className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-100 transition-colors border-r" onClick={() => { setSelectedGroupDocs(topGroup.subGroups.flatMap(sg => sg.items)); setIsDatesOpen(true); }}>
                                                                         <div className="flex flex-col items-center">
                                                                             <span>{formatDateStr(refDoc.dateSubmittedToRqm)}</span>
+                                                                            {refDoc.remarksSubmittedToRqm && <span className="text-[10px] text-gray-500 mt-0.5">{refDoc.remarksSubmittedToRqm}</span>}
                                                                             {refDoc.remarks && <span className="text-[10px] text-red-500 font-bold">{refDoc.remarks}</span>}
                                                                         </div>
                                                                     </TableCell>
@@ -628,18 +635,25 @@ export default function KpiMonitoringPage() {
 
                                                         {/* Submitted To User — Always per row */}
                                                         <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
-                                                            {formatDateStr(item.dateSubmittedToReviewer)}
+                                                            <div className="flex flex-col items-center">
+                                                                <span>{formatDateStr(item.dateSubmittedToReviewer)}</span>
+                                                                {item.remarksSubmittedToReviewer && <span className="text-[10px] text-gray-500 mt-0.5">{item.remarksSubmittedToReviewer}</span>}
+                                                            </div>
                                                         </TableCell>
 
                                                         {/* Approved By User — Always per row */}
                                                         <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
-                                                            {formatDateStr(item.dateApproved)}
+                                                            <div className="flex flex-col items-center">
+                                                                <span>{formatDateStr(item.dateApproved)}</span>
+                                                                {item.remarksApproved && <span className="text-[10px] text-gray-500 mt-0.5">{item.remarksApproved}</span>}
+                                                            </div>
                                                         </TableCell>
 
                                                         {/* Submitted RQM — Always per row */}
                                                         <TableCell className="text-center text-sm font-medium cursor-pointer hover:bg-indigo-50 transition-colors border-r" onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}>
                                                             <div className="flex flex-col items-center">
                                                                 <span>{formatDateStr(item.dateSubmittedToRqm)}</span>
+                                                                {item.remarksSubmittedToRqm && <span className="text-[10px] text-gray-500 mt-0.5">{item.remarksSubmittedToRqm}</span>}
                                                                 {item.remarks && <span className="text-[10px] text-red-500 font-bold">{item.remarks}</span>}
                                                             </div>
                                                         </TableCell>
