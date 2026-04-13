@@ -135,7 +135,7 @@ export default function KpiMonitoringPage() {
     const handleExportExcel = async () => {
         setExporting(true);
         try {
-            const response = await kpiApi.exportExcel(queryParams);
+            const response = await kpiApi.exportExcel(currentMonth);
             const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
             const url = window.URL.createObjectURL(blob);
             const link = document.createElement('a');

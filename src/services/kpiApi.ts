@@ -41,9 +41,9 @@ export const kpiApi = {
         });
     },
 
-    exportExcel: (params: KpiDocumentQuery) => {
+    exportExcel: (periodMonth: string) => {
         return api.get("/api/kpi-documents/export", { 
-            params, 
+            params: { periodMonth }, 
             responseType: 'blob' 
         });
     },
