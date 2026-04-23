@@ -23,17 +23,29 @@ import { MonthlyDataDto, PagedResultDto, SwrHistoryItemDto, SwrNoteUpdateDto, Sw
 
 // Determine base URL based on environment
 const getBaseURL = () => {
-  if (import.meta.env.DEV) {
-    return import.meta.env.VITE_API_URL || "http://localhost:5116";
+  // Always use VITE_API_URL if set, regardless of environment
+  const url = import.meta.env.VITE_API_URL;
+  if (url) {
+    console.log("[v0] Using API URL from VITE_API_URL:", url);
+    return url;
   }
-  return import.meta.env.VITE_API_URL || "https://api.mknops.web.id";
-
+  
+  // Fallback to environment-specific defaults
+  if (import.meta.env.DEV) {
+    console.log("[v0] Using DEV API URL: http://localhost:5116");
+    return "http://localhost:5116";
+  }
+  console.log("[v0] Using PROD API URL: https://api.mknops.web.id");
+  return "https://api.mknops.web.id";
 };
 // ✅ DEFAULT API INSTANCE (60 second timeout)
 export const api = axios.create({
   baseURL: getBaseURL(),
   timeout: 60000,
   withCredentials: false,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // ✅ LONG RUNNING API INSTANCE (5 minute timeout for CSV import)
@@ -41,6 +53,9 @@ export const apiLongRunning = axios.create({
   baseURL: getBaseURL(),
   timeout: 300000,
   withCredentials: false,
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
 // Request interceptor
@@ -87,24 +102,44 @@ const errorInterceptor = (error: any) => {
     headers: error.config?.headers,
   });
 
+  // Handle Network Errors (CORS, timeout, connection refused)
   if (error.code === "ERR_NETWORK" || error.message === "Network Error") {
-    console.error("🌐 Network Error Details:");
+    console.error("🌐 [v0] Network Error Details:");
     console.error("- Backend URL:", getBaseURL());
     console.error("- Environment:", import.meta.env.MODE);
     console.error("- VITE_API_URL:", import.meta.env.VITE_API_URL);
+    console.error("- Error Code:", error.code);
+    console.error("- Error Message:", error.message);
 
+    const errorMsg = `Network Error: Tidak dapat terhubung ke ${getBaseURL()}
+    
+Kemungkinan penyebab:
+1. Server backend tidak berjalan
+2. URL server salah
+3. CORS tidak dikonfigurasi di backend
+4. Firewall/proxy memblokir koneksi
+
+Cek di browser console untuk info lebih lengkap.`;
+
+    throw new Error(errorMsg);
+  }
+
+  // Handle CORS errors
+  if (error.message && error.message.includes("CORS")) {
+    console.error("🚫 [v0] CORS Error - Backend harus mengizinkan v0.dev");
     throw new Error(
-      "Tidak dapat terhubung ke server. Periksa:\n1. Backend server sedang berjalan\n2. Koneksi internet stabil\n3. CORS configuration di backend"
+      `CORS Error: Backend di ${getBaseURL()} harus mengizinkan requests dari v0.dev`
     );
   }
 
+  // Handle authentication errors
   if (error.response?.status === 401) {
-    console.warn("🛑 Unauthorized - Redirect to login");
+    console.warn("🛑 [v0] Unauthorized - Token invalid");
     localStorage.removeItem("authToken");
     localStorage.removeItem("user");
     localStorage.removeItem("permissions");
   } else if (error.response?.status === 403) {
-    console.warn("🚫 Forbidden - Insufficient permissions");
+    console.warn("🚫 [v0] Forbidden - Insufficient permissions");
   }
 
   return Promise.reject(error);
