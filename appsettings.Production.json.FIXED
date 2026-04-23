@@ -1,0 +1,23 @@
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+  "AllowedHosts": "*",
+  "ConnectionStrings": {
+    "DefaultConnection": "Server=your-prod-server;Port=3306;Database=pm_mknops;Uid=root;Pwd=your-password"
+  },
+  "Jwt": {
+    "SecretKey": "your-prod-secret-key",
+    "Issuer": "pm-api",
+    "Audience": "pm-app",
+    "ExpiryMinutes": 60
+  },
+  "AllowedOrigins": "https://pm.mknops.web.id,https://pmfrontend.vercel.app,https://pmdocmkn-web.vercel.app,https://*.vercel.app,https://v0.dev,https://*.vusercontent.net",
+  "App": {
+    "Name": "PM API",
+    "Version": "1.0.0"
+  }
+}
