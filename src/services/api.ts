@@ -1,6 +1,5 @@
 import axios from "axios";
 import { LoginRequest, User } from "../types/auth";
-import { proxyFetch } from "./apiProxy";
 import {
   DailySummary,
   UploadCsvResponse,
@@ -173,9 +172,10 @@ export const testConnection = async (): Promise<{
   message: string;
 }> => {
   try {
-    console.log("🔗 Testing connection (using proxy) to:", getBaseURL());
-    const response = await proxyFetch("/api/auth/profile", {
-      method: "GET",
+    console.log("🔗 Testing connection to:", getBaseURL());
+    const response = await api.get("/api/auth/profile", {
+      timeout: 10000,
+      validateStatus: (status) => status < 500,
     });
     console.log("🔗 Connection test response status:", response.status);
     return {
@@ -198,17 +198,9 @@ export const testConnection = async (): Promise<{
 export const authApi = {
   login: async (credentials: LoginRequest) => {
     try {
-      console.log("🔐 Login attempt (using proxy) to:", `${getBaseURL()}/api/auth/login`);
+      console.log("🔐 Login attempt to:", `${getBaseURL()}/api/auth/login`);
 
-      // Use proxy fetch to bypass CORS issues
-      const response = await proxyFetch("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify(credentials),
-        headers: {
-          "Content-Type": "application/json",
-        },
-      });
-      
+      const response = await api.post("/api/auth/login", credentials);
       console.log("🔐 Login response received:", response.data);
 
       // ✅ Backend now returns camelCase: { statusCode, message, data: { token, user, permissions }, meta }
@@ -231,8 +223,17 @@ export const authApi = {
     } catch (error: any) {
       console.error("❌ Login API error:", error);
 
-      const errorMessage = error.message || "Login failed";
-      throw new Error(errorMessage);
+      if (error.code === "ERR_NETWORK") {
+        throw new Error(
+          "Tidak dapat terhubung ke server. Pastikan backend sedang berjalan dan CORS dikonfigurasi dengan benar."
+        );
+      }
+
+      const errorMessage =
+        error.response?.data?.data?.message ||
+        error.response?.data?.message ||
+        error.message;
+      throw new Error(errorMessage || "Login failed");
     }
   },
 
