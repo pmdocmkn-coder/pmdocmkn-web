@@ -211,6 +211,7 @@ const NecHistoryPage: React.FC = () => {
     null
   );
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedPivotTower, setSelectedPivotTower] = useState<string>("all");
   const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
   const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -540,10 +541,11 @@ const NecHistoryPage: React.FC = () => {
 
   const handleExport = async () => {
     try {
-      await necSignalApi.exportYearlyExcel(selectedYear);
+      const towerToExport = activeTab === "pivot" && selectedPivotTower !== "all" ? selectedPivotTower : undefined;
+      await necSignalApi.exportYearlyExcel(selectedYear, towerToExport);
       toast({
         title: "Ekspor Berhasil",
-        description: `Laporan tahun ${selectedYear} berhasil diunduh.`,
+        description: `Laporan tahun ${selectedYear}${towerToExport ? ` (${towerToExport})` : ''} berhasil diunduh.`,
       });
     } catch (error) {
       console.error("Error exporting file:", error);
@@ -1750,11 +1752,21 @@ const NecHistoryPage: React.FC = () => {
         <TabsContent value="pivot">
           {/* Mobile pivot - wrapped in a scrollable container */}
           <div className="md:hidden">
-            <NecRslPivotTable />
+            <NecRslPivotTable 
+              externalYear={selectedYear} 
+              onYearChange={setSelectedYear} 
+              externalTower={selectedPivotTower} 
+              onTowerChange={setSelectedPivotTower} 
+            />
           </div>
           {/* Desktop pivot */}
           <div className="hidden md:block">
-            <NecRslPivotTable />
+            <NecRslPivotTable 
+              externalYear={selectedYear} 
+              onYearChange={setSelectedYear} 
+              externalTower={selectedPivotTower} 
+              onTowerChange={setSelectedPivotTower} 
+            />
           </div>
         </TabsContent>
 

@@ -6,8 +6,9 @@ import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
 import { 
-    Search, Plus, Calendar, Edit2, Clock, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Upload, Link2
+    Search, Plus, Calendar, Edit2, Clock, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Upload, Link2, FileText, AlertCircle
 } from "lucide-react";
+import { motion } from "framer-motion";
 import { kpiApi } from "../../services/kpiApi";
 import { KpiDocument, KpiDocumentQuery } from "../../types/kpi";
 import { useToast } from "../../hooks/use-toast";
@@ -323,6 +324,12 @@ export default function KpiMonitoringPage() {
     // Extract unique group tags for autocomplete
     const existingTags = Array.from(new Set(data.filter(d => !!d.groupTag).map(d => d.groupTag!))).sort();
 
+    // Summary Calculations
+    const totalDocs = data.length;
+    const completedDocs = data.filter(d => d.status.includes("Selesai") || d.status === "Approved").length;
+    const pendingReviewDocs = data.filter(d => d.status.includes("Menunggu Sign User")).length;
+    const waitingDataDocs = data.filter(d => d.status.includes("Menunggu Data") || d.status.includes("Data Diterima") || (!d.status.includes("Selesai") && !d.status.includes("Menunggu Sign") && d.status !== "Approved")).length;
+
     return (
         <div className="p-6 space-y-6">
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -377,6 +384,81 @@ export default function KpiMonitoringPage() {
                         </>
                     )}
                 </div>
+            </div>
+
+            {/* Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
+                {/* Total Documents */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} 
+                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <FileText className="w-6 h-6" strokeWidth={2.5} />
+                        </div>
+                        <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-blue-100">ALL DATA</span>
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{totalDocs}</h3>
+                        <p className="text-sm font-semibold text-slate-500">Total Documents</p>
+                    </div>
+                </motion.div>
+
+                {/* Completed */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} 
+                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <CheckCircle2 className="w-6 h-6" strokeWidth={2.5} />
+                        </div>
+                        <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-emerald-100">FINISHED</span>
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{completedDocs}</h3>
+                        <p className="text-sm font-semibold text-slate-500">Completed</p>
+                    </div>
+                </motion.div>
+
+                {/* Pending Signature */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }} 
+                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <Clock className="w-6 h-6" strokeWidth={2.5} />
+                        </div>
+                        <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-amber-100">ON HOLD</span>
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{pendingReviewDocs}</h3>
+                        <p className="text-sm font-semibold text-slate-500">Pending Signature</p>
+                    </div>
+                </motion.div>
+
+                {/* Waiting Data */}
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }} 
+                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
+                    <div className="flex justify-between items-start mb-4 relative z-10">
+                        <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 shadow-sm">
+                            <AlertCircle className="w-6 h-6" strokeWidth={2.5} />
+                        </div>
+                        <span className="bg-rose-50 text-rose-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-rose-100">OVERDUE</span>
+                    </div>
+                    <div className="relative z-10">
+                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{waitingDataDocs}</h3>
+                        <p className="text-sm font-semibold text-slate-500">Waiting Data</p>
+                    </div>
+                </motion.div>
             </div>
 
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">

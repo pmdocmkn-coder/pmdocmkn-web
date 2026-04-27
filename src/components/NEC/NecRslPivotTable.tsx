@@ -117,11 +117,30 @@ interface PivotData {
   notes?: Record<string, string>;
 }
 
-const NecRslPivotTable: React.FC = () => {
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+export interface NecRslPivotTableProps {
+  externalYear?: number;
+  onYearChange?: (year: number) => void;
+  externalTower?: string;
+  onTowerChange?: (tower: string) => void;
+}
+
+const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
+  externalYear,
+  onYearChange,
+  externalTower,
+  onTowerChange
+}) => {
+  const [internalYear, setInternalYear] = useState(new Date().getFullYear());
+  const [internalTower, setInternalTower] = useState<string>("all");
+
+  const selectedYear = externalYear !== undefined ? externalYear : internalYear;
+  const setSelectedYear = onYearChange || setInternalYear;
+
+  const selectedTower = externalTower !== undefined ? externalTower : internalTower;
+  const setSelectedTower = onTowerChange || setInternalTower;
+
   const [pivotData, setPivotData] = useState<PivotData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
-  const [selectedTower, setSelectedTower] = useState<string>("all");
   const [towers, setTowers] = useState<string[]>([]);
 
   const [hoveredCell, setHoveredCell] = useState<{
