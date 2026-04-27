@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PM Dashboard Mobile Design</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 30px;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 2000px;
+        }
+
+        .phone-frame {
+            width: 375px;
+            height: 812px;
+            border: 12px solid #000;
+            border-radius: 40px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            background: white;
+            position: relative;
+        }
+
+        .phone-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 28px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 100;
+        }
+
+        .status-bar {
+            height: 44px;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .screen {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            background: white;
+        }
+
+        .screen.hidden {
+            display: none;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            padding: 20px;
+        }
+
+        .header-title {
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-top: 4px;
+        }
+
+        .header-with-profile {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border: 1px solid #e5e7eb;
+        }
+
+        .metric-card {
+            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .metric-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: #4F46E5;
+        }
+
+        .call-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .call-item:last-child {
+            border-bottom: none;
+        }
+
+        .avatar {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 16px;
+            flex-shrink: 0;
+        }
+
+        .call-info {
+            flex: 1;
+        }
+
+        .call-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .call-meta {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
+        }
+
+        .call-duration {
+            font-size: 13px;
+            font-weight: 500;
+            color: #4F46E5;
+            text-align: right;
+        }
+
+        .nav-bar {
+            height: 70px;
+            border-top: 1px solid #e5e7eb;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            background: white;
+            padding-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            color: #999;
+            font-size: 10px;
+            font-weight: 500;
+            flex: 1;
+            transition: color 0.2s;
+        }
+
+        .nav-item:active {
+            color: #4F46E5;
+        }
+
+        .nav-item.active {
+            color: #4F46E5;
+        }
+
+        .nav-icon {
+            font-size: 24px;
+        }
+
+        .input-group {
+            margin-bottom: 16px;
+        }
+
+        .input-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #4F46E5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:active {
+            transform: scale(0.98);
+        }
+
+        .login-logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .logo-circle {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 32px;
+            font-weight: 700;
+        }
+
+        .login-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+
+        .login-subtitle {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .text-center {
+            text-align: center;
+            margin-top: 16px;
+        }
+
+        .text-center a {
+            color: #4F46E5;
+            text-decoration: none;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .search-bar {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+
+        .search-bar input {
+            flex: 1;
+        }
+
+        .icon-btn {
+            width: 44px;
+            height: 44px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .section-title {
+            font-size: 14px;
+            font-weight: 700;
+            color: #1f2937;
+            margin: 16px 0 12px 0;
+        }
+
+        .welcome-text {
+            font-size: 20px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .welcome-subtitle {
+            font-size: 14px;
+            color: rgba(255,255,255,0.8);
+            margin-top: 4px;
+        }
+
+        .profile-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .chart-placeholder {
+            height: 120px;
+            background: linear-gradient(135deg, #F3F4F6 0%, #E5E7EB 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+            font-size: 36px;
+            margin-bottom: 16px;
+        }
+
+        .date-badge {
+            background: #f0f0f0;
+            color: #666;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 11px;
+            font-weight: 600;
+            margin: 12px 0 8px 0;
+            display: inline-block;
+        }
+
+        .top-callers {
+            counter-reset: item;
+        }
+
+        .caller-rank {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .caller-rank:last-child {
+            border-bottom: none;
+        }
+
+        .rank-number {
+            width: 30px;
+            height: 30px;
+            background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            margin-right: 12px;
+            flex-shrink: 0;
+        }
+
+        .rank-info {
+            flex: 1;
+        }
+
+        .rank-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1f2937;
+        }
+
+        .rank-stats {
+            font-size: 12px;
+            color: #999;
+            margin-top: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- LOGIN SCREEN -->
+        <div class="phone-frame">
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>📶 📡 🔋</span>
+            </div>
+            <div class="screen" id="screen-login">
+                <div style="padding: 60px 20px 20px;">
+                    <div class="login-logo">
+                        <div class="logo-circle">📊</div>
+                        <div class="login-title">PM Dashboard</div>
+                        <div class="login-subtitle">Call Analytics</div>
+                    </div>
+
+                    <div style="margin-top: 40px;">
+                        <div class="input-group">
+                            <label class="input-label">Username</label>
+                            <input type="text" placeholder="Enter your username" value="pm">
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Password</label>
+                            <input type="password" placeholder="Enter your password" value="••••••••••">
+                        </div>
+
+                        <button class="btn" onclick="switchScreen('dashboard')">Sign In</button>
+
+                        <div class="text-center">
+                            <a href="#">Don't have account? Create Account</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-bar" style="background: #f9f9f9; border-top: none;">
+                <span style="color: #999; font-size: 11px; margin: auto;">Login Screen</span>
+            </div>
+        </div>
+
+        <!-- DASHBOARD SCREEN -->
+        <div class="phone-frame">
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>📶 📡 🔋</span>
+            </div>
+            <div class="screen hidden" id="screen-dashboard">
+                <div class="header">
+                    <div class="header-with-profile">
+                        <div>
+                            <div class="welcome-text">Welcome Back</div>
+                            <div class="welcome-subtitle">PM</div>
+                        </div>
+                        <div class="profile-icon">👤</div>
+                    </div>
+                </div>
+
+                <div class="content">
+                    <div class="section-title">Today's Stats</div>
+                    
+                    <div class="metric-card">
+                        <div class="metric-label">Total Calls</div>
+                        <div class="metric-value">1,248</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Call Duration</div>
+                        <div class="metric-value">524 hrs</div>
+                    </div>
+
+                    <div class="metric-card">
+                        <div class="metric-label">Average Duration</div>
+                        <div class="metric-value">15m 32s</div>
+                    </div>
+
+                    <div class="section-title" style="margin-top: 24px;">Recent Calls</div>
+                    <div class="card">
+                        <div class="call-item">
+                            <div class="avatar">JD</div>
+                            <div class="call-info">
+                                <div class="call-name">John Doe</div>
+                                <div class="call-meta">Today at 10:30 AM</div>
+                            </div>
+                            <div class="call-duration">12m</div>
+                        </div>
+                        <div class="call-item">
+                            <div class="avatar">SA</div>
+                            <div class="call-info">
+                                <div class="call-name">Sarah Anderson</div>
+                                <div class="call-meta">Today at 09:15 AM</div>
+                            </div>
+                            <div class="call-duration">8m</div>
+                        </div>
+                        <div class="call-item">
+                            <div class="avatar">MJ</div>
+                            <div class="call-info">
+                                <div class="call-name">Mike Johnson</div>
+                                <div class="call-meta">Yesterday at 03:45 PM</div>
+                            </div>
+                            <div class="call-duration">25m</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-bar">
+                <div class="nav-item active" onclick="switchScreen('dashboard')">
+                    <div class="nav-icon">🏠</div>
+                    <div>Home</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('calls')">
+                    <div class="nav-icon">☎️</div>
+                    <div>Calls</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('analytics')">
+                    <div class="nav-icon">📈</div>
+                    <div>Stats</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('settings')">
+                    <div class="nav-icon">⚙️</div>
+                    <div>Settings</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('more')">
+                    <div class="nav-icon">≡</div>
+                    <div>More</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- CALL RECORDS SCREEN -->
+        <div class="phone-frame">
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>📶 📡 🔋</span>
+            </div>
+            <div class="screen hidden" id="screen-calls">
+                <div class="header">
+                    <div class="header-title">Call Records</div>
+                </div>
+
+                <div class="content">
+                    <div class="search-bar">
+                        <input type="text" placeholder="Search calls...">
+                        <button class="icon-btn">🔍</button>
+                    </div>
+
+                    <div class="date-badge">Today</div>
+                    <div class="card">
+                        <div class="call-item">
+                            <div class="avatar">JD</div>
+                            <div class="call-info">
+                                <div class="call-name">John Doe</div>
+                                <div class="call-meta">10:30 AM • Incoming ⬇️</div>
+                            </div>
+                            <div class="call-duration">12m</div>
+                        </div>
+                    </div>
+
+                    <div class="date-badge">Yesterday</div>
+                    <div class="card">
+                        <div class="call-item">
+                            <div class="avatar">SA</div>
+                            <div class="call-info">
+                                <div class="call-name">Sarah Anderson</div>
+                                <div class="call-meta">03:45 PM • Outgoing ⬆️</div>
+                            </div>
+                            <div class="call-duration">8m</div>
+                        </div>
+                        <div class="call-item">
+                            <div class="avatar">MJ</div>
+                            <div class="call-info">
+                                <div class="call-name">Mike Johnson</div>
+                                <div class="call-meta">02:20 PM • Incoming ⬇️</div>
+                            </div>
+                            <div class="call-duration">25m</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-bar">
+                <div class="nav-item" onclick="switchScreen('dashboard')">
+                    <div class="nav-icon">🏠</div>
+                    <div>Home</div>
+                </div>
+                <div class="nav-item active" onclick="switchScreen('calls')">
+                    <div class="nav-icon">☎️</div>
+                    <div>Calls</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('analytics')">
+                    <div class="nav-icon">📈</div>
+                    <div>Stats</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('settings')">
+                    <div class="nav-icon">⚙️</div>
+                    <div>Settings</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('more')">
+                    <div class="nav-icon">≡</div>
+                    <div>More</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ANALYTICS SCREEN -->
+        <div class="phone-frame">
+            <div class="status-bar">
+                <span>9:41</span>
+                <span>📶 📡 🔋</span>
+            </div>
+            <div class="screen hidden" id="screen-analytics">
+                <div class="header">
+                    <div class="header-title">Analytics</div>
+                </div>
+
+                <div class="content">
+                    <div class="section-title">This Week</div>
+                    <div class="chart-placeholder">📊</div>
+
+                    <div class="card">
+                        <div class="metric-label">Incoming Calls</div>
+                        <div class="metric-value" style="color: #4F46E5; font-size: 22px;">68% (546)</div>
+                    </div>
+
+                    <div class="card">
+                        <div class="metric-label">Outgoing Calls</div>
+                        <div class="metric-value" style="color: #7C3AED; font-size: 22px;">32% (256)</div>
+                    </div>
+
+                    <div class="section-title">Top Callers</div>
+                    <div class="card top-callers">
+                        <div class="caller-rank">
+                            <div class="rank-number">1</div>
+                            <div class="rank-info">
+                                <div class="rank-name">John Doe</div>
+                                <div class="rank-stats">148 calls • 32h</div>
+                            </div>
+                        </div>
+                        <div class="caller-rank">
+                            <div class="rank-number">2</div>
+                            <div class="rank-info">
+                                <div class="rank-name">Sarah Anderson</div>
+                                <div class="rank-stats">124 calls • 28h</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="nav-bar">
+                <div class="nav-item" onclick="switchScreen('dashboard')">
+                    <div class="nav-icon">🏠</div>
+                    <div>Home</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('calls')">
+                    <div class="nav-icon">☎️</div>
+                    <div>Calls</div>
+                </div>
+                <div class="nav-item active" onclick="switchScreen('analytics')">
+                    <div class="nav-icon">📈</div>
+                    <div>Stats</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('settings')">
+                    <div class="nav-icon">⚙️</div>
+                    <div>Settings</div>
+                </div>
+                <div class="nav-item" onclick="switchScreen('more')">
+                    <div class="nav-icon">≡</div>
+                    <div>More</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function switchScreen(screenName) {
+            // Hide all screens in all phone frames
+            document.querySelectorAll('.screen').forEach(screen => {
+                screen.classList.add('hidden');
+            });
+            
+            document.querySelectorAll('.nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            
+            // Show selected screen in the clicked phone frame
+            event.target.closest('.phone-frame').querySelector('#screen-' + screenName).classList.remove('hidden');
+            event.target.closest('.nav-item').classList.add('active');
+        }
+    </script>
+</body>
+</html>
