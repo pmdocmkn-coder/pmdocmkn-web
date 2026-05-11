@@ -424,7 +424,7 @@ const Login: React.FC = () => {
               </div>
 
               <p className="text-blue-100/40 text-xs text-center font-light">
-                © 2024 Call Analytics Dashboard. All rights reserved.
+                © 2025 Call Analytics Dashboard. All rights reserved.
               </p>
               <p className="text-blue-100/30 text-xs text-center font-light mt-1">
                 Developed by Jupri Eka Pratama

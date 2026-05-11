@@ -27,6 +27,7 @@ import {
   PencilRuler,
   Trash2,
   Link2,
+  CalendarDays,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -79,6 +80,13 @@ const navItems: NavItem[] = [
     icon: ClipboardList,
     id: "kpi-tracking",
     permission: "kpi.view",
+  },
+  {
+    name: "PM Schedule",
+    path: "/pm-schedule",
+    icon: CalendarDays,
+    id: "pm-schedule",
+    permission: "pmschedule.view",
   },
   {
     name: "Inspeksi KPC",

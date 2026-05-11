@@ -8,6 +8,8 @@ import { useLocation, Link } from "react-router-dom";
 export const searchableItems = [
   { name: "Dashboard", path: "/dashboard", section: "Main" },
   { name: "Docs", path: "/docs", section: "Main" },
+  { name: "KPI Tracking", path: "/kpi-tracking", section: "Main" },
+  { name: "PM Schedule", path: "/pm-schedule", section: "Main" },
   { name: "Inspeksi KPC", path: "/inspeksi-kpc", section: "Main" },
   { name: "Fleet Statistics", path: "/fleet-statistics", section: "Main" },
   { name: "NEC History", path: "/nec-history", section: "Main" },
