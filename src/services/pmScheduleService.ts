@@ -28,6 +28,10 @@ export const pmScheduleApi = {
     await api.delete(`/api/pm-sites/${id}`);
   },
 
+  reorderSites: async (orders: { id: number; orderIndex: number }[]): Promise<void> => {
+    await api.put('/api/pm-sites/reorder', orders);
+  },
+
   // ============================================
   // PM SCHEDULE MATRIX
   // ============================================
@@ -42,5 +46,9 @@ export const pmScheduleApi = {
 
   upsertSchedule: async (dto: PmScheduleUpsertDto): Promise<void> => {
     await api.post("/api/pm-schedules/upsert", dto);
+  },
+
+  deleteSchedule: async (year: number, pmSiteId: number, deviceName: string): Promise<void> => {
+    await api.delete(`/api/pm-schedules/${year}/${pmSiteId}/${encodeURIComponent(deviceName)}`);
   },
 };

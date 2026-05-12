@@ -45,7 +45,7 @@ const Login: React.FC = () => {
     setSuccess(null);
 
     if (!username.trim() || !password.trim()) {
-      setError('Harap lengkapi username dan password');
+      setError('Harap lengkapi username/email dan password');
       return;
     }
 
@@ -84,11 +84,12 @@ const Login: React.FC = () => {
     } catch (error: any) {
       console.error('🔐 Login error details:', error);
 
-      let errorMessage = 'Username atau password tidak valid';
+      let errorMessage = 'Login gagal. Silakan coba lagi.';
 
-      if (error.message.includes('Tidak dapat terhubung')) {
+      if (error.message?.includes('Tidak dapat terhubung')) {
         errorMessage = error.message;
       } else if (error.response?.data?.message) {
+        // Backend returns specific messages: "Password Anda salah" or "Username atau email tidak ditemukan"
         errorMessage = error.response.data.message;
       } else if (error.response?.data?.error) {
         errorMessage = error.response.data.error;
@@ -307,13 +308,13 @@ const Login: React.FC = () => {
               onSubmit={handleSubmit}
               className="space-y-5"
             >
-              {/* Username Field */}
+              {/* Username / Email Field */}
               <div className="group">
                 <label
                   htmlFor="username"
                   className="block text-sm font-medium text-blue-100 mb-2 group-focus-within:text-blue-300 transition-colors"
                 >
-                  Username
+                  Username atau Email
                 </label>
                 <div className="relative">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
@@ -325,7 +326,7 @@ const Login: React.FC = () => {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     className="w-full pl-11 pr-4 py-3.5 bg-white/10 border border-white/20 text-white placeholder-blue-200/50 rounded-xl focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50 backdrop-blur-lg transition-all duration-300 hover:bg-white/15 focus:bg-white/20"
-                    placeholder="Enter your username"
+                    placeholder="Masukkan username atau email"
                     disabled={isLoading}
                     required
                   />
@@ -377,6 +378,16 @@ const Login: React.FC = () => {
                     )}
                   </button>
                 </div>
+              </div>
+
+              {/* Forgot Password Link */}
+              <div className="flex justify-end -mt-1">
+                <Link
+                  to="/forgot-password"
+                  className="text-blue-300/80 hover:text-blue-200 text-xs font-medium transition-colors"
+                >
+                  Lupa Password?
+                </Link>
               </div>
 
               {/* Submit Button */}

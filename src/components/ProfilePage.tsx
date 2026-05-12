@@ -82,7 +82,7 @@ const getStrengthText = (strength: number) => {
 };
 
 export default function ProfilePage() {
-  const { user: contextUser, logout } = useAuth();
+  const { user: contextUser, logout, refreshUser } = useAuth();
   const [currentUser, setCurrentUser] = useState(contextUser);
   const [photoError, setPhotoError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -172,7 +172,19 @@ export default function ProfilePage() {
   }, [formData.newPassword, formData.confirmPassword]);
 
   // Load & sync user data
-  // Removed auto-refresh on mount as it is unnecessary
+  // Fetch fresh profile from API on mount to ensure all fields are current
+  useEffect(() => {
+    const fetchFreshProfile = async () => {
+      try {
+        const fresh = await authApi.getProfile();
+        setCurrentUser(fresh);
+        setPhotoError(false);
+      } catch (error) {
+        console.error("Failed to fetch fresh profile on mount:", error);
+      }
+    };
+    fetchFreshProfile();
+  }, []);
 
   useEffect(() => {
     if (contextUser) setCurrentUser(contextUser);
@@ -231,13 +243,15 @@ export default function ProfilePage() {
       setCurrentUser(fresh);
       localStorage.setItem("user", JSON.stringify(fresh));
       setPhotoError(false);
+      // Also update the global auth context so other components see fresh data
+      await refreshUser();
       setMessage({ type: "success", text: "Data profil diperbarui" });
     } catch (error) {
       setMessage({ type: "error", text: "Gagal memuat profil terbaru" });
     } finally {
       setRefreshing(false);
     }
-  }, [contextUser]);
+  }, [contextUser, refreshUser]);
 
   const getInitials = () => {
     if (!currentUser?.fullName) return "U";

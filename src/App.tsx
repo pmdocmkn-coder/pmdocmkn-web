@@ -30,13 +30,15 @@ import CompanyPage from "./components/CompanyPage";
 import DocumentTypePage from "./components/DocumentTypePage";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { Toaster } from "./components/ui/toaster";
-import RadioTrunkingPage from "./components/Radio/RadioTrunkingPage";
-import RadioConventionalPage from "./components/Radio/RadioConventionalPage";
-import RadioGrafirPage from "./components/Radio/RadioGrafirPage";
+import RadioInternalPage from "./components/Radio/RadioInternalPage";
+import RadioContractorPage from "./components/Radio/RadioContractorPage";
+import RadioUnitPage from "./components/Radio/RadioUnitPage";
 import RadioScrapPage from "./components/Radio/RadioScrapPage";
 import VerifyPage from "./components/VerifyPage";
 import KpiMonitoringPage from "./components/Kpi/KpiMonitoringPage";
 import PmSchedulePage from "./components/PmSchedule/PmSchedulePage";
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -225,19 +227,19 @@ function AppContent() {
           <Route path="/swr-signal" element={<SwrSignalPage />} />
 
           {/* ✅ RADIO MANAGEMENT ROUTES */}
-          <Route path="/radio-trunking" element={
+          <Route path="/radio-internal" element={
             <PermissionGuard permission="radio.view" >
-              <RadioTrunkingPage />
+              <RadioInternalPage />
             </PermissionGuard>
           } />
-          <Route path="/radio-conventional" element={
+          <Route path="/radio-contractor" element={
             <PermissionGuard permission="radio.view" >
-              <RadioConventionalPage />
+              <RadioContractorPage />
             </PermissionGuard>
           } />
-          <Route path="/radio-grafir" element={
+          <Route path="/radio-unit" element={
             <PermissionGuard permission="radio.view" >
-              <RadioGrafirPage />
+              <RadioUnitPage />
             </PermissionGuard>
           } />
           <Route path="/radio-scrap" element={
@@ -330,6 +332,14 @@ function AppRoutes() {
       <Route
         path="/register"
         element={!user ? <Register /> : <Navigate to="/dashboard" replace />}
+      />
+      <Route
+        path="/forgot-password"
+        element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" replace />}
+      />
+      <Route
+        path="/reset-password"
+        element={!user ? <ResetPassword /> : <Navigate to="/dashboard" replace />}
       />
       <Route path="/verify/gatepass/:token" element={<VerifyPage />} />
       <Route

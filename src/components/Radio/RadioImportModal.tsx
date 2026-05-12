@@ -116,12 +116,12 @@ export default function RadioImportModal({
             const importData = response.data?.data ?? response.data;
             
             setResult({
-                success: importData?.success ?? 0,
+                success: importData?.imported ?? importData?.success ?? 0,
                 failed: importData?.failed ?? 0,
                 errors: importData?.errors || []
             });
 
-            if ((importData?.failed ?? 0) > 0 && (importData?.success ?? 0) === 0) {
+            if ((importData?.failed ?? 0) > 0 && (importData?.imported ?? importData?.success ?? 0) === 0) {
                 setStatus('error');
                 setErrorMessage("Seluruh data gagal diimpor. Periksa format atau data duplikat.");
             } else if ((importData?.failed ?? 0) > 0) {

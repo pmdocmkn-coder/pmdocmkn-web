@@ -154,7 +154,7 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
 
                         <div className="space-y-1.5 bg-white p-2.5 rounded-lg border shadow-sm">
                             <div className="flex justify-between items-center mb-1">
-                                <Label className="text-xs font-bold text-gray-700 uppercase">2. Submitted To User (Dikirim via Email)</Label>
+                                <Label className="text-xs font-bold text-gray-700 uppercase">2. Submitted To User</Label>
                                 <button type="button" onClick={() => setToday('dateSubmittedToReviewer')} className="text-xs text-indigo-600 font-medium hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors">Hari Ini</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -174,7 +174,7 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
 
                         <div className="space-y-1.5 bg-white p-2.5 rounded-lg border shadow-sm">
                             <div className="flex justify-between items-center mb-1">
-                                <Label className="text-xs font-bold text-gray-700 uppercase">3. Approved By User (Email dibalas ACC)</Label>
+                                <Label className="text-xs font-bold text-gray-700 uppercase">3. Approved By User</Label>
                                 <button type="button" onClick={() => setToday('dateApproved')} className="text-xs text-indigo-600 font-medium hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors">Hari Ini</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">

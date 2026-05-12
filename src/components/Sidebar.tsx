@@ -86,7 +86,7 @@ const navItems: NavItem[] = [
     path: "/pm-schedule",
     icon: CalendarDays,
     id: "pm-schedule",
-    permission: "pmschedule.view",
+    permission: "pmschedule.menu",
   },
   {
     name: "Inspeksi KPC",
@@ -182,26 +182,26 @@ const callRecordsMenu: NavItem[] = [
 
 const radioMenu: NavItem[] = [
   {
-    name: "Radio Trunking",
-    path: "/radio-trunking",
+    name: "Radio Internal",
+    path: "/radio-internal",
     icon: Radio,
-    id: "radio-trunking",
+    id: "radio-internal",
     permission: "radio.view",
     forAll: true,
   },
   {
-    name: "Radio Conventional",
-    path: "/radio-conventional",
+    name: "Radio Contractor",
+    path: "/radio-contractor",
+    icon: Building2,
+    id: "radio-contractor",
+    permission: "radio.view",
+    forAll: true,
+  },
+  {
+    name: "Radio Unit",
+    path: "/radio-unit",
     icon: RadioReceiver,
-    id: "radio-conventional",
-    permission: "radio.view",
-    forAll: true,
-  },
-  {
-    name: "Radio Grafir",
-    path: "/radio-grafir",
-    icon: PencilRuler,
-    id: "radio-grafir",
+    id: "radio-unit",
     permission: "radio.view",
     forAll: true,
   },
@@ -210,7 +210,7 @@ const radioMenu: NavItem[] = [
     path: "/radio-scrap",
     icon: Trash2,
     id: "radio-scrap",
-    permission: "radio.view",
+    permission: "radio.scrap.view",
     forAll: true,
   },
 ];

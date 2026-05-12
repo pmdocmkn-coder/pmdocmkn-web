@@ -99,10 +99,14 @@ const errorInterceptor = (error: any) => {
   }
 
   if (error.response?.status === 401) {
-    console.warn("🛑 Unauthorized - Redirect to login");
-    localStorage.removeItem("authToken");
-    localStorage.removeItem("user");
-    localStorage.removeItem("permissions");
+    // Don't clear auth for login attempts - they're supposed to return 401
+    const isLoginRequest = error.config?.url?.includes('/auth/login');
+    if (!isLoginRequest) {
+      console.warn("🛑 Unauthorized - Redirect to login");
+      localStorage.removeItem("authToken");
+      localStorage.removeItem("user");
+      localStorage.removeItem("permissions");
+    }
   } else if (error.response?.status === 403) {
     console.warn("🚫 Forbidden - Insufficient permissions");
   }

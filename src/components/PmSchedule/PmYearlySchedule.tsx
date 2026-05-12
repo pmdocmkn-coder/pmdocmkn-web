@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "../../hooks/use-toast";
 import { pmScheduleApi } from "../../services/pmScheduleService";
+import { hasPermission } from "../../utils/permissionUtils";
 import {
   PmSiteScheduleDto,
   PmScheduleTaskDto,
@@ -17,6 +18,7 @@ import {
   Trash2,
   ArrowLeft,
   Copy,
+  Download,
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -29,6 +31,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Label } from "../ui/label";
+import { exportPmScheduleToExcel } from "../../utils/exportExcel";
 
 const MONTHS_FULL = [
   "January", "February", "March", "April", "May", "June",
@@ -46,6 +49,7 @@ export default function PmYearlySchedule() {
   const [sites, setSites] = useState<PmSiteScheduleDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [updatingCells, setUpdatingCells] = useState<Record<string, boolean>>({});
+  const canUpdate = hasPermission("pmschedule.update");
 
   // View mode: 'overview' (yearly) or number 0-11 (monthly detail)
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
@@ -58,6 +62,7 @@ export default function PmYearlySchedule() {
   const [addingDevice, setAddingDevice] = useState(false);
 
   const handleSelectMonthAndScroll = (monthIdx: number, siteId: number, deviceName: string) => {
+    if (!canUpdate) return;
     setSelectedMonth(monthIdx);
     setTimeout(() => {
       const el = document.getElementById(`row-${siteId}-${deviceName.replace(/\s+/g, '-')}`);
@@ -76,7 +81,8 @@ export default function PmYearlySchedule() {
     try {
       setLoading(true);
       const data = await pmScheduleApi.getYearlySchedule(year);
-      setSites(data.sites || []);
+      const sortedSites = (data.sites || []).sort((a, b) => a.orderIndex - b.orderIndex);
+      setSites(sortedSites);
     } catch (error: any) {
       toast({
         title: "Error",
@@ -123,7 +129,7 @@ export default function PmYearlySchedule() {
   const handleDeleteDevice = async (siteId: number, deviceName: string) => {
     if (!confirm(`Hapus PM "${deviceName}"? Semua jadwal untuk PM ini akan dihapus.`)) return;
     try {
-      await pmScheduleApi.upsertSchedule({ year, pmSiteId: siteId, deviceName, tasks: [] });
+      await pmScheduleApi.deleteSchedule(year, siteId, deviceName);
       toast({ title: "Success", description: `Jadwal PM "${deviceName}" berhasil dihapus` });
       loadSchedule();
     } catch (error: any) {
@@ -238,8 +244,8 @@ export default function PmYearlySchedule() {
               {months.map((m, i) => (
                 <th
                   key={m}
-                  onClick={() => setSelectedMonth(startIdx + i)}
-                  className="py-3 font-bold text-xs text-slate-600 border-r border-b border-slate-200 last:border-r-0 cursor-pointer hover:text-indigo-600 hover:bg-indigo-50 transition-colors text-center"
+                  onClick={() => canUpdate && setSelectedMonth(startIdx + i)}
+                  className={`py-3 font-bold text-xs text-slate-600 border-r border-b border-slate-200 last:border-r-0 text-center ${canUpdate ? 'cursor-pointer hover:text-indigo-600 hover:bg-indigo-50' : 'cursor-default'} transition-colors`}
                 >
                   {m}
                 </th>
@@ -333,8 +339,8 @@ export default function PmYearlySchedule() {
                             return (
                               <td
                                 key={m}
-                                onClick={() => handleSelectMonthAndScroll(startIdx + mIdx, site.siteId, device.deviceName)}
-                                className="border-r border-slate-200 last:border-r-0 cursor-pointer hover:bg-indigo-50 transition-colors"
+                                onClick={() => canUpdate && handleSelectMonthAndScroll(startIdx + mIdx, site.siteId, device.deviceName)}
+                                className={`border-r border-slate-200 last:border-r-0 transition-colors ${canUpdate ? 'cursor-pointer hover:bg-indigo-50' : 'cursor-default'}`}
                               >
                                 <div className="grid grid-cols-4 gap-[2px] w-full max-w-[80px] mx-auto px-1 py-2">
                                   {[1, 2, 3, 4].map((w) => {
@@ -368,6 +374,7 @@ export default function PmYearlySchedule() {
       <div className="flex flex-col gap-5">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-black text-slate-900 tracking-tight">Yearly Overview</h2>
+          {!canUpdate && <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-bold">View Only</span>}
         </div>
 
         {/* Semester 1: Jan - Jun */}
@@ -452,7 +459,7 @@ export default function PmYearlySchedule() {
               </div>
             </div>
           </div>
-          {selectedMonth > 0 && (
+          {canUpdate && selectedMonth > 0 && (
             <button
               onClick={handleCloneFromPreviousMonth}
               disabled={loading}
@@ -486,13 +493,15 @@ export default function PmYearlySchedule() {
                       <p className="text-[11px] text-slate-400">{site.devices.length} PM</p>
                     </div>
                   </div>
-                  <button
-                    onClick={() => openAddDeviceDialog(site.siteId, site.siteName)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                    Tambah PM
-                  </button>
+                  {canUpdate && (
+                    <button
+                      onClick={() => openAddDeviceDialog(site.siteId, site.siteName)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Tambah PM
+                    </button>
+                  )}
                 </div>
 
                 {/* Device Rows */}
@@ -525,13 +534,15 @@ export default function PmYearlySchedule() {
                           <td className="px-5 py-3">
                             <div className="flex items-center justify-between">
                               <span className="text-sm font-medium text-slate-800">{device.deviceName}</span>
-                              <button
-                                onClick={() => handleDeleteDevice(site.siteId, device.deviceName)}
-                                className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                                title="Hapus PM"
-                              >
-                                <Trash2 className="w-3.5 h-3.5" />
-                              </button>
+                              {canUpdate && (
+                                <button
+                                  onClick={() => handleDeleteDevice(site.siteId, device.deviceName)}
+                                  className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
+                                  title="Hapus PM"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
                             </div>
                           </td>
                           {[1, 2, 3, 4].map((week) => {
@@ -540,23 +551,37 @@ export default function PmYearlySchedule() {
                             const isUpdating = updatingCells[cellKey];
                             return (
                               <td key={week} className="text-center px-2 py-3">
-                                <button
-                                  onClick={() => handleToggleSchedule(site.siteId, device, monthNum, week)}
-                                  disabled={isUpdating}
-                                  className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-200 ${
-                                    isUpdating
-                                      ? "bg-slate-100 cursor-wait"
-                                      : isScheduled
-                                        ? "bg-emerald-500 shadow-md shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 active:scale-95"
-                                        : "bg-white border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:scale-110 active:scale-95"
-                                  }`}
-                                >
-                                  {isUpdating ? (
-                                    <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                                  ) : isScheduled ? (
-                                    <Check className="w-5 h-5 text-white stroke-[3]" />
-                                  ) : null}
-                                </button>
+                                {canUpdate ? (
+                                  <button
+                                    onClick={() => handleToggleSchedule(site.siteId, device, monthNum, week)}
+                                    disabled={isUpdating}
+                                    className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-200 ${
+                                      isUpdating
+                                        ? "bg-slate-100 cursor-wait"
+                                        : isScheduled
+                                          ? "bg-emerald-500 shadow-md shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 active:scale-95"
+                                          : "bg-white border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:scale-110 active:scale-95"
+                                    }`}
+                                  >
+                                    {isUpdating ? (
+                                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
+                                    ) : isScheduled ? (
+                                      <Check className="w-5 h-5 text-white stroke-[3]" />
+                                    ) : null}
+                                  </button>
+                                ) : (
+                                  <div
+                                    className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center ${
+                                      isScheduled
+                                        ? "bg-emerald-500"
+                                        : "bg-white border-2 border-slate-200"
+                                    }`}
+                                  >
+                                    {isScheduled ? (
+                                      <Check className="w-5 h-5 text-white stroke-[3]" />
+                                    ) : null}
+                                  </div>
+                                )}
                               </td>
                             );
                           })}
@@ -589,13 +614,23 @@ export default function PmYearlySchedule() {
             <p className="text-xs text-slate-500">Pilih bulan untuk melihat detail & edit jadwal</p>
           </div>
         </div>
-        <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
-          <button onClick={() => setYear((y) => y - 1)} className="p-2 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all">
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-          <span className="font-black text-indigo-600 text-base px-3 tabular-nums">{year}</span>
-          <button onClick={() => setYear((y) => y + 1)} className="p-2 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all">
-            <ChevronRight className="w-4 h-4" />
+        <div className="flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
+            <button onClick={() => setYear((y) => y - 1)} className="p-2 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="font-black text-indigo-600 text-base px-3 tabular-nums">{year}</span>
+            <button onClick={() => setYear((y) => y + 1)} className="p-2 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+          <button
+            onClick={() => exportPmScheduleToExcel(year, sites)}
+            className="flex items-center gap-2 px-4 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20 text-white font-bold transition-all active:scale-95"
+            title="Export ke Excel"
+          >
+            <Download className="w-4 h-4" />
+            <span className="hidden sm:inline">Export Excel</span>
           </button>
         </div>
       </div>

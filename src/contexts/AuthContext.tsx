@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null;
   login: (credentials: LoginRequest) => Promise<void>;
   logout: () => void;
+  refreshUser: () => Promise<void>;
   isLoading: boolean;
 }
 
@@ -27,15 +28,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check if user is logged in on app start
+  // Check if user is logged in on app start — always fetch fresh profile from API
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('authToken');
-      const userData = localStorage.getItem('user');
-
-      if (token && userData) {
+      if (token) {
         try {
-          // Verify token is still valid
           const userProfile = await authApi.getProfile();
           setUser(userProfile);
         } catch (error) {
@@ -54,11 +52,23 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const login = async (credentials: LoginRequest) => {
     try {
-      const data = await authApi.login(credentials);
-      setUser(data.user);
+      // Login returns token + basic user info
+      await authApi.login(credentials);
+      // Always fetch full profile after login to get all fields (division, employeeId, etc.)
+      const fullProfile = await authApi.getProfile();
+      setUser(fullProfile);
     } catch (error) {
       setUser(null);
-      throw error; // Re-throw to handle in component
+      throw error;
+    }
+  };
+
+  const refreshUser = async () => {
+    try {
+      const fresh = await authApi.getProfile();
+      setUser(fresh);
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
     }
   };
 
@@ -71,6 +81,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user,
     login,
     logout,
+    refreshUser,
     isLoading,
   };
 

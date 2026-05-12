@@ -8,54 +8,71 @@ import {
 } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import { ScrapFromRadioDto } from "../../types/radio";
+import { ScrapRadioDto, radioApi } from "../../services/radioApi";
+import { useToast } from "../../hooks/use-toast";
 
 interface ScrapRadioModalProps {
     isOpen: boolean;
     onClose: () => void;
-    onConfirm: (data: ScrapFromRadioDto) => void;
-    loading?: boolean;
-    radioUnitNumber?: string;
+    onSuccess: () => void;
+    radioId?: number;
+    radioIdentifier?: string;
 }
 
 const ScrapRadioModal: React.FC<ScrapRadioModalProps> = ({
     isOpen,
     onClose,
-    onConfirm,
-    loading = false,
-    radioUnitNumber,
+    onSuccess,
+    radioId,
+    radioIdentifier,
 }) => {
-    const [formData, setFormData] = useState<ScrapFromRadioDto>({
-        dateScrap: new Date().toISOString().split("T")[0],
-        jobNumber: "",
+    const { toast } = useToast();
+    const [loading, setLoading] = useState(false);
+    const [formData, setFormData] = useState<ScrapRadioDto>({
+        dateScrapped: new Date().toISOString().split("T")[0],
+        scrapJobNumber: "",
         remarks: "",
     });
 
-    const handleSubmit = () => {
-        onConfirm(formData);
+    const handleSubmit = async () => {
+        if (!radioId) return;
+        setLoading(true);
+        try {
+            await radioApi.scrapRadio(radioId, formData);
+            toast({ title: "Success", description: "Radio scrapped successfully" });
+            onSuccess();
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.response?.data?.message || "Failed to scrap radio",
+                variant: "destructive",
+            });
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
         <Dialog open={isOpen} onOpenChange={onClose}>
             <DialogContent className="max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Scrap Radio {radioUnitNumber}</DialogTitle>
+                    <DialogTitle>Scrap Radio {radioIdentifier}</DialogTitle>
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Date Scrap *</label>
                         <Input
                             type="date"
-                            value={formData.dateScrap}
-                            onChange={(e) => setFormData({ ...formData, dateScrap: e.target.value })}
+                            value={formData.dateScrapped}
+                            onChange={(e) => setFormData({ ...formData, dateScrapped: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Job Number</label>
                         <Input
-                            value={formData.jobNumber}
+                            value={formData.scrapJobNumber}
                             placeholder="e.g. WO-12345"
-                            onChange={(e) => setFormData({ ...formData, jobNumber: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, scrapJobNumber: e.target.value })}
                         />
                     </div>
                     <div className="space-y-2">
