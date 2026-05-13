@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X, RefreshCw, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X, RefreshCw, ChevronRight, Radio as RadioIcon, ExternalLink, AlertCircle } from 'lucide-react';
 import { MobilePageHeader } from './ui/MobilePageHeader';
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion';
 import { callRecordApi } from '../services/api';
@@ -11,6 +11,7 @@ import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { id as localeId } from "react-day-picker/locale";
+import { radioApi, RadioDto } from '../services/radioApi';
 
 // Animation Variants
 const containerVariants = {
@@ -202,6 +203,72 @@ const FleetStatisticsPage: React.FC = () => {
   };
 
   const [isExporting, setIsExporting] = useState(false);
+
+  // ── Radio Management Integration ────────────────────────────────────────────
+  // Cache semua data radio (Internal + Contractor + Unit) untuk matching
+  const [allRadios, setAllRadios] = useState<RadioDto[]>([]);
+  const [radioModalData, setRadioModalData] = useState<RadioDto | null>(null);
+  const [isRadioModalOpen, setIsRadioModalOpen] = useState(false);
+
+  // Load semua radio saat komponen mount
+  useEffect(() => {
+    const loadAllRadios = async () => {
+      try {
+        const [internal, contractor, unit] = await Promise.all([
+          radioApi.getAll("Internal", false),
+          radioApi.getAll("Contractor", false),
+          radioApi.getAll("Unit", false),
+        ]);
+        setAllRadios([
+          ...internal.data.data,
+          ...contractor.data.data,
+          ...unit.data.data,
+        ]);
+      } catch (err) {
+        console.error("Failed to load radio data for matching:", err);
+      }
+    };
+    loadAllRadios();
+  }, []);
+
+  /**
+   * Parse format "200-{fleet}-{radioId}" → { fleet, radioId }
+   * Contoh: "200-3751-207" → { fleet: "3751", radioId: "207" }
+   */
+  const parseCallerFleet = useCallback((callerFleet: string): { fleet: string; radioId: string } | null => {
+    const parts = callerFleet.split("-");
+    if (parts.length < 3) return null;
+    // Ambil segmen ke-2 sebagai fleet, segmen ke-3 sebagai radioId
+    const fleet = parts[1];
+    const radioId = parts[2];
+    if (!fleet || !radioId) return null;
+    return { fleet, radioId };
+  }, []);
+
+  /**
+   * Cari radio yang cocok berdasarkan fleet DAN radioId
+   * RadioDto.fleet bisa berisi multiple fleet dipisah koma, misal "3751, 3752"
+   */
+  const findMatchingRadio = useCallback((callerFleet: string): RadioDto | null => {
+    const parsed = parseCallerFleet(callerFleet);
+    if (!parsed) return null;
+    const { fleet, radioId } = parsed;
+
+    return allRadios.find((r) => {
+      // Cocokkan radioId (string comparison, case-insensitive)
+      const radioIdMatch = r.radioId?.trim().toLowerCase() === radioId.toLowerCase();
+      if (!radioIdMatch) return false;
+      // Cocokkan fleet — bisa multi-value dipisah koma
+      if (!r.fleet) return false;
+      const fleets = r.fleet.split(",").map((f) => f.trim());
+      return fleets.includes(fleet);
+    }) ?? null;
+  }, [allRadios, parseCallerFleet]);
+
+  const openRadioDetail = (radio: RadioDto) => {
+    setRadioModalData(radio);
+    setIsRadioModalOpen(true);
+  };
 
   const handleExportUniqueCallers = async () => {
     if (!detailModal.fleet) return;
@@ -1594,34 +1661,56 @@ const FleetStatisticsPage: React.FC = () => {
                               }
                               return modalSortOrder === 'DESC' ? bVal - aVal : aVal - bVal;
                             });
-                            return filteredData.map((item, index) => (
-                              <motion.tr
-                                key={detailModal.type === 'caller'
-                                  ? (item as UniqueCallerDetailDto).callerFleet
-                                  : (item as UniqueCalledDetailDto).calledFleet}
-                                initial={{ opacity: 0, x: -20 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: index * 0.02 }}
-                                className="hover:bg-gray-50"
-                              >
-                                <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
-                                <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                                  {detailModal.type === 'caller'
-                                    ? (item as UniqueCallerDetailDto).callerFleet
-                                    : (item as UniqueCalledDetailDto).calledFleet}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-900 font-mono">
-                                  {detailModal.type === 'caller'
-                                    ? (item as UniqueCallerDetailDto).callCount.toLocaleString()
-                                    : (item as UniqueCalledDetailDto).callCount.toLocaleString()}
-                                </td>
-                                <td className="px-4 py-3 text-sm text-gray-600">
-                                  {detailModal.type === 'caller'
-                                    ? (item as UniqueCallerDetailDto).totalDurationFormatted
-                                    : (item as UniqueCalledDetailDto).totalDurationFormatted}
-                                </td>
-                              </motion.tr>
-                            ));
+                            return filteredData.map((item, index) => {
+                              const fleetId = detailModal.type === 'caller'
+                                ? (item as UniqueCallerDetailDto).callerFleet
+                                : (item as UniqueCalledDetailDto).calledFleet;
+                              const matchedRadio = findMatchingRadio(fleetId);
+                              const isRegistered = matchedRadio !== null;
+
+                              return (
+                                <motion.tr
+                                  key={fleetId}
+                                  initial={{ opacity: 0, x: -20 }}
+                                  animate={{ opacity: 1, x: 0 }}
+                                  transition={{ delay: index * 0.02 }}
+                                  className="hover:bg-gray-50"
+                                >
+                                  <td className="px-4 py-3 text-sm text-gray-500">{index + 1}</td>
+                                  <td className="px-4 py-3 text-sm font-medium">
+                                    {isRegistered ? (
+                                      <button
+                                        onClick={() => openRadioDetail(matchedRadio)}
+                                        className="flex items-center gap-1.5 text-purple-700 hover:text-purple-900 hover:underline transition-colors group"
+                                        title={`Lihat detail radio: ${matchedRadio.nomorAset || matchedRadio.nomorUnit || fleetId}`}
+                                      >
+                                        <RadioIcon className="w-3.5 h-3.5 flex-shrink-0 text-purple-500 group-hover:text-purple-700" />
+                                        <span>{fleetId}</span>
+                                        <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                      </button>
+                                    ) : (
+                                      <span
+                                        className="flex items-center gap-1.5 text-gray-400 cursor-not-allowed"
+                                        title="Radio belum terdaftar di Radio Management"
+                                      >
+                                        <AlertCircle className="w-3.5 h-3.5 flex-shrink-0 text-gray-300" />
+                                        <span className="text-gray-700">{fleetId}</span>
+                                      </span>
+                                    )}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-900 font-mono">
+                                    {detailModal.type === 'caller'
+                                      ? (item as UniqueCallerDetailDto).callCount.toLocaleString()
+                                      : (item as UniqueCalledDetailDto).callCount.toLocaleString()}
+                                  </td>
+                                  <td className="px-4 py-3 text-sm text-gray-600">
+                                    {detailModal.type === 'caller'
+                                      ? (item as UniqueCallerDetailDto).totalDurationFormatted
+                                      : (item as UniqueCalledDetailDto).totalDurationFormatted}
+                                  </td>
+                                </motion.tr>
+                              );
+                            });
                           })()}
                         </tbody>
                       </table>
@@ -1660,12 +1749,32 @@ const FleetStatisticsPage: React.FC = () => {
                           const duration = detailModal.type === 'caller'
                             ? (item as UniqueCallerDetailDto).totalDurationFormatted
                             : (item as UniqueCalledDetailDto).totalDurationFormatted;
+                          const matchedRadio = findMatchingRadio(fleetName);
+                          const isRegistered = matchedRadio !== null;
                           return (
                             <div key={fleetName} className="bg-white border text-left border-gray-200 rounded-xl p-4 shadow-sm">
                               <div className="flex justify-between items-start mb-2">
                                 <div className="flex items-center gap-2">
                                   <span className="text-gray-400 font-medium text-sm">#{index + 1}</span>
-                                  <h4 className="font-bold text-gray-900">{fleetName}</h4>
+                                  {isRegistered ? (
+                                    <button
+                                      onClick={() => openRadioDetail(matchedRadio)}
+                                      className="flex items-center gap-1.5 font-bold text-purple-700 hover:text-purple-900 hover:underline transition-colors group"
+                                      title={`Lihat detail radio: ${matchedRadio.nomorAset || matchedRadio.nomorUnit || fleetName}`}
+                                    >
+                                      <RadioIcon className="w-3.5 h-3.5 text-purple-500" />
+                                      <span>{fleetName}</span>
+                                      <ExternalLink className="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                    </button>
+                                  ) : (
+                                    <span
+                                      className="flex items-center gap-1.5 font-bold text-gray-700 cursor-not-allowed"
+                                      title="Radio belum terdaftar di Radio Management"
+                                    >
+                                      <AlertCircle className="w-3.5 h-3.5 text-gray-300" />
+                                      {fleetName}
+                                    </span>
+                                  )}
                                 </div>
                                 <span className="bg-purple-100 text-purple-800 text-xs font-bold px-2.5 py-1 rounded-full">
                                   {callCount.toLocaleString()} calls
@@ -1675,6 +1784,12 @@ const FleetStatisticsPage: React.FC = () => {
                                 <Clock className="w-4 h-4 mr-1.5 text-gray-400" />
                                 <span>Duration: <span className="font-medium text-gray-800">{duration}</span></span>
                               </div>
+                              {!isRegistered && (
+                                <p className="mt-2 text-xs text-amber-600 flex items-center gap-1">
+                                  <AlertCircle className="w-3 h-3" />
+                                  Radio belum terdaftar di Radio Management
+                                </p>
+                              )}
                             </div>
                           );
                         });
@@ -1697,6 +1812,143 @@ const FleetStatisticsPage: React.FC = () => {
                   </p>
                 </div>
               )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Radio Detail Modal ─────────────────────────────────────────────── */}
+      <AnimatePresence>
+        {isRadioModalOpen && radioModalData && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[60] flex items-center justify-center p-4"
+            onClick={() => setIsRadioModalOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="bg-white rounded-xl shadow-2xl max-w-lg w-full overflow-hidden"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="px-5 py-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-indigo-50 flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 bg-purple-100 rounded-lg">
+                    <RadioIcon className="w-4 h-4 text-purple-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-sm">Detail Radio</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {radioModalData.category} · {radioModalData.isTrunking ? 'Trunking' : radioModalData.isConventional ? 'Konvensional' : '-'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setIsRadioModalOpen(false)}
+                  className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 hover:text-gray-700 transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="p-5 space-y-3">
+                {/* Nomor Aset / Grafir */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Nomor Aset / Grafir</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.nomorAset || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Nomor Unit</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.nomorUnit || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Radio ID</p>
+                    <p className="font-semibold text-gray-900 text-sm font-mono">{radioModalData.radioId || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Fleet</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.fleet || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Serial Number</p>
+                    <p className="font-semibold text-gray-900 text-sm font-mono">{radioModalData.serialNumber || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Type Radio</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.type || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Divisi</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.division || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Departemen</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.department || '-'}</p>
+                  </div>
+                  {radioModalData.company && (
+                    <div className="bg-gray-50 rounded-lg p-3 col-span-2">
+                      <p className="text-xs text-gray-500 mb-1">Perusahaan</p>
+                      <p className="font-semibold text-gray-900 text-sm">{radioModalData.company}</p>
+                    </div>
+                  )}
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Channel</p>
+                    <p className="font-semibold text-gray-900 text-sm">{radioModalData.channel || '-'}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-gray-500 mb-1">Tanggal</p>
+                    <p className="font-semibold text-gray-900 text-sm">
+                      {radioModalData.tanggal
+                        ? new Date(radioModalData.tanggal).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' })
+                        : '-'}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Badges */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {radioModalData.isTrunking && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 border border-blue-200 text-xs font-semibold">
+                      Trunking
+                    </span>
+                  )}
+                  {radioModalData.isConventional && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-green-100 text-green-700 border border-green-200 text-xs font-semibold">
+                      Konvensional
+                    </span>
+                  )}
+                  {radioModalData.isDuplicateId && (
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 text-xs font-semibold">
+                      Duplikat ID
+                    </span>
+                  )}
+                  <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+                    radioModalData.category === 'Internal'
+                      ? 'bg-violet-100 text-violet-700 border-violet-200'
+                      : radioModalData.category === 'Contractor'
+                      ? 'bg-blue-100 text-blue-700 border-blue-200'
+                      : 'bg-green-100 text-green-700 border-green-200'
+                  }`}>
+                    {radioModalData.category}
+                  </span>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="px-5 py-3 border-t border-gray-100 bg-gray-50 flex justify-end">
+                <button
+                  onClick={() => setIsRadioModalOpen(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+                >
+                  Tutup
+                </button>
+              </div>
             </motion.div>
           </motion.div>
         )}
