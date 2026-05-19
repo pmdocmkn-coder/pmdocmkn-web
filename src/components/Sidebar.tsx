@@ -28,6 +28,7 @@ import {
   Trash2,
   Link2,
   CalendarDays,
+  Camera,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -87,6 +88,13 @@ const navItems: NavItem[] = [
     icon: CalendarDays,
     id: "pm-schedule",
     permission: "pmschedule.menu",
+  },
+  {
+    name: "CCTV KPC",
+    path: "/cctv-kpc",
+    icon: Camera,
+    id: "cctv-kpc",
+    permission: "cctv.kpc.menu",
   },
   {
     name: "Inspeksi KPC",
@@ -182,7 +190,7 @@ const callRecordsMenu: NavItem[] = [
 
 const radioMenu: NavItem[] = [
   {
-    name: "Radio Internal",
+    name: "Radio KPC",
     path: "/radio-internal",
     icon: Radio,
     id: "radio-internal",

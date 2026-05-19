@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import React from "react";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
 import {
@@ -43,37 +44,15 @@ import {
   Tag,
 } from "lucide-react";
 import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
+import { SearchableCombobox, FleetCombobox } from "./RadioCombobox";
 import RadioHistoryModal from "./RadioHistoryModal";
 import ScrapRadioModal from "./ScrapRadioModal";
 import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
+import { parseRadioResponse, parseFleetList, isNoGrafir } from "../../utils/radioHelpers";
+import { FilterSelect } from "./FilterSelect";
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
-
-/** Splits a comma-separated fleet string into an array of trimmed fleet numbers */
-const parseFleetList = (fleet?: string): string[] => {
-  if (!fleet) return [];
-  return fleet
-    .split(",")
-    .map((f) => f.trim())
-    .filter((f) => f.length > 0);
-};
-
-/** Returns true if the radio has no valid grafir number */
-const isNoGrafir = (nomorAset?: string): boolean => {
-  if (!nomorAset) return true;
-  const val = nomorAset.trim().toLowerCase();
-  return val === "" || val === "-" || val === "no graf" || val === "no grafir";
-};
-
-/** Returns a CSS class for the table row based on duplicate/no-grafir status */
-const getRowClass = (item: RadioDto): string => {
-  if (item.isDuplicateId) return "bg-red-50 hover:bg-red-100";
-  if (isNoGrafir(item.nomorAset)) return "bg-orange-50 hover:bg-orange-100";
-  return "";
-};
-
-// ─── Animation Variants ──────────────────────────────────────────────────────
 
 const containerVariants: Variants = {
   hidden: { opacity: 0 },
@@ -125,16 +104,26 @@ export default function RadioInternalPage() {
   // ── Data State ──────────────────────────────────────────────────────────────
   const [data, setData] = useState<RadioDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // ── Pagination State ────────────────────────────────────────────────────────
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   // ── Filter State ────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
   const [filterDivisi, setFilterDivisi] = useState("");
   const [filterType, setFilterType] = useState("");
   const [filterFleet, setFilterFleet] = useState("");
-  const [filterJenis, setFilterJenis] = useState(""); // "trunking" | "konvensional" | ""
+  const [filterJenis, setFilterJenis] = useState("");
+  const [filterDepartment, setFilterDepartment] = useState("");
   const [filterDuplikat, setFilterDuplikat] = useState(false);
   const [filterNoGrafir, setFilterNoGrafir] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
+
+  // ── Options untuk combobox (dari data semua halaman — unpaged) ──────────────
+  const [allOptions, setAllOptions] = useState<RadioDto[]>([]);
 
   // ── Modal State ─────────────────────────────────────────────────────────────
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -164,16 +153,41 @@ export default function RadioInternalPage() {
     isScrap: false,
   });
 
-  // ── Load Data ───────────────────────────────────────────────────────────────
+  // ── Load Options (unpaged, untuk combobox) ──────────────────────────────────
+  useEffect(() => {
+    radioApi.getAllUnpaged("Internal", false)
+      .then((r) => setAllOptions(r.data.data))
+      .catch(() => {});
+  }, []);
+
+  // ── Load Data (paged, server-side filter) ───────────────────────────────────
   useEffect(() => {
     loadData();
-  }, []);
+  }, [page, search, filterDivisi, filterType, filterFleet, filterJenis, filterDepartment, filterDuplikat, filterNoGrafir]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await radioApi.getAll("Internal", false);
-      setData(response.data.data);
+      const response = await radioApi.getAll({
+        category: "Internal",
+        isScrap: false,
+        page,
+        pageSize: PAGE_SIZE,
+        search: search || undefined,
+        division: filterDivisi || undefined,
+        type: filterType || undefined,
+        fleet: filterFleet || undefined,
+        jenis: filterJenis ? filterJenis.toLowerCase() : undefined,
+        department: filterDepartment || undefined,
+        isDuplicate: filterDuplikat || undefined,
+        isNoGrafir: filterNoGrafir || undefined,
+      });
+
+      console.log("🔍 API Response:", response.data);
+      const { items, totalCount: tc, totalPages: tp } = parseRadioResponse(response.data);
+      console.log("📊 Parsed:", { items: items.length, totalCount: tc, totalPages: tp });      setData(items);
+      setTotalCount(tc);
+      setTotalPages(tp);
     } catch (error) {
       toast({
         title: "Error",
@@ -185,37 +199,36 @@ export default function RadioInternalPage() {
     }
   };
 
+  // ── Form Error State ────────────────────────────────────────────────────────
+  const [formError, setFormError] = useState<string | null>(null);
+
   // ── CRUD Handlers ───────────────────────────────────────────────────────────
   const handleCreate = async () => {
+    setFormError(null);
     try {
       await radioApi.create(formData);
-      toast({ title: "Success", description: "Radio created successfully" });
+      toast({ title: "Berhasil", description: "Radio berhasil ditambahkan" });
       setIsCreateOpen(false);
       loadData();
       resetForm();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to create radio",
-        variant: "destructive",
-      });
+      const msg = error.response?.data?.message || "Gagal membuat radio";
+      setFormError(msg);
     }
   };
 
   const handleUpdate = async () => {
     if (!selectedRadio) return;
+    setFormError(null);
     try {
       await radioApi.update(selectedRadio.id, formData);
-      toast({ title: "Success", description: "Radio updated successfully" });
+      toast({ title: "Berhasil", description: "Radio berhasil diperbarui" });
       setIsEditOpen(false);
       loadData();
       resetForm();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Failed to update radio",
-        variant: "destructive",
-      });
+      const msg = error.response?.data?.message || "Gagal memperbarui radio";
+      setFormError(msg);
     }
   };
 
@@ -235,22 +248,14 @@ export default function RadioInternalPage() {
   };
 
   const handleDeleteAll = async () => {
-    if (
-      !window.confirm(
-        "WARNING: Are you sure you want to delete ALL radio data? This cannot be undone!"
-      )
-    )
+    if (!window.confirm("PERINGATAN: Yakin ingin menghapus SEMUA data Radio KPC? Tindakan ini tidak dapat dibatalkan!"))
       return;
     try {
-      await radioApi.deleteAll();
-      toast({ title: "Success", description: "All radio data deleted successfully" });
+      await radioApi.deleteAllKpc();
+      toast({ title: "Berhasil", description: "Semua data Radio KPC berhasil dihapus" });
       loadData();
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to delete all radio data",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Gagal menghapus data Radio KPC", variant: "destructive" });
     }
   };
 
@@ -299,19 +304,23 @@ export default function RadioInternalPage() {
     setSelectedRadio(null);
   };
 
-  // ── Derived Filter Options ──────────────────────────────────────────────────
+  // ── Derived Filter Options — dari allOptions (unpaged) ────────────────────
   const divisiOptions = useMemo(
-    () => Array.from(new Set(data.map((d) => d.division).filter(Boolean))) as string[],
-    [data]
+    () => Array.from(new Set(allOptions.map((d) => d.division).filter(Boolean))).sort() as string[],
+    [allOptions]
   );
   const typeOptions = useMemo(
-    () => Array.from(new Set(data.map((d) => d.type).filter(Boolean))) as string[],
-    [data]
+    () => Array.from(new Set(allOptions.map((d) => d.type).filter(Boolean))).sort() as string[],
+    [allOptions]
+  );
+  const departmentOptions = useMemo(
+    () => Array.from(new Set(allOptions.map((d) => d.department).filter(Boolean))).sort() as string[],
+    [allOptions]
   );
   const fleetOptions = useMemo(() => {
-    const all = data.flatMap((d) => parseFleetList(d.fleet));
+    const all = allOptions.flatMap((d) => parseFleetList(d.fleet));
     return Array.from(new Set(all)).sort();
-  }, [data]);
+  }, [allOptions]);
 
   // ── Active Filter Count ─────────────────────────────────────────────────────
   const activeFilterCount = useMemo(() => {
@@ -321,10 +330,11 @@ export default function RadioInternalPage() {
     if (filterType) count++;
     if (filterFleet) count++;
     if (filterJenis) count++;
+    if (filterDepartment) count++;
     if (filterDuplikat) count++;
     if (filterNoGrafir) count++;
     return count;
-  }, [search, filterDivisi, filterType, filterFleet, filterJenis, filterDuplikat, filterNoGrafir]);
+  }, [search, filterDivisi, filterType, filterFleet, filterJenis, filterDepartment, filterDuplikat, filterNoGrafir]);
 
   const resetFilters = () => {
     setSearch("");
@@ -332,63 +342,31 @@ export default function RadioInternalPage() {
     setFilterType("");
     setFilterFleet("");
     setFilterJenis("");
+    setFilterDepartment("");
     setFilterDuplikat(false);
     setFilterNoGrafir(false);
+    setPage(1);
   };
 
-  // ── Filtered Data ───────────────────────────────────────────────────────────
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
-      // Search
-      if (search) {
-        const q = search.toLowerCase();
-        const matches =
-          item.nomorAset?.toLowerCase().includes(q) ||
-          item.nomorUnit?.toLowerCase().includes(q) ||
-          item.serialNumber?.toLowerCase().includes(q) ||
-          item.radioId?.toLowerCase().includes(q) ||
-          item.division?.toLowerCase().includes(q) ||
-          item.type?.toLowerCase().includes(q) ||
-          item.fleet?.toLowerCase().includes(q);
-        if (!matches) return false;
-      }
-      // Divisi
-      if (filterDivisi && item.division !== filterDivisi) return false;
-      // Type
-      if (filterType && item.type !== filterType) return false;
-      // Fleet
-      if (filterFleet) {
-        const fleets = parseFleetList(item.fleet);
-        if (!fleets.includes(filterFleet)) return false;
-      }
-      // Jenis
-      if (filterJenis === "trunking" && !item.isTrunking) return false;
-      if (filterJenis === "konvensional" && !item.isConventional) return false;
-      // Duplikat ID
-      if (filterDuplikat && !item.isDuplicateId) return false;
-      // No Grafir
-      if (filterNoGrafir && !isNoGrafir(item.nomorAset)) return false;
-      return true;
-    });
-  }, [data, search, filterDivisi, filterType, filterFleet, filterJenis, filterDuplikat, filterNoGrafir]);
+  // ── data sudah difilter server-side, pakai langsung ─────────────────────────
+  const filteredData = data;
 
-  // ── Fleet Color Map — assign distinct color per unique fleet number ──────────
+  // ── Fleet Color Map ──────────────────────────────────────────────────────────
   const fleetColorMap = useMemo(() => {
     const palettes = [
-      "bg-emerald-100 border-emerald-400 text-emerald-800",   // hijau
-      "bg-pink-100 border-pink-400 text-pink-800",            // pink
-      "bg-sky-100 border-sky-400 text-sky-800",               // biru muda
-      "bg-amber-100 border-amber-400 text-amber-800",         // kuning
-      "bg-violet-100 border-violet-400 text-violet-800",      // ungu
-      "bg-rose-100 border-rose-400 text-rose-800",            // merah muda
-      "bg-teal-100 border-teal-400 text-teal-800",            // teal
-      "bg-orange-100 border-orange-400 text-orange-800",      // oranye
-      "bg-indigo-100 border-indigo-400 text-indigo-800",      // indigo
-      "bg-lime-100 border-lime-400 text-lime-800",            // lime
+      "bg-emerald-100 border-emerald-400 text-emerald-800",
+      "bg-pink-100 border-pink-400 text-pink-800",
+      "bg-sky-100 border-sky-400 text-sky-800",
+      "bg-amber-100 border-amber-400 text-amber-800",
+      "bg-violet-100 border-violet-400 text-violet-800",
+      "bg-rose-100 border-rose-400 text-rose-800",
+      "bg-teal-100 border-teal-400 text-teal-800",
+      "bg-orange-100 border-orange-400 text-orange-800",
+      "bg-indigo-100 border-indigo-400 text-indigo-800",
+      "bg-lime-100 border-lime-400 text-lime-800",
     ];
     const map = new Map<string, string>();
     let idx = 0;
-    // Assign colors in sorted order so same fleet always gets same color
     const sorted = [...fleetOptions].sort();
     for (const f of sorted) {
       map.set(f, palettes[idx % palettes.length]);
@@ -397,9 +375,34 @@ export default function RadioInternalPage() {
     return map;
   }, [fleetOptions]);
 
-  const trunkingCount = useMemo(() => filteredData.filter((d) => d.isTrunking).length, [filteredData]);
-  const duplikatCount = useMemo(() => filteredData.filter((d) => d.isDuplicateId).length, [filteredData]);
-  const noGrafirCount = useMemo(() => filteredData.filter((d) => isNoGrafir(d.nomorAset)).length, [filteredData]);
+  // ── Calculate Stats from All Unpaged Data based on active filters ──────────
+  const filteredAllOptions = useMemo(() => {
+    let result = allOptions;
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(d => 
+        (d.nomorAset || "").toLowerCase().includes(s) ||
+        (d.radioId || "").toLowerCase().includes(s) ||
+        (d.serialNumber || "").toLowerCase().includes(s) ||
+        (d.company || "").toLowerCase().includes(s)
+      );
+    }
+    if (filterDivisi) result = result.filter(d => d.division === filterDivisi);
+    if (filterType) result = result.filter(d => d.type === filterType);
+    if (filterFleet) result = result.filter(d => d.fleet?.includes(filterFleet));
+    if (filterJenis === "Trunking") result = result.filter(d => d.isTrunking);
+    if (filterJenis === "Konvensional") result = result.filter(d => d.isConventional);
+    if (filterDepartment) result = result.filter(d => d.department === filterDepartment);
+    if (filterDuplikat) result = result.filter(d => d.isDuplicateId);
+    if (filterNoGrafir) result = result.filter(d => isNoGrafir(d.nomorAset));
+
+    return result;
+  }, [allOptions, search, filterDivisi, filterType, filterFleet, filterJenis, filterDepartment, filterDuplikat, filterNoGrafir]);
+
+  const trunkingCount = useMemo(() => filteredAllOptions.filter((d) => d.isTrunking).length, [filteredAllOptions]);
+  const konvensionalCount = useMemo(() => filteredAllOptions.filter((d) => d.isConventional).length, [filteredAllOptions]);
+  const duplikatCount = useMemo(() => filteredAllOptions.filter((d) => d.isDuplicateId).length, [filteredAllOptions]);
+  const noGrafirCount = useMemo(() => filteredAllOptions.filter((d) => isNoGrafir(d.nomorAset)).length, [filteredAllOptions]);
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -412,11 +415,11 @@ export default function RadioInternalPage() {
       {/* ── Page Header ── */}
       <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Radio Internal</h1>
-          <p className="text-muted-foreground text-sm mt-0.5">Manajemen aset radio internal perusahaan</p>
+          <h1 className="text-2xl font-bold tracking-tight text-gray-900">Radio KPC</h1>
+          <p className="text-muted-foreground text-sm mt-0.5">Manajemen aset radio KPC perusahaan</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {hasPermission("radio.delete") && (
+          {hasPermission("radio.delete.all.kpc") && (
             <Button variant="destructive" size="sm" onClick={handleDeleteAll}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               Delete All
@@ -439,7 +442,7 @@ export default function RadioInternalPage() {
       </motion.div>
 
       {/* ── Stat Cards ── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Radio */}
         <motion.div
           variants={cardHoverVariants}
@@ -456,8 +459,8 @@ export default function RadioInternalPage() {
               </div>
               <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Total</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{filteredData.length}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">dari {data.length} data</p>
+            <p className="text-4xl font-black tracking-tight">{totalCount.toLocaleString()}</p>
+            <p className="text-xs opacity-70 mt-1.5 font-medium">halaman {page} / {totalPages}</p>
           </div>
         </motion.div>
 
@@ -573,137 +576,96 @@ export default function RadioInternalPage() {
               style={{ overflow: "hidden" }}
             >
               <div className="px-5 pt-1 pb-5 border-t border-gray-100 space-y-4">
-                {/* Row 1: Search + Dropdowns */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-4">
-                  {/* Search */}
-                  <div className="relative sm:col-span-2 lg:col-span-1 xl:col-span-2">
+                {/* Row 1: Search */}
+                <div className="pt-4">
+                  <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <Input
                       placeholder="Cari nomor aset, SN, ID radio..."
                       className="pl-9 h-9 text-sm border-gray-200 focus:border-violet-400 focus:ring-violet-400"
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                     />
                   </div>
-
-                  {/* Divisi */}
-                  <select
-                    value={filterDivisi}
-                    onChange={(e) => setFilterDivisi(e.target.value)}
-                    className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-violet-400 focus:border-violet-400 text-gray-700"
-                  >
-                    <option value="">Semua Divisi</option>
-                    {divisiOptions.map((d) => (
-                      <option key={d} value={d}>{d}</option>
-                    ))}
-                  </select>
-
-                  {/* Type */}
-                  <select
-                    value={filterType}
-                    onChange={(e) => setFilterType(e.target.value)}
-                    className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-violet-400 focus:border-violet-400 text-gray-700"
-                  >
-                    <option value="">Semua Type Radio</option>
-                    {typeOptions.map((t) => (
-                      <option key={t} value={t}>{t}</option>
-                    ))}
-                  </select>
-
-                  {/* Fleet */}
-                  <select
-                    value={filterFleet}
-                    onChange={(e) => setFilterFleet(e.target.value)}
-                    className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-violet-400 focus:border-violet-400 text-gray-700"
-                  >
-                    <option value="">Semua Fleet</option>
-                    {fleetOptions.map((f) => (
-                      <option key={f} value={f}>{f}</option>
-                    ))}
-                  </select>
-
-                  {/* Jenis */}
-                  <select
-                    value={filterJenis}
-                    onChange={(e) => setFilterJenis(e.target.value)}
-                    className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-violet-400 focus:border-violet-400 text-gray-700"
-                  >
-                    <option value="">Semua Jenis</option>
-                    <option value="trunking">Trunking</option>
-                    <option value="konvensional">Konvensional</option>
-                  </select>
                 </div>
 
-                {/* Row 2: Checkboxes */}
+                {/* Row 2: Dropdowns */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
+                  <FilterSelect
+                    value={filterDivisi}
+                    onChange={(v) => { setFilterDivisi(v); setPage(1); }}
+                    options={divisiOptions}
+                    placeholder="Semua Divisi"
+                    color="violet"
+                  />
+                  <FilterSelect
+                    value={filterDepartment}
+                    onChange={(v) => { setFilterDepartment(v); setPage(1); }}
+                    options={departmentOptions}
+                    placeholder="Semua Dept"
+                    color="violet"
+                  />
+                  <FilterSelect
+                    value={filterType}
+                    onChange={(v) => { setFilterType(v); setPage(1); }}
+                    options={typeOptions}
+                    placeholder="Semua Type"
+                    color="violet"
+                  />
+                  <FilterSelect
+                    value={filterFleet}
+                    onChange={(v) => { setFilterFleet(v); setPage(1); }}
+                    options={fleetOptions}
+                    placeholder="Semua Fleet"
+                    color="violet"
+                  />
+                  <FilterSelect
+                    value={filterJenis}
+                    onChange={(v) => { setFilterJenis(v); setPage(1); }}
+                    options={["Trunking", "Konvensional"]}
+                    placeholder="Semua Jenis"
+                    color="violet"
+                  />
+                </div>
+
+                {/* Row 3: Checkboxes */}
                 <div className="flex flex-wrap items-center gap-4 pt-1">
                   <label className="flex items-center gap-2 cursor-pointer select-none group">
                     <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterDuplikat ? 'bg-red-500 border-red-500' : 'border-gray-300 group-hover:border-red-400'}`}>
                       {filterDuplikat && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                      <input type="checkbox" checked={filterDuplikat} onChange={(e) => setFilterDuplikat(e.target.checked)} className="sr-only" />
+                      <input type="checkbox" checked={filterDuplikat} onChange={(e) => { setFilterDuplikat(e.target.checked); setPage(1); }} className="sr-only" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">Duplikat ID</span>
-                    {duplikatCount > 0 && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">{duplikatCount}</span>
-                    )}
+                    {duplikatCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">{duplikatCount}</span>}
                   </label>
-
                   <label className="flex items-center gap-2 cursor-pointer select-none group">
                     <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterNoGrafir ? 'bg-orange-500 border-orange-500' : 'border-gray-300 group-hover:border-orange-400'}`}>
                       {filterNoGrafir && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                      <input type="checkbox" checked={filterNoGrafir} onChange={(e) => setFilterNoGrafir(e.target.checked)} className="sr-only" />
+                      <input type="checkbox" checked={filterNoGrafir} onChange={(e) => { setFilterNoGrafir(e.target.checked); setPage(1); }} className="sr-only" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">No Grafir</span>
-                    {noGrafirCount > 0 && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">{noGrafirCount}</span>
-                    )}
+                    {noGrafirCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">{noGrafirCount}</span>}
                   </label>
                 </div>
 
                 {/* Active Filter Chips */}
                 {activeFilterCount > 0 && (
                   <div className="flex flex-wrap gap-2 pt-2 border-t border-gray-100">
-                    {search && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-violet-100 text-violet-700 text-xs font-medium">
-                        Cari: "{search}"
-                        <button onClick={() => setSearch("")} className="hover:text-violet-900 ml-0.5"><X className="w-3 h-3" /></button>
+                    {[
+                      { val: search, label: `Cari: "${search}"`, clear: () => setSearch(""), color: "bg-violet-100 text-violet-700" },
+                      { val: filterDivisi, label: `Divisi: ${filterDivisi}`, clear: () => setFilterDivisi(""), color: "bg-blue-100 text-blue-700" },
+                      { val: filterDepartment, label: `Dept: ${filterDepartment}`, clear: () => setFilterDepartment(""), color: "bg-blue-100 text-blue-700" },
+                      { val: filterType, label: `Type: ${filterType}`, clear: () => setFilterType(""), color: "bg-blue-100 text-blue-700" },
+                      { val: filterFleet, label: `Fleet: ${filterFleet}`, clear: () => setFilterFleet(""), color: "bg-blue-100 text-blue-700" },
+                      { val: filterJenis, label: `Jenis: ${filterJenis}`, clear: () => setFilterJenis(""), color: "bg-blue-100 text-blue-700" },
+                      { val: filterDuplikat ? "1" : "", label: "Duplikat ID", clear: () => setFilterDuplikat(false), color: "bg-red-100 text-red-700" },
+                      { val: filterNoGrafir ? "1" : "", label: "No Grafir", clear: () => setFilterNoGrafir(false), color: "bg-orange-100 text-orange-700" },
+                    ].filter(f => f.val).map((f, i) => (
+                      <span key={i} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${f.color}`}>
+                        {f.label}
+                        <button onClick={f.clear} className="ml-0.5 hover:opacity-70"><X className="w-3 h-3" /></button>
                       </span>
-                    )}
-                    {filterDivisi && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                        Divisi: {filterDivisi}
-                        <button onClick={() => setFilterDivisi("")} className="hover:text-blue-900 ml-0.5"><X className="w-3 h-3" /></button>
-                      </span>
-                    )}
-                    {filterType && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                        Type: {filterType}
-                        <button onClick={() => setFilterType("")} className="hover:text-blue-900 ml-0.5"><X className="w-3 h-3" /></button>
-                      </span>
-                    )}
-                    {filterFleet && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                        Fleet: {filterFleet}
-                        <button onClick={() => setFilterFleet("")} className="hover:text-blue-900 ml-0.5"><X className="w-3 h-3" /></button>
-                      </span>
-                    )}
-                    {filterJenis && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium">
-                        Jenis: {filterJenis}
-                        <button onClick={() => setFilterJenis("")} className="hover:text-blue-900 ml-0.5"><X className="w-3 h-3" /></button>
-                      </span>
-                    )}
-                    {filterDuplikat && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-100 text-red-700 text-xs font-medium">
-                        Duplikat ID
-                        <button onClick={() => setFilterDuplikat(false)} className="hover:text-red-900 ml-0.5"><X className="w-3 h-3" /></button>
-                      </span>
-                    )}
-                    {filterNoGrafir && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-orange-100 text-orange-700 text-xs font-medium">
-                        No Grafir
-                        <button onClick={() => setFilterNoGrafir(false)} className="hover:text-orange-900 ml-0.5"><X className="w-3 h-3" /></button>
-                      </span>
-                    )}
+                    ))}
                   </div>
                 )}
               </div>
@@ -845,6 +807,60 @@ export default function RadioInternalPage() {
         </div>
       </motion.div>
 
+      {/* ── Pagination ── */}
+      <motion.div variants={itemVariants} className="flex items-center justify-between px-1">
+        <p className="text-sm text-gray-500">
+          Menampilkan <span className="font-semibold text-gray-700">{totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, totalCount)}</span> dari <span className="font-semibold text-gray-700">{totalCount.toLocaleString()}</span> data
+        </p>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => setPage(1)}
+            disabled={page <= 1}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold"
+            title="Halaman pertama"
+          >«</button>
+          <button
+            onClick={() => setPage((p) => Math.max(1, p - 1))}
+            disabled={page <= 1}
+            className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs"
+            title="Sebelumnya"
+          >‹</button>
+
+          {/* Page number buttons */}
+          {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let p: number;
+            if (totalPages <= 5) p = i + 1;
+            else if (page <= 3) p = i + 1;
+            else if (page >= totalPages - 2) p = totalPages - 4 + i;
+            else p = page - 2 + i;
+            return (
+              <button
+                key={p}
+                onClick={() => setPage(p)}
+                className={`h-8 w-8 flex items-center justify-center rounded-md border text-xs font-medium transition-colors ${
+                  p === page
+                    ? "bg-violet-600 border-violet-600 text-white"
+                    : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                }`}
+                >{p}</button>
+              );
+            })}
+
+            <button
+              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              disabled={page >= totalPages}
+              className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs"
+              title="Berikutnya"
+            >›</button>
+            <button
+              onClick={() => setPage(totalPages)}
+              disabled={page >= totalPages}
+              className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold"
+              title="Halaman terakhir"
+            >»</button>
+          </div>
+      </motion.div>
+
       {/* ── Create / Edit Modal ── */}
       <Dialog
         open={isCreateOpen || isEditOpen}
@@ -853,13 +869,14 @@ export default function RadioInternalPage() {
             setIsCreateOpen(false);
             setIsEditOpen(false);
             resetForm();
+            setFormError(null);
           }
         }}
       >
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {isEditOpen ? "Edit Radio Internal" : "Tambah Radio Internal"}
+              {isEditOpen ? "Edit Radio KPC" : "Tambah Radio KPC"}
             </DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
@@ -897,18 +914,20 @@ export default function RadioInternalPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Divisi</label>
-              <Input
-                value={formData.division}
+              <SearchableCombobox
+                value={formData.division || ""}
+                onChange={(val) => setFormData({ ...formData, division: val })}
+                options={divisiOptions}
                 placeholder="e.g. Mining"
-                onChange={(e) => setFormData({ ...formData, division: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Department</label>
-              <Input
-                value={formData.department}
-                placeholder="e.g. IT"
-                onChange={(e) => setFormData({ ...formData, department: e.target.value })}
+              <SearchableCombobox
+                value={formData.department || ""}
+                onChange={(val) => setFormData({ ...formData, department: val })}
+                options={departmentOptions}
+                placeholder="e.g. MOD"
               />
             </div>
             <div className="space-y-2">
@@ -929,10 +948,10 @@ export default function RadioInternalPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Fleet</label>
-              <Input
-                value={formData.fleet}
-                placeholder="e.g. 2001, 3401, 4501"
-                onChange={(e) => setFormData({ ...formData, fleet: e.target.value })}
+              <FleetCombobox
+                value={formData.fleet || ""}
+                onChange={(val) => setFormData({ ...formData, fleet: val })}
+                options={fleetOptions}
               />
               <p className="text-xs text-muted-foreground">Pisahkan dengan koma untuk beberapa fleet</p>
             </div>
@@ -994,6 +1013,26 @@ export default function RadioInternalPage() {
               </div>
             </div>
           </div>
+
+          {/* ── Inline Error Banner ── */}
+          {formError && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+              </svg>
+              <div className="flex-1">
+                <p className="font-semibold">Gagal menyimpan</p>
+                <p className="mt-0.5 opacity-90">{formError}</p>
+              </div>
+              <button
+                onClick={() => setFormError(null)}
+                className="ml-auto flex-shrink-0 text-red-400 hover:text-red-600 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          )}
+
           <DialogFooter>
             <Button
               variant="outline"
@@ -1001,6 +1040,7 @@ export default function RadioInternalPage() {
                 setIsCreateOpen(false);
                 setIsEditOpen(false);
                 resetForm();
+                setFormError(null);
               }}
             >
               Batal
@@ -1036,7 +1076,7 @@ export default function RadioInternalPage() {
       <RadioImportModal
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
-        title="Import Radio Internal"
+        title="Import Radio KPC"
         onImportSuccess={() => loadData()}
         importApiCall={radioApi.importInternal}
       />

@@ -1,5 +1,40 @@
 import { api, apiLongRunning } from "./api";
 
+// ── Pagination types ──────────────────────────────────────────────────────────
+export interface PaginationInfo {
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+}
+
+export interface PagedResult<T> {
+  data: T[];
+  meta: {
+    pagination: PaginationInfo;
+  };
+}
+
+// ── Radio query params ────────────────────────────────────────────────────────
+export interface RadioQueryParams {
+  category?: string;
+  isScrap?: boolean;
+  page?: number;
+  pageSize?: number;
+  search?: string;
+  division?: string;
+  department?: string;
+  type?: string;
+  fleet?: string;
+  jenis?: string;       // "trunking" | "konvensional"
+  isDuplicate?: boolean;
+  isNoGrafir?: boolean;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 // DTOs matching backend
 export interface RadioDto {
   id: number;
@@ -69,11 +104,30 @@ export interface ScrapRadioDto {
 // ==========================================
 
 export const radioApi = {
-  // category = "Internal" | "Contractor" | "Unit" | "LegacyScrap" | null (for all)
-  getAll: (category?: string, isScrap: boolean = false) => {
-    return api.get<{ data: RadioDto[]; message: string }>("/api/radios", {
-      params: { category, isScrap },
-    });
+  // Paged — dipakai tabel utama
+  getAll: (params: RadioQueryParams) => {
+    console.log("📤 Request params:", params);
+    return api.get<any>("/api/radios", { params });
+  },
+
+  // Unpaged — dipakai untuk matching (Fleet Statistics) dan dropdown options
+  getAllUnpaged: async (category?: string, isScrap: boolean = false): Promise<{ data: { data: RadioDto[] } }> => {
+    try {
+      const res = await api.get<any>("/api/radios/all", { params: { category, isScrap } });
+      // Response: { statusCode, message, data: [...] }
+      const items: RadioDto[] = Array.isArray(res.data?.data) ? res.data.data : [];
+      return { data: { data: items } };
+    } catch {
+      // Fallback: pakai /api/radios dengan pageSize besar
+      try {
+        const res = await api.get<any>("/api/radios", { params: { category, isScrap, pageSize: 9999, page: 1 } });
+        // Response: { statusCode, message, data: [...], meta: {...} }
+        const items: RadioDto[] = Array.isArray(res.data?.data) ? res.data.data : [];
+        return { data: { data: items } };
+      } catch {
+        return { data: { data: [] } };
+      }
+    }
   },
 
   getById: (id: number) => {
@@ -94,6 +148,22 @@ export const radioApi = {
 
   deleteAll: () => {
     return api.delete(`/api/radios/all`);
+  },
+
+  deleteAllKpc: () => {
+    return api.delete(`/api/radios/all/kpc`);
+  },
+
+  deleteAllKontraktor: () => {
+    return api.delete(`/api/radios/all/kontraktor`);
+  },
+
+  deleteAllUnit: () => {
+    return api.delete(`/api/radios/all/unit`);
+  },
+
+  deleteAllScrap: () => {
+    return api.delete(`/api/radios/all/scrap`);
   },
 
   scrapRadio: (id: number, data: ScrapRadioDto) => {

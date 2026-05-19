@@ -215,9 +215,9 @@ const FleetStatisticsPage: React.FC = () => {
     const loadAllRadios = async () => {
       try {
         const [internal, contractor, unit] = await Promise.all([
-          radioApi.getAll("Internal", false),
-          radioApi.getAll("Contractor", false),
-          radioApi.getAll("Unit", false),
+          radioApi.getAllUnpaged("Internal", false),
+          radioApi.getAllUnpaged("Contractor", false),
+          radioApi.getAllUnpaged("Unit", false),
         ]);
         setAllRadios([
           ...internal.data.data,

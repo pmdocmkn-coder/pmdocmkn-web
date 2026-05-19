@@ -34,6 +34,7 @@ export default function RadioImportModal({
     const [isDragging, setIsDragging] = useState(false);
     const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     const [result, setResult] = useState<{ success: number; failed: number; errors?: string[] } | null>(null);
+    const [sheetDetails, setSheetDetails] = useState<{ sheetName: string; recordCount: number }[]>([]);
     const [errorMessage, setErrorMessage] = useState("");
     const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,6 +50,7 @@ export default function RadioImportModal({
         setIsDragging(false);
         setStatus('idle');
         setResult(null);
+        setSheetDetails([]);
         setErrorMessage("");
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
@@ -111,21 +113,23 @@ export default function RadioImportModal({
         setStatus('uploading');
         try {
             const response = await importApiCall(file);
-            // Backend wraps result in ApiResponse: { data: { success, failed, errors }, message: "..." }
-            // Unwrap: response.data is the ApiResponse body, response.data.data is the actual payload
             const importData = response.data?.data ?? response.data;
             
+            // Extract sheet details if available (multiple sheets)
+            const sheets = importData?.sheetDetails ?? [];
+            setSheetDetails(sheets);
+
             setResult({
-                success: importData?.imported ?? importData?.success ?? 0,
+                success: importData?.totalImported ?? importData?.imported ?? importData?.success ?? 0,
                 failed: importData?.failed ?? 0,
                 errors: importData?.errors || []
             });
 
-            if ((importData?.failed ?? 0) > 0 && (importData?.imported ?? importData?.success ?? 0) === 0) {
+            if ((importData?.failed ?? 0) > 0 && (importData?.totalImported ?? importData?.imported ?? importData?.success ?? 0) === 0) {
                 setStatus('error');
                 setErrorMessage("Seluruh data gagal diimpor. Periksa format atau data duplikat.");
             } else if ((importData?.failed ?? 0) > 0) {
-                setStatus('success'); // Partial success is still a success, we just show warnings
+                setStatus('success');
                 onImportSuccess();
             } else {
                 setStatus('success');
@@ -257,6 +261,65 @@ export default function RadioImportModal({
                        <div className="bg-white px-6 py-3 rounded-xl shadow-sm border border-gray-100 w-32">
                            <div className="text-sm text-gray-500 font-medium mb-1">Gagal</div>
                            <div className="text-3xl font-bold text-red-500">{result.failed}</div>
+                       </div>
+                   </div>
+               )}
+
+               {/* ── Sheet Details (hanya muncul jika multiple sheets) ── */}
+               {sheetDetails.length > 1 && (
+                   <div className="mt-5 w-full">
+                       <p className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1.5">
+                           <svg className="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                               <path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                           </svg>
+                           Detail per Sheet ({sheetDetails.length} sheet terdeteksi)
+                       </p>
+                       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-sm">
+                           <table className="w-full text-sm">
+                               <thead>
+                                   <tr className="bg-gray-50 border-b border-gray-200">
+                                       <th className="text-left px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Sheet</th>
+                                       <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Data</th>
+                                       <th className="text-right px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wide">Status</th>
+                                   </tr>
+                               </thead>
+                               <tbody>
+                                   {sheetDetails.map((sheet, i) => (
+                                       <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                                           <td className="px-4 py-2.5 font-medium text-gray-800">
+                                               <span className="inline-flex items-center gap-1.5">
+                                                   <span className="w-5 h-5 rounded bg-blue-100 text-blue-700 text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                                                   {sheet.sheetName}
+                                               </span>
+                                           </td>
+                                           <td className="px-4 py-2.5 text-right font-bold text-gray-900">{sheet.recordCount.toLocaleString()}</td>
+                                           <td className="px-4 py-2.5 text-right">
+                                               {sheet.recordCount > 0 ? (
+                                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+                                                       <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>
+                                                       OK
+                                                   </span>
+                                               ) : (
+                                                   <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-gray-100 text-gray-500 text-xs font-semibold">
+                                                       Kosong
+                                                   </span>
+                                               )}
+                                           </td>
+                                       </tr>
+                                   ))}
+                               </tbody>
+                               <tfoot>
+                                   <tr className="bg-green-50 border-t-2 border-green-200">
+                                       <td className="px-4 py-2.5 font-bold text-green-800">Total</td>
+                                       <td className="px-4 py-2.5 text-right font-black text-green-700 text-base">
+                                           {sheetDetails.reduce((sum, s) => sum + s.recordCount, 0).toLocaleString()}
+                                       </td>
+                                       <td className="px-4 py-2.5 text-right">
+                                           <span className="text-xs font-semibold text-green-700">{sheetDetails.length} sheet</span>
+                                       </td>
+                                   </tr>
+                               </tfoot>
+                           </table>
                        </div>
                    </div>
                )}

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
 import { Button } from "../ui/button";
@@ -36,6 +36,17 @@ import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
 import RadioHistoryModal from "./RadioHistoryModal";
 import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
+import { parseRadioResponse } from "../../utils/radioHelpers";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+import { Download, Calendar } from "lucide-react";
+
+import { format } from "date-fns";
+import { id as dateFnsLocale } from "date-fns/locale";
+import { DayPicker, DateRange } from "react-day-picker";
+import "react-day-picker/style.css";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { id as localeId } from "react-day-picker/locale";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -106,6 +117,12 @@ export default function RadioScrapPage() {
   // ── Data State ──────────────────────────────────────────────────────────────
   const [data, setData] = useState<RadioDto[]>([]);
   const [loading, setLoading] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
+  // ── Pagination ──────────────────────────────────────────────────────────────
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 50;
 
   // ── Filter State ────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -114,12 +131,45 @@ export default function RadioScrapPage() {
   const [filterDateTo, setFilterDateTo] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
+  // State Date Range Popover
+  const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [dateRangeOpen, setDateRangeOpen] = useState(false);
+  const deskCalRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (deskCalRef.current && !deskCalRef.current.contains(e.target as Node)) {
+        setDateRangeOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const formatRangeLabel = () => {
+    if (!filterDateFrom && !filterDateTo) return "Pilih Rentang Tanggal";
+    if (filterDateFrom && !filterDateTo) return format(new Date(filterDateFrom), "d MMM yyyy", { locale: dateFnsLocale });
+    if (filterDateFrom === filterDateTo) return format(new Date(filterDateFrom), "d MMM yyyy", { locale: dateFnsLocale });
+    return `${format(new Date(filterDateFrom), "d MMM yyyy", { locale: dateFnsLocale })} – ${format(new Date(filterDateTo), "d MMM yyyy", { locale: dateFnsLocale })}`;
+  };
+
   // ── Modal State ─────────────────────────────────────────────────────────────
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedRadio, setSelectedRadio] = useState<RadioDto | null>(null);
+
+  // ── Load Options (unpaged, untuk menghitung statistik akurat) ───────────────
+  const [allOptions, setAllOptions] = useState<RadioDto[]>([]);
+  useEffect(() => {
+    radioApi.getAllUnpaged(undefined, true)
+      .then((r) => setAllOptions(r.data.data))
+      .catch(() => {});
+  }, []);
+
+  // ── Form Error ──────────────────────────────────────────────────────────────
+  const [formError, setFormError] = useState<string | null>(null);
 
   // ── Form State ──────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState<CreateRadioDto>({
@@ -148,19 +198,26 @@ export default function RadioScrapPage() {
   // ── Load Data ───────────────────────────────────────────────────────────────
   useEffect(() => {
     loadData();
-  }, []);
+  }, [page, search, filterCategory, filterDateFrom, filterDateTo]);
 
   const loadData = async () => {
     setLoading(true);
     try {
-      const response = await radioApi.getAll(undefined, true);
-      setData(response.data.data);
-    } catch {
-      toast({
-        title: "Error",
-        description: "Failed to load Scrap radios",
-        variant: "destructive",
+      const response = await radioApi.getAll({
+        isScrap: true,
+        category: filterCategory || undefined,
+        page,
+        pageSize: PAGE_SIZE,
+        search: search || undefined,
+        dateFrom: filterDateFrom || undefined,
+        dateTo: filterDateTo || undefined,
       });
+      const { items, totalCount: tc, totalPages: tp } = parseRadioResponse(response.data);
+      setData(items);
+      setTotalCount(tc);
+      setTotalPages(tp);
+    } catch {
+      toast({ title: "Error", description: "Failed to load Scrap radios", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -168,6 +225,7 @@ export default function RadioScrapPage() {
 
   // ── CRUD Handlers ───────────────────────────────────────────────────────────
   const handleCreate = async () => {
+    setFormError(null);
     try {
       await radioApi.create(formData);
       toast({ title: "Berhasil", description: "Data scrap radio berhasil ditambahkan" });
@@ -175,16 +233,13 @@ export default function RadioScrapPage() {
       loadData();
       resetForm();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Gagal menambahkan data",
-        variant: "destructive",
-      });
+      setFormError(error.response?.data?.message || "Gagal menambahkan data");
     }
   };
 
   const handleUpdate = async () => {
     if (!selectedRadio) return;
+    setFormError(null);
     try {
       await radioApi.update(selectedRadio.id, formData);
       toast({ title: "Berhasil", description: "Data scrap radio berhasil diperbarui" });
@@ -192,11 +247,7 @@ export default function RadioScrapPage() {
       loadData();
       resetForm();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.response?.data?.message || "Gagal memperbarui data",
-        variant: "destructive",
-      });
+      setFormError(error.response?.data?.message || "Gagal memperbarui data");
     }
   };
 
@@ -212,10 +263,10 @@ export default function RadioScrapPage() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm("PERINGATAN: Yakin ingin menghapus SEMUA data radio? Tindakan ini tidak dapat dibatalkan!")) return;
+    if (!window.confirm("PERINGATAN: Yakin ingin menghapus SEMUA data Radio Scrap? Tindakan ini tidak dapat dibatalkan!")) return;
     try {
-      await radioApi.deleteAll();
-      toast({ title: "Berhasil", description: "Semua data radio berhasil dihapus" });
+      await radioApi.deleteAllScrap();
+      toast({ title: "Berhasil", description: "Semua data Radio Scrap berhasil dihapus" });
       loadData();
     } catch {
       toast({ title: "Error", description: "Gagal menghapus semua data", variant: "destructive" });
@@ -282,6 +333,8 @@ export default function RadioScrapPage() {
     setFilterCategory("");
     setFilterDateFrom("");
     setFilterDateTo("");
+    setDateRange(undefined);
+    setPage(1);
   };
 
   // ── Active Filter Count ─────────────────────────────────────────────────────
@@ -294,48 +347,293 @@ export default function RadioScrapPage() {
     return count;
   }, [search, filterCategory, filterDateFrom, filterDateTo]);
 
-  // ── Filtered Data ───────────────────────────────────────────────────────────
-  const filteredData = useMemo(() => {
-    return data.filter((item) => {
+  // ── Calculate Stats from All Unpaged Data based on active filters ──────────
+  const filteredAllOptions = useMemo(() => {
+    let result = allOptions;
+    if (search) {
+      const s = search.toLowerCase();
+      result = result.filter(d => 
+        (d.nomorAset || "").toLowerCase().includes(s) ||
+        (d.radioId || "").toLowerCase().includes(s) ||
+        (d.serialNumber || "").toLowerCase().includes(s) ||
+        (d.scrapJobNumber || "").toLowerCase().includes(s) ||
+        (d.company || "").toLowerCase().includes(s) ||
+        (d.nomorLv || "").toLowerCase().includes(s)
+      );
+    }
+    if (filterCategory) result = result.filter(d => d.category === filterCategory);
+    
+    if (filterDateFrom) {
+      const from = new Date(filterDateFrom);
+      result = result.filter(d => {
+        const scrapped = d.dateScrapped ? new Date(d.dateScrapped) : null;
+        return scrapped && scrapped >= from;
+      });
+    }
+    if (filterDateTo) {
+      const to = new Date(filterDateTo);
+      to.setHours(23, 59, 59, 999);
+      result = result.filter(d => {
+        const scrapped = d.dateScrapped ? new Date(d.dateScrapped) : null;
+        return scrapped && scrapped <= to;
+      });
+    }
+
+    return result;
+  }, [allOptions, search, filterCategory, filterDateFrom, filterDateTo]);
+
+  // ── Stat Counts ─────────────────────────────────────────────────────────────
+  const internalCount = useMemo(() => filteredAllOptions.filter((d) => d.category === "Internal").length, [filteredAllOptions]);
+  const contractorCount = useMemo(() => filteredAllOptions.filter((d) => d.category === "Contractor").length, [filteredAllOptions]);
+  const legacyCount = useMemo(() => filteredAllOptions.filter((d) => d.category === "LegacyScrap" || d.category === "Unit").length, [filteredAllOptions]);
+
+  // ── Export Functions ────────────────────────────────────────────────────────
+  const handleExportNormal = async () => {
+    try {
+      const res = await radioApi.getAllUnpaged(filterCategory || undefined, true);
+      let exportData = res.data.data;
+
       if (search) {
-        const q = search.toLowerCase();
-        const matches =
-          item.scrapJobNumber?.toLowerCase().includes(q) ||
-          item.serialNumber?.toLowerCase().includes(q) ||
-          item.radioId?.toLowerCase().includes(q) ||
-          item.nomorAset?.toLowerCase().includes(q) ||
-          item.company?.toLowerCase().includes(q);
-        if (!matches) return false;
+        const s = search.toLowerCase();
+        exportData = exportData.filter((item: RadioDto) =>
+          (item.nomorAset || "").toLowerCase().includes(s) ||
+          (item.serialNumber || "").toLowerCase().includes(s) ||
+          (item.radioId || "").toLowerCase().includes(s) ||
+          (item.scrapJobNumber || "").toLowerCase().includes(s) ||
+          (item.company || "").toLowerCase().includes(s) ||
+          (item.nomorLv || "").toLowerCase().includes(s)
+        );
       }
-      if (filterCategory && item.category !== filterCategory) return false;
       if (filterDateFrom) {
         const from = new Date(filterDateFrom);
-        const scrapped = item.dateScrapped ? new Date(item.dateScrapped) : null;
-        if (!scrapped || scrapped < from) return false;
+        exportData = exportData.filter((item: RadioDto) => {
+          const scrapped = item.dateScrapped ? new Date(item.dateScrapped) : null;
+          return scrapped && scrapped >= from;
+        });
       }
       if (filterDateTo) {
         const to = new Date(filterDateTo);
         to.setHours(23, 59, 59, 999);
-        const scrapped = item.dateScrapped ? new Date(item.dateScrapped) : null;
-        if (!scrapped || scrapped > to) return false;
+        exportData = exportData.filter((item: RadioDto) => {
+          const scrapped = item.dateScrapped ? new Date(item.dateScrapped) : null;
+          return scrapped && scrapped <= to;
+        });
       }
-      return true;
-    });
-  }, [data, search, filterCategory, filterDateFrom, filterDateTo]);
 
-  // ── Stat Counts ─────────────────────────────────────────────────────────────
-  const internalCount = useMemo(
-    () => filteredData.filter((d) => d.category === "Internal").length,
-    [filteredData]
-  );
-  const contractorCount = useMemo(
-    () => filteredData.filter((d) => d.category === "Contractor").length,
-    [filteredData]
-  );
-  const legacyCount = useMemo(
-    () => filteredData.filter((d) => d.category === "LegacyScrap" || d.category === "Unit").length,
-    [filteredData]
-  );
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Radio Scrap Filtered");
+      ws.columns = [
+        { header: "NO", key: "no", width: 5 },
+        { header: "KATEGORI", key: "kategori", width: 15 },
+        { header: "NO ASET / COMPANY", key: "aset", width: 25 },
+        { header: "SERIAL NUMBER", key: "sn", width: 20 },
+        { header: "TYPE", key: "type", width: 20 },
+        { header: "DIVISI", key: "divisi", width: 15 },
+        { header: "DEPT", key: "dept", width: 15 },
+        { header: "JENIS", key: "jenis", width: 15 },
+        { header: "JOB NUMBER", key: "job", width: 20 },
+        { header: "TGL SCRAP", key: "tgl", width: 15 },
+        { header: "REMARK", key: "remark", width: 30 },
+      ];
+
+      ws.getRow(1).eachCell(cell => {
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF991B1B" } };
+        cell.alignment = { vertical: "middle", horizontal: "center" };
+      });
+
+      exportData.forEach((item: RadioDto, i: number) => {
+        ws.addRow({
+          no: i + 1,
+          kategori: item.category,
+          aset: item.nomorAset || item.company || item.nomorLv || "-",
+          sn: item.serialNumber || "-",
+          type: item.type || "-",
+          divisi: item.division || "-",
+          dept: item.department || "-",
+          jenis: item.isTrunking ? "Trunking" : item.isConventional ? "Konvensional" : "-",
+          job: item.scrapJobNumber || "-",
+          tgl: item.dateScrapped ? new Date(item.dateScrapped).toISOString().split("T")[0] : "-",
+          remark: item.remarks || "-",
+        });
+      });
+
+      const buf = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buf]), `RadioScrap_Filtered_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast({ title: "Berhasil", description: `${exportData.length} data diekspor.` });
+    } catch (e) {
+      toast({ title: "Gagal", description: "Gagal ekspor data.", variant: "destructive" });
+    }
+  };
+
+  const handleExportTahunan = async () => {
+    try {
+      const res = await radioApi.getAllUnpaged(undefined, true);
+      const allScrap = res.data.data;
+
+      const trunking = allScrap.filter((x: RadioDto) => x.isTrunking);
+      const conventional = allScrap.filter((x: RadioDto) => x.isConventional);
+
+      // Hardcoded data based on user request (2022-2025)
+      const hardcodedTrunking: Record<number, number[]> = {
+        2022: [0, 2, 3, 5, 2, 1, 31, 45, 57, 36, 19, 10],
+        2023: [2, 1, 3, 48, 5, 9, 2, 4, 6, 0, 4, 4],
+        2024: [5, 4, 6, 5, 4, 4, 6, 4, 9, 5, 8, 3],
+        2025: [3, 1, 4, 7, 11, 2, 26, 7, 6, 5, 0, 0]
+      };
+
+      const hardcodedConv: Record<number, number[]> = {
+        2022: [2, 2, 3, 0, 1, 4, 3, 3, 0, 2, 9, 2],
+        2023: [1, 0, 0, 18, 0, 6, 0, 1, 1, 7, 0, 2],
+        2024: [1, 0, 0, 1, 1, 1, 0, 0, 1, 0, 1, 1],
+        2025: [1, 1, 3, 0, 0, 3, 5, 0, 0, 0, 0, 0]
+      };
+
+      // Ensure template exactly matches 2022 to 2037 as requested
+      const allYears = [];
+      for (let y = 2022; y <= 2037; y++) allYears.push(y);
+
+      const buildTable = (data: RadioDto[], type: "trunking" | "conv") => {
+        const rows: number[][] = [];
+        const hardcodeMap = type === "trunking" ? hardcodedTrunking : hardcodedConv;
+
+        for (let m = 0; m < 12; m++) {
+          const monthRow = allYears.map(y => {
+            // Use hardcoded data for 2022-2025
+            if (y >= 2022 && y <= 2025) {
+              return hardcodeMap[y][m];
+            }
+            // Use realtime data from database for 2026 onwards
+            return data.filter((d: RadioDto) => {
+              if (!d.dateScrapped) return false;
+              const date = new Date(d.dateScrapped);
+              return date.getFullYear() === y && date.getMonth() === m;
+            }).length;
+          });
+          rows.push(monthRow);
+        }
+        return rows;
+      };
+
+      const paddedTrunking = buildTable(trunking, "trunking");
+      const paddedConv = buildTable(conventional, "conv");
+      const paddedTotal = paddedTrunking.map((row, m) => 
+        row.map((val, i) => val + paddedConv[m][i])
+      );
+
+      const wb = new ExcelJS.Workbook();
+      const wsConv = wb.addWorksheet("Conventional Radio");
+      const wsTrunk = wb.addWorksheet("Trunking Radio");
+      const wsTotal = wb.addWorksheet("TOTAL PER TAHUN");
+
+      // Function to add raw data table
+      const addRawDataToSheet = (ws: ExcelJS.Worksheet, data: RadioDto[]) => {
+        ws.columns = [
+          { header: "No.", key: "no", width: 5 },
+          { header: "Type", key: "type", width: 15 },
+          { header: "Serial Number", key: "sn", width: 20 },
+          { header: "Job Number", key: "job", width: 15 },
+          { header: "Date Scrapped", key: "date", width: 20 },
+          { header: "remarks", key: "remark", width: 30 },
+        ];
+
+        ws.getRow(1).eachCell(cell => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        data.forEach((item, i) => {
+          const formattedDate = item.dateScrapped 
+            ? format(new Date(item.dateScrapped), "dd-MMM-yy") 
+            : "";
+          const row = ws.addRow({
+            no: i + 1,
+            type: item.type || "-",
+            sn: item.serialNumber || "-",
+            job: item.scrapJobNumber || "-",
+            date: formattedDate || "-",
+            remark: item.remarks || "-",
+          });
+          row.eachCell(cell => {
+            cell.alignment = { horizontal: "center" };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+          });
+        });
+      };
+
+      addRawDataToSheet(wsConv, conventional);
+      addRawDataToSheet(wsTrunk, trunking);
+
+      // Function to add summary table to sheet
+      const addTableToSheet = (ws: ExcelJS.Worksheet, title: string, dataRows: number[][], startRow: number) => {
+        ws.getCell(`A${startRow}`).value = title;
+        ws.getCell(`A${startRow}`).font = { size: 16, bold: true, italic: true, underline: true };
+
+        const headerRow = ws.getRow(startRow + 2);
+        headerRow.getCell(1).value = "";
+        headerRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5C282' } };
+        allYears.forEach((y, i) => {
+          const cell = headerRow.getCell(i + 2);
+          cell.value = y;
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: 'center' };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5C282' } };
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        let r = startRow + 3;
+        for (let m = 0; m < 12; m++) {
+          const row = ws.getRow(r);
+          row.getCell(1).value = months[m];
+          row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF5C282' } };
+          row.getCell(1).font = { bold: true };
+          row.getCell(1).alignment = { horizontal: 'center' };
+          row.getCell(1).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+
+          allYears.forEach((y, i) => {
+            const val = dataRows[m][i];
+            const cell = row.getCell(i + 2);
+            cell.value = val;
+            cell.alignment = { horizontal: 'center' };
+            cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+          });
+          r++;
+        }
+
+        const totalRow = ws.getRow(r);
+        totalRow.getCell(1).value = "Total";
+        totalRow.getCell(1).font = { bold: true };
+        totalRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+        totalRow.getCell(1).border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        totalRow.getCell(1).alignment = { horizontal: 'center' };
+
+        allYears.forEach((y, i) => {
+          let sum = 0;
+          for (let m = 0; m < 12; m++) sum += dataRows[m][i];
+          const cell = totalRow.getCell(i + 2);
+          cell.value = sum;
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: 'center' };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFFF00' } };
+          cell.border = { top: { style: 'thin' }, left: { style: 'thin' }, bottom: { style: 'thin' }, right: { style: 'thin' } };
+        });
+
+        return r + 3;
+      };
+
+      let nextRow = addTableToSheet(wsTotal, "Radio Trunking Scrap", paddedTrunking, 1);
+      nextRow = addTableToSheet(wsTotal, "Radio Conventional Scrap", paddedConv, nextRow);
+      addTableToSheet(wsTotal, "Total Radio Scrap (Conventional + Trunking)", paddedTotal, nextRow);
+
+      const buf = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buf]), `RadioScrap_Tahunan_${new Date().toISOString().slice(0, 10)}.xlsx`);
+      toast({ title: "Berhasil", description: "Laporan tahunan berhasil diekspor." });
+    } catch (e) {
+      toast({ title: "Gagal", description: "Gagal ekspor laporan tahunan.", variant: "destructive" });
+    }
+  };
 
   // ── Render ──────────────────────────────────────────────────────────────────
   return (
@@ -357,7 +655,7 @@ export default function RadioScrapPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
-          {hasPermission("radio.delete") && (
+          {hasPermission("radio.delete.all.scrap") && (
             <Button variant="destructive" size="sm" onClick={handleDeleteAll}>
               <Trash2 className="w-4 h-4 mr-1.5" />
               Delete All
@@ -366,9 +664,25 @@ export default function RadioScrapPage() {
           {hasPermission("radio.scrap.import") && (
             <Button variant="outline" size="sm" onClick={() => setIsImportOpen(true)}>
               <Upload className="w-4 h-4 mr-1.5" />
-              Import Legacy Scrap
+              Import Legacy
             </Button>
           )}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700">
+                <Download className="w-4 h-4 mr-1.5" />
+                Export Data
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem onClick={handleExportNormal}>
+                Export Filter Terkini
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportTahunan}>
+                Export Data Tahunan
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           {hasPermission("radio.scrap.create") && (
             <Button
               size="sm"
@@ -400,8 +714,8 @@ export default function RadioScrapPage() {
               </div>
               <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Total Scrap</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{filteredData.length}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">dari {data.length} data</p>
+            <p className="text-4xl font-black tracking-tight">{totalCount.toLocaleString()}</p>
+            <p className="text-xs opacity-70 mt-1.5 font-medium">halaman {page} / {totalPages}</p>
           </div>
         </motion.div>
 
@@ -419,10 +733,10 @@ export default function RadioScrapPage() {
               <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
                 <RadioIcon className="w-5 h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Internal</span>
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">KPC</span>
             </div>
             <p className="text-4xl font-black tracking-tight">{internalCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">radio internal</p>
+            <p className="text-xs opacity-70 mt-1.5 font-medium">radio KPC</p>
           </div>
         </motion.div>
 
@@ -525,14 +839,14 @@ export default function RadioScrapPage() {
                       placeholder="Cari job number, SN, ID radio..."
                       className="pl-9 h-9 text-sm border-gray-200 focus:border-red-400 focus:ring-red-400"
                       value={search}
-                      onChange={(e) => setSearch(e.target.value)}
+                      onChange={(e) => { setSearch(e.target.value); setPage(1); }}
                     />
                   </div>
 
                   {/* Category */}
                   <select
                     value={filterCategory}
-                    onChange={(e) => setFilterCategory(e.target.value)}
+                    onChange={(e) => { setFilterCategory(e.target.value); setPage(1); }}
                     className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 text-gray-700"
                   >
                     <option value="">Semua Kategori</option>
@@ -542,26 +856,81 @@ export default function RadioScrapPage() {
                     <option value="LegacyScrap">LegacyScrap</option>
                   </select>
 
-                  {/* Date From */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-500 whitespace-nowrap">Dari</label>
-                    <input
-                      type="date"
-                      value={filterDateFrom}
-                      onChange={(e) => setFilterDateFrom(e.target.value)}
-                      className="flex-1 h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 text-gray-700"
-                    />
-                  </div>
-
-                  {/* Date To */}
-                  <div className="flex items-center gap-2">
-                    <label className="text-xs text-gray-500 whitespace-nowrap">Sampai</label>
-                    <input
-                      type="date"
-                      value={filterDateTo}
-                      onChange={(e) => setFilterDateTo(e.target.value)}
-                      className="flex-1 h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 text-gray-700"
-                    />
+                  {/* Date Range Picker */}
+                  <div className="relative sm:col-span-2 lg:col-span-2">
+                    <Popover open={dateRangeOpen} onOpenChange={setDateRangeOpen}>
+                      <PopoverTrigger asChild>
+                        <button className="flex items-center justify-between w-full h-9 px-3 text-sm font-medium text-left bg-white border border-gray-200 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 transition-all shadow-sm">
+                          <div className="flex items-center gap-2 text-gray-700">
+                            <Calendar className="w-4 h-4 text-red-500" />
+                            <span className="truncate">{formatRangeLabel()}</span>
+                          </div>
+                          <ChevronDown className="w-4 h-4 text-gray-400" />
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0" align="start">
+                        <div ref={deskCalRef} className="p-3 bg-white rounded-xl shadow-xl border border-gray-100">
+                          <DayPicker
+                            mode="range"
+                            selected={dateRange}
+                            onSelect={(range) => {
+                              setDateRange(range);
+                              if (range?.from) setFilterDateFrom(format(range.from, 'yyyy-MM-dd'));
+                              else setFilterDateFrom("");
+                              
+                              if (range?.to) setFilterDateTo(format(range.to, 'yyyy-MM-dd'));
+                              else setFilterDateTo("");
+                            }}
+                            locale={localeId}
+                            showOutsideDays
+                            className="border-0"
+                            classNames={{
+                              months: "flex flex-col sm:flex-row space-y-4 sm:space-x-4 sm:space-y-0",
+                              month: "space-y-4",
+                              caption: "flex justify-center pt-1 relative items-center mb-4",
+                              caption_label: "text-sm font-semibold text-gray-900",
+                              nav: "space-x-1 flex items-center bg-gray-50/50 rounded-lg p-1",
+                              nav_button: "h-7 w-7 bg-transparent p-0 opacity-70 hover:opacity-100 hover:bg-white rounded-md transition-all flex items-center justify-center text-gray-600 shadow-sm",
+                              nav_button_previous: "absolute left-1",
+                              nav_button_next: "absolute right-1",
+                              table: "w-full border-collapse space-y-1",
+                              head_row: "flex w-full",
+                              head_cell: "text-gray-500 rounded-md w-9 font-medium text-[0.8rem] text-center",
+                              row: "flex w-full mt-2",
+                              cell: "h-9 w-9 text-center text-sm p-0 relative focus-within:relative focus-within:z-20",
+                              day: "h-9 w-9 p-0 font-normal hover:bg-gray-100 rounded-lg transition-colors aria-selected:opacity-100",
+                              day_range_start: "day-range-start bg-red-600 text-white hover:bg-red-700 rounded-l-lg rounded-r-none",
+                              day_range_end: "day-range-end bg-red-600 text-white hover:bg-red-700 rounded-r-lg rounded-l-none",
+                              day_range_middle: "aria-selected:bg-red-50 aria-selected:text-red-900 rounded-none",
+                              day_selected: "bg-red-600 text-white hover:bg-red-700 focus:bg-red-600 focus:text-white rounded-lg font-semibold shadow-sm",
+                              day_today: "bg-gray-100 text-gray-900 font-semibold",
+                              day_outside: "text-gray-400 opacity-50 aria-selected:bg-red-50/50 aria-selected:text-red-900/50",
+                              day_disabled: "text-gray-300 opacity-50",
+                              day_hidden: "invisible",
+                            }}
+                          />
+                          <div className="flex items-center justify-between pt-3 mt-3 border-t border-gray-100">
+                            <button
+                              onClick={() => {
+                                setDateRange(undefined);
+                                setFilterDateFrom("");
+                                setFilterDateTo("");
+                                setDateRangeOpen(false);
+                              }}
+                              className="px-3 py-1.5 text-xs font-medium text-gray-500 hover:text-red-600 transition-colors"
+                            >
+                              Hapus
+                            </button>
+                            <button
+                              onClick={() => setDateRangeOpen(false)}
+                              className="px-4 py-1.5 text-xs font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg shadow-sm transition-colors"
+                            >
+                              Selesai
+                            </button>
+                          </div>
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   </div>
                 </div>
 
@@ -627,8 +996,8 @@ export default function RadioScrapPage() {
                 {(hasPermission("radio.view") ||
                   hasPermission("radio.scrap.update") ||
                   hasPermission("radio.scrap.delete")) && (
-                  <th className="font-semibold text-gray-600 py-3 px-4 text-right whitespace-nowrap">Aksi</th>
-                )}
+                    <th className="font-semibold text-gray-600 py-3 px-4 text-right whitespace-nowrap">Aksi</th>
+                  )}
               </tr>
             </thead>
             <tbody>
@@ -641,7 +1010,7 @@ export default function RadioScrapPage() {
                     </div>
                   </td>
                 </tr>
-              ) : filteredData.length === 0 ? (
+              ) : data.length === 0 ? (
                 <tr>
                   <td colSpan={11} className="text-center py-12 text-muted-foreground">
                     <div className="flex flex-col items-center gap-2">
@@ -651,7 +1020,7 @@ export default function RadioScrapPage() {
                   </td>
                 </tr>
               ) : (
-                filteredData.map((item) => (
+                data.map((item) => (
                   <tr key={item.id} className="border-b border-gray-100 transition-colors hover:bg-gray-50">
                     <td className="py-3 px-4 whitespace-nowrap">
                       <CategoryBadge category={item.category} />
@@ -676,10 +1045,10 @@ export default function RadioScrapPage() {
                     <td className="py-3 px-4 whitespace-nowrap">
                       {item.dateScrapped
                         ? new Date(item.dateScrapped).toLocaleDateString("id-ID", {
-                            day: "2-digit",
-                            month: "short",
-                            year: "numeric",
-                          })
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric",
+                        })
                         : "-"}
                     </td>
                     <td className="py-3 px-4 max-w-[200px] truncate" title={item.remarks || undefined}>
@@ -688,45 +1057,68 @@ export default function RadioScrapPage() {
                     {(hasPermission("radio.view") ||
                       hasPermission("radio.scrap.update") ||
                       hasPermission("radio.scrap.delete")) && (
-                      <td className="py-3 px-4 text-right whitespace-nowrap">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger className="h-7 w-7 p-0 inline-flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
-                            <span className="sr-only">Open menu</span>
-                            <MoreVertical className="h-3.5 w-3.5" />
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {hasPermission("radio.view") && (
-                              <DropdownMenuItem
-                                onClick={() => { setSelectedRadio(item); setIsHistoryOpen(true); }}
-                              >
-                                <History className="mr-2 h-4 w-4" />
-                                History
-                              </DropdownMenuItem>
-                            )}
-                            {hasPermission("radio.scrap.update") && (
-                              <DropdownMenuItem onClick={() => openEditModal(item)}>
-                                <Edit2 className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                            )}
-                            {hasPermission("radio.scrap.delete") && (
-                              <DropdownMenuItem
-                                className="text-red-600 focus:text-red-600 focus:bg-red-50"
-                                onClick={() => handleDelete(item.id)}
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Hapus
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    )}
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger className="h-7 w-7 p-0 inline-flex items-center justify-center rounded-md hover:bg-slate-100 transition-colors">
+                              <span className="sr-only">Open menu</span>
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {hasPermission("radio.view") && (
+                                <DropdownMenuItem
+                                  onClick={() => { setSelectedRadio(item); setIsHistoryOpen(true); }}
+                                >
+                                  <History className="mr-2 h-4 w-4" />
+                                  History
+                                </DropdownMenuItem>
+                              )}
+                              {hasPermission("radio.scrap.update") && (
+                                <DropdownMenuItem onClick={() => openEditModal(item)}>
+                                  <Edit2 className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                              )}
+                              {hasPermission("radio.scrap.delete") && (
+                                <DropdownMenuItem
+                                  className="text-red-600 focus:text-red-600 focus:bg-red-50"
+                                  onClick={() => handleDelete(item.id)}
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Hapus
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </td>
+                      )}
                   </tr>
                 ))
               )}
             </tbody>
           </table>
+        </div>
+      </motion.div>
+
+      {/* ── Pagination ── */}
+      <motion.div variants={itemVariants} className="flex items-center justify-between px-1">
+        <p className="text-sm text-gray-500">
+          Menampilkan <span className="font-semibold text-gray-700">{totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, totalCount)}</span> dari <span className="font-semibold text-gray-700">{totalCount.toLocaleString()}</span> data
+        </p>
+        <div className="flex items-center gap-1">
+          <button onClick={() => setPage(1)} disabled={page <= 1} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold" title="Halaman pertama">«</button>
+          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs" title="Sebelumnya">‹</button>
+          {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+            let p: number;
+            if (totalPages <= 5) p = i + 1;
+            else if (page <= 3) p = i + 1;
+            else if (page >= totalPages - 2) p = totalPages - 4 + i;
+            else p = page - 2 + i;
+            return (
+              <button key={p} onClick={() => setPage(p)} className={`h-8 w-8 flex items-center justify-center rounded-md border text-xs font-medium transition-colors ${p === page ? "bg-red-600 border-red-600 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{p}</button>
+            );
+          })}
+          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs" title="Berikutnya">›</button>
+          <button onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold" title="Halaman terakhir">»</button>
         </div>
       </motion.div>
 
@@ -738,6 +1130,7 @@ export default function RadioScrapPage() {
             setIsCreateOpen(false);
             setIsEditOpen(false);
             resetForm();
+            setFormError(null);
           }
         }}
       >
@@ -751,7 +1144,7 @@ export default function RadioScrapPage() {
             <div className="space-y-2 col-span-2">
               <label className="text-sm font-medium">Kategori Asal</label>
               <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 value={formData.category}
                 onChange={(e) => setFormData({ ...formData, category: e.target.value })}
               >
@@ -763,84 +1156,50 @@ export default function RadioScrapPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Scrap Job Number</label>
-              <Input
-                value={formData.scrapJobNumber}
-                placeholder="e.g. SCRAP-2024-001"
-                onChange={(e) => setFormData({ ...formData, scrapJobNumber: e.target.value })}
-              />
+              <Input value={formData.scrapJobNumber} placeholder="e.g. SCRAP-2024-001" onChange={(e) => setFormData({ ...formData, scrapJobNumber: e.target.value })} />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Tanggal Scrap</label>
-              <Input
-                type="date"
-                value={formData.dateScrapped}
-                onChange={(e) => setFormData({ ...formData, dateScrapped: e.target.value })}
-              />
+              <Input type="date" value={formData.dateScrapped} onChange={(e) => setFormData({ ...formData, dateScrapped: e.target.value })} />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nomor Aset / Company</label>
               <Input
                 value={formData.nomorAset}
                 placeholder="Aset/Company/Unit/LV No"
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    nomorAset: e.target.value,
-                    company: e.target.value,
-                    nomorUnit: e.target.value,
-                    nomorLv: e.target.value,
-                  })
-                }
+                onChange={(e) => setFormData({ ...formData, nomorAset: e.target.value, company: e.target.value, nomorUnit: e.target.value, nomorLv: e.target.value })}
               />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Serial Number</label>
-              <Input
-                value={formData.serialNumber}
-                placeholder="e.g. SN123456"
-                onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })}
-              />
+              <Input value={formData.serialNumber} placeholder="e.g. SN123456" onChange={(e) => setFormData({ ...formData, serialNumber: e.target.value })} />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Type Radio</label>
-              <Input
-                value={formData.type}
-                placeholder="e.g. Motorola XPR"
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-              />
+              <Input value={formData.type} placeholder="e.g. Motorola XPR" onChange={(e) => setFormData({ ...formData, type: e.target.value })} />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">ID Radio</label>
-              <Input
-                value={formData.radioId}
-                placeholder="e.g. 2001"
-                onChange={(e) => setFormData({ ...formData, radioId: e.target.value })}
-              />
+              <Input value={formData.radioId} placeholder="e.g. 2001" onChange={(e) => setFormData({ ...formData, radioId: e.target.value })} />
             </div>
             <div className="space-y-2 col-span-2">
               <label className="text-sm font-medium">Keterangan</label>
-              <Input
-                value={formData.remarks}
-                placeholder="Catatan tambahan..."
-                onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-              />
+              <Input value={formData.remarks} placeholder="Catatan tambahan..." onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} />
             </div>
           </div>
+
+          {/* ── Inline Error Banner ── */}
+          {formError && (
+            <div className="flex items-start gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
+              <div className="flex-1"><p className="font-semibold">Gagal menyimpan</p><p className="mt-0.5 opacity-90">{formError}</p></div>
+              <button onClick={() => setFormError(null)} className="ml-auto flex-shrink-0 text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
+            </div>
+          )}
+
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setIsCreateOpen(false);
-                setIsEditOpen(false);
-                resetForm();
-              }}
-            >
-              Batal
-            </Button>
-            <Button
-              onClick={isEditOpen ? handleUpdate : handleCreate}
-              className="bg-red-600 hover:bg-red-700 text-white"
-            >
+            <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); resetForm(); setFormError(null); }}>Batal</Button>
+            <Button onClick={isEditOpen ? handleUpdate : handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
               {isEditOpen ? "Simpan Perubahan" : "Tambah Data"}
             </Button>
           </DialogFooter>

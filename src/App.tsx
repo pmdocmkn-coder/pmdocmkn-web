@@ -34,6 +34,7 @@ import RadioInternalPage from "./components/Radio/RadioInternalPage";
 import RadioContractorPage from "./components/Radio/RadioContractorPage";
 import RadioUnitPage from "./components/Radio/RadioUnitPage";
 import RadioScrapPage from "./components/Radio/RadioScrapPage";
+import CctvKpcPage from "./components/CctvKpc/CctvKpcPage";
 import VerifyPage from "./components/VerifyPage";
 import KpiMonitoringPage from "./components/Kpi/KpiMonitoringPage";
 import PmSchedulePage from "./components/PmSchedule/PmSchedulePage";
@@ -245,6 +246,13 @@ function AppContent() {
           <Route path="/radio-scrap" element={
             <PermissionGuard permission="radio.scrap.view" >
               <RadioScrapPage />
+            </PermissionGuard>
+          } />
+
+          {/* ✅ CCTV KPC ROUTE */}
+          <Route path="/cctv-kpc" element={
+            <PermissionGuard permission="cctv.kpc.view">
+              <CctvKpcPage />
             </PermissionGuard>
           } />
 
