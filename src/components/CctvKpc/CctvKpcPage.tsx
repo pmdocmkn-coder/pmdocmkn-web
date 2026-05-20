@@ -951,7 +951,7 @@ export default function CctvKpcPage() {
             <div className="space-y-2">
               <label className="text-sm font-medium">Brand</label>
               <FormMobileSelect
-                value={formData.brand}
+                value={formData.brand || ""}
                 onChange={(val) => setFormData({ ...formData, brand: val })}
                 options={brandOptions}
                 placeholder="Pilih Brand (e.g. Sony)"
@@ -1134,7 +1134,7 @@ export default function CctvKpcPage() {
               Semua Brand {!filterBrand && <Check className="w-4 h-4" />}
             </div>
             {Array.from(new Set(allOptions.map(o => o.brand).filter(Boolean))).sort().map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterBrand === opt ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterBrand(opt); setPage(1); document.getElementById("mobile-dropdown-brand")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterBrand === opt ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterBrand(opt as string); setPage(1); document.getElementById("mobile-dropdown-brand")?.classList.add("hidden"); }}>
                 {opt} {filterBrand === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
