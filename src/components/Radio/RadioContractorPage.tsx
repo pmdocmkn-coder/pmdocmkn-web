@@ -32,6 +32,7 @@ import {
   RotateCcw,
   Copy,
   Tag,
+  Download,
 } from "lucide-react";
 import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
 import { SearchableCombobox, FleetCombobox } from "./RadioCombobox";
@@ -39,8 +40,11 @@ import RadioHistoryModal from "./RadioHistoryModal";
 import ScrapRadioModal from "./ScrapRadioModal";
 import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
-import { parseRadioResponse, parseFleetList } from "../../utils/radioHelpers";
+import { parseRadioResponse, parseFleetList, isNoGrafir } from "../../utils/radioHelpers";
 import { FilterSelect } from "./FilterSelect";
+import { format } from "date-fns";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
 
 // ─── Helper Functions ────────────────────────────────────────────────────────
 
@@ -164,7 +168,7 @@ const filterPanelVariants: Variants = {
         search: search || undefined,
         type: filterType || undefined,
         fleet: filterFleet || undefined,
-        jenis: filterJenis || undefined,
+        jenis: filterJenis ? filterJenis.toLowerCase() : undefined,
         department: filterDepartment || undefined,
         isDuplicate: filterDuplikat || undefined,
       });
@@ -228,7 +232,177 @@ const filterPanelVariants: Variants = {
       toast({ title: "Berhasil", description: "Semua data Radio Kontraktor berhasil dihapus" });
       loadData();
     } catch {
-      toast({ title: "Error", description: "Gagal menghapus data Radio Kontraktor", variant: "destructive" });
+      toast({ title: "Gagal menghapus data Radio Kontraktor", variant: "destructive" });
+    }
+  };
+
+  const [isExporting, setIsExporting] = useState(false);
+  const handleExport = async () => {
+    if (filteredAllOptions.length === 0) {
+      toast({ title: "Info", description: "Tidak ada data untuk diekspor" });
+      return;
+    }
+    setIsExporting(true);
+    try {
+      const wb = new ExcelJS.Workbook();
+
+      const addSheet = (sheetName: string, data: RadioDto[]) => {
+        if (data.length === 0) return;
+        const ws = wb.addWorksheet(sheetName);
+
+        const noGrafirCount = data.filter(d => isNoGrafir(d.nomorAset)).length;
+
+        const allFleets = new Set<string>();
+        data.forEach(d => {
+          parseFleetList(d.fleet).forEach(f => allFleets.add(f));
+        });
+        const distinctFleets = Array.from(allFleets).sort();
+
+        // 1. Info Table
+        const infoHeaderRow = ws.addRow(["Warna", "KETERANGAN", "JUMLAH"]);
+        infoHeaderRow.eachCell((cell) => {
+          cell.font = { bold: true };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+          cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } };
+          cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+        });
+        
+        const infoDataRow = ws.addRow(["", "Belum Grafir", noGrafirCount]);
+        infoDataRow.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
+        infoDataRow.getCell(2).font = { bold: true };
+        infoDataRow.getCell(3).font = { bold: true, color: { argb: 'FFFF0000' } };
+        infoDataRow.eachCell((cell) => {
+          cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+          cell.alignment = { horizontal: "center", vertical: "middle" };
+        });
+
+        // Spacer
+        ws.addRow([]);
+
+        // Main Table Headers (2 rows for merged Fleet)
+        const mainHeadersRow1 = [
+          "NO", "Nomor Aset", "Serial Number", "Fleet"
+        ];
+        // Add empty slots for Fleet merge
+        for(let i=1; i<distinctFleets.length; i++) {
+          mainHeadersRow1.push("");
+        }
+        mainHeadersRow1.push("ID Radio", "Scrap", "Mark", "TRUNGKING", "KONV", "Company", "Dept", "Tanggal", "Type", "Channel");
+
+        const mainHeadersRow2 = [
+          "", "", "", ...distinctFleets, "", "", "", "", "", "", "", "", "", ""
+        ];
+
+        const r1 = ws.addRow(mainHeadersRow1);
+        const r2 = ws.addRow(mainHeadersRow2);
+
+        // Styling and merging
+        const fleetStartCol = 4;
+        const fleetEndCol = 3 + (distinctFleets.length > 0 ? distinctFleets.length : 1);
+        
+        if (distinctFleets.length > 0) {
+          ws.mergeCells(r1.number, fleetStartCol, r1.number, fleetEndCol);
+        }
+
+        const standardMergeCols = [
+          1, 2, 3, 
+          fleetEndCol + 1, fleetEndCol + 2, fleetEndCol + 3, fleetEndCol + 4, 
+          fleetEndCol + 5, fleetEndCol + 6, fleetEndCol + 7, fleetEndCol + 8,
+          fleetEndCol + 9, fleetEndCol + 10
+        ];
+
+        standardMergeCols.forEach(col => {
+          ws.mergeCells(r1.number, col, r2.number, col);
+        });
+
+        [r1, r2].forEach(r => {
+          r.eachCell(cell => {
+            cell.font = { bold: true };
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF92D050' } };
+            cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+          });
+        });
+
+        // Add Data
+        data.forEach((item, i) => {
+          const isItemNoGrafir = isNoGrafir(item.nomorAset);
+          
+          const rowData: any[] = [
+            i + 1,
+            item.nomorAset || "-",
+            item.serialNumber || "-"
+          ];
+
+          const itemFleets = parseFleetList(item.fleet);
+          if (distinctFleets.length > 0) {
+            distinctFleets.forEach(f => {
+              rowData.push(itemFleets.includes(f) ? "✓" : "");
+            });
+          } else {
+            rowData.push(""); // empty fleet placeholder if none exist
+          }
+
+          rowData.push(
+            item.radioId || "-",
+            item.isScrap ? "Yes" : "-",
+            item.mark || "-",
+            item.isTrunking ? "V" : "",
+            item.isConventional ? "V" : "",
+            item.company || "-",
+            item.department || "-",
+            (item.tanggal && item.tanggal !== "-") ? format(new Date(item.tanggal), "dd-MMM-yyyy") : "-",
+            item.type || "-",
+            item.channel || "-"
+          );
+
+          const row = ws.addRow(rowData);
+          row.eachCell((cell) => {
+            cell.alignment = { horizontal: "center", vertical: "middle" };
+            cell.border = { top: { style: "thin" }, left: { style: "thin" }, bottom: { style: "thin" }, right: { style: "thin" } };
+            if (isItemNoGrafir) {
+              cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC000' } };
+            }
+          });
+        });
+
+        // Adjust column widths
+        ws.getColumn(1).width = 5;  // NO
+        ws.getColumn(2).width = 15; // Aset
+        ws.getColumn(3).width = 20; // SN
+        
+        let colIdx = 4;
+        if (distinctFleets.length > 0) {
+          distinctFleets.forEach(() => {
+            ws.getColumn(colIdx).width = 8;
+            colIdx++;
+          });
+        } else {
+          ws.getColumn(colIdx).width = 15;
+          colIdx++;
+        }
+        
+        ws.getColumn(colIdx++).width = 12; // ID
+        ws.getColumn(colIdx++).width = 10; // Scrap
+        ws.getColumn(colIdx++).width = 12; // Mark
+        ws.getColumn(colIdx++).width = 12; // Trunking
+        ws.getColumn(colIdx++).width = 12; // Konv
+        ws.getColumn(colIdx++).width = 25; // Company
+        ws.getColumn(colIdx++).width = 15; // Dept
+        ws.getColumn(colIdx++).width = 15; // Tanggal
+        ws.getColumn(colIdx++).width = 15; // Type
+        ws.getColumn(colIdx++).width = 10; // Channel
+      };
+
+      addSheet("Data Kontraktor", filteredAllOptions);
+
+      const buf = await wb.xlsx.writeBuffer();
+      saveAs(new Blob([buf]), `Radio_Contractor_Filtered_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`);
+      toast({ title: "Berhasil", description: `${filteredAllOptions.length} data diekspor.` });
+    } catch (e) {
+      toast({ title: "Gagal", description: "Terjadi kesalahan saat export", variant: "destructive" });
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -357,6 +531,7 @@ const filterPanelVariants: Variants = {
 
   // ── Stat Counts ─────────────────────────────────────────────────────────────
   const trunkingCount = useMemo(() => filteredAllOptions.filter((d) => d.isTrunking).length, [filteredAllOptions]);
+  const konvensionalCount = useMemo(() => filteredAllOptions.filter((d) => d.isConventional).length, [filteredAllOptions]);
   const duplikatCount = useMemo(() => filteredAllOptions.filter((d) => d.isDuplicateId).length, [filteredAllOptions]);
   const scrapCount = useMemo(() => filteredAllOptions.filter((d) => d.isScrap).length, [filteredAllOptions]);
 
@@ -387,6 +562,14 @@ const filterPanelVariants: Variants = {
               Import
             </Button>
           )}
+          <Button variant="outline" size="sm" onClick={handleExport} disabled={isExporting} className="bg-white hover:bg-slate-50 text-slate-700">
+            {isExporting ? (
+              <div className="w-4 h-4 mr-1.5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+            ) : (
+              <Download className="w-4 h-4 mr-1.5" />
+            )}
+            Export
+          </Button>
           {hasPermission("radio.create") && (
             <Button
               size="sm"
@@ -401,7 +584,7 @@ const filterPanelVariants: Variants = {
       </motion.div>
 
       {/* ── Stat Cards ── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
         {/* Total Radio */}
         <motion.div
           variants={cardHoverVariants}
@@ -441,6 +624,27 @@ const filterPanelVariants: Variants = {
             </div>
             <p className="text-4xl font-black tracking-tight">{trunkingCount}</p>
             <p className="text-xs opacity-70 mt-1.5 font-medium">radio trunking aktif</p>
+          </div>
+        </motion.div>
+
+        {/* Konvensional */}
+        <motion.div
+          variants={cardHoverVariants}
+          initial="rest"
+          whileHover="hover"
+          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-emerald-500 via-teal-500 to-teal-700 cursor-default"
+        >
+          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-4">
+              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
+                <RadioIcon className="w-5 h-5" />
+              </div>
+              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Konvensional</span>
+            </div>
+            <p className="text-4xl font-black tracking-tight">{konvensionalCount}</p>
+            <p className="text-xs opacity-70 mt-1.5 font-medium">radio konvensional aktif</p>
           </div>
         </motion.div>
 

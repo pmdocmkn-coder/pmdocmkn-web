@@ -113,6 +113,7 @@ export default function CctvKpcPage() {
   const [filterSeverity, setFilterSeverity] = useState("");
   const [filterBrand, setFilterBrand] = useState("");
   const [filterActive, setFilterActive] = useState<string>("");
+  const [filterLocation, setFilterLocation] = useState("");
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   // ── Options ────────────────────────────────────────────────────────────────
@@ -141,7 +142,7 @@ export default function CctvKpcPage() {
   }, []);
 
   // ── Load data ──────────────────────────────────────────────────────────────
-  useEffect(() => { loadData(); }, [page, search, filterSeverity, filterBrand, filterActive]);
+  useEffect(() => { loadData(); }, [page, search, filterSeverity, filterBrand, filterActive, filterLocation]);
 
   const loadData = async () => {
     setLoading(true);
@@ -152,6 +153,7 @@ export default function CctvKpcPage() {
         severity: filterSeverity || undefined,
         brand: filterBrand || undefined,
         isActive: filterActive === "" ? undefined : filterActive === "Aktif",
+        explicitLocation: filterLocation || undefined,
       });
       const { items, totalCount: tc, totalPages: tp } = parseCctvResponse(res.data);
       setData(items);
@@ -237,17 +239,23 @@ export default function CctvKpcPage() {
     [allOptions]
   );
 
+  const locationOptions = useMemo(
+    () => Array.from(new Set(allOptions.map((d) => d.explicitLocation).filter(Boolean))).sort() as string[],
+    [allOptions]
+  );
+
   const activeFilterCount = useMemo(() => {
     let c = 0;
     if (search) c++;
     if (filterSeverity) c++;
     if (filterBrand) c++;
     if (filterActive !== "") c++;
+    if (filterLocation) c++;
     return c;
-  }, [search, filterSeverity, filterBrand, filterActive]);
+  }, [search, filterSeverity, filterBrand, filterActive, filterLocation]);
 
   const resetFilters = () => {
-    setSearch(""); setFilterSeverity(""); setFilterBrand(""); setFilterActive(""); setPage(1);
+    setSearch(""); setFilterSeverity(""); setFilterBrand(""); setFilterActive(""); setFilterLocation(""); setPage(1);
   };
 
   // ── Stat counts ────────────────────────────────────────────────────────────
@@ -613,6 +621,13 @@ export default function CctvKpcPage() {
                     placeholder="Semua Status"
                     color="violet"
                   />
+                  <FilterSelect
+                    value={filterLocation}
+                    onChange={(v) => { setFilterLocation(v); setPage(1); }}
+                    options={locationOptions}
+                    placeholder="Semua Lokasi"
+                    color="violet"
+                  />
                 </div>
 
                 {/* Active filter chips */}
@@ -623,6 +638,7 @@ export default function CctvKpcPage() {
                       { val: filterSeverity, label: `Severity: ${filterSeverity}`, clear: () => setFilterSeverity(""), color: filterSeverity === "High" ? "bg-red-100 text-red-700" : filterSeverity === "Medium" ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700" },
                       { val: filterBrand, label: `Brand: ${filterBrand}`, clear: () => setFilterBrand(""), color: "bg-blue-100 text-blue-700" },
                       { val: filterActive, label: `Status: ${filterActive}`, clear: () => setFilterActive(""), color: "bg-violet-100 text-violet-700" },
+                      { val: filterLocation, label: `Lokasi: ${filterLocation}`, clear: () => setFilterLocation(""), color: "bg-teal-100 text-teal-700" },
                     ].filter((f) => f.val).map((f, i) => (
                       <span key={i} className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium ${f.color}`}>
                         {f.label}

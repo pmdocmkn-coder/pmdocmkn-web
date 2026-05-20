@@ -14,18 +14,22 @@ export const searchableItems = [
   { name: "Fleet Statistics", path: "/fleet-statistics", section: "Main" },
   { name: "NEC History", path: "/nec-history", section: "Main" },
   { name: "Link Internal", path: "/link-internal", section: "Main" },
+  { name: "NEC Management", path: "/nec-management", section: "Main" },
   { name: "SWR Signal", path: "/swr-signal", section: "Main" },
   { name: "View Records", path: "/callrecords", section: "Call Records" },
+  { name: "Print Records", path: "/callrecord-print", section: "Call Records" },
   { name: "Upload CSV", path: "/upload", section: "Call Records" },
   { name: "Export Data", path: "/export", section: "Call Records" },
-  { name: "Radio Trunking", path: "/radio-trunking", section: "Radio Management" },
-  { name: "Radio Conventional", path: "/radio-conventional", section: "Radio Management" },
-  { name: "Radio Grafir", path: "/radio-grafir", section: "Radio Management" },
+  { name: "Radio KPC", path: "/radio-internal", section: "Radio Management" },
+  { name: "Radio Contractor", path: "/radio-contractor", section: "Radio Management" },
+  { name: "Radio Unit", path: "/radio-unit", section: "Radio Management" },
   { name: "Radio Scrap", path: "/radio-scrap", section: "Radio Management" },
+  { name: "CCTV KPC", path: "/cctv-kpc", section: "CCTV" },
   { name: "Letter Numbers", path: "/letter-numbers", section: "Letter Numbering" },
   { name: "Companies", path: "/companies", section: "Letter Numbering" },
   { name: "Document Types", path: "/document-types", section: "Letter Numbering" },
-  { name: "Settings", path: "/settings", section: "System" }
+  { name: "Settings", path: "/settings", section: "System" },
+  { name: "Profile", path: "/profile", section: "System" }
 ];
 
 interface LayoutProps {
@@ -182,6 +186,68 @@ const Layout: React.FC<LayoutProps> = ({
               PM Dashboard
             </span>
           </div>
+          
+          {/* Mobile Search & Profile */}
+          <div className="flex items-center gap-2">
+             {/* Simple Mobile Search Overlay trigger */}
+            <div className="relative group">
+              <button onClick={() => setIsSearchFocused(!isSearchFocused)} className="p-2 text-slate-500 hover:text-indigo-600 transition-colors">
+                <Search className="w-5 h-5" />
+              </button>
+            </div>
+             <Link to="/profile" className="flex items-center group hover:opacity-80 transition-opacity">
+              {user?.photoUrl ? (
+                <img src={user.photoUrl} alt="profile" className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
+                  {user?.fullName?.[0] || "U"}
+                </div>
+              )}
+            </Link>
+          </div>
+
+          {/* Mobile Search Overlay */}
+          {isSearchFocused && (
+            <div className="absolute top-full left-0 right-0 bg-white border-b border-slate-200 p-4 shadow-xl animate-in slide-in-from-top-2">
+               <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                  <input
+                    type="text"
+                    autoFocus
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Cari fitur..."
+                    className="w-full pl-9 pr-4 py-2 bg-slate-100 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500/50"
+                  />
+               </div>
+               {searchQuery && (
+                  <div className="mt-2 max-h-60 overflow-y-auto">
+                    {filteredSearch.length > 0 ? (
+                      <div className="py-1">
+                        {filteredSearch.map((item, idx) => (
+                          <Link
+                            key={idx}
+                            to={item.path}
+                            onClick={() => {
+                              setSearchQuery("");
+                              setIsSearchFocused(false);
+                            }}
+                            className="flex flex-col px-3 py-2 hover:bg-slate-50 rounded-md"
+                          >
+                            <span className="text-sm font-semibold text-slate-700">{item.name}</span>
+                            <span className="text-[10px] text-slate-400">{item.section}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-4 text-center text-sm text-slate-500">
+                        Tidak ada hasil untuk "{searchQuery}"
+                      </div>
+                    )}
+                  </div>
+               )}
+            </div>
+          )}
         </header>
 
         {/* Main content area */}

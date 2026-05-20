@@ -388,7 +388,11 @@ export default function RadioScrapPage() {
   const legacyCount = useMemo(() => filteredAllOptions.filter((d) => d.category === "LegacyScrap" || d.category === "Unit").length, [filteredAllOptions]);
 
   // ── Export Functions ────────────────────────────────────────────────────────
+  const [isExportingNormal, setIsExportingNormal] = useState(false);
+  const [isExportingTahunan, setIsExportingTahunan] = useState(false);
+
   const handleExportNormal = async () => {
+    setIsExportingNormal(true);
     try {
       const res = await radioApi.getAllUnpaged(filterCategory || undefined, true);
       let exportData = res.data.data;
@@ -463,10 +467,13 @@ export default function RadioScrapPage() {
       toast({ title: "Berhasil", description: `${exportData.length} data diekspor.` });
     } catch (e) {
       toast({ title: "Gagal", description: "Gagal ekspor data.", variant: "destructive" });
+    } finally {
+      setIsExportingNormal(false);
     }
   };
 
   const handleExportTahunan = async () => {
+    setIsExportingTahunan(true);
     try {
       const res = await radioApi.getAllUnpaged(undefined, true);
       const allScrap = res.data.data;
@@ -490,7 +497,7 @@ export default function RadioScrapPage() {
       };
 
       // Ensure template exactly matches 2022 to 2037 as requested
-      const allYears = [];
+      const allYears: number[] = [];
       for (let y = 2022; y <= 2037; y++) allYears.push(y);
 
       const buildTable = (data: RadioDto[], type: "trunking" | "conv") => {
@@ -632,6 +639,8 @@ export default function RadioScrapPage() {
       toast({ title: "Berhasil", description: "Laporan tahunan berhasil diekspor." });
     } catch (e) {
       toast({ title: "Gagal", description: "Gagal ekspor laporan tahunan.", variant: "destructive" });
+    } finally {
+      setIsExportingTahunan(false);
     }
   };
 
@@ -669,16 +678,38 @@ export default function RadioScrapPage() {
           )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700">
-                <Download className="w-4 h-4 mr-1.5" />
-                Export Data
+              <Button variant="outline" size="sm" className="bg-slate-50 text-slate-700" disabled={isExportingNormal || isExportingTahunan}>
+                {(isExportingNormal || isExportingTahunan) ? (
+                  <div className="w-4 h-4 mr-1.5 border-2 border-slate-500 border-t-transparent rounded-full animate-spin" />
+                ) : (
+                  <Download className="w-4 h-4 mr-1.5" />
+                )}
+                {(isExportingNormal || isExportingTahunan) ? "Exporting..." : "Export Data"}
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem onClick={handleExportNormal}>
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  if (isExportingNormal || isExportingTahunan) {
+                    e.preventDefault();
+                  } else {
+                    handleExportNormal();
+                  }
+                }}
+                className={`cursor-pointer ${isExportingNormal || isExportingTahunan ? "pointer-events-none opacity-50" : ""}`}
+              >
                 Export Filter Terkini
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleExportTahunan}>
+              <DropdownMenuItem 
+                onClick={(e) => {
+                  if (isExportingNormal || isExportingTahunan) {
+                    e.preventDefault();
+                  } else {
+                    handleExportTahunan();
+                  }
+                }}
+                className={`cursor-pointer ${isExportingNormal || isExportingTahunan ? "pointer-events-none opacity-50" : ""}`}
+              >
                 Export Data Tahunan
               </DropdownMenuItem>
             </DropdownMenuContent>

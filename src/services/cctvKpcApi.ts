@@ -35,6 +35,7 @@ export interface CctvKpcQueryParams {
   severity?: string;
   brand?: string;
   isActive?: boolean;
+  explicitLocation?: string;
 }
 
 // ==========================================
