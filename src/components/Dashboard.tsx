@@ -17,7 +17,9 @@ import {
   Phone,
   Link2,
   Settings,
-  BookOpen
+  BookOpen,
+  CalendarDays,
+  Video
 } from "lucide-react";
 import { Variants } from "framer-motion";
 
@@ -110,10 +112,38 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       id: "radio-management",
       icon: Radio,
       title: "Radio Management",
-      description: "Manajemen Trunking, Konvensional, dll.",
+      description: "Manajemen Radio Internal, Unit, dll.",
       color: "from-purple-500 to-pink-500",
-      tab: "radio-trunking",
-      permission: "radio.management.menu",
+      tab: "radio-unit",
+      permission: "radio.view",
+      forAll: true,
+    },
+    {
+      id: "kpi-tracking",
+      icon: ClipboardList,
+      title: "KPI Tracking",
+      description: "Lacak performa dan pencapaian KPI.",
+      color: "from-teal-500 to-emerald-500",
+      tab: "kpi-tracking",
+      permission: "kpi.view",
+    },
+    {
+      id: "pm-schedule",
+      icon: CalendarDays,
+      title: "PM Schedule",
+      description: "Jadwal Preventive Maintenance.",
+      color: "from-orange-500 to-red-500",
+      tab: "pm-schedule",
+      permission: "pmschedule.menu",
+    },
+    {
+      id: "cctv-kpc",
+      icon: Video,
+      title: "CCTV KPC",
+      description: "Manajemen dan monitoring CCTV KPC.",
+      color: "from-blue-600 to-indigo-600",
+      tab: "cctv-kpc",
+      permission: "cctv.kpc.menu",
     },
     {
       id: "letter-numbers",

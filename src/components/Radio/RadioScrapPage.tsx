@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
 import { Button } from "../ui/button";
@@ -37,9 +38,15 @@ import RadioHistoryModal from "./RadioHistoryModal";
 import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
 import { parseRadioResponse } from "../../utils/radioHelpers";
+import { FormMobileDatePicker } from "./FormMobileDatePicker";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
-import { Download, Calendar } from "lucide-react";
+import {
+  Download, 
+  Calendar,
+  Home,
+  Check,
+} from "lucide-react";
 
 import { format } from "date-fns";
 import { id as dateFnsLocale } from "date-fns/locale";
@@ -112,6 +119,7 @@ function CategoryBadge({ category }: { category?: string }) {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function RadioScrapPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   // ── Data State ──────────────────────────────────────────────────────────────
@@ -122,7 +130,7 @@ export default function RadioScrapPage() {
 
   // ── Pagination ──────────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 10;
 
   // ── Filter State ────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -652,10 +660,30 @@ export default function RadioScrapPage() {
       variants={containerVariants}
       className="p-4 md:p-6 space-y-6"
     >
-      {/* ── Page Header ── */}
+      {/* ====== MOBILE INTEGRATED HEADER ====== */}
+      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
+        <div className="flex items-start justify-between pb-4">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1 opacity-80">
+              <span className="text-[10px] font-bold text-purple-600 tracking-wider uppercase">Radio Management</span>
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
+              Radio Scrap
+            </h1>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center hover:bg-purple-100 transition-colors shrink-0"
+          >
+            <Home className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Page Header (Desktop) ── */}
       <motion.div
         variants={itemVariants}
-        className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
+        className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4"
       >
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Radio Scrap</h1>
@@ -813,6 +841,27 @@ export default function RadioScrapPage() {
           </div>
         </motion.div>
       </motion.div>
+
+      {/* ── Mobile Filter ── */}
+      <div className="md:hidden flex flex-col gap-3 bg-[#fff1f2] p-4 rounded-xl mb-4 border border-red-100">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-red-600" />
+          <Input placeholder="Cari job number, SN, ID..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-red-500 text-sm bg-red-50 text-gray-900 placeholder-red-400" />
+        </div>
+        <div className="flex flex-wrap gap-2 relative z-30 pb-1">
+          <div className="relative shrink-0">
+            <button onClick={() => document.getElementById("mobile-dropdown-category")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-red-50 px-3 text-gray-800 text-xs font-medium select-none min-w-[100px]">
+              <span className="truncate max-w-[120px]">{filterCategory || "Kategori"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+          <div className="relative shrink-0 flex items-center gap-1">
+             <Input type="date" className="h-8 text-xs bg-red-50 border-none rounded-lg text-gray-700" value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} />
+             <span className="text-xs text-gray-400">-</span>
+             <Input type="date" className="h-8 text-xs bg-red-50 border-none rounded-lg text-gray-700" value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} />
+          </div>
+        </div>
+      </div>
 
       {/* ── Filter Panel ── */}
       <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-gray-200 shadow-sm">
@@ -1130,28 +1179,93 @@ export default function RadioScrapPage() {
         </div>
       </motion.div>
 
+      {/* ── Mobile Card View ── */}
+      <div className="md:hidden flex flex-col gap-3 mt-4">
+        {loading ? (
+          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div></div>
+        ) : data.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm flex flex-col items-center gap-2">
+            <Package className="w-10 h-10 opacity-20" />
+            <span className="text-sm">Tidak ada data yang ditemukan</span>
+          </div>
+        ) : data.map((item) => (
+          <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">
+            <div className="flex justify-between items-start">
+              <CategoryBadge category={item.category} />
+              <span className="text-xs text-gray-400 font-medium">
+                {item.dateScrapped ? new Date(item.dateScrapped).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
+              </span>
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900">{item.nomorAset || item.company || item.nomorLv || "-"}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Job: {item.scrapJobNumber || "-"} • SN: {item.serialNumber || "-"}</p>
+            </div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5 mt-1 mb-1">
+              <div><span className="text-gray-400">Type:</span> {item.type || "-"}</div>
+              <div><span className="text-gray-400">Div/Dept:</span> {item.division || "-"}/{item.department || "-"}</div>
+              <div>
+                <span className="text-gray-400">Jenis: </span>
+                {item.isTrunking ? "Trunking" : item.isConventional ? "Konvensional" : "-"}
+              </div>
+              <div><span className="text-gray-400">ID Radio:</span> {item.radioId || "-"}</div>
+            </div>
+            {item.remarks && (
+              <p className="text-xs text-gray-600 italic leading-snug break-words">"{item.remarks}"</p>
+            )}
+            <div className="flex items-center justify-end pt-3 mt-1 border-t border-gray-100">
+              <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                {hasPermission("radio.view") && <Button variant="ghost" size="sm" onClick={() => { setSelectedRadio(item); setIsHistoryOpen(true); }}><History className="h-4 w-4" /></Button>}
+                {hasPermission("radio.scrap.update") && <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}><Edit2 className="h-4 w-4" /></Button>}
+                {hasPermission("radio.scrap.delete") && (
+                  <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                )}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* ── Pagination ── */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between px-1">
-        <p className="text-sm text-gray-500">
-          Menampilkan <span className="font-semibold text-gray-700">{totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, totalCount)}</span> dari <span className="font-semibold text-gray-700">{totalCount.toLocaleString()}</span> data
-        </p>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPage(1)} disabled={page <= 1} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold" title="Halaman pertama">«</button>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs" title="Sebelumnya">‹</button>
-          {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-            let p: number;
-            if (totalPages <= 5) p = i + 1;
-            else if (page <= 3) p = i + 1;
-            else if (page >= totalPages - 2) p = totalPages - 4 + i;
-            else p = page - 2 + i;
-            return (
-              <button key={p} onClick={() => setPage(p)} className={`h-8 w-8 flex items-center justify-center rounded-md border text-xs font-medium transition-colors ${p === page ? "bg-red-600 border-red-600 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{p}</button>
-            );
-          })}
-          <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs" title="Berikutnya">›</button>
-          <button onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold" title="Halaman terakhir">»</button>
+      {totalPages > 1 && (
+        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-b-xl">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} variant="outline">Previous</Button>
+            <span className="flex items-center text-sm text-gray-700">Hal {page}/{totalPages}</span>
+            <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} variant="outline">Next</Button>
+          </div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-700">
+              Menampilkan <span className="font-medium">{totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}</span> s/d{" "}
+              <span className="font-medium">{Math.min(page * PAGE_SIZE, totalCount)}</span> dari{" "}
+              <span className="font-medium">{totalCount.toLocaleString()}</span> data
+            </p>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+              <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} variant="outline" className="rounded-r-none">Previous</Button>
+              {Number.isFinite(totalPages) && totalPages > 0 && [...Array(Math.min(totalPages, 5))].map((_, i) => {
+                let p: number;
+                if (totalPages <= 5) p = i + 1;
+                else if (page <= 3) p = i + 1;
+                else if (page >= totalPages - 2) p = totalPages - 4 + i;
+                else p = page - 2 + i;
+                return (
+                  <Button key={p} onClick={() => setPage(p)} variant={page === p ? "default" : "outline"} className="rounded-none font-medium">{p}</Button>
+                );
+              })}
+              <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} variant="outline" className="rounded-l-none">Next</Button>
+            </nav>
+          </div>
         </div>
-      </motion.div>
+      )}
+
+      {/* ── Mobile FAB ── */}
+      {hasPermission("radio.scrap.create") && (
+        <button
+          onClick={() => { resetForm(); setIsCreateOpen(true); }}
+          className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-[#9333ea] hover:bg-purple-700 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-purple-500/40 transition-all active:scale-95 text-[15px]"
+        >
+          <Plus className="w-5 h-5" /> Tambah
+        </button>
+      )}
 
       {/* ── Create / Edit Modal ── */}
       <Dialog
@@ -1171,8 +1285,8 @@ export default function RadioScrapPage() {
               {isEditOpen ? "Edit Scrap Radio" : "Tambah Scrap Radio Manual"}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
-            <div className="space-y-2 col-span-2">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Kategori Asal</label>
               <select
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
@@ -1191,7 +1305,19 @@ export default function RadioScrapPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Tanggal Scrap</label>
-              <Input type="date" value={formData.dateScrapped} onChange={(e) => setFormData({ ...formData, dateScrapped: e.target.value })} />
+              <FormMobileDatePicker
+                date={formData.dateScrapped ? new Date(formData.dateScrapped) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const offset = date.getTimezoneOffset();
+                    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+                    setFormData({ ...formData, dateScrapped: localDate.toISOString().split('T')[0] });
+                  } else {
+                    setFormData({ ...formData, dateScrapped: "" });
+                  }
+                }}
+                placeholder="Pilih tanggal scrap"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Nomor Aset / Company</label>
@@ -1213,7 +1339,7 @@ export default function RadioScrapPage() {
               <label className="text-sm font-medium">ID Radio</label>
               <Input value={formData.radioId} placeholder="e.g. 2001" onChange={(e) => setFormData({ ...formData, radioId: e.target.value })} />
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Keterangan</label>
               <Input value={formData.remarks} placeholder="Catatan tambahan..." onChange={(e) => setFormData({ ...formData, remarks: e.target.value })} />
             </div>
@@ -1252,6 +1378,25 @@ export default function RadioScrapPage() {
         onClose={() => setIsHistoryOpen(false)}
         radioId={selectedRadio?.id || null}
       />
+
+      {/* ========== MOBILE FILTER MODALS ========== */}
+      <div id="mobile-dropdown-category" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-category")?.classList.add("hidden")}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Kategori</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterCategory ? 'font-bold text-red-700 bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterCategory(""); setPage(1); document.getElementById("mobile-dropdown-category")?.classList.add("hidden"); }}>
+              Semua Kategori {!filterCategory && <Check className="w-4 h-4" />}
+            </div>
+            {["Internal", "Contractor", "Unit", "LegacyScrap"].map((opt) => (
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterCategory === opt ? 'font-bold text-red-700 bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterCategory(opt); setPage(1); document.getElementById("mobile-dropdown-category")?.classList.add("hidden"); }}>
+                {opt} {filterCategory === opt && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }

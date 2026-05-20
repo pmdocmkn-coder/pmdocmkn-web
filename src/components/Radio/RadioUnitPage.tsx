@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
 import {
@@ -42,6 +43,8 @@ import {
   Copy,
   Tag,
   Download,
+  Home,
+  Check,
 } from "lucide-react";
 import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
 import { SearchableCombobox, FleetCombobox } from "./RadioCombobox";
@@ -51,6 +54,8 @@ import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
 import { parseRadioResponse, parseFleetList, isNoGrafir } from "../../utils/radioHelpers";
 import { FilterSelect } from "./FilterSelect";
+import { FormMobileSelect } from "./FormMobileSelect";
+import { FormMobileDatePicker } from "./FormMobileDatePicker";
 import { format } from "date-fns";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -102,6 +107,7 @@ const filterPanelVariants: Variants = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function RadioUnitPage() {
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   // ── Data State ──────────────────────────────────────────────────────────────
@@ -112,7 +118,7 @@ export default function RadioUnitPage() {
 
   // ── Pagination ──────────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
-  const PAGE_SIZE = 50;
+  const PAGE_SIZE = 10;
 
   // ── Filter State ────────────────────────────────────────────────────────────
   const [search, setSearch] = useState("");
@@ -204,8 +210,36 @@ export default function RadioUnitPage() {
   };
 
   // ── CRUD Handlers ───────────────────────────────────────────────────────────
+  const validateDuplicate = (): string | null => {
+    if (!formData.radioId || !formData.fleet) return null;
+    
+    const inputRadioId = formData.radioId.trim().toLowerCase();
+    const inputFleets = parseFleetList(formData.fleet).map(f => f.toLowerCase());
+    
+    if (inputFleets.length === 0) return null;
+
+    for (const option of allOptions) {
+      if (selectedRadio && option.id === selectedRadio.id) continue;
+      
+      if (option.radioId && option.radioId.trim().toLowerCase() === inputRadioId) {
+        const optionFleets = parseFleetList(option.fleet).map(f => f.toLowerCase());
+        const hasOverlap = inputFleets.some(f => optionFleets.includes(f));
+        if (hasOverlap) {
+          return `Duplikat terdeteksi! Radio ID "${formData.radioId}" sudah terdaftar pada fleet yang sama.`;
+        }
+      }
+    }
+    return null;
+  };
+
   const handleCreate = async () => {
     setFormError(null);
+    const dupError = validateDuplicate();
+    if (dupError) {
+      alert(dupError);
+      setFormError(dupError);
+      return;
+    }
     try {
       await radioApi.create(formData);
       toast({ title: "Berhasil", description: "Radio berhasil ditambahkan" });
@@ -220,6 +254,12 @@ export default function RadioUnitPage() {
   const handleUpdate = async () => {
     if (!selectedRadio) return;
     setFormError(null);
+    const dupError = validateDuplicate();
+    if (dupError) {
+      alert(dupError);
+      setFormError(dupError);
+      return;
+    }
     try {
       await radioApi.update(selectedRadio.id, formData);
       toast({ title: "Berhasil", description: "Radio berhasil diperbarui" });
@@ -602,8 +642,28 @@ export default function RadioUnitPage() {
       variants={containerVariants}
       className="p-4 md:p-6 space-y-6"
     >
-      {/* ── Page Header ── */}
-      <motion.div variants={itemVariants} className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      {/* ====== MOBILE INTEGRATED HEADER ====== */}
+      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
+        <div className="flex items-start justify-between pb-4">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1 opacity-80">
+              <span className="text-[10px] font-bold text-purple-600 tracking-wider uppercase">Radio Management</span>
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
+              Radio Unit
+            </h1>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-10 h-10 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center hover:bg-purple-100 transition-colors shrink-0"
+          >
+            <Home className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Page Header (Desktop) ── */}
+      <motion.div variants={itemVariants} className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Radio Unit</h1>
           <p className="text-muted-foreground text-sm mt-0.5">Manajemen aset radio unit kendaraan</p>
@@ -750,8 +810,62 @@ export default function RadioUnitPage() {
         </motion.div>
       </motion.div>
 
-      {/* ── Filter Panel ── */}
-      <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+      {/* ── Mobile Filter ── */}
+      <div className="md:hidden flex flex-col gap-3 bg-[#f0fdf4] p-4 rounded-xl border border-emerald-100">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
+          <Input placeholder="Cari nomor aset, unit, SN, ID radio..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-emerald-50 text-gray-900 placeholder-emerald-400" />
+        </div>
+        <div className="flex flex-wrap gap-2 relative z-30 pb-1">
+          <div className="relative shrink-0">
+            <button onClick={() => document.getElementById("mobile-dropdown-divisi")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-emerald-50 px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+              <span className="truncate max-w-[100px]">{filterDivisi || "Divisi"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+          <div className="relative shrink-0">
+            <button onClick={() => document.getElementById("mobile-dropdown-dept")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-emerald-50 px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+              <span className="truncate max-w-[100px]">{filterDepartment || "Dept"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+          <div className="relative shrink-0">
+            <button onClick={() => document.getElementById("mobile-dropdown-type")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-emerald-50 px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+              <span className="truncate max-w-[100px]">{filterType || "Type"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+          <div className="relative shrink-0">
+            <button onClick={() => document.getElementById("mobile-dropdown-jenis")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-emerald-50 px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+              <span className="truncate max-w-[100px]">{filterJenis || "Jenis"}</span>
+              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
+            </button>
+          </div>
+        </div>
+        
+        {/* Mobile Checkboxes */}
+        <div className="flex flex-wrap items-center gap-4 mt-2">
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterDuplikat ? 'bg-red-500 border-red-500' : 'border-emerald-300 bg-white'}`}>
+              {filterDuplikat && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+              <input type="checkbox" checked={filterDuplikat} onChange={(e) => { setFilterDuplikat(e.target.checked); setPage(1); }} className="sr-only" />
+            </div>
+            <span className="text-xs font-medium text-emerald-900">Duplikat ID</span>
+            {duplikatCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">{duplikatCount}</span>}
+          </label>
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterNoGrafir ? 'bg-orange-500 border-orange-500' : 'border-emerald-300 bg-white'}`}>
+              {filterNoGrafir && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
+              <input type="checkbox" checked={filterNoGrafir} onChange={(e) => { setFilterNoGrafir(e.target.checked); setPage(1); }} className="sr-only" />
+            </div>
+            <span className="text-xs font-medium text-emerald-900">No Grafir</span>
+            {noGrafirCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold">{noGrafirCount}</span>}
+          </label>
+        </div>
+      </div>
+
+      {/* ── Filter Panel (Desktop) ── */}
+      <motion.div variants={itemVariants} className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm">
         {/* Filter Header */}
         <button
           onClick={() => setIsFilterOpen((v) => !v)}
@@ -866,8 +980,8 @@ export default function RadioUnitPage() {
         </AnimatePresence>
       </motion.div>
 
-      {/* ── Data Table ── */}
-      <motion.div variants={itemVariants} className="rounded-xl border bg-white shadow-sm">
+      {/* ── Data Table (Desktop) ── */}
+      <motion.div variants={itemVariants} className="hidden md:block rounded-xl border bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full caption-bottom text-sm border-collapse">
             <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
@@ -1038,29 +1152,106 @@ export default function RadioUnitPage() {
           </table>
         </div>
       </motion.div>
+      {/* ── Mobile Card View ── */}
+      <div className="md:hidden flex flex-col gap-3 mt-4">
+        {loading ? (
+          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div>
+        ) : filteredData.length === 0 ? (
+          <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">Tidak ada data radio unit</div>
+        ) : filteredData.map((item) => {
+          const fleetList = parseFleetList(item.fleet);
+          return (
+            <div key={item.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">
+              <div className="flex justify-between items-start">
+                <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                  item.isTrunking ? 'bg-blue-100 text-blue-700' : item.isConventional ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                }`}>
+                  {item.isTrunking ? 'Trunking' : item.isConventional ? 'Konvensional' : 'N/A'}
+                </span>
+                <span className="text-xs text-gray-400 font-medium">
+                  {item.tanggal ? new Date(item.tanggal).toLocaleDateString("id-ID", { day: "2-digit", month: "short", year: "numeric" }) : "-"}
+                </span>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-gray-900">{item.nomorAset || "-"}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Unit: {item.nomorLv || "-"} • SN: {item.serialNumber || "-"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5">
+                <div><span className="text-gray-400">Type:</span> {item.type || "-"}</div>
+                <div><span className="text-gray-400">Divisi:</span> {item.division || "-"}</div>
+                <div><span className="text-gray-400">Dept:</span> {item.department || "-"}</div>
+                <div><span className="text-gray-400">ID Radio:</span> <span className={item.isDuplicateId ? "text-red-600 font-bold" : ""}>{item.radioId || "-"}</span></div>
+                <div><span className="text-gray-400">Mark:</span> {item.mark || "-"}</div>
+              </div>
+              {fleetList.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1">
+                  <span className="text-xs text-gray-400 mr-1 font-medium">Fleet:</span>
+                  {fleetList.slice(0, 4).map((f, i) => {
+                    const colorClass = fleetColorMap.get(f) ?? "bg-gray-100 border-gray-300 text-gray-700";
+                    return <span key={i} className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-mono font-semibold ${colorClass}`}>{f}</span>;
+                  })}
+                  {fleetList.length > 4 && <span className="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 border border-gray-300 text-gray-600 text-xs font-semibold">+{fleetList.length - 4}</span>}
+                </div>
+              )}
+              <div className="flex items-center justify-between pt-3 mt-1 border-t border-gray-100">
+                <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                  {item.isScrap && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 border border-red-200 text-xs font-semibold">Scrap</span>}
+                  {item.isDuplicateId && <span className="px-2 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold border border-red-200">Duplikat ID: {item.radioId || "-"}</span>}
+                </div>
+                <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
+                  {hasPermission("radio.view") && <Button variant="ghost" size="sm" onClick={() => { setSelectedRadio(item); setIsHistoryOpen(true); }}><History className="h-4 w-4" /></Button>}
+                  {hasPermission("radio.update") && <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}><Edit2 className="h-4 w-4" /></Button>}
+                  {hasPermission("radio.delete") && (
+                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
 
       {/* ── Pagination ── */}
-      <motion.div variants={itemVariants} className="flex items-center justify-between px-1">
-        <p className="text-sm text-gray-500">
-          Menampilkan <span className="font-semibold text-gray-700">{totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}–{Math.min(page * PAGE_SIZE, totalCount)}</span> dari <span className="font-semibold text-gray-700">{totalCount.toLocaleString()}</span> data
-        </p>
-        <div className="flex items-center gap-1">
-          <button onClick={() => setPage(1)} disabled={page <= 1} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold" title="Halaman pertama">«</button>
-          <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page <= 1} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs" title="Sebelumnya">‹</button>
-          {totalPages > 0 && Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-              let p: number;
-              if (totalPages <= 5) p = i + 1;
-              else if (page <= 3) p = i + 1;
-              else if (page >= totalPages - 2) p = totalPages - 4 + i;
-              else p = page - 2 + i;
-              return (
-                <button key={p} onClick={() => setPage(p)} className={`h-8 w-8 flex items-center justify-center rounded-md border text-xs font-medium transition-colors ${p === page ? "bg-emerald-600 border-emerald-600 text-white" : "border-gray-200 text-gray-600 hover:bg-gray-50"}`}>{p}</button>
-              );
-            })}
-            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs" title="Berikutnya">›</button>
-            <button onClick={() => setPage(totalPages)} disabled={page >= totalPages} className="h-8 w-8 flex items-center justify-center rounded-md border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors text-xs font-bold" title="Halaman terakhir">»</button>
+      {totalPages > 1 && (
+        <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-b-xl">
+          <div className="flex-1 flex justify-between sm:hidden">
+            <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} variant="outline">Previous</Button>
+            <span className="flex items-center text-sm text-gray-700">Hal {page}/{totalPages}</span>
+            <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} variant="outline">Next</Button>
           </div>
-      </motion.div>
+          <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <p className="text-sm text-gray-700">
+              Menampilkan <span className="font-medium">{totalCount > 0 ? (page - 1) * PAGE_SIZE + 1 : 0}</span> s/d{" "}
+              <span className="font-medium">{Math.min(page * PAGE_SIZE, totalCount)}</span> dari{" "}
+              <span className="font-medium">{totalCount.toLocaleString()}</span> data
+            </p>
+            <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
+              <Button onClick={() => setPage(Math.max(1, page - 1))} disabled={page === 1} variant="outline" className="rounded-r-none">Previous</Button>
+              {Number.isFinite(totalPages) && totalPages > 0 && [...Array(Math.min(totalPages, 5))].map((_, i) => {
+                let p: number;
+                if (totalPages <= 5) p = i + 1;
+                else if (page <= 3) p = i + 1;
+                else if (page >= totalPages - 2) p = totalPages - 4 + i;
+                else p = page - 2 + i;
+                return (
+                  <Button key={p} onClick={() => setPage(p)} variant={page === p ? "default" : "outline"} className="rounded-none font-medium">{p}</Button>
+                );
+              })}
+              <Button onClick={() => setPage(Math.min(totalPages, page + 1))} disabled={page === totalPages} variant="outline" className="rounded-l-none">Next</Button>
+            </nav>
+          </div>
+        </div>
+      )}
+
+      {/* ── Mobile FAB ── */}
+      {hasPermission("radio.create") && (
+        <button
+          onClick={() => { resetForm(); setIsCreateOpen(true); }}
+          className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-[#9333ea] hover:bg-purple-700 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-purple-500/40 transition-all active:scale-95 text-[15px]"
+        >
+          <Plus className="w-5 h-5" /> Tambah
+        </button>
+      )}
 
       {/* ── Create / Edit Modal ── */}
       <Dialog
@@ -1080,7 +1271,7 @@ export default function RadioUnitPage() {
               {isEditOpen ? "Edit Radio Unit" : "Tambah Radio Unit"}
             </DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nomor Aset</label>
               <Input value={formData.nomorAset} placeholder="e.g. KPC-001" onChange={(e) => setFormData({ ...formData, nomorAset: e.target.value })} />
@@ -1095,24 +1286,42 @@ export default function RadioUnitPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Type Radio</label>
-              <SearchableCombobox value={formData.type || ""} onChange={(val) => setFormData({ ...formData, type: val })} options={typeOptions} placeholder="e.g. Motorola XPR" />
+              <FormMobileSelect value={formData.type || ""} onChange={(val) => setFormData({ ...formData, type: val })} options={typeOptions} placeholder="e.g. Motorola XPR" color="emerald" label="Pilih Type" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Divisi (DIV)</label>
-              <SearchableCombobox value={formData.division || ""} onChange={(val) => setFormData({ ...formData, division: val })} options={divisiOptions} placeholder="e.g. Mining" />
+              <FormMobileSelect value={formData.division || ""} onChange={(val) => setFormData({ ...formData, division: val })} options={divisiOptions} placeholder="Pilih Divisi (e.g. Mining)" color="emerald" label="Pilih Divisi" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Department (Dept)</label>
-              <SearchableCombobox value={formData.department || ""} onChange={(val) => setFormData({ ...formData, department: val })} options={departmentOptions} placeholder="e.g. MOD" />
+              <FormMobileSelect value={formData.department || ""} onChange={(val) => setFormData({ ...formData, department: val })} options={departmentOptions} placeholder="Pilih Dept (e.g. MOD)" color="emerald" label="Pilih Department" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Tanggal</label>
-              <Input type="date" value={formData.tanggal} onChange={(e) => setFormData({ ...formData, tanggal: e.target.value })} />
+              <FormMobileDatePicker
+                date={formData.tanggal ? new Date(formData.tanggal) : undefined}
+                onSelect={(date) => {
+                  if (date) {
+                    const offset = date.getTimezoneOffset();
+                    const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+                    setFormData({ ...formData, tanggal: localDate.toISOString().split('T')[0] });
+                  } else {
+                    setFormData({ ...formData, tanggal: "" });
+                  }
+                }}
+                placeholder="Pilih tanggal"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Fleet</label>
-              <FleetCombobox value={formData.fleet || ""} onChange={(val) => setFormData({ ...formData, fleet: val })} options={fleetOptions} />
-              <p className="text-xs text-muted-foreground">Pisahkan dengan koma untuk beberapa fleet</p>
+              <FormMobileSelect
+                value={formData.fleet || ""}
+                onChange={(val) => setFormData({ ...formData, fleet: val })}
+                options={fleetOptions}
+                placeholder="Pilih atau ketik Fleet..."
+                label="Pilih Fleet"
+                color="emerald"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">ID Radio</label>
@@ -1122,7 +1331,7 @@ export default function RadioUnitPage() {
               <label className="text-sm font-medium">Mark</label>
               <Input value={formData.mark} placeholder="e.g. OK" onChange={(e) => setFormData({ ...formData, mark: e.target.value })} />
             </div>
-            <div className="space-y-2 col-span-2">
+            <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Jenis Radio</label>
               <div className="flex gap-6 mt-1">
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -1192,6 +1401,79 @@ export default function RadioUnitPage() {
         onClose={() => setIsHistoryOpen(false)}
         radioId={selectedRadio?.id || null}
       />
+
+      {/* ========== MOBILE FILTER MODALS ========== */}
+      <div id="mobile-dropdown-divisi" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden")}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Divisi</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDivisi ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(""); setPage(1); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
+              Semua Divisi {!filterDivisi && <Check className="w-4 h-4" />}
+            </div>
+            {divisiOptions.map((opt) => (
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDivisi === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(opt); setPage(1); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
+                {opt} {filterDivisi === opt && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dropdown-dept" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-dept")?.classList.add("hidden")}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Dept</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDepartment ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(""); setPage(1); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
+              Semua Dept {!filterDepartment && <Check className="w-4 h-4" />}
+            </div>
+            {departmentOptions.map((opt) => (
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDepartment === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(opt); setPage(1); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
+                {opt} {filterDepartment === opt && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dropdown-type" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-type")?.classList.add("hidden")}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Type</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterType ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(""); setPage(1); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
+              Semua Type {!filterType && <Check className="w-4 h-4" />}
+            </div>
+            {typeOptions.map((opt) => (
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterType === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(opt); setPage(1); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
+                {opt} {filterType === opt && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div id="mobile-dropdown-jenis" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden")}>
+        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
+          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
+            <h3 className="font-bold text-gray-800">Pilih Jenis</h3>
+          </div>
+          <div className="overflow-y-auto p-2 space-y-1">
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterJenis ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(""); setPage(1); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
+              Semua Jenis {!filterJenis && <Check className="w-4 h-4" />}
+            </div>
+            {["Trunking", "Konvensional"].map((opt) => (
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterJenis === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(opt); setPage(1); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
+                {opt} {filterJenis === opt && <Check className="w-4 h-4" />}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 }

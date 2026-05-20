@@ -31,8 +31,10 @@ const Footer: React.FC = () => {
             <p className="font-bold text-gray-900">PM Dashboard</p>
           </div>
           <p className="text-xs text-gray-500">
-            © {new Date().getFullYear()} All rights reserved. Professional
-            Analytics Platform.
+            © 2025 Call Analytics Dashboard. All rights reserved.
+          </p>
+          <p className="text-[10px] text-gray-400 mt-0.5">
+            Developed by Jupri Eka Pratama
           </p>
         </motion.div>
 
