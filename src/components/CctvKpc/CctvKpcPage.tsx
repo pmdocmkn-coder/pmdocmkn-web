@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
@@ -109,6 +109,7 @@ export default function CctvKpcPage() {
   const [totalCount, setTotalCount] = useState(0);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
+  const [pageBeforeSearch, setPageBeforeSearch] = useState(1);
   const PAGE_SIZE = 10;
 
   // ── Filter ─────────────────────────────────────────────────────────────────
@@ -526,60 +527,76 @@ export default function CctvKpcPage() {
       </motion.div>
 
       {/* ── Stat Cards ── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Total */}
         <motion.div variants={cardHoverVariants} initial="rest" whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-slate-600 to-slate-800 cursor-default">
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl"><Video className="w-5 h-5" /></div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Total</span>
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#475569] to-[#334155] cursor-default">
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Total CCTV</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Video className="w-3.5 h-3.5 md:w-5 md:h-5" />
+              </div>
             </div>
-            <p className="text-4xl font-black tracking-tight">{totalCount.toLocaleString()}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">halaman {page} / {totalPages}</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{totalCount.toLocaleString()}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">hal {page}/{totalPages}</p>
+            </div>
           </div>
         </motion.div>
 
         {/* High */}
         <motion.div variants={cardHoverVariants} initial="rest" whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-red-500 to-red-700 cursor-default">
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl"><ShieldAlert className="w-5 h-5" /></div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">High</span>
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#ef4444] to-[#b91c1c] cursor-default">
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">High</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <ShieldAlert className="w-3.5 h-3.5 md:w-5 md:h-5" />
+              </div>
             </div>
-            <p className="text-4xl font-black tracking-tight">{highCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">severity tinggi</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{highCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">severity tinggi</p>
+            </div>
           </div>
         </motion.div>
 
         {/* Medium */}
         <motion.div variants={cardHoverVariants} initial="rest" whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-amber-500 to-orange-600 cursor-default">
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl"><AlertTriangle className="w-5 h-5" /></div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Medium</span>
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#f59e0b] to-[#c2410c] cursor-default">
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Medium</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <AlertTriangle className="w-3.5 h-3.5 md:w-5 md:h-5" />
+              </div>
             </div>
-            <p className="text-4xl font-black tracking-tight">{mediumCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">severity sedang</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{mediumCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">severity sedang</p>
+            </div>
           </div>
         </motion.div>
 
         {/* Low */}
         <motion.div variants={cardHoverVariants} initial="rest" whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-emerald-500 to-emerald-700 cursor-default">
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl"><ShieldCheck className="w-5 h-5" /></div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Low</span>
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#10b981] to-[#047857] cursor-default">
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Low</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <ShieldCheck className="w-3.5 h-3.5 md:w-5 md:h-5" />
+              </div>
             </div>
-            <p className="text-4xl font-black tracking-tight">{lowCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">severity rendah</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{lowCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">severity rendah</p>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -588,7 +605,7 @@ export default function CctvKpcPage() {
       <div className="md:hidden flex flex-col gap-3 bg-[#f8fafc] p-4 rounded-xl mb-4 border border-slate-200">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
-          <Input placeholder="Cari nama kamera, IP, lokasi..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-slate-500 text-sm bg-slate-100 text-gray-900 placeholder-slate-400" />
+          <Input placeholder="Cari nama kamera, IP, lokasi..." value={search} onChange={(e) => { const v = e.target.value; if (v && !search) setPageBeforeSearch(page); setSearch(v); setPage(v ? 1 : pageBeforeSearch); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-slate-500 text-sm bg-slate-100 text-gray-900 placeholder-slate-400" />
         </div>
         <div className="flex flex-wrap gap-2 relative z-30 pb-1">
           <div className="relative shrink-0">
@@ -646,7 +663,7 @@ export default function CctvKpcPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" />
                     <Input placeholder="Cari nama kamera, IP, model, lokasi..."
                       className="pl-9 h-9 text-sm border-gray-200 focus:border-slate-400"
-                      value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} />
+                      value={search} onChange={(e) => { const v = e.target.value; if (v && !search) setPageBeforeSearch(page); setSearch(v); setPage(v ? 1 : pageBeforeSearch); }} />
                   </div>
                 </div>
 
@@ -654,28 +671,28 @@ export default function CctvKpcPage() {
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
                   <FilterSelect
                     value={filterSeverity}
-                    onChange={(v) => { setFilterSeverity(v); setPage(1); }}
+                    onChange={(v) => { setFilterSeverity(v); }}
                     options={["High", "Medium", "Low"]}
                     placeholder="Semua Severity"
                     color="violet"
                   />
                   <FilterSelect
                     value={filterBrand}
-                    onChange={(v) => { setFilterBrand(v); setPage(1); }}
+                    onChange={(v) => { setFilterBrand(v); }}
                     options={brandOptions}
                     placeholder="Semua Brand"
                     color="violet"
                   />
                   <FilterSelect
                     value={filterActive}
-                    onChange={(v) => { setFilterActive(v); setPage(1); }}
+                    onChange={(v) => { setFilterActive(v); }}
                     options={["Aktif", "Nonaktif"]}
                     placeholder="Semua Status"
                     color="violet"
                   />
                   <FilterSelect
                     value={filterLocation}
-                    onChange={(v) => { setFilterLocation(v); setPage(1); }}
+                    onChange={(v) => { setFilterLocation(v); }}
                     options={locationOptions}
                     placeholder="Semua Lokasi"
                     color="violet"
@@ -1112,11 +1129,11 @@ export default function CctvKpcPage() {
             <h3 className="font-bold text-gray-800">Pilih Severity</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterSeverity ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterSeverity(""); setPage(1); document.getElementById("mobile-dropdown-severity")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterSeverity ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterSeverity(""); document.getElementById("mobile-dropdown-severity")?.classList.add("hidden"); }}>
               Semua Severity {!filterSeverity && <Check className="w-4 h-4" />}
             </div>
             {["High", "Medium", "Low"].map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterSeverity === opt ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterSeverity(opt); setPage(1); document.getElementById("mobile-dropdown-severity")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterSeverity === opt ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterSeverity(opt); document.getElementById("mobile-dropdown-severity")?.classList.add("hidden"); }}>
                 {opt} {filterSeverity === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
@@ -1130,11 +1147,11 @@ export default function CctvKpcPage() {
             <h3 className="font-bold text-gray-800">Pilih Brand</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterBrand ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterBrand(""); setPage(1); document.getElementById("mobile-dropdown-brand")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterBrand ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterBrand(""); document.getElementById("mobile-dropdown-brand")?.classList.add("hidden"); }}>
               Semua Brand {!filterBrand && <Check className="w-4 h-4" />}
             </div>
             {Array.from(new Set(allOptions.map(o => o.brand).filter(Boolean))).sort().map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterBrand === opt ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterBrand(opt as string); setPage(1); document.getElementById("mobile-dropdown-brand")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterBrand === opt ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterBrand(opt as string); document.getElementById("mobile-dropdown-brand")?.classList.add("hidden"); }}>
                 {opt} {filterBrand === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
@@ -1148,13 +1165,13 @@ export default function CctvKpcPage() {
             <h3 className="font-bold text-gray-800">Pilih Status</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterActive === "" ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterActive(""); setPage(1); document.getElementById("mobile-dropdown-active")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterActive === "" ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterActive(""); document.getElementById("mobile-dropdown-active")?.classList.add("hidden"); }}>
               Semua Status {filterActive === "" && <Check className="w-4 h-4" />}
             </div>
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterActive === "true" ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterActive("true"); setPage(1); document.getElementById("mobile-dropdown-active")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterActive === "true" ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterActive("true"); document.getElementById("mobile-dropdown-active")?.classList.add("hidden"); }}>
               Aktif {filterActive === "true" && <Check className="w-4 h-4" />}
             </div>
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterActive === "false" ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterActive("false"); setPage(1); document.getElementById("mobile-dropdown-active")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterActive === "false" ? 'font-bold text-slate-700 bg-slate-100' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterActive("false"); document.getElementById("mobile-dropdown-active")?.classList.add("hidden"); }}>
               Nonaktif {filterActive === "false" && <Check className="w-4 h-4" />}
             </div>
           </div>

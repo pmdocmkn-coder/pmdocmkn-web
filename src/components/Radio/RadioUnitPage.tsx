@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+﻿import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
@@ -45,12 +45,14 @@ import {
   Download,
   Home,
   Check,
+  AlertCircle,
 } from "lucide-react";
 import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
 import { SearchableCombobox, FleetCombobox } from "./RadioCombobox";
 import RadioHistoryModal from "./RadioHistoryModal";
 import ScrapRadioModal from "./ScrapRadioModal";
 import RadioImportModal from "./RadioImportModal";
+import { DuplicateSnModal } from "./DuplicateSnModal";
 import { useToast } from "../../hooks/use-toast";
 import { parseRadioResponse, parseFleetList, isNoGrafir } from "../../utils/radioHelpers";
 import { FilterSelect } from "./FilterSelect";
@@ -118,6 +120,7 @@ export default function RadioUnitPage() {
 
   // ── Pagination ──────────────────────────────────────────────────────────────
   const [page, setPage] = useState(1);
+  const [pageBeforeSearch, setPageBeforeSearch] = useState(1);
   const PAGE_SIZE = 10;
 
   // ── Filter State ────────────────────────────────────────────────────────────
@@ -141,6 +144,7 @@ export default function RadioUnitPage() {
   const [isScrapOpen, setIsScrapOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [selectedRadio, setSelectedRadio] = useState<RadioDto | null>(null);
+  const [isDuplicateSnModalOpen, setIsDuplicateSnModalOpen] = useState(false);
 
   // ── Form Error ──────────────────────────────────────────────────────────────
   const [formError, setFormError] = useState<string | null>(null);
@@ -628,9 +632,45 @@ export default function RadioUnitPage() {
   }, [allOptions, search, filterDivisi, filterType, filterFleet, filterJenis, filterDepartment, filterDuplikat, filterNoGrafir]);
 
   // ── Stat Counts ─────────────────────────────────────────────────────────────
-  const trunkingCount = useMemo(() => filteredAllOptions.filter((d) => d.isTrunking).length, [filteredAllOptions]);
-  const konvensionalCount = useMemo(() => filteredAllOptions.filter((d) => d.isConventional).length, [filteredAllOptions]);
-  const duplikatCount = useMemo(() => filteredAllOptions.filter((d) => d.isDuplicateId).length, [filteredAllOptions]);
+  const uniqueRadios = useMemo(() => {
+    const seenSn = new Set<string>();
+    return filteredAllOptions.filter((d) => {
+      const sn = d.serialNumber?.trim()?.toLowerCase();
+      if (!sn || sn === "-" || sn === "n/a") return true; // count devices without valid SN individually
+      if (seenSn.has(sn)) return false;
+      seenSn.add(sn);
+      return true;
+    });
+  }, [filteredAllOptions]);
+
+  const duplicateSns = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const d of filteredAllOptions) {
+      const sn = d.serialNumber?.trim()?.toLowerCase();
+      if (sn && sn !== "-" && sn !== "n/a") {
+        counts.set(sn, (counts.get(sn) || 0) + 1);
+      }
+    }
+    const dups = new Set<string>();
+    for (const [sn, c] of counts.entries()) {
+      if (c > 1) dups.add(sn);
+    }
+    return dups;
+  }, [filteredAllOptions]);
+
+  const realTotalCount = uniqueRadios.length;
+  const trunkingCount = useMemo(() => uniqueRadios.filter((d) => d.isTrunking).length, [uniqueRadios]);
+  const konvensionalCount = useMemo(() => uniqueRadios.filter((d) => d.isConventional).length, [uniqueRadios]);
+  const duplikatCount = useMemo(() => {
+    const seen = new Set<string>();
+    let count = 0;
+    for (const d of filteredAllOptions) {
+      if (!d.isDuplicateId) continue;
+      const key = `${(d.radioId || "").trim().toLowerCase()}_${(d.fleet || "").trim().toLowerCase()}`;
+      if (!seen.has(key)) { seen.add(key); count++; }
+    }
+    return count;
+  }, [filteredAllOptions]);
   const scrapCount = useMemo(() => filteredAllOptions.filter((d) => d.isScrap).length, [filteredAllOptions]);
   const noGrafirCount = useMemo(() => filteredAllOptions.filter((d) => isNoGrafir(d.nomorAset)).length, [filteredAllOptions]);
 
@@ -669,6 +709,15 @@ export default function RadioUnitPage() {
           <p className="text-muted-foreground text-sm mt-0.5">Manajemen aset radio unit kendaraan</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setIsDuplicateSnModalOpen(true)}
+            className="bg-amber-50 text-amber-600 hover:bg-amber-100 border-amber-200 gap-2 font-semibold shadow-sm"
+          >
+            <AlertCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Cek Duplikat SN</span>
+          </Button>
+
           {hasPermission("radio.delete.all.unit") && (
             <Button variant="destructive" size="sm" onClick={handleDeleteAll}>
               <Trash2 className="w-4 h-4 mr-1.5" />
@@ -703,25 +752,26 @@ export default function RadioUnitPage() {
       </motion.div>
 
       {/* ── Stat Cards ── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
         {/* Total Unit */}
         <motion.div
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-emerald-600 to-emerald-800 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#059669] to-[#047857] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <RadioIcon className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Total Unit</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <RadioIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Total</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{totalCount.toLocaleString()}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">halaman {page} / {totalPages}</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{realTotalCount.toLocaleString()}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">hal {page}/{totalPages}</p>
+            </div>
           </div>
         </motion.div>
 
@@ -730,19 +780,20 @@ export default function RadioUnitPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-sky-500 to-blue-700 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#0ea5e9] to-[#1d4ed8] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <RadioIcon className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Trunking</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <RadioIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Trunking</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{trunkingCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">radio trunking aktif</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{trunkingCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">aktif</p>
+            </div>
           </div>
         </motion.div>
 
@@ -751,19 +802,20 @@ export default function RadioUnitPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-teal-500 to-emerald-700 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#14b8a6] to-[#047857] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <RadioIcon className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Konvensional</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <RadioIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Konvensional</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{konvensionalCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">radio konvensional aktif</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{konvensionalCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">aktif</p>
+            </div>
           </div>
         </motion.div>
 
@@ -772,19 +824,20 @@ export default function RadioUnitPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-rose-500 to-red-700 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#f43f5e] to-[#b91c1c] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <Copy className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Duplikat ID</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Copy className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Duplikat</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{duplikatCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">ID radio duplikat</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{duplikatCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">radio</p>
+            </div>
           </div>
         </motion.div>
 
@@ -793,19 +846,20 @@ export default function RadioUnitPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-amber-500 to-orange-600 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#f59e0b] to-[#ea580c] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <Tag className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Scrap</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Tag className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Scrap</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{scrapCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">unit di-scrap</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{scrapCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">di-scrap</p>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -814,7 +868,7 @@ export default function RadioUnitPage() {
       <div className="md:hidden flex flex-col gap-3 bg-[#f0fdf4] p-4 rounded-xl border border-emerald-100">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-600" />
-          <Input placeholder="Cari nomor aset, unit, SN, ID radio..." value={search} onChange={(e) => { setSearch(e.target.value); setPage(1); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-emerald-50 text-gray-900 placeholder-emerald-400" />
+          <Input placeholder="Cari nomor aset, unit, SN, ID radio..." value={search} onChange={(e) => { const v = e.target.value; if (v && !search) setPageBeforeSearch(page); setSearch(v); setPage(v ? 1 : pageBeforeSearch); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-emerald-500 text-sm bg-emerald-50 text-gray-900 placeholder-emerald-400" />
         </div>
         <div className="flex flex-wrap gap-2 relative z-30 pb-1">
           <div className="relative shrink-0">
@@ -848,7 +902,7 @@ export default function RadioUnitPage() {
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterDuplikat ? 'bg-red-500 border-red-500' : 'border-emerald-300 bg-white'}`}>
               {filterDuplikat && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-              <input type="checkbox" checked={filterDuplikat} onChange={(e) => { setFilterDuplikat(e.target.checked); setPage(1); }} className="sr-only" />
+              <input type="checkbox" checked={filterDuplikat} onChange={(e) => { setFilterDuplikat(e.target.checked); }} className="sr-only" />
             </div>
             <span className="text-xs font-medium text-emerald-900">Duplikat ID</span>
             {duplikatCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-[10px] font-bold">{duplikatCount}</span>}
@@ -856,7 +910,7 @@ export default function RadioUnitPage() {
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterNoGrafir ? 'bg-orange-500 border-orange-500' : 'border-emerald-300 bg-white'}`}>
               {filterNoGrafir && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3} />}
-              <input type="checkbox" checked={filterNoGrafir} onChange={(e) => { setFilterNoGrafir(e.target.checked); setPage(1); }} className="sr-only" />
+              <input type="checkbox" checked={filterNoGrafir} onChange={(e) => { setFilterNoGrafir(e.target.checked); }} className="sr-only" />
             </div>
             <span className="text-xs font-medium text-emerald-900">No Grafir</span>
             {noGrafirCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-[10px] font-bold">{noGrafirCount}</span>}
@@ -920,18 +974,18 @@ export default function RadioUnitPage() {
                       placeholder="Cari nomor aset, unit, SN, ID radio..."
                       className="pl-9 h-9 text-sm border-gray-200 focus:border-emerald-400 focus:ring-emerald-400"
                       value={search}
-                      onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+                      onChange={(e) => { const v = e.target.value; if (v && !search) setPageBeforeSearch(page); setSearch(v); setPage(v ? 1 : pageBeforeSearch); }}
                     />
                   </div>
                 </div>
 
                 {/* Dropdowns */}
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2">
-                  <FilterSelect value={filterDivisi} onChange={(v) => { setFilterDivisi(v); setPage(1); }} options={divisiOptions} placeholder="Semua Divisi" color="emerald" />
-                  <FilterSelect value={filterDepartment} onChange={(v) => { setFilterDepartment(v); setPage(1); }} options={departmentOptions} placeholder="Semua Dept" color="emerald" />
-                  <FilterSelect value={filterType} onChange={(v) => { setFilterType(v); setPage(1); }} options={typeOptions} placeholder="Semua Type" color="emerald" />
-                  <FilterSelect value={filterFleet} onChange={(v) => { setFilterFleet(v); setPage(1); }} options={fleetOptions} placeholder="Semua Fleet" color="emerald" />
-                  <FilterSelect value={filterJenis} onChange={(v) => { setFilterJenis(v); setPage(1); }} options={["Trunking", "Konvensional"]} placeholder="Semua Jenis" color="emerald" />
+                  <FilterSelect value={filterDivisi} onChange={(v) => { setFilterDivisi(v); }} options={divisiOptions} placeholder="Semua Divisi" color="emerald" />
+                  <FilterSelect value={filterDepartment} onChange={(v) => { setFilterDepartment(v); }} options={departmentOptions} placeholder="Semua Dept" color="emerald" />
+                  <FilterSelect value={filterType} onChange={(v) => { setFilterType(v); }} options={typeOptions} placeholder="Semua Type" color="emerald" />
+                  <FilterSelect value={filterFleet} onChange={(v) => { setFilterFleet(v); }} options={fleetOptions} placeholder="Semua Fleet" color="emerald" />
+                  <FilterSelect value={filterJenis} onChange={(v) => { setFilterJenis(v); }} options={["Trunking", "Konvensional"]} placeholder="Semua Jenis" color="emerald" />
                 </div>
 
                 {/* Checkboxes */}
@@ -939,7 +993,7 @@ export default function RadioUnitPage() {
                   <label className="flex items-center gap-2 cursor-pointer select-none group">
                     <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterDuplikat ? "bg-red-500 border-red-500" : "border-gray-300 group-hover:border-red-400"}`}>
                       {filterDuplikat && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                      <input type="checkbox" checked={filterDuplikat} onChange={(e) => { setFilterDuplikat(e.target.checked); setPage(1); }} className="sr-only" />
+                      <input type="checkbox" checked={filterDuplikat} onChange={(e) => { setFilterDuplikat(e.target.checked); }} className="sr-only" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">Duplikat ID</span>
                     {duplikatCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-red-100 text-red-700 text-xs font-bold">{duplikatCount}</span>}
@@ -947,7 +1001,7 @@ export default function RadioUnitPage() {
                   <label className="flex items-center gap-2 cursor-pointer select-none group">
                     <div className={`w-4 h-4 rounded border-2 flex items-center justify-center transition-colors ${filterNoGrafir ? "bg-orange-500 border-orange-500" : "border-gray-300 group-hover:border-orange-400"}`}>
                       {filterNoGrafir && <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}><path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" /></svg>}
-                      <input type="checkbox" checked={filterNoGrafir} onChange={(e) => { setFilterNoGrafir(e.target.checked); setPage(1); }} className="sr-only" />
+                      <input type="checkbox" checked={filterNoGrafir} onChange={(e) => { setFilterNoGrafir(e.target.checked); }} className="sr-only" />
                     </div>
                     <span className="text-sm font-medium text-gray-700">No Grafir</span>
                     {noGrafirCount > 0 && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-orange-100 text-orange-700 text-xs font-bold">{noGrafirCount}</span>}
@@ -1029,16 +1083,23 @@ export default function RadioUnitPage() {
               ) : (
                 filteredData.map((item) => {
                   const fleetList = parseFleetList(item.fleet);
-                  const rowBg = item.isDuplicateId
-                    ? "bg-red-50 hover:bg-red-100"
-                    : isNoGrafir(item.nomorAset)
-                    ? "bg-orange-50 hover:bg-orange-100"
-                    : "hover:bg-gray-50";
+                  const snLower = item.serialNumber?.trim()?.toLowerCase();
+                  const isDuplicateSn = !!(snLower && snLower !== "-" && snLower !== "n/a" && duplicateSns.has(snLower));
+
+                  let rowBg = "hover:bg-gray-50";
+                  if (item.isDuplicateId) rowBg = "bg-red-50 hover:bg-red-100";
+                  else if (isDuplicateSn) rowBg = "bg-amber-50 hover:bg-amber-100";
+                  else if (isNoGrafir(item.nomorAset)) rowBg = "bg-orange-50 hover:bg-orange-100";
+                  
                   return (
                     <tr key={item.id} className={`border-b border-gray-100 transition-colors ${rowBg}`}>
                       <td className="font-medium py-3 px-4 whitespace-nowrap">{item.nomorAset || "-"}</td>
                       <td className="py-3 px-4 whitespace-nowrap">{item.nomorLv || item.nomorUnit || "-"}</td>
-                      <td className="py-3 px-4 font-mono whitespace-nowrap">{item.serialNumber || "-"}</td>
+                      <td className="py-3 px-4 whitespace-nowrap">
+                        <span className={`font-mono ${isDuplicateSn ? "text-amber-700 font-bold" : ""}`}>
+                          {item.serialNumber || "-"}
+                        </span>
+                      </td>
                       <td className="py-3 px-4 whitespace-nowrap">{item.type || "-"}</td>
                       <td className="py-3 px-4 whitespace-nowrap">{item.division || "-"}</td>
                       <td className="py-3 px-4 whitespace-nowrap">{item.department || "-"}</td>
@@ -1395,6 +1456,12 @@ export default function RadioUnitPage() {
         importApiCall={radioApi.importUnit}
       />
 
+      {/* ── Duplicate SN Modal ── */}
+      <DuplicateSnModal
+        isOpen={isDuplicateSnModalOpen}
+        onClose={() => setIsDuplicateSnModalOpen(false)}
+      />
+
       {/* ── History Modal ── */}
       <RadioHistoryModal
         isOpen={isHistoryOpen}
@@ -1409,11 +1476,11 @@ export default function RadioUnitPage() {
             <h3 className="font-bold text-gray-800">Pilih Divisi</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDivisi ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(""); setPage(1); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDivisi ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(""); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
               Semua Divisi {!filterDivisi && <Check className="w-4 h-4" />}
             </div>
             {divisiOptions.map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDivisi === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(opt); setPage(1); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDivisi === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(opt); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
                 {opt} {filterDivisi === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
@@ -1427,11 +1494,11 @@ export default function RadioUnitPage() {
             <h3 className="font-bold text-gray-800">Pilih Dept</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDepartment ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(""); setPage(1); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDepartment ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(""); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
               Semua Dept {!filterDepartment && <Check className="w-4 h-4" />}
             </div>
             {departmentOptions.map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDepartment === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(opt); setPage(1); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDepartment === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(opt); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
                 {opt} {filterDepartment === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
@@ -1445,11 +1512,11 @@ export default function RadioUnitPage() {
             <h3 className="font-bold text-gray-800">Pilih Type</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterType ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(""); setPage(1); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterType ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(""); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
               Semua Type {!filterType && <Check className="w-4 h-4" />}
             </div>
             {typeOptions.map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterType === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(opt); setPage(1); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterType === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(opt); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
                 {opt} {filterType === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
@@ -1463,11 +1530,11 @@ export default function RadioUnitPage() {
             <h3 className="font-bold text-gray-800">Pilih Jenis</h3>
           </div>
           <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterJenis ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(""); setPage(1); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
+            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterJenis ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(""); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
               Semua Jenis {!filterJenis && <Check className="w-4 h-4" />}
             </div>
             {["Trunking", "Konvensional"].map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterJenis === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(opt); setPage(1); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
+              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterJenis === opt ? 'font-bold text-emerald-700 bg-emerald-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(opt); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
                 {opt} {filterJenis === opt && <Check className="w-4 h-4" />}
               </div>
             ))}

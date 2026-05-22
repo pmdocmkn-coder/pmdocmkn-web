@@ -70,6 +70,23 @@ export interface RadioHistoryDto {
   createdAt: string;
 }
 
+export interface DuplicateSnItemDto {
+  id: number;
+  category: string;
+  nomorAset?: string;
+  nomorUnit?: string;
+  nomorLv?: string;
+  company?: string;
+  division?: string;
+  department?: string;
+}
+
+export interface DuplicateSnDto {
+  serialNumber: string;
+  count: number;
+  occurrences: DuplicateSnItemDto[];
+}
+
 export interface CreateRadioDto {
   category: string;
   serialNumber?: string;
@@ -132,6 +149,10 @@ export const radioApi = {
 
   getById: (id: number) => {
     return api.get<{ data: RadioDto; message: string }>(`/api/radios/${id}`);
+  },
+
+  getDuplicateSns: () => {
+    return api.get<{ data: DuplicateSnDto[]; message: string }>("/api/radios/duplicate-sns");
   },
 
   create: (data: CreateRadioDto) => {

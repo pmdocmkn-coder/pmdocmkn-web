@@ -39,6 +39,7 @@ import RadioImportModal from "./RadioImportModal";
 import { useToast } from "../../hooks/use-toast";
 import { parseRadioResponse } from "../../utils/radioHelpers";
 import { FormMobileDatePicker } from "./FormMobileDatePicker";
+import { FormMobileSelect } from "./FormMobileSelect";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import {
@@ -142,12 +143,17 @@ export default function RadioScrapPage() {
   // State Date Range Popover
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [dateRangeOpen, setDateRangeOpen] = useState(false);
+  const [mobDateRangeOpen, setMobDateRangeOpen] = useState(false);
   const deskCalRef = useRef<HTMLDivElement>(null);
+  const mobCalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (deskCalRef.current && !deskCalRef.current.contains(e.target as Node)) {
         setDateRangeOpen(false);
+      }
+      if (mobCalRef.current && !mobCalRef.current.contains(e.target as Node)) {
+        setMobDateRangeOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -756,25 +762,26 @@ export default function RadioScrapPage() {
       </motion.div>
 
       {/* ── Stat Cards ── */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {/* Total Scrap */}
         <motion.div
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-red-600 to-red-800 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#ef4444] to-[#dc2626] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <Package className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Total Scrap</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Package className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Total Scrap</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{totalCount.toLocaleString()}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">halaman {page} / {totalPages}</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{totalCount.toLocaleString()}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">hal {page}/{totalPages}</p>
+            </div>
           </div>
         </motion.div>
 
@@ -783,19 +790,20 @@ export default function RadioScrapPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-violet-600 via-purple-600 to-indigo-700 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#8b5cf6] to-[#6d28d9] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <RadioIcon className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Radio KPC</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <RadioIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">KPC</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{internalCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">radio KPC</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{internalCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">unit</p>
+            </div>
           </div>
         </motion.div>
 
@@ -804,19 +812,20 @@ export default function RadioScrapPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-sky-500 via-blue-600 to-blue-700 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#3b82f6] to-[#2563eb] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <RadioIcon className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Kontraktor</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <RadioIcon className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Contractor</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{contractorCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">radio kontraktor</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{contractorCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">unit</p>
+            </div>
           </div>
         </motion.div>
 
@@ -825,19 +834,20 @@ export default function RadioScrapPage() {
           variants={cardHoverVariants}
           initial="rest"
           whileHover="hover"
-          className="relative overflow-hidden rounded-2xl p-5 shadow-lg text-white bg-gradient-to-br from-slate-500 to-slate-700 cursor-default"
+          className="relative overflow-hidden rounded-2xl p-3.5 md:p-5 shadow-sm text-white bg-gradient-to-br from-[#64748b] to-[#475569] cursor-default"
         >
-          <div className="absolute -top-4 -right-4 w-24 h-24 bg-white/10 rounded-full" />
-          <div className="absolute -bottom-6 -left-4 w-20 h-20 bg-white/5 rounded-full" />
-          <div className="relative z-10">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-2.5 bg-white/20 rounded-xl backdrop-blur-sm shadow-inner">
-                <Package className="w-5 h-5" />
+          <div className="absolute -top-6 -right-6 w-24 h-24 bg-white/10 rounded-full" />
+          <div className="relative z-10 flex flex-col h-full justify-between gap-3 md:gap-4">
+            <div className="flex items-start justify-between">
+              <span className="text-xs md:text-sm font-semibold opacity-90 tracking-wide">Legacy</span>
+              <div className="p-1.5 bg-white/20 rounded-lg backdrop-blur-sm">
+                <Package className="w-3.5 h-3.5 md:w-5 md:h-5" />
               </div>
-              <span className="text-[10px] font-extrabold uppercase tracking-[0.15em] opacity-80">Legacy</span>
             </div>
-            <p className="text-4xl font-black tracking-tight">{legacyCount}</p>
-            <p className="text-xs opacity-70 mt-1.5 font-medium">unit &amp; legacy scrap</p>
+            <div className="flex items-end justify-between">
+              <p className="text-2xl md:text-3xl font-bold tracking-tight leading-none">{legacyCount}</p>
+              <p className="text-[10px] md:text-xs opacity-80 font-medium">scrap</p>
+            </div>
           </div>
         </motion.div>
       </motion.div>
@@ -855,16 +865,82 @@ export default function RadioScrapPage() {
               <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
             </button>
           </div>
-          <div className="relative shrink-0 flex items-center gap-1">
-             <Input type="date" className="h-8 text-xs bg-red-50 border-none rounded-lg text-gray-700" value={filterDateFrom} onChange={e => { setFilterDateFrom(e.target.value); setPage(1); }} />
-             <span className="text-xs text-gray-400">-</span>
-             <Input type="date" className="h-8 text-xs bg-red-50 border-none rounded-lg text-gray-700" value={filterDateTo} onChange={e => { setFilterDateTo(e.target.value); setPage(1); }} />
+          <div className="relative shrink-0 flex items-center gap-1" ref={mobCalRef}>
+            <button
+              onClick={() => setMobDateRangeOpen((prev) => !prev)}
+              className="flex items-center justify-between h-8 rounded-lg bg-red-50 px-3 text-gray-800 text-xs font-medium select-none min-w-[150px] shadow-sm"
+            >
+              <span className="truncate">{formatRangeLabel()}</span>
+              <Calendar className="w-3.5 h-3.5 ml-2 text-red-500" />
+            </button>
+
+            {mobDateRangeOpen && (
+              <>
+                <div
+                  className="fixed inset-0 bg-slate-900/40 z-[100] backdrop-blur-sm"
+                  onClick={() => setMobDateRangeOpen(false)}
+                />
+                <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[110] bg-white rounded-2xl shadow-2xl border border-red-100 p-4 w-[90%] max-w-[360px] max-h-[85vh] overflow-y-auto flex flex-col">
+                  <div className="flex-1 overflow-y-auto no-scrollbar">
+                    <div className="flex justify-center">
+                      <DayPicker
+                        mode="range"
+                        selected={dateRange}
+                        onSelect={(r) => {
+                          setDateRange(r);
+                          if (r?.from) setFilterDateFrom(format(r.from, "yyyy-MM-dd"));
+                          else setFilterDateFrom("");
+
+                          if (r?.to) setFilterDateTo(format(r.to, "yyyy-MM-dd"));
+                          else if (r?.from) setFilterDateTo(format(r.from, "yyyy-MM-dd"));
+                          else setFilterDateTo("");
+                        }}
+                        locale={localeId}
+                        showOutsideDays
+                      />
+                    </div>
+                  </div>
+                  {/* Fixed Footer */}
+                  <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-2 text-sm bg-white shrink-0">
+                    <div className="flex gap-4">
+                      <button
+                        onClick={() => {
+                          setDateRange(undefined);
+                          setFilterDateFrom("");
+                          setFilterDateTo("");
+                        }}
+                        className="text-gray-400 hover:text-red-500 font-medium transition-colors"
+                      >
+                        Hapus
+                      </button>
+                      <button
+                        onClick={() => {
+                          const today = new Date();
+                          setDateRange({ from: today, to: today });
+                          setFilterDateFrom(format(today, "yyyy-MM-dd"));
+                          setFilterDateTo(format(today, "yyyy-MM-dd"));
+                        }}
+                        className="text-red-600 font-bold hover:text-red-800 transition-colors"
+                      >
+                        Hari ini
+                      </button>
+                    </div>
+                    <button
+                      onClick={() => setMobDateRangeOpen(false)}
+                      className="bg-red-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-red-700 transition-colors"
+                    >
+                      Selesai
+                    </button>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
 
       {/* ── Filter Panel ── */}
-      <motion.div variants={itemVariants} className="bg-white rounded-2xl border border-gray-200 shadow-sm">
+      <motion.div variants={itemVariants} className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm">
         {/* Filter Header */}
         <button
           onClick={() => setIsFilterOpen((v) => !v)}
@@ -1058,7 +1134,7 @@ export default function RadioScrapPage() {
       </motion.div>
 
       {/* ── Data Table ── */}
-      <motion.div variants={itemVariants} className="rounded-xl border bg-white shadow-sm">
+      <motion.div variants={itemVariants} className="hidden md:block rounded-xl border bg-white shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full caption-bottom text-sm border-collapse">
             <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
@@ -1288,16 +1364,14 @@ export default function RadioScrapPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Kategori Asal</label>
-              <select
-                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              >
-                <option value="LegacyScrap">Legacy Scrap (Unknown Source)</option>
-                <option value="Internal">Internal</option>
-                <option value="Contractor">Contractor</option>
-                <option value="Unit">Unit</option>
-              </select>
+              <FormMobileSelect
+                value={formData.category || "LegacyScrap"}
+                onChange={(val) => setFormData({ ...formData, category: val || "LegacyScrap" })}
+                options={["LegacyScrap", "Internal", "Contractor", "Unit"]}
+                placeholder="Pilih Kategori Asal"
+                label="Pilih Kategori Asal"
+                color="rose"
+              />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Scrap Job Number</label>
