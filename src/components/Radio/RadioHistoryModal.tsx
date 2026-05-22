@@ -10,7 +10,7 @@ import { radioApi, RadioHistoryDto, RadioDto } from "../../services/radioApi";
 import { userApi } from "../../services/api";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Clock, Radio, CheckCircle2, RefreshCw, Trash2, AlertCircle, Info, Building2, Users, Zap } from "lucide-react";
+import { Clock, Radio, CheckCircle2, RefreshCw, Trash2, AlertCircle, Info, Building2, Users, Zap, Wrench } from "lucide-react";
 
 interface RadioHistoryModalProps {
     isOpen: boolean;
@@ -146,6 +146,34 @@ export default function RadioHistoryModal({
                     dot: "bg-red-500",
                     icon: <Trash2 className="w-3.5 h-3.5 text-red-600" />,
                     label: "Di-scrap",
+                };
+            case "RepairOpened":
+                return {
+                    badge: "bg-violet-100 text-violet-700 border-violet-200",
+                    dot: "bg-violet-500",
+                    icon: <Wrench className="w-3.5 h-3.5 text-violet-600" />,
+                    label: "Perbaikan dibuka",
+                };
+            case "RepairStatusChanged":
+                return {
+                    badge: "bg-amber-100 text-amber-800 border-amber-200",
+                    dot: "bg-amber-500",
+                    icon: <RefreshCw className="w-3.5 h-3.5 text-amber-600" />,
+                    label: "Status perbaikan",
+                };
+            case "RepairHandoverWarehouse":
+                return {
+                    badge: "bg-teal-100 text-teal-700 border-teal-200",
+                    dot: "bg-teal-500",
+                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-teal-600" />,
+                    label: "Serah ke warehouse",
+                };
+            case "RepairReturnedToHelpdesk":
+                return {
+                    badge: "bg-indigo-100 text-indigo-700 border-indigo-200",
+                    dot: "bg-indigo-500",
+                    icon: <CheckCircle2 className="w-3.5 h-3.5 text-indigo-600" />,
+                    label: "Kembali ke helpdesk",
                 };
             default:
                 return {
