@@ -1386,7 +1386,7 @@ export default function RadioUnitPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">ID Radio</label>
-              <Input value={formData.radioId} placeholder="e.g. 2001" onChange={(e) => setFormData({ ...formData, radioId: e.target.value })} />
+              <Input value={formData.radioId} placeholder="e.g. 100" onChange={(e) => setFormData({ ...formData, radioId: e.target.value })} />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">Mark</label>
@@ -1412,7 +1412,7 @@ export default function RadioUnitPage() {
           </div>
 
           {/* ── Footer: Error Banner + Tombol ── */}
-          <DialogFooter className="flex-col gap-3 sm:flex-col">
+          <div className="flex flex-col gap-3 pt-2 border-t border-gray-100 mt-2">
             {formError && (
               <div className="flex items-start gap-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" /></svg>
@@ -1420,13 +1420,13 @@ export default function RadioUnitPage() {
                 <button onClick={() => setFormError(null)} className="ml-auto flex-shrink-0 text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
               </div>
             )}
-            <div className="flex justify-end gap-2 w-full">
+            <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); resetForm(); setFormError(null); }}>Batal</Button>
               <Button onClick={isEditOpen ? handleUpdate : handleCreate} className="bg-emerald-600 hover:bg-emerald-700 text-white">
                 {isEditOpen ? "Simpan Perubahan" : "Tambah Radio"}
               </Button>
             </div>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

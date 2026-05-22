@@ -1434,7 +1434,7 @@ export default function RadioInternalPage() {
               <label className="text-sm font-medium">ID Radio</label>
               <Input
                 value={formData.radioId}
-                placeholder="e.g. 2001"
+                placeholder="e.g. 100"
                 onChange={(e) => setFormData({ ...formData, radioId: e.target.value })}
               />
             </div>
@@ -1490,7 +1490,7 @@ export default function RadioInternalPage() {
           </div>
 
           {/* ── Footer: Error Banner + Tombol ── */}
-          <DialogFooter className="flex-col gap-3 sm:flex-col">
+          <div className="flex flex-col gap-3 pt-2 border-t border-gray-100 mt-2">
             {formError && (
               <div className="flex items-start gap-3 w-full rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 <svg className="mt-0.5 h-4 w-4 flex-shrink-0 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1508,7 +1508,7 @@ export default function RadioInternalPage() {
                 </button>
               </div>
             )}
-            <div className="flex justify-end gap-2 w-full">
+            <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
                 onClick={() => {
@@ -1527,7 +1527,7 @@ export default function RadioInternalPage() {
                 {isEditOpen ? "Simpan Perubahan" : "Tambah Radio"}
               </Button>
             </div>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 

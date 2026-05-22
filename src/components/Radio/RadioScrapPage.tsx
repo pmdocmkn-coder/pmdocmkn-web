@@ -1411,7 +1411,7 @@ export default function RadioScrapPage() {
             </div>
             <div className="space-y-2">
               <label className="text-sm font-medium">ID Radio</label>
-              <Input value={formData.radioId} placeholder="e.g. 2001" onChange={(e) => setFormData({ ...formData, radioId: e.target.value })} />
+              <Input value={formData.radioId} placeholder="e.g. 100" onChange={(e) => setFormData({ ...formData, radioId: e.target.value })} />
             </div>
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Keterangan</label>
