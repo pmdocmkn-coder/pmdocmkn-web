@@ -10,7 +10,6 @@ export type RadioRepairJobStatus =
 
 export interface RadioRepairJobList {
   id: number;
-  jobNumber: string;
   helpdeskTicketNumber: string;
   radioSerialNumber: string;
   radioId?: number | null;
@@ -18,6 +17,8 @@ export interface RadioRepairJobList {
   radioFleet?: string | null;
   radioCategory?: string | null;
   equipmentName?: string | null;
+  unitNumber?: string | null;
+  radioOwnerLabel?: string | null;
   previewPhotoBase64?: string | null;
   damageDescription: string;
   status: RadioRepairJobStatus;
@@ -112,8 +113,11 @@ export interface RadioRepairJobDetail extends RadioRepairJobList {
     handoverNumber: string;
     handoverType: string;
     handoverAt: string;
+    signedAt?: string | null;
+    equipmentTagType?: string;
     handedOverByName: string;
     receivedByName: string;
+    status?: string;
     hasRadioPhoto: boolean;
     hasHandedOverSignature: boolean;
     hasReceiverSignature: boolean;

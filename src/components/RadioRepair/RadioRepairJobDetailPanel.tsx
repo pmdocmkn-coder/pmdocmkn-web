@@ -9,7 +9,8 @@ import { radioApi, type RadioDto } from "../../services/radioApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
 import { repairJobCustomStatusApi } from "../../services/repairJobCustomStatusApi";
 import RepairJobCustomStatusManager from "./RepairJobCustomStatusManager";
-import DamagedEquipmentTagCard from "../RadioHandover/DamagedEquipmentTagCard";
+import HandoverTagPreview from "../RadioHandover/HandoverTagPreview";
+import HandoverTimeline from "../RadioHandover/HandoverTimeline";
 import HandoverPhotoThumbnails from "../RadioHandover/HandoverPhotoThumbnails";
 import SignaturePadField from "../common/SignaturePadField";
 import {
@@ -100,34 +101,6 @@ export default function RadioRepairJobDetailPanel({
   const displayFleet = job.radioFleet?.trim() || radioMaster?.fleet?.trim() || null;
   const displayCategory = job.radioCategory ?? radioMaster?.category ?? null;
 
-  const tagData = {
-    handoverNumber: ph?.handoverNumber ?? "—",
-    handedOverByName: ph?.handedOverByName ?? job.openedByName,
-    receivedByName: ph?.receivedByName ?? job.assignedTechnicianName,
-    handoverAt: ph?.handoverAt ?? job.openedAt,
-    // Field data radio — prioritaskan dari job (bisa diedit), fallback ke handover
-    equipmentName: job.equipmentName ?? ph?.equipmentName,
-    unitNumber: job.unitNumber ?? ph?.unitNumber,
-    radioSerialNumber: job.radioSerialNumber,  // selalu dari job, bukan snapshot handover
-    radioOwnerLabel: job.radioOwnerLabel ?? ph?.radioOwnerLabel,
-    ownerDivision: job.ownerDivision ?? ph?.ownerDivision,
-    ownerDepartment: job.ownerDepartment ?? ph?.ownerDepartment,
-    damageDescription: job.damageDescription,  // selalu dari job
-    accessories:
-      ph?.accessories?.map((a) => ({
-        itemName: a.itemName,
-        quantity: a.quantity,
-        unit: a.unit ?? undefined,
-        description: a.description ?? undefined,
-        serialNumber: a.serialNumber ?? undefined,
-      })) ?? [],
-    helpdeskTicketNumber: job.helpdeskTicketNumber,
-    radioMasterId: job.radioId,
-    radioMasterRadioId: displayRadioMasterId,
-    radioFleet: displayFleet,
-    radioCategory: displayCategory,
-  };
-
   const handoverPhotos = handoverDetail ? resolveHandoverPhotosFromDetail(handoverDetail) : [];
   const nextStatuses = allowedNextStatuses(job.status);
   const locked = isJobStatusLocked(job.status) || job.isDeleted;
@@ -169,7 +142,7 @@ export default function RadioRepairJobDetailPanel({
         )}
       </div>
 
-      <DamagedEquipmentTagCard data={tagData} />
+      {handoverDetail ? <HandoverTagPreview detail={handoverDetail} /> : null}
 
       {/* Edit keterangan kerusakan — hanya untuk teknisi yang punya radio.repair.update */}
       {canUpdate && !locked && (
@@ -379,16 +352,19 @@ export default function RadioRepairJobDetailPanel({
       )}
 
       {job.handovers && job.handovers.length > 0 && (
-        <div>
-          <h3 className="font-semibold mb-1">Riwayat serah terima</h3>
-          <ul className="text-xs space-y-1 text-gray-600">
-            {job.handovers.map((h) => (
-              <li key={h.id}>
-                {h.handoverNumber} ({h.handoverType}) — {h.handedOverByName} → {h.receivedByName}
-              </li>
-            ))}
-          </ul>
-        </div>
+        <HandoverTimeline
+          handovers={job.handovers.map((h) => ({
+            id: h.id,
+            handoverNumber: h.handoverNumber,
+            handoverType: h.handoverType,
+            handoverAt: h.handoverAt,
+            signedAt: h.signedAt,
+            equipmentTagType: h.equipmentTagType,
+            handedOverByName: h.handedOverByName,
+            receivedByName: h.receivedByName,
+            status: h.status,
+          }))}
+        />
       )}
 
       <div>

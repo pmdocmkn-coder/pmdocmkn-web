@@ -1,6 +1,8 @@
 import { Plus, Trash2 } from "lucide-react";
 import RadioSerialLookupField from "./RadioSerialLookupField";
+import RadioMasterSummaryCard from "./RadioMasterSummaryCard";
 import type { RadioLookup } from "../../types/radioHandover";
+import { lineFromLookup } from "../../utils/radioHandoverLineUtils";
 
 export type RadioSerialLine = {
   id: string;
@@ -26,17 +28,14 @@ const newLine = (): RadioSerialLine => ({
   ownerDepartment: "",
 });
 
-function ownerFromLookup(lookup?: RadioLookup | null): string {
-  if (!lookup) return "";
-  return lookup.company?.trim() || lookup.ownerLabel?.trim() || lookup.category || "";
-}
-
 type Props = {
   lines: RadioSerialLine[];
   onChange: (lines: RadioSerialLine[]) => void;
+  /** Sembunyikan pemilik/divisi — dipakai bersama SharedRadioDefaultsFields */
+  compactMode?: boolean;
 };
 
-export default function MultiRadioSerialList({ lines, onChange }: Props) {
+export default function MultiRadioSerialList({ lines, onChange, compactMode }: Props) {
   const rows = lines.length > 0 ? lines : [newLine()];
 
   const patch = (id: string, patch: Partial<RadioSerialLine>) => {
@@ -44,17 +43,8 @@ export default function MultiRadioSerialList({ lines, onChange }: Props) {
   };
 
   const onSelect = (id: string, s: string, radioId: number | null, lookup?: RadioLookup) => {
-    const prev = rows.find((r) => r.id === id);
-    patch(id, {
-      serial: s,
-      radioId,
-      lookup: lookup ?? null,
-      equipmentName: lookup?.type?.trim() ?? (radioId ? "" : prev?.equipmentName ?? ""),
-      unitNumber: lookup?.nomorUnit?.trim() ?? prev?.unitNumber ?? "",
-      radioOwnerLabel: ownerFromLookup(lookup) || prev?.radioOwnerLabel || "",
-      ownerDivision: lookup?.division?.trim() ?? prev?.ownerDivision ?? "",
-      ownerDepartment: lookup?.department?.trim() ?? prev?.ownerDepartment ?? "",
-    });
+    const merged = lineFromLookup(s, radioId, lookup ?? null);
+    patch(id, { ...merged, id });
   };
 
   const add = () => onChange([...rows, newLine()]);
@@ -96,6 +86,9 @@ export default function MultiRadioSerialList({ lines, onChange }: Props) {
                 required={index === 0}
                 onSelect={(s, id, l) => onSelect(row.id, s, id, l)}
               />
+              {compactMode && row.serial.trim() && (
+                <RadioMasterSummaryCard line={row} compact />
+              )}
             </div>
             {rows.length > 1 && (
               <button
@@ -115,7 +108,9 @@ export default function MultiRadioSerialList({ lines, onChange }: Props) {
                 <label className="block text-sm">
                   <span className="font-medium text-amber-800">Tipe / nama alat *</span>
                   <span className="text-xs text-gray-500 block mb-1">
-                    Wajib jika SN belum di master (contoh: Motorola DP4800)
+                    {compactMode
+                      ? "Wajib jika SN belum di master — atau isi default di atas"
+                      : "Wajib jika SN belum di master (contoh: Motorola DP4800)"}
                   </span>
                   <input
                     className="w-full border rounded-lg px-3 py-2 mt-0.5 bg-white"
@@ -126,51 +121,54 @@ export default function MultiRadioSerialList({ lines, onChange }: Props) {
                 </label>
               )}
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <label className="block text-sm sm:col-span-2">
-                  <span className="font-medium text-gray-700">Pemilik radio</span>
-                  <span className="text-xs text-gray-500 block mb-1">
-                    Nama perusahaan, unit, atau nama pemakai (user)
-                  </span>
-                  <input
-                    className="w-full border rounded-lg px-3 py-2 mt-0.5 bg-white"
-                    value={row.radioOwnerLabel}
-                    onChange={(e) => patch(row.id, { radioOwnerLabel: e.target.value })}
-                    placeholder={row.radioId ? "Dari master — bisa diedit" : "Contoh: PT KPC / John Doe"}
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="font-medium text-gray-700">Divisi</span>
-                  <input
-                    className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
-                    value={row.ownerDivision}
-                    onChange={(e) => patch(row.id, { ownerDivision: e.target.value })}
-                    placeholder={row.radioId ? "Dari master" : "Opsional"}
-                  />
-                </label>
-                <label className="block text-sm">
-                  <span className="font-medium text-gray-700">Departemen</span>
-                  <input
-                    className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
-                    value={row.ownerDepartment}
-                    onChange={(e) => patch(row.id, { ownerDepartment: e.target.value })}
-                    placeholder={row.radioId ? "Dari master" : "Opsional"}
-                  />
-                </label>
-              </div>
-
-              <label className="block text-sm">
-                <span className="font-medium text-gray-700">Nomor unit</span>
-                <span className="text-xs text-gray-500 block mb-1">
-                  {row.radioId ? "Terisi otomatis dari master — bisa diedit" : "Opsional jika tidak terdaftar"}
-                </span>
-                <input
-                  className="w-full border rounded-lg px-3 py-2 mt-0.5 bg-white"
-                  value={row.unitNumber}
-                  onChange={(e) => patch(row.id, { unitNumber: e.target.value })}
-                  placeholder={row.radioId ? "Dari master radio" : "Opsional"}
-                />
-              </label>
+              {!compactMode && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <label className="block text-sm sm:col-span-2">
+                      <span className="font-medium text-gray-700">Pemilik radio</span>
+                      <span className="text-xs text-gray-500 block mb-1">
+                        Nama perusahaan, unit, atau nama pemakai (user)
+                      </span>
+                      <input
+                        className="w-full border rounded-lg px-3 py-2 mt-0.5 bg-white"
+                        value={row.radioOwnerLabel}
+                        onChange={(e) => patch(row.id, { radioOwnerLabel: e.target.value })}
+                        placeholder={row.radioId ? "Dari master — bisa diedit" : "Contoh: PT KPC / John Doe"}
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-gray-700">Divisi</span>
+                      <input
+                        className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
+                        value={row.ownerDivision}
+                        onChange={(e) => patch(row.id, { ownerDivision: e.target.value })}
+                        placeholder={row.radioId ? "Dari master" : "Opsional"}
+                      />
+                    </label>
+                    <label className="block text-sm">
+                      <span className="font-medium text-gray-700">Departemen</span>
+                      <input
+                        className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
+                        value={row.ownerDepartment}
+                        onChange={(e) => patch(row.id, { ownerDepartment: e.target.value })}
+                        placeholder={row.radioId ? "Dari master" : "Opsional"}
+                      />
+                    </label>
+                  </div>
+                  <label className="block text-sm">
+                    <span className="font-medium text-gray-700">Nomor unit</span>
+                    <span className="text-xs text-gray-500 block mb-1">
+                      {row.radioId ? "Terisi otomatis dari master — bisa diedit" : "Opsional jika tidak terdaftar"}
+                    </span>
+                    <input
+                      className="w-full border rounded-lg px-3 py-2 mt-0.5 bg-white"
+                      value={row.unitNumber}
+                      onChange={(e) => patch(row.id, { unitNumber: e.target.value })}
+                      placeholder={row.radioId ? "Dari master radio" : "Opsional"}
+                    />
+                  </label>
+                </>
+              )}
             </>
           )}
         </div>

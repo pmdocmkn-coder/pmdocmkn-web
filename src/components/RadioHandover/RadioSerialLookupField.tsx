@@ -48,8 +48,31 @@ export default function RadioSerialLookupField({
 
   const display = serial || (radioId ? `Radio #${radioId}` : "");
 
-  const pick = (s: string, id: number | null, item?: RadioLookup) => {
-    onSelect(s, id, item);
+  const pick = async (s: string, id: number | null, item?: RadioLookup) => {
+    const trimmed = s.trim();
+    if (!trimmed) return;
+
+    if (id != null && item) {
+      onSelect(trimmed, id, item);
+      setOpen(false);
+      return;
+    }
+
+    try {
+      const results = await radioHandoverApi.lookupBySerial(trimmed);
+      const exact =
+        results.find((r) => (r.serialNumber ?? "").trim().toLowerCase() === trimmed.toLowerCase()) ??
+        results[0];
+      if (exact?.id) {
+        onSelect(trimmed, exact.id, exact);
+        setOpen(false);
+        return;
+      }
+    } catch {
+      /* manual SN */
+    }
+
+    onSelect(trimmed, null);
     setOpen(false);
   };
 
@@ -105,7 +128,7 @@ export default function RadioSerialLookupField({
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && search.trim()) {
                       e.preventDefault();
-                      pick(search.trim(), null);
+                      void pick(search.trim(), null);
                     }
                   }}
                   placeholder="Cari atau ketik SN manual..."
@@ -115,7 +138,7 @@ export default function RadioSerialLookupField({
                 {search.trim() && (
                   <button
                     type="button"
-                    onClick={() => pick(search.trim(), null)}
+                    onClick={() => void pick(search.trim(), null)}
                     className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-violet-100 text-violet-700 rounded-xl text-xs font-bold"
                   >
                     Pakai

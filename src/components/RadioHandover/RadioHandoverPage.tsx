@@ -7,7 +7,10 @@ import { radioHandoverApi } from "../../services/radioHandoverApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
 import HelpdeskToTechnicianForm from "./HelpdeskToTechnicianForm";
 import HandoverStatusBadge from "./HandoverStatusBadge";
-import DamagedEquipmentTagCard from "./DamagedEquipmentTagCard";
+import HandoverTagPreview from "./HandoverTagPreview";
+import HandoverTimeline from "./HandoverTimeline";
+import { radioRepairApi } from "../../services/radioRepairApi";
+import type { RadioRepairJobDetail } from "../../types/radioRepair";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import { canCreateHandoverHd } from "../../utils/handoverPermissions";
@@ -50,6 +53,7 @@ export default function RadioHandoverPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [detail, setDetail] = useState<RadioHandoverDetail | null>(null);
+  const [detailJob, setDetailJob] = useState<RadioRepairJobDetail | null>(null);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
@@ -82,7 +86,12 @@ export default function RadioHandoverPage() {
     try {
       const d = await radioHandoverApi.getById(id);
       setDetail(d);
+      setDetailJob(null);
       setSigReceiverComplete(null);
+      radioRepairApi
+        .getById(d.radioRepairJobId)
+        .then(setDetailJob)
+        .catch(() => setDetailJob(null));
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string } } };
       toast({
@@ -394,7 +403,7 @@ export default function RadioHandoverPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
+      <Dialog open={!!detail} onOpenChange={() => { setDetail(null); setDetailJob(null); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
@@ -404,23 +413,22 @@ export default function RadioHandoverPage() {
           </DialogHeader>
           {detail && (
             <div className="space-y-4 text-sm">
-              <DamagedEquipmentTagCard
-                data={{
-                  handoverNumber: detail.handoverNumber,
-                  handedOverByName: detail.handedOverByName,
-                  receivedByName: detail.receivedByName,
-                  handoverAt: detail.handoverAt,
-                  equipmentName: detail.equipmentName,
-                  unitNumber: detail.unitNumber,
-                  radioSerialNumber: detail.radioSerialNumber,
-                  radioOwnerLabel: detail.radioOwnerLabel,
-                  ownerDivision: detail.ownerDivision,
-                  ownerDepartment: detail.ownerDepartment,
-                  damageDescription: detail.damageDescription,
-                  accessories: detail.accessories ?? [],
-                  helpdeskTicketNumber: detail.helpdeskTicketNumber,
-                }}
-              />
+              {detailJob?.handovers && detailJob.handovers.length > 0 && (
+                <HandoverTimeline
+                  handovers={detailJob.handovers.map((h) => ({
+                    id: h.id,
+                    handoverNumber: h.handoverNumber,
+                    handoverType: h.handoverType,
+                    handoverAt: h.handoverAt,
+                    signedAt: h.signedAt,
+                    equipmentTagType: h.equipmentTagType,
+                    handedOverByName: h.handedOverByName,
+                    receivedByName: h.receivedByName,
+                    status: h.status,
+                  }))}
+                />
+              )}
+              <HandoverTagPreview detail={detail} />
               <p className="text-gray-600">
                 Status job: <strong>{detail.jobStatus}</strong>
                 {detail.radioId && (

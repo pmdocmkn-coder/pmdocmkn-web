@@ -68,21 +68,11 @@ export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipme
         <TagField label="Nama Alat" value={data.equipmentName ?? "—"} />
         <TagField label="Nomor Unit" value={data.unitNumber?.trim() || "—"} />
         <TagField label="S/N" value={data.radioSerialNumber} highlight />
-        {data.radioMasterRadioId?.trim() && (
-          <TagField label="ID Radio" value={data.radioMasterRadioId.trim()} />
-        )}
-        {data.radioFleet?.trim() && (
-          <TagField label="Fleet" value={data.radioFleet.trim()} />
-        )}
-        {data.radioOwnerLabel?.trim() && (
-          <TagField label="Pemilik" value={data.radioOwnerLabel.trim()} />
-        )}
-        {data.ownerDivision?.trim() && (
-          <TagField label="Divisi" value={data.ownerDivision.trim()} />
-        )}
-        {data.ownerDepartment?.trim() && (
-          <TagField label="Departemen" value={data.ownerDepartment.trim()} />
-        )}
+        <TagField label="ID Radio" value={data.radioMasterRadioId?.trim() || "—"} />
+        <TagField label="Fleet" value={data.radioFleet?.trim() || "—"} />
+        <TagField label="Pemilik" value={data.radioOwnerLabel?.trim() || "—"} />
+        <TagField label="Divisi" value={data.ownerDivision?.trim() || "—"} />
+        <TagField label="Departemen" value={data.ownerDepartment?.trim() || "—"} />
         {data.damageDescription && (
           <TagField label="Kerusakan" value={data.damageDescription} />
         )}

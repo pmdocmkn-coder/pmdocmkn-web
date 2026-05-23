@@ -1,4 +1,8 @@
+import type { EquipmentTagType, GreenTagFields } from "./equipmentTag";
+
 export type RadioHandoverType = "HelpdeskToTechnician" | "TechnicianToWarehouse" | "WarehouseToHelpdesk";
+
+export type { EquipmentTagType, GreenTagFields };
 
 
 
@@ -32,6 +36,8 @@ export interface UserOption {
 
 export interface RadioLookup {
   id: number;
+  /** ID grafir / nomor radio di master */
+  radioId?: string;
   category: string;
   serialNumber?: string;
   type?: string;
@@ -73,6 +79,19 @@ export interface CreateRadioHandoverPayload {
 
   damageDescription?: string;
 
+  equipmentTagType?: EquipmentTagType;
+
+  originFrom?: string;
+  repairDataDescription?: string;
+  repairedByName?: string;
+  frequencyError?: string;
+  afReading?: string;
+  powerReading?: string;
+  voltageOutNoLoad?: string;
+  voltageOutWithLoad?: string;
+  physicalCondition?: string;
+  displayCondition?: string;
+
   radioRepairJobId?: number;
 
   receivedByUserId: number;
@@ -103,8 +122,6 @@ export interface RadioHandoverList {
 
   radioRepairJobId: number;
 
-  jobNumber: string;
-
   helpdeskTicketNumber?: string;
 
   radioSerialNumber: string;
@@ -131,6 +148,10 @@ export interface RadioHandoverList {
 
   handoverAt: string;
 
+  signedAt?: string | null;
+
+  equipmentTagType?: EquipmentTagType | string;
+
   hasRadioPhoto: boolean;
 
   hasHandedOverSignature: boolean;
@@ -151,6 +172,10 @@ export interface RadioHandoverDetail extends RadioHandoverList {
 
   radioId?: number | null;
 
+  radioMasterRadioId?: string | null;
+
+  radioFleet?: string | null;
+
   radioOwnerLabel?: string | null;
 
   ownerDivision?: string | null;
@@ -158,6 +183,17 @@ export interface RadioHandoverDetail extends RadioHandoverList {
   ownerDepartment?: string | null;
 
   damageDescription?: string | null;
+
+  originFrom?: string | null;
+  repairDataDescription?: string | null;
+  repairedByName?: string | null;
+  frequencyError?: string | null;
+  afReading?: string | null;
+  powerReading?: string | null;
+  voltageOutNoLoad?: string | null;
+  voltageOutWithLoad?: string | null;
+  physicalCondition?: string | null;
+  displayCondition?: string | null;
 
   batterySerialNumber?: string | null;
 
