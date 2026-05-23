@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import type { HandoverAccessoryItem } from "../../types/radioHandover";
+import mknLogo from "../../assets/MKN.png";
 
 export type DamagedEquipmentTagData = {
   handoverNumber: string;
@@ -26,50 +27,109 @@ export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipme
   const acc = data.accessories?.filter((a) => a.itemName?.trim()) ?? [];
 
   return (
-    <div className="border-2 border-dashed border-violet-300 rounded-xl p-4 bg-violet-50/30">
-      <p className="text-xs font-bold uppercase tracking-wide text-violet-700 mb-3">Tag Peralatan Rusak</p>
-      <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-sm">
-        <TagRow label="Nama (HD → Teknisi)" value={`${data.handedOverByName} → ${data.receivedByName}`} span />
-        <TagRow label="Tanggal serah terima" value={format(new Date(data.handoverAt), "dd MMMM yyyy HH:mm", { locale: localeId })} />
-        <TagRow label="No. STR / Tiket" value={`${data.handoverNumber}${data.helpdeskTicketNumber ? ` · ${data.helpdeskTicketNumber}` : ""}`} />
-        <TagRow label="Nama alat" value={data.equipmentName ?? "—"} />
-        <TagRow label="Serial number" value={data.radioSerialNumber} />
-        {data.radioMasterId != null && (
-          <TagRow label="Ref. master" value={`#${data.radioMasterId}`} />
+    <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-md text-sm">
+
+      {/* ── Header hazard stripe ── */}
+      <div
+        className="h-3 w-full"
+        style={{
+          background: "repeating-linear-gradient(45deg, #000 0px, #000 8px, #facc15 8px, #facc15 16px)",
+        }}
+      />
+
+      {/* ── Logo + AWAS banner ── */}
+      <div className="bg-yellow-400 px-4 pt-3 pb-2 flex flex-col items-center">
+        <img src={mknLogo} alt="MKN Logo" className="h-14 object-contain" />
+      </div>
+
+      <div className="bg-gray-900 py-2 text-center">
+        <p className="text-white font-black text-xl tracking-widest">AWAS</p>
+      </div>
+
+      <div className="bg-yellow-400 py-2 text-center">
+        <p className="text-gray-900 font-black text-base tracking-wider leading-tight">
+          PERALATAN<br />RUSAK
+        </p>
+      </div>
+
+      {/* ── Bottom hazard stripe ── */}
+      <div
+        className="h-2 w-full"
+        style={{
+          background: "repeating-linear-gradient(45deg, #000 0px, #000 6px, #facc15 6px, #facc15 12px)",
+        }}
+      />
+
+      {/* ── Data fields ── */}
+      <div className="bg-yellow-50 px-4 py-3 space-y-2">
+        <TagField label="No. STR / Tiket" value={`${data.handoverNumber}${data.helpdeskTicketNumber ? ` · ${data.helpdeskTicketNumber}` : ""}`} />
+        <TagField label="Tanggal/waktu" value={format(new Date(data.handoverAt), "dd MMMM yyyy HH:mm", { locale: localeId })} />
+        <TagField label="Helpdesk → Teknisi" value={`${data.handedOverByName} → ${data.receivedByName}`} />
+        <TagField label="Nama Alat" value={data.equipmentName ?? "—"} />
+        <TagField label="Nomor Unit" value={data.unitNumber?.trim() || "—"} />
+        <TagField label="S/N" value={data.radioSerialNumber} highlight />
+        {data.radioMasterRadioId?.trim() && (
+          <TagField label="ID Radio" value={data.radioMasterRadioId.trim()} />
         )}
-        <TagRow label="ID Radio" value={data.radioMasterRadioId?.trim() || "—"} />
-        <TagRow label="Fleet" value={data.radioFleet?.trim() || "—"} span />
-        {data.radioCategory?.trim() && <TagRow label="Kategori" value={data.radioCategory.trim()} />}
-        <TagRow label="Nomor unit" value={data.unitNumber?.trim() || "—"} />
-        <TagRow label="Pemilik radio" value={data.radioOwnerLabel?.trim() || "—"} />
-        <TagRow label="Divisi" value={data.ownerDivision?.trim() || "—"} />
-        <TagRow label="Departemen" value={data.ownerDepartment?.trim() || "—"} />
-        {data.damageDescription && <TagRow label="Kerusakan" value={data.damageDescription} span />}
-      </dl>
-      {acc.length > 0 && (
-        <div className="mt-3 pt-3 border-t border-violet-200">
-          <p className="text-xs font-semibold text-gray-600 mb-2">Kelengkapan / aksesoris</p>
-          <ul className="text-xs space-y-1">
-            {acc.map((a, i) => (
-              <li key={i} className="flex flex-wrap gap-2">
-                <span className="font-medium">{a.itemName}</span>
-                <span className="text-gray-500">×{a.quantity} {a.unit ?? "EA"}</span>
-                {a.serialNumber?.trim() && <span className="text-gray-600">SN: {a.serialNumber}</span>}
-                {a.description?.trim() && <span className="text-gray-500">— {a.description}</span>}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {data.radioFleet?.trim() && (
+          <TagField label="Fleet" value={data.radioFleet.trim()} />
+        )}
+        {data.radioOwnerLabel?.trim() && (
+          <TagField label="Pemilik" value={data.radioOwnerLabel.trim()} />
+        )}
+        {data.ownerDivision?.trim() && (
+          <TagField label="Divisi" value={data.ownerDivision.trim()} />
+        )}
+        {data.ownerDepartment?.trim() && (
+          <TagField label="Departemen" value={data.ownerDepartment.trim()} />
+        )}
+        {data.damageDescription && (
+          <TagField label="Kerusakan" value={data.damageDescription} />
+        )}
+
+        {acc.length > 0 && (
+          <div className="pt-2 border-t border-yellow-300">
+            <p className="text-xs font-bold text-gray-700 mb-1.5">Kelengkapan</p>
+            <ul className="space-y-1">
+              {acc.map((a, i) => (
+                <li key={i} className="flex flex-wrap gap-2 text-xs">
+                  <span className="font-semibold text-gray-800">{a.itemName}</span>
+                  <span className="text-gray-600">×{a.quantity} {a.unit ?? "EA"}</span>
+                  {a.serialNumber?.trim() && <span className="text-gray-500">SN: {a.serialNumber}</span>}
+                  {a.description?.trim() && <span className="text-gray-500">— {a.description}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+
+      {/* ── Footer hazard stripe ── */}
+      <div
+        className="h-3 w-full"
+        style={{
+          background: "repeating-linear-gradient(45deg, #000 0px, #000 8px, #facc15 8px, #facc15 16px)",
+        }}
+      />
     </div>
   );
 }
 
-function TagRow({ label, value, span }: { label: string; value: string; span?: boolean }) {
+function TagField({
+  label,
+  value,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  highlight?: boolean;
+}) {
   return (
-    <div className={span ? "sm:col-span-2" : ""}>
-      <dt className="text-xs text-gray-500">{label}</dt>
-      <dd className="font-medium text-gray-900 mt-0.5">{value}</dd>
+    <div className="flex gap-2 items-baseline border-b border-yellow-200 pb-1.5 last:border-0">
+      <span className="text-xs text-gray-500 w-28 shrink-0">{label}</span>
+      <span className={`text-xs font-semibold flex-1 ${highlight ? "text-gray-900 font-mono" : "text-gray-800"}`}>
+        {value}
+      </span>
     </div>
   );
 }

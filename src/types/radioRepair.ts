@@ -23,10 +23,27 @@ export interface RadioRepairJobList {
   status: RadioRepairJobStatus;
   assignedTechnicianUserId: number;
   assignedTechnicianName: string;
+  /** ID status custom jika job sedang di status custom */
+  customStatusId?: number | null;
+  /** Label status custom untuk ditampilkan di UI */
+  customStatusLabel?: string | null;
+  /** Warna status custom (Tailwind class) */
+  customStatusColor?: string | null;
   openedAt: string;
   closedAt?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
+}
+
+// ─── Custom Status Types ──────────────────────────────────────────────────────
+export interface RepairJobCustomStatus {
+  id: number;
+  label: string;
+  color: string;
+  sortOrder: number;
+  isActive: boolean;
+  activeJobCount: number;
+  createdAt: string;
 }
 
 export interface RadioRepairTicketGroup {

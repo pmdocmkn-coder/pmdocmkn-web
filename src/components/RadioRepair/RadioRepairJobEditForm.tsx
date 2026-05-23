@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import type { RadioRepairJobDetail } from "../../types/radioRepair";
 import type { UpdateRadioRepairJobPayload } from "../../services/radioRepairApi";
-import type { UserOption } from "../../types/radioHandover";
+import type { RadioLookup, UserOption } from "../../types/radioHandover";
+import { radioHandoverApi } from "../../services/radioHandoverApi";
 import RadioSerialLookupField from "../RadioHandover/RadioSerialLookupField";
 
 type Props = {
@@ -14,6 +15,7 @@ type Props = {
 export default function RadioRepairJobEditForm({ job, technicians, saving, onSave }: Props) {
   const [serial, setSerial] = useState(job.radioSerialNumber);
   const [radioId, setRadioId] = useState<number | null>(job.radioId ?? null);
+  const [lookup, setLookup] = useState<RadioLookup | null>(null);
   const [form, setForm] = useState<UpdateRadioRepairJobPayload>({
     helpdeskTicketNumber: job.helpdeskTicketNumber,
     radioSerialNumber: job.radioSerialNumber,
@@ -44,6 +46,28 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
       ownerDivision: job.ownerDivision ?? "",
       ownerDepartment: job.ownerDepartment ?? "",
     });
+
+    // Fetch lookup sekaligus dalam satu effect — hindari race condition
+    // antara reset form dan async fetch
+    if (!job.radioSerialNumber) {
+      setLookup(null);
+      return;
+    }
+    let cancelled = false;
+    radioHandoverApi
+      .lookupBySerial(job.radioSerialNumber)
+      .then((results) => {
+        if (cancelled) return;
+        const match =
+          (job.radioId ? results.find((r) => r.id === job.radioId) : null) ??
+          results[0] ??
+          null;
+        setLookup(match);
+      })
+      .catch(() => {
+        if (!cancelled) setLookup(null);
+      });
+    return () => { cancelled = true; };
   }, [job]);
 
   const techInList = technicians.some((t) => t.userId === job.assignedTechnicianUserId);
@@ -78,18 +102,20 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
       <RadioSerialLookupField
         serial={serial}
         radioId={radioId}
-        onSelect={(s, id, lookup) => {
+        lookup={lookup}
+        onSelect={(s, id, newLookup) => {
           setSerial(s);
           setRadioId(id);
+          setLookup(newLookup ?? null);
           setForm((f) => ({
             ...f,
             radioSerialNumber: s,
             radioId: id,
-            equipmentName: lookup?.type ?? f.equipmentName,
-            unitNumber: lookup?.nomorUnit ?? f.unitNumber,
-            radioOwnerLabel: lookup?.ownerLabel ?? f.radioOwnerLabel,
-            ownerDivision: lookup?.division ?? f.ownerDivision,
-            ownerDepartment: lookup?.department ?? f.ownerDepartment,
+            equipmentName: newLookup?.type ?? f.equipmentName,
+            unitNumber: newLookup?.nomorUnit ?? f.unitNumber,
+            radioOwnerLabel: newLookup?.ownerLabel ?? f.radioOwnerLabel,
+            ownerDivision: newLookup?.division ?? f.ownerDivision,
+            ownerDepartment: newLookup?.department ?? f.ownerDepartment,
           }));
         }}
       />

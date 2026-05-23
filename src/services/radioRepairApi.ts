@@ -56,9 +56,14 @@ export const radioRepairApi = {
   update: (id: number, payload: UpdateRadioRepairJobPayload) =>
     api.patch(`/api/radio-repair-jobs/${id}`, payload).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
-  updateStatus: (id: number, status: RadioRepairJobStatus, note?: string) =>
+  technicianUpdate: (id: number, damageDescription: string) =>
     api
-      .patch(`/api/radio-repair-jobs/${id}/status`, { status, note })
+      .patch(`/api/radio-repair-jobs/${id}/notes`, { damageDescription })
+      .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
+
+  updateStatus: (id: number, status: RadioRepairJobStatus, note?: string, customStatusId?: number | null) =>
+    api
+      .patch(`/api/radio-repair-jobs/${id}/status`, { status, note, customStatusId })
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
   approveMaterial: (

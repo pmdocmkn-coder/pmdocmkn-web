@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import SignaturePadField from "../common/SignaturePadField";
+import { useEffect, useRef, useState } from "react";
+import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import type { RadioRepairJobDetail } from "../../types/radioRepair";
 import type { HandoverAccessoryItem, UserOption } from "../../types/radioHandover";
@@ -31,6 +31,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
   const [sigTech, setSigTech] = useState<string | null>(null);
   const [sigWh, setSigWh] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const sigTechRef = useRef<SignaturePadHandle>(null);
+  const sigWhRef = useRef<SignaturePadHandle>(null);
 
   useEffect(() => {
     radioHandoverApi
@@ -75,7 +77,11 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
   }, [job]);
 
   const submit = async () => {
-    if (!whId || photos.length === 0 || !sigTech || !sigWh) {
+    // Export TTD dari canvas terlebih dahulu sebelum validasi
+    const techSig = (await sigTechRef.current?.exportNow()) ?? sigTech;
+    const whSig = (await sigWhRef.current?.exportNow()) ?? sigWh;
+
+    if (!whId || photos.length === 0 || !techSig || !whSig) {
       toast({ title: "Lengkapi foto, TTD teknisi & warehouse", variant: "destructive" });
       return;
     }
@@ -93,8 +99,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         batterySerialNumber: batterySerialNumber ?? job.batterySerialNumber ?? undefined,
         receivedByUserId: Number(whId),
         radioPhotos: photos,
-        handedOverSignatureBase64: sigTech,
-        receiverSignatureBase64: sigWh,
+        handedOverSignatureBase64: techSig,
+        receiverSignatureBase64: whSig,
         accessories: acc,
       });
       toast({ title: "Serah terima ke warehouse berhasil" });
@@ -114,7 +120,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
   return (
     <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
       <p className="text-sm text-gray-600">
-        Job <strong>{job.jobNumber}</strong> — SN {job.radioSerialNumber}
+        Tiket <strong>{job.helpdeskTicketNumber}</strong> — SN {job.radioSerialNumber}
       </p>
 
       <div>
@@ -140,8 +146,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         label="Tambahan aksesoris"
       />
 
-      <SignaturePadField label="TTD Teknisi (penyerah)" required value={sigTech} onChange={setSigTech} />
-      <SignaturePadField label="TTD Warehouse (penerima)" required value={sigWh} onChange={setSigWh} />
+      <SignaturePadField ref={sigTechRef} label="TTD Teknisi (penyerah)" required value={sigTech} onChange={setSigTech} />
+      <SignaturePadField ref={sigWhRef} label="TTD Warehouse (penerima)" required value={sigWh} onChange={setSigWh} />
 
       <div className="flex gap-2 justify-end pt-2">
         <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>

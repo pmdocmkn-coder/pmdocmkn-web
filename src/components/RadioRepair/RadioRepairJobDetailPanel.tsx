@@ -1,10 +1,14 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import type { RadioRepairJobDetail, RadioRepairJobStatus } from "../../types/radioRepair";
+import { Pencil, X, Check, Loader2 } from "lucide-react";
+import type { RadioRepairJobDetail, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import type { RadioHandoverDetail } from "../../types/radioHandover";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioApi, type RadioDto } from "../../services/radioApi";
+import { radioRepairApi } from "../../services/radioRepairApi";
+import { repairJobCustomStatusApi } from "../../services/repairJobCustomStatusApi";
+import RepairJobCustomStatusManager from "./RepairJobCustomStatusManager";
 import DamagedEquipmentTagCard from "../RadioHandover/DamagedEquipmentTagCard";
 import HandoverPhotoThumbnails from "../RadioHandover/HandoverPhotoThumbnails";
 import SignaturePadField from "../common/SignaturePadField";
@@ -13,6 +17,7 @@ import {
   isJobStatusLocked,
   STATUS_LABELS,
   statusActionButtonClass,
+  statusActionLabel,
 } from "../../utils/radioRepairStatusUtils";
 import { formatWorkshopDuration } from "../../utils/repairDurationUtils";
 
@@ -27,10 +32,12 @@ type Props = {
   canUpdate: boolean;
   canSupervise: boolean;
   canHandoverWh: boolean;
-  onPatchStatus: (status: RadioRepairJobStatus) => void;
+  patchingStatus?: boolean;
+  onPatchStatus: (status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onApproveMaterial: (resume: "InProgress" | "Monitoring") => void;
   onOpenWh: () => void;
   onOpenPhotos?: (images: string[], index?: number) => void;
+  onJobUpdated?: (job: RadioRepairJobDetail) => void;
 };
 
 export default function RadioRepairJobDetailPanel({
@@ -38,13 +45,33 @@ export default function RadioRepairJobDetailPanel({
   canUpdate,
   canSupervise,
   canHandoverWh,
+  patchingStatus = false,
   onPatchStatus,
   onApproveMaterial,
   onOpenWh,
   onOpenPhotos,
+  onJobUpdated,
 }: Props) {
   const [handoverDetail, setHandoverDetail] = useState<RadioHandoverDetail | null>(null);
   const [radioMaster, setRadioMaster] = useState<RadioDto | null>(null);
+  const [customStatuses, setCustomStatuses] = useState<RepairJobCustomStatus[]>([]);
+
+  // Load custom statuses sekali saat panel dibuka
+  useEffect(() => {
+    repairJobCustomStatusApi.getAll()
+      .then((list) => setCustomStatuses(list.filter((s) => s.isActive)))
+      .catch(() => setCustomStatuses([]));
+  }, []);
+
+  // Edit catatan kerusakan oleh teknisi
+  const [editingDamage, setEditingDamage] = useState(false);
+  const [damageInput, setDamageInput] = useState(job.damageDescription);
+  const [savingDamage, setSavingDamage] = useState(false);
+
+  // Sync input saat job berubah (misal setelah refresh)
+  useEffect(() => {
+    setDamageInput(job.damageDescription);
+  }, [job.damageDescription]);
 
   const ph = job.primaryHandover;
   const handoverId = ph?.id ?? job.handovers?.find((h) => h.handoverType === "HelpdeskToTechnician")?.id;
@@ -78,13 +105,14 @@ export default function RadioRepairJobDetailPanel({
     handedOverByName: ph?.handedOverByName ?? job.openedByName,
     receivedByName: ph?.receivedByName ?? job.assignedTechnicianName,
     handoverAt: ph?.handoverAt ?? job.openedAt,
-    equipmentName: ph?.equipmentName ?? job.equipmentName,
-    unitNumber: ph?.unitNumber ?? job.unitNumber,
-    radioSerialNumber: ph?.radioSerialNumber ?? job.radioSerialNumber,
-    radioOwnerLabel: ph?.radioOwnerLabel ?? job.radioOwnerLabel,
-    ownerDivision: ph?.ownerDivision ?? job.ownerDivision,
-    ownerDepartment: ph?.ownerDepartment ?? job.ownerDepartment,
-    damageDescription: ph?.damageDescription ?? job.damageDescription,
+    // Field data radio — prioritaskan dari job (bisa diedit), fallback ke handover
+    equipmentName: job.equipmentName ?? ph?.equipmentName,
+    unitNumber: job.unitNumber ?? ph?.unitNumber,
+    radioSerialNumber: job.radioSerialNumber,  // selalu dari job, bukan snapshot handover
+    radioOwnerLabel: job.radioOwnerLabel ?? ph?.radioOwnerLabel,
+    ownerDivision: job.ownerDivision ?? ph?.ownerDivision,
+    ownerDepartment: job.ownerDepartment ?? ph?.ownerDepartment,
+    damageDescription: job.damageDescription,  // selalu dari job
     accessories:
       ph?.accessories?.map((a) => ({
         itemName: a.itemName,
@@ -112,6 +140,24 @@ export default function RadioRepairJobDetailPanel({
     }
   };
 
+  const saveDamage = async () => {
+    const trimmed = damageInput.trim();
+    if (!trimmed || trimmed === job.damageDescription) {
+      setEditingDamage(false);
+      return;
+    }
+    setSavingDamage(true);
+    try {
+      const updated = await radioRepairApi.technicianUpdate(job.id, trimmed);
+      setEditingDamage(false);
+      onJobUpdated?.(updated);
+    } catch {
+      // biarkan user coba lagi
+    } finally {
+      setSavingDamage(false);
+    }
+  };
+
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -124,6 +170,56 @@ export default function RadioRepairJobDetailPanel({
       </div>
 
       <DamagedEquipmentTagCard data={tagData} />
+
+      {/* Edit keterangan kerusakan — hanya untuk teknisi yang punya radio.repair.update */}
+      {canUpdate && !locked && (
+        <div className="border rounded-lg p-3 bg-amber-50/60 border-amber-200 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold text-amber-800">Keterangan kerusakan</p>
+            {!editingDamage && (
+              <button
+                type="button"
+                onClick={() => { setDamageInput(job.damageDescription); setEditingDamage(true); }}
+                className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 px-2 py-1 rounded hover:bg-amber-100"
+              >
+                <Pencil className="w-3 h-3" /> Edit
+              </button>
+            )}
+          </div>
+          {editingDamage ? (
+            <div className="space-y-2">
+              <textarea
+                className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                rows={3}
+                value={damageInput}
+                onChange={(e) => setDamageInput(e.target.value)}
+                disabled={savingDamage}
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  type="button"
+                  onClick={() => setEditingDamage(false)}
+                  disabled={savingDamage}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs border rounded-lg hover:bg-gray-50"
+                >
+                  <X className="w-3 h-3" /> Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={saveDamage}
+                  disabled={savingDamage || !damageInput.trim()}
+                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                >
+                  <Check className="w-3 h-3" /> {savingDamage ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <p className="text-sm text-gray-700">{job.damageDescription}</p>
+          )}
+        </div>
+      )}
 
       {handoverDetail && (
         <div className="border rounded-lg p-3 bg-gray-50 space-y-3">
@@ -158,10 +254,12 @@ export default function RadioRepairJobDetailPanel({
               <button
                 key={s}
                 type="button"
-                className={statusActionButtonClass(s)}
+                disabled={patchingStatus}
+                className={`${statusActionButtonClass(s, job.status)} disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5`}
                 onClick={() => onPatchStatus(s)}
               >
-                {STATUS_LABELS[s]}
+                {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                {statusActionLabel(job.status, s)}
               </button>
             ))}
           </div>
@@ -169,6 +267,53 @@ export default function RadioRepairJobDetailPanel({
             <p className="text-xs text-gray-500">
               Status &quot;Tunggu material&quot; akan masuk antrian persetujuan supervisor.
             </p>
+          )}
+          {job.status === "Monitoring" && (
+            <p className="text-xs text-gray-500">
+              Selesaikan monitoring terlebih dahulu untuk melanjutkan ke tahap berikutnya.
+            </p>
+          )}
+
+          {/* Tombol status custom — tampil saat InProgress atau dari status custom */}
+          {customStatuses.length > 0 &&
+            ["InProgress", "Received"].includes(job.status) && (
+            <div className="pt-1 border-t border-gray-100">
+              <p className="text-xs text-gray-500 mb-1.5">Status tambahan:</p>
+              <div className="flex flex-wrap gap-2">
+                {customStatuses
+                  .filter((cs) => cs.id !== job.customStatusId)
+                  .map((cs) => (
+                    <button
+                      key={cs.id}
+                      type="button"
+                      disabled={patchingStatus}
+                      onClick={() => onPatchStatus("InProgress", cs.id)}
+                      className={`px-3 py-2 rounded-lg text-sm font-medium text-white border-0 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-1.5 ${cs.color}`}
+                    >
+                      {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                      {cs.label}
+                    </button>
+                  ))}
+              </div>
+            </div>
+          )}
+
+          {/* Jika sedang di status custom, tampilkan tombol untuk kembali ke InProgress */}
+          {job.customStatusId && (
+            <div className="pt-1 border-t border-gray-100">
+              <p className="text-xs text-gray-500 mb-1.5">
+                Status saat ini: <strong>{job.customStatusLabel}</strong>
+              </p>
+              <button
+                type="button"
+                disabled={patchingStatus}
+                onClick={() => onPatchStatus("InProgress", null)}
+                className="px-3 py-2 rounded-lg text-sm font-medium border border-gray-300 text-gray-700 hover:bg-gray-50 disabled:opacity-60 flex items-center gap-1.5"
+              >
+                {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Kembali ke Progress
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -179,16 +324,20 @@ export default function RadioRepairJobDetailPanel({
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
-              className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm"
+              disabled={patchingStatus}
+              className="px-4 py-2 bg-amber-600 text-white rounded-lg text-sm disabled:opacity-60 flex items-center gap-1.5"
               onClick={() => onApproveMaterial("InProgress")}
             >
+              {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Setujui → Progress
             </button>
             <button
               type="button"
-              className="px-4 py-2 border border-amber-600 text-amber-800 rounded-lg text-sm hover:bg-amber-100"
+              disabled={patchingStatus}
+              className="px-4 py-2 border border-amber-600 text-amber-800 rounded-lg text-sm hover:bg-amber-100 disabled:opacity-60 flex items-center gap-1.5"
               onClick={() => onApproveMaterial("Monitoring")}
             >
+              {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Setujui → Monitoring
             </button>
           </div>
@@ -203,6 +352,30 @@ export default function RadioRepairJobDetailPanel({
         >
           Serah terima ke Warehouse
         </button>
+      )}
+
+      {/* Supervisor: rollback dari RepairCompleted jika teknisi salah tekan */}
+      {canSupervise && job.status === "RepairCompleted" && !job.isDeleted && (
+        <div className="border border-slate-200 rounded-lg p-3 bg-slate-50 space-y-2">
+          <p className="text-xs font-semibold text-slate-600">Koreksi status (supervisor)</p>
+          <p className="text-xs text-slate-500">Job sudah ditandai Selesai. Jika salah, kembalikan ke Progress:</p>
+          <button
+            type="button"
+            disabled={patchingStatus}
+            onClick={() => onPatchStatus("InProgress", null)}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-red-100 text-red-700 border border-red-300 rounded-lg hover:bg-red-200 disabled:opacity-60"
+          >
+            {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+            Batalkan Selesai → Progress
+          </button>
+        </div>
+      )}
+
+      {/* Manajemen status custom — hanya supervisor */}
+      {canSupervise && (
+        <div className="border border-violet-100 rounded-lg p-3 bg-violet-50/40">
+          <RepairJobCustomStatusManager />
+        </div>
       )}
 
       {job.handovers && job.handovers.length > 0 && (
@@ -220,16 +393,66 @@ export default function RadioRepairJobDetailPanel({
 
       <div>
         <h3 className="font-semibold mb-2">Timeline status</h3>
-        <ul className="space-y-1 text-xs text-gray-600">
-          {(job.statusLogs ?? []).map((l) => (
-            <li key={l.id}>
-              {format(new Date(l.at), "dd/MM HH:mm")} — {l.fromStatus ?? "—"} → {l.toStatus} ({l.userName})
-              {l.note && <span className="text-gray-400"> — {l.note}</span>}
-            </li>
-          ))}
+        <ul className="space-y-1.5 text-xs text-gray-600">
+          {(job.statusLogs ?? []).map((l) => {
+            const isEdit = l.note?.startsWith("[Edit oleh teknisi]");
+            const isSameStatus = l.fromStatus === l.toStatus;
+            return (
+              <li
+                key={l.id}
+                className={`flex gap-2 p-2 rounded-lg ${
+                  isEdit
+                    ? "bg-amber-50 border border-amber-100"
+                    : "bg-gray-50 border border-gray-100"
+                }`}
+              >
+                <div className="shrink-0 mt-0.5">
+                  {isEdit ? (
+                    <Pencil className="w-3 h-3 text-amber-500" />
+                  ) : (
+                    <div className="w-2 h-2 rounded-full bg-violet-400 mt-0.5" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-1 flex-wrap">
+                    <span className="font-medium text-gray-800">{l.userName}</span>
+                    <span className="text-gray-400">·</span>
+                    <span className="text-gray-500">
+                      {format(new Date(l.at), "dd MMM yyyy HH:mm", { locale: localeId })}
+                    </span>
+                  </div>
+                  {isEdit ? (
+                    <p className="text-amber-700 mt-0.5 break-words">
+                      {l.note?.replace("[Edit oleh teknisi] ", "")}
+                    </p>
+                  ) : (
+                    <p className="mt-0.5">
+                      {isSameStatus ? (
+                        <span className="text-gray-500">Status tetap: <strong>{l.toStatus}</strong></span>
+                      ) : (
+                        <>
+                          <span className="text-gray-500">{l.fromStatus ?? "—"}</span>
+                          {" → "}
+                          <strong className="text-violet-700">{l.toStatus}</strong>
+                        </>
+                      )}
+                      {l.note && !isEdit && (
+                        <span className="text-gray-400 ml-1">— {l.note}</span>
+                      )}
+                    </p>
+                  )}
+                </div>
+              </li>
+            );
+          })}
+          {(job.statusLogs ?? []).length === 0 && (
+            <li className="text-gray-400 italic">Belum ada riwayat</li>
+          )}
         </ul>
       </div>
 
     </div>
   );
 }
+
+

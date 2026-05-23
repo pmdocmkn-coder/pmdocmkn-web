@@ -63,6 +63,8 @@ export default function RadioRepairDashboardPage() {
   const [editJob, setEditJob] = useState<RadioRepairJobDetail | null>(null);
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [patchingStatus, setPatchingStatus] = useState(false);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
@@ -76,11 +78,11 @@ export default function RadioRepairDashboardPage() {
   const canDeletePermanent = hasPermission("radio.repair.delete.permanent");
   const canHandoverWh = canCreateTekToWarehouseHandover();
 
-  const statusOptions = useMemo(() => ["", ...Object.values(STATUS_LABELS)], []);
+  const statusOptions = useMemo(() => Object.values(STATUS_LABELS), []);
   const statusLabel = filterStatus ? STATUS_LABELS[filterStatus as RadioRepairJobStatus] ?? "" : "";
 
   const technicianOptions = useMemo(
-    () => ["", ...technicians.map((t) => `${t.fullName} (${t.username})`)],
+    () => technicians.map((t) => `${t.fullName} (${t.username})`),
     [technicians]
   );
   const technicianLabel = useMemo(() => {
@@ -146,6 +148,7 @@ export default function RadioRepairDashboardPage() {
       const pg = paged.meta.pagination;
       setTotalCount(pg.totalCount);
       setTotalPages(pg.totalPages || 1);
+      setLastUpdated(new Date());
     } catch (err: unknown) {
       setDash(null);
       setJobs([]);
@@ -165,6 +168,17 @@ export default function RadioRepairDashboardPage() {
   useEffect(() => {
     load();
   }, [page, search, filterStatus, filterTechnician, filterFromDate, filterToDate, showArchive]);
+
+  // Auto-refresh setiap 30 detik — sinkronisasi antar teknisi tanpa perlu reload manual
+  useEffect(() => {
+    const interval = setInterval(() => {
+      // Hanya refresh jika tidak sedang ada operasi aktif (patching/saving)
+      if (!patchingStatus && !savingEdit) {
+        load();
+      }
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [page, search, filterStatus, filterTechnician, filterFromDate, filterToDate, showArchive, patchingStatus, savingEdit]);
 
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
@@ -265,25 +279,31 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const patchStatus = async (status: RadioRepairJobStatus) => {
-    if (!detail) return;
+  const patchStatus = async (status: RadioRepairJobStatus, customStatusId?: number | null) => {
+    if (!detail || patchingStatus) return;
+    setPatchingStatus(true);
     try {
-      setDetail(await radioRepairApi.updateStatus(detail.id, status));
+      setDetail(await radioRepairApi.updateStatus(detail.id, status, undefined, customStatusId));
       toast({ title: "Status diperbarui" });
       load();
     } catch (err: unknown) {
       toast({ title: "Gagal update status", description: apiMessage(err), variant: "destructive" });
+    } finally {
+      setPatchingStatus(false);
     }
   };
 
   const approveMaterial = async (resume: "InProgress" | "Monitoring") => {
-    if (!detail) return;
+    if (!detail || patchingStatus) return;
+    setPatchingStatus(true);
     try {
       setDetail(await radioRepairApi.approveMaterial(detail.id, resume));
       toast({ title: "Material disetujui" });
       load();
     } catch (err: unknown) {
       toast({ title: "Gagal approve", description: apiMessage(err), variant: "destructive" });
+    } finally {
+      setPatchingStatus(false);
     }
   };
 
@@ -292,7 +312,13 @@ export default function RadioRepairDashboardPage() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-gray-900">Dashboard Perbaikan Radio</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">Monitoring perbaikan radio per tiket MKN</p>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            Monitoring perbaikan radio per tiket MKN
+            <span className="ml-2 text-xs text-gray-400">
+              · Diperbarui {lastUpdated.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+              <span className="ml-1 text-gray-300">(otomatis setiap 30 detik)</span>
+            </span>
+          </p>
         </div>
         {canViewArchive && (
           <Button
@@ -418,6 +444,8 @@ export default function RadioRepairDashboardPage() {
           showArchive={showArchive}
           canEdit={canEdit}
           canDelete={canDelete}
+          canUpdate={canUpdate}
+          canHandoverWh={canHandoverWh}
           canViewArchive={canViewArchive}
           canDeletePermanent={canDeletePermanent}
           onOpenPhoto={openRowPhoto}
@@ -426,6 +454,23 @@ export default function RadioRepairDashboardPage() {
           onSoftDelete={softDelete}
           onRestore={restore}
           onDeletePermanent={deletePermanent}
+          onQuickStatus={async (job, status) => {
+            setPatchingStatus(true);
+            try {
+              await radioRepairApi.updateStatus(job.id, status);
+              toast({ title: "Status diperbarui" });
+              load();
+            } catch (err) {
+              toast({ title: "Gagal update status", description: apiMessage(err), variant: "destructive" });
+            } finally {
+              setPatchingStatus(false);
+            }
+          }}
+          onQuickHandoverWh={async (job) => {
+            // Buka detail panel langsung ke form serah terima WH
+            await openDetail(job.id);
+            setShowWh(true);
+          }}
           isJobLocked={isJobStatusLocked}
         />
 
@@ -467,7 +512,7 @@ export default function RadioRepairDashboardPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               {detail?.helpdeskTicketNumber} — SN {detail?.radioSerialNumber}
-              {detail && <RadioRepairStatusBadge status={detail.status} />}
+              {detail && <RadioRepairStatusBadge status={detail.status} customStatusLabel={detail.customStatusLabel} customStatusColor={detail.customStatusColor} />}
             </DialogTitle>
             {detail && (
               <p className="text-sm text-gray-600">
@@ -485,6 +530,11 @@ export default function RadioRepairDashboardPage() {
               onApproveMaterial={approveMaterial}
               onOpenWh={() => setShowWh(true)}
               onOpenPhotos={openPhotos}
+              onJobUpdated={(updated) => {
+                setDetail(updated);
+                load();
+              }}
+              patchingStatus={patchingStatus}
             />
           )}
         </DialogContent>
