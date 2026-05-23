@@ -5,7 +5,17 @@ import type {
   RadioRepairJobDetail,
   RadioRepairJobList,
   RadioRepairJobStatus,
+  RadioRepairTicketGroup,
 } from "../types/radioRepair";
+
+export type UpdateRadioRepairJobPayload = {
+  helpdeskTicketNumber: string;
+  radioSerialNumber: string;
+  batterySerialNumber?: string | null;
+  damageDescription: string;
+  assignedTechnicianUserId: number;
+  radioId?: number | null;
+};
 
 export const radioRepairApi = {
   getDashboard: () =>
@@ -26,12 +36,20 @@ export const radioRepairApi = {
   getAll: (params?: Record<string, unknown>) =>
     api.get("/api/radio-repair-jobs", { params }).then((r) => unwrapPaged<RadioRepairJobList>(r)),
 
-  getById: (id: number) =>
-    api.get(`/api/radio-repair-jobs/${id}`).then((r) => {
+  getByTicket: (params?: Record<string, unknown>) =>
+    api
+      .get("/api/radio-repair-jobs/by-ticket", { params })
+      .then((r) => unwrapData<RadioRepairTicketGroup[]>(r) ?? []),
+
+  getById: (id: number, includeDeleted = false) =>
+    api.get(`/api/radio-repair-jobs/${id}`, { params: { includeDeleted } }).then((r) => {
       const data = unwrapData<RadioRepairJobDetail>(r);
-      if (!data) throw new Error("Job tidak ditemukan");
+      if (!data) throw new Error("Pekerjaan tidak ditemukan");
       return data;
     }),
+
+  update: (id: number, payload: UpdateRadioRepairJobPayload) =>
+    api.patch(`/api/radio-repair-jobs/${id}`, payload).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
   updateStatus: (id: number, status: RadioRepairJobStatus, note?: string) =>
     api
@@ -47,5 +65,11 @@ export const radioRepairApi = {
       .patch(`/api/radio-repair-jobs/${id}/approve-material`, { resumeStatus, note })
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
-  cancel: (id: number) => api.delete(`/api/radio-repair-jobs/${id}`),
+  softDelete: (id: number) => api.delete(`/api/radio-repair-jobs/${id}`),
+
+  restore: (id: number) =>
+    api.patch(`/api/radio-repair-jobs/${id}/restore`).then((r) => unwrapData(r)),
+
+  deletePermanent: (id: number) =>
+    api.delete(`/api/radio-repair-jobs/${id}/permanent`).then((r) => unwrapData(r)),
 };

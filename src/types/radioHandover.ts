@@ -92,7 +92,13 @@ export interface RadioHandoverList {
 
   jobNumber: string;
 
+  helpdeskTicketNumber?: string;
+
   radioSerialNumber: string;
+
+  isDeleted?: boolean;
+
+  deletedAt?: string | null;
 
   handedOverByName: string;
 

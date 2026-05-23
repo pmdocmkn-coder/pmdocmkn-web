@@ -1,13 +1,14 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Plus, Package } from "lucide-react";
+import { Archive, Plus, Package, Trash2, RotateCcw } from "lucide-react";
+import { hasPermission } from "../../utils/permissionUtils";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
 import HelpdeskToTechnicianForm from "./HelpdeskToTechnicianForm";
 import HandoverStatusBadge from "./HandoverStatusBadge";
 import ImageGalleryModal from "../common/ImageGalleryModal";
-import SignaturePadField from "../common/SignaturePadField";
+import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import { canCreateHandoverHd } from "../../utils/handoverPermissions";
 import { isValidSignature } from "../../utils/signatureUtils";
 import { useToast } from "../../hooks/use-toast";
@@ -44,11 +45,16 @@ export default function RadioHandoverPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [sigReceiverComplete, setSigReceiverComplete] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
+  const sigTekCompleteRef = useRef<SignaturePadHandle>(null);
+  const canDelete = hasPermission("radio.handover.delete");
+  const canViewArchive = hasPermission("radio.handover.view.archive");
+  const canDeletePermanent = hasPermission("radio.handover.delete.permanent");
 
   const load = () => {
     setLoading(true);
     radioHandoverApi
-      .getAll({ page: 1, pageSize: 50 })
+      .getAll({ page: 1, pageSize: 50, includeDeleted: showArchive })
       .then((r) => setItems(r.data ?? []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
@@ -56,7 +62,7 @@ export default function RadioHandoverPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [showArchive]);
 
   const openDetail = async (id: number) => {
     const d = await radioHandoverApi.getById(id);
@@ -92,13 +98,14 @@ export default function RadioHandoverPage() {
   };
 
   const completeReceiver = async () => {
-    if (!detail || !isValidSignature(sigReceiverComplete)) {
+    const tekSig = (await sigTekCompleteRef.current?.exportNow()) ?? sigReceiverComplete;
+    if (!detail || !isValidSignature(tekSig)) {
       toast({ title: "Gambar TTD teknisi di area putih", variant: "destructive" });
       return;
     }
     setCompleting(true);
     try {
-      await radioHandoverApi.completeReceiverSignature(detail.id, sigReceiverComplete!);
+      await radioHandoverApi.completeReceiverSignature(detail.id, tekSig!);
       toast({ title: "Serah terima selesai (Done)" });
       setDetail(null);
       load();
@@ -127,15 +134,26 @@ export default function RadioHandoverPage() {
           </h1>
           <p className="text-sm text-gray-500 mt-1">Helpdesk ke Teknisi dan histori STR</p>
         </div>
-        {canCreateHandoverHd() && (
-          <button
-            type="button"
-            onClick={() => setShowCreate(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
-          >
-            <Plus className="w-4 h-4" /> HD ke Teknisi
-          </button>
-        )}
+        <div className="flex gap-2">
+          {canViewArchive && (
+            <button
+              type="button"
+              onClick={() => setShowArchive((v) => !v)}
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${showArchive ? "bg-gray-800 text-white" : "bg-white"}`}
+            >
+              <Archive className="w-4 h-4" /> {showArchive ? "Arsip" : "Arsip"}
+            </button>
+          )}
+          {canCreateHandoverHd() && !showArchive && (
+            <button
+              type="button"
+              onClick={() => setShowCreate(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-violet-600 text-white rounded-lg hover:bg-violet-700"
+            >
+              <Plus className="w-4 h-4" /> HD ke Teknisi
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="bg-white rounded-xl border overflow-hidden">
@@ -144,20 +162,21 @@ export default function RadioHandoverPage() {
             <tr>
               <th className="px-4 py-3">STR</th>
               <th className="px-4 py-3">Tipe</th>
-              <th className="px-4 py-3">Job</th>
+              <th className="px-4 py-3">Tiket</th>
               <th className="px-4 py-3">SN</th>
               <th className="px-4 py-3">Status</th>
               <th className="px-4 py-3">Foto</th>
               <th className="px-4 py-3">Penyerah → Penerima</th>
               <th className="px-4 py-3">Tanggal</th>
+              <th className="px-4 py-3 text-right">Aksi</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Memuat...</td></tr>
             )}
             {!loading && items.length === 0 && (
-              <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Belum ada data</td></tr>
+              <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Belum ada data</td></tr>
             )}
             {items.map((h) => (
               <tr
@@ -167,7 +186,7 @@ export default function RadioHandoverPage() {
               >
                 <td className="px-4 py-3 font-mono text-xs">{h.handoverNumber}</td>
                 <td className="px-4 py-3">{handoverTypeLabel(h.handoverType)}</td>
-                <td className="px-4 py-3">{h.jobNumber}</td>
+                <td className="px-4 py-3">{h.helpdeskTicketNumber ?? "—"}</td>
                 <td className="px-4 py-3">{h.radioSerialNumber}</td>
                 <td className="px-4 py-3">
                   <HandoverStatusBadge status={h.status} />
@@ -190,6 +209,55 @@ export default function RadioHandoverPage() {
                 </td>
                 <td className="px-4 py-3">{h.handedOverByName} → {h.receivedByName}</td>
                 <td className="px-4 py-3">{format(new Date(h.handoverAt), "dd MMM yyyy HH:mm", { locale: localeId })}</td>
+                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  {canDelete && !showArchive && (
+                    <button type="button" className="p-2 border rounded-lg text-red-600 hover:bg-red-50" title="Hapus" onClick={async () => {
+                      if (!window.confirm(`Hapus STR ${h.handoverNumber}?`)) return;
+                      try {
+                        await radioHandoverApi.softDelete(h.id);
+                        toast({ title: "Dipindah ke arsip" });
+                        load();
+                      } catch (err: unknown) {
+                        const ax = err as { response?: { data?: { message?: string } } };
+                        toast({ title: "Gagal", description: ax.response?.data?.message, variant: "destructive" });
+                      }
+                    }}>
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                  {canViewArchive && showArchive && (
+                    <div className="flex justify-end gap-1">
+                      <button type="button" className="p-2 border rounded-lg text-emerald-700 hover:bg-emerald-50" title="Pulihkan" onClick={async () => {
+                        try {
+                          await radioHandoverApi.restore(h.id);
+                          toast({ title: "Dipulihkan" });
+                          load();
+                        } catch {
+                          toast({ title: "Gagal memulihkan", variant: "destructive" });
+                        }
+                      }}>
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                      {canDeletePermanent && (
+                        <button type="button" className="p-2 border rounded-lg text-red-700 hover:bg-red-100 border-red-200" title="Hapus permanen" onClick={async () => {
+                          if (!window.confirm(`Hapus permanen STR ${h.handoverNumber}?\n\nData tidak dapat dikembalikan.`)) return;
+                          if (!window.confirm("Konfirmasi terakhir: hapus permanen?")) return;
+                          try {
+                            await radioHandoverApi.deletePermanent(h.id);
+                            toast({ title: "Dihapus permanen" });
+                            if (detail?.id === h.id) setDetail(null);
+                            load();
+                          } catch (err: unknown) {
+                            const ax = err as { response?: { data?: { message?: string } } };
+                            toast({ title: "Gagal hapus permanen", description: ax.response?.data?.message, variant: "destructive" });
+                          }
+                        }}>
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
@@ -224,7 +292,7 @@ export default function RadioHandoverPage() {
           {detail && (
             <div className="space-y-4 text-sm">
               <p>
-                Tiket: {detail.helpdeskTicketNumber} | Job: {detail.jobNumber} | Status job:{" "}
+                Tiket: {detail.helpdeskTicketNumber} | SN: {detail.radioSerialNumber} | Status job:{" "}
                 {detail.jobStatus}
               </p>
               {detail.remarks && <p className="text-gray-600">Catatan: {detail.remarks}</p>}
@@ -282,7 +350,12 @@ export default function RadioHandoverPage() {
               ) : canSignAsReceiver ? (
                 <div className="space-y-2 border border-amber-200 bg-amber-50/50 rounded-lg p-3">
                   <p className="text-amber-800 font-medium">Lengkapi TTD sebagai teknisi penerima</p>
-                  <SignaturePadField label="TTD Teknisi (penerima)" value={sigReceiverComplete} onChange={setSigReceiverComplete} />
+                  <SignaturePadField
+                    ref={sigTekCompleteRef}
+                    label="TTD Teknisi (penerima)"
+                    value={sigReceiverComplete}
+                    onChange={setSigReceiverComplete}
+                  />
                   <button
                     type="button"
                     disabled={completing}

@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
-import SignaturePadField from "../common/SignaturePadField";
+import { useEffect, useRef, useState } from "react";
+import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import type { HandoverAccessoryItem, UserOption } from "../../types/radioHandover";
 import { useToast } from "../../hooks/use-toast";
 import { isValidSignature } from "../../utils/signatureUtils";
+import { buildAccessoriesPayload } from "../../utils/handoverFormUtils";
 import RadioSerialLookupField from "./RadioSerialLookupField";
 import HandoverAccessoryList from "./HandoverAccessoryList";
 import MultiPhotoUpload from "./MultiPhotoUpload";
@@ -19,7 +20,6 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
   const [ticket, setTicket] = useState("");
   const [serial, setSerial] = useState("");
   const [radioId, setRadioId] = useState<number | null>(null);
-  const [batterySn, setBatterySn] = useState("");
   const [damage, setDamage] = useState("");
   const [techId, setTechId] = useState("");
   const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
@@ -28,6 +28,8 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
   const [sigHandover, setSigHandover] = useState<string | null>(null);
   const [sigReceiver, setSigReceiver] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const sigHdRef = useRef<SignaturePadHandle>(null);
+  const sigTekRef = useRef<SignaturePadHandle>(null);
 
   useEffect(() => {
     radioHandoverApi
@@ -36,19 +38,18 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
       .catch(() => setTechnicians([]));
   }, []);
 
-  const validate = (): string[] => {
+  const submit = async () => {
+    const hdSig = (await sigHdRef.current?.exportNow()) ?? sigHandover;
+    const tekSig = (await sigTekRef.current?.exportNow()) ?? sigReceiver;
+
     const missing: string[] = [];
     if (!ticket.trim()) missing.push("No tiket helpdesk");
     if (!serial.trim()) missing.push("Serial number radio");
     if (!damage.trim()) missing.push("Keterangan kerusakan");
     if (!techId) missing.push("Teknisi penerima");
     if (photos.length === 0) missing.push("Foto radio (minimal 1)");
-    if (!isValidSignature(sigHandover)) missing.push("TTD Helpdesk — pastikan sudah digambar dan kursor keluar dari area tanda tangan");
-    return missing;
-  };
+    if (!isValidSignature(hdSig)) missing.push("TTD Helpdesk — gambar tanda tangan di area putih");
 
-  const submit = async () => {
-    const missing = validate();
     if (missing.length > 0) {
       toast({
         title: "Field wajib belum lengkap",
@@ -58,7 +59,9 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
       return;
     }
 
-    const receiverOk = isValidSignature(sigReceiver);
+    const { accessories: acc, batterySerialNumber } = buildAccessoriesPayload(accessories);
+    const receiverOk = isValidSignature(tekSig);
+
     setSubmitting(true);
     try {
       await radioHandoverApi.create({
@@ -66,13 +69,13 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
         helpdeskTicketNumber: ticket.trim(),
         radioId,
         radioSerialNumber: serial.trim(),
-        batterySerialNumber: batterySn.trim() || undefined,
+        batterySerialNumber,
         damageDescription: damage.trim(),
         receivedByUserId: Number(techId),
         radioPhotos: photos,
-        handedOverSignatureBase64: sigHandover!,
-        receiverSignatureBase64: receiverOk ? sigReceiver! : undefined,
-        accessories: accessories.filter((a) => a.itemName.trim()),
+        handedOverSignatureBase64: hdSig!,
+        receiverSignatureBase64: receiverOk ? tekSig! : undefined,
+        accessories: acc,
         remarks: remarks.trim() || undefined,
       });
       toast({
@@ -111,10 +114,6 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
         }}
       />
       <div>
-        <label className="text-sm font-medium">SN Baterai</label>
-        <input className="w-full border rounded-lg px-3 py-2 mt-1" value={batterySn} onChange={(e) => setBatterySn(e.target.value)} />
-      </div>
-      <div>
         <label className="text-sm font-medium">Keterangan Kerusakan *</label>
         <textarea className="w-full border rounded-lg px-3 py-2 mt-1" rows={3} value={damage} onChange={(e) => setDamage(e.target.value)} />
       </div>
@@ -129,8 +128,15 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
       </div>
       <MultiPhotoUpload photos={photos} onChange={setPhotos} required />
       <HandoverAccessoryList items={accessories} onChange={setAccessories} />
-      <SignaturePadField label="TTD Helpdesk (penyerah)" required value={sigHandover} onChange={setSigHandover} />
       <SignaturePadField
+        ref={sigHdRef}
+        label="TTD Helpdesk (penyerah)"
+        required
+        value={sigHandover}
+        onChange={setSigHandover}
+      />
+      <SignaturePadField
+        ref={sigTekRef}
         label="TTD Teknisi (penerima)"
         value={sigReceiver}
         onChange={setSigReceiver}

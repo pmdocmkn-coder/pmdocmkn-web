@@ -40,4 +40,13 @@ export const radioHandoverApi = {
     api
       .get("/api/radios/lookup-by-serial", { params: { serialNumber } })
       .then((r) => unwrapList<RadioLookup>(r)),
+
+  update: (id: number, remarks?: string | null) =>
+    api.patch(`/api/radio-handovers/${id}`, { remarks }).then((r) => unwrapData<RadioHandoverDetail>(r)!),
+
+  softDelete: (id: number) => api.delete(`/api/radio-handovers/${id}`),
+
+  restore: (id: number) => api.patch(`/api/radio-handovers/${id}/restore`),
+
+  deletePermanent: (id: number) => api.delete(`/api/radio-handovers/${id}/permanent`),
 };

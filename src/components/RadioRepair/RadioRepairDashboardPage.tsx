@@ -1,9 +1,17 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Wrench } from "lucide-react";
-import { radioRepairApi } from "../../services/radioRepairApi";
-import type { RadioRepairDashboard, RadioRepairJobDetail, RadioRepairJobList, RadioRepairJobStatus } from "../../types/radioRepair";
+import { Archive, Eye, Pencil, RotateCcw, Trash2, Wrench } from "lucide-react";
+import { radioRepairApi, type UpdateRadioRepairJobPayload } from "../../services/radioRepairApi";
+import { radioHandoverApi } from "../../services/radioHandoverApi";
+import type {
+  RadioRepairDashboard,
+  RadioRepairJobDetail,
+  RadioRepairJobList,
+  RadioRepairJobStatus,
+  RadioRepairTicketGroup,
+} from "../../types/radioRepair";
+import type { UserOption } from "../../types/radioHandover";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
 import TechnicianToWarehouseForm from "../RadioHandover/TechnicianToWarehouseForm";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -17,33 +25,45 @@ const STATUS_OPTIONS: { value: RadioRepairJobStatus; label: string }[] = [
   { value: "RepairCompleted", label: "Selesai" },
 ];
 
+const LOCKED = new Set(["HandedToWarehouse", "ReturnedToHelpdesk", "Cancelled"]);
+
 export default function RadioRepairDashboardPage() {
   const { toast } = useToast();
   const [dash, setDash] = useState<RadioRepairDashboard | null>(null);
-  const [jobs, setJobs] = useState<RadioRepairJobList[]>([]);
+  const [groups, setGroups] = useState<RadioRepairTicketGroup[]>([]);
   const [detail, setDetail] = useState<RadioRepairJobDetail | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [showWh, setShowWh] = useState(false);
+  const [showArchive, setShowArchive] = useState(false);
   const [search, setSearch] = useState("");
+  const [editJob, setEditJob] = useState<RadioRepairJobDetail | null>(null);
+  const [technicians, setTechnicians] = useState<UserOption[]>([]);
+  const [editForm, setEditForm] = useState<UpdateRadioRepairJobPayload | null>(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+
   const canSupervise = hasPermission("radio.repair.supervise");
   const canUpdate = hasPermission("radio.repair.update");
+  const canDelete = hasPermission("radio.repair.delete");
+  const canEdit = hasPermission("radio.repair.edit");
+  const canViewArchive = hasPermission("radio.repair.view.archive");
+  const canDeletePermanent = hasPermission("radio.repair.delete.permanent");
 
   const load = async () => {
     try {
-      const [d, j] = await Promise.all([
-        radioRepairApi.getDashboard(),
-        radioRepairApi.getAll({ page: 1, pageSize: 50, search: search || undefined }),
+      const params = { page: 1, pageSize: 100, search: search || undefined, includeDeleted: showArchive };
+      const [d, g] = await Promise.all([
+        showArchive ? Promise.resolve(null) : radioRepairApi.getDashboard(),
+        radioRepairApi.getByTicket(params),
       ]);
-      setDash(d);
-      setJobs(j.data ?? []);
+      if (d) setDash(d);
+      setGroups(g);
     } catch (err: unknown) {
       setDash(null);
-      setJobs([]);
+      setGroups([]);
       const ax = err as { response?: { status?: number; data?: { message?: string } } };
       toast({
         title: ax.response?.status === 403 ? "Akses ditolak" : "Gagal memuat data",
-        description:
-          ax.response?.data?.message ??
-          "Pastikan role Teknisi punya permission radio.repair.view",
+        description: ax.response?.data?.message,
         variant: "destructive",
       });
     }
@@ -51,11 +71,99 @@ export default function RadioRepairDashboardPage() {
 
   useEffect(() => {
     load();
-  }, [search]);
+  }, [search, showArchive]);
+
+  useEffect(() => {
+    if (canEdit) {
+      radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
+    }
+  }, [canEdit]);
 
   const openDetail = async (id: number) => {
-    const d = await radioRepairApi.getById(id);
-    setDetail(d);
+    setDetailLoading(true);
+    try {
+      const d = await radioRepairApi.getById(id, showArchive);
+      setDetail(d);
+    } catch (err: unknown) {
+      setDetail(null);
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({ title: "Gagal membuka detail", description: ax.response?.data?.message, variant: "destructive" });
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const openEdit = async (job: RadioRepairJobList) => {
+    try {
+      const d = await radioRepairApi.getById(job.id, showArchive);
+      setEditJob(d);
+      setEditForm({
+        helpdeskTicketNumber: d.helpdeskTicketNumber,
+        radioSerialNumber: d.radioSerialNumber,
+        batterySerialNumber: d.batterySerialNumber ?? "",
+        damageDescription: d.damageDescription,
+        assignedTechnicianUserId: d.assignedTechnicianUserId,
+        radioId: d.radioId ?? null,
+      });
+    } catch {
+      toast({ title: "Gagal memuat data edit", variant: "destructive" });
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!editJob || !editForm) return;
+    setSavingEdit(true);
+    try {
+      await radioRepairApi.update(editJob.id, {
+        ...editForm,
+        batterySerialNumber: editForm.batterySerialNumber || null,
+      });
+      toast({ title: "Pekerjaan diperbarui" });
+      setEditJob(null);
+      load();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({ title: "Gagal menyimpan", description: ax.response?.data?.message, variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const softDelete = async (id: number, ticket: string, sn: string) => {
+    if (!window.confirm(`Hapus (arsip) tiket ${ticket} — SN ${sn}?`)) return;
+    try {
+      await radioRepairApi.softDelete(id);
+      toast({ title: "Dipindah ke arsip" });
+      if (detail?.id === id) setDetail(null);
+      load();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({ title: "Gagal menghapus", description: ax.response?.data?.message, variant: "destructive" });
+    }
+  };
+
+  const restore = async (id: number) => {
+    try {
+      await radioRepairApi.restore(id);
+      toast({ title: "Dipulihkan" });
+      load();
+    } catch {
+      toast({ title: "Gagal memulihkan", variant: "destructive" });
+    }
+  };
+
+  const deletePermanent = async (id: number, ticket: string, sn: string) => {
+    if (!window.confirm(`Hapus permanen tiket ${ticket} — SN ${sn}?\n\nData tidak dapat dikembalikan.`)) return;
+    if (!window.confirm("Konfirmasi terakhir: hapus permanen?")) return;
+    try {
+      await radioRepairApi.deletePermanent(id);
+      toast({ title: "Dihapus permanen" });
+      if (detail?.id === id) setDetail(null);
+      load();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({ title: "Gagal hapus permanen", description: ax.response?.data?.message, variant: "destructive" });
+    }
   };
 
   const patchStatus = async (status: RadioRepairJobStatus) => {
@@ -94,95 +202,166 @@ export default function RadioRepairDashboardPage() {
       ]
     : [];
 
+  const renderActions = (j: RadioRepairJobList) => (
+    <div className="flex justify-end gap-1">
+      <button type="button" title="Detail" className="p-2 border rounded-lg hover:bg-violet-50" disabled={detailLoading} onClick={() => openDetail(j.id)}>
+        <Eye className="w-4 h-4" />
+      </button>
+      {canEdit && !showArchive && !LOCKED.has(j.status) && (
+        <button type="button" title="Edit" className="p-2 border rounded-lg hover:bg-amber-50" onClick={() => openEdit(j)}>
+          <Pencil className="w-4 h-4" />
+        </button>
+      )}
+      {canDelete && !showArchive && !LOCKED.has(j.status) && (
+        <button type="button" title="Hapus" className="p-2 border rounded-lg hover:bg-red-50 text-red-600" onClick={() => softDelete(j.id, j.helpdeskTicketNumber, j.radioSerialNumber)}>
+          <Trash2 className="w-4 h-4" />
+        </button>
+      )}
+      {canViewArchive && showArchive && (
+        <>
+          <button type="button" title="Pulihkan" className="p-2 border rounded-lg hover:bg-emerald-50 text-emerald-700" onClick={() => restore(j.id)}>
+            <RotateCcw className="w-4 h-4" />
+          </button>
+          {canDeletePermanent && (
+            <button
+              type="button"
+              title="Hapus permanen"
+              className="p-2 border rounded-lg hover:bg-red-100 text-red-700 border-red-200"
+              onClick={() => deletePermanent(j.id, j.helpdeskTicketNumber, j.radioSerialNumber)}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </>
+      )}
+    </div>
+  );
+
   return (
     <div className="p-6 space-y-6">
-      <h1 className="text-2xl font-bold flex items-center gap-2">
-        <Wrench className="w-7 h-7 text-violet-600" /> Dashboard Perbaikan Radio
-      </h1>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
-        {cards.map((c) => (
-          <div key={c.label} className="bg-white rounded-xl border p-4 shadow-sm">
-            <p className="text-xs text-gray-500">{c.label}</p>
-            <p className="text-2xl font-bold mt-1">{c.value}</p>
-            <div className={`h-1 mt-2 rounded ${c.color}`} />
-          </div>
-        ))}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-bold flex items-center gap-2">
+          <Wrench className="w-7 h-7 text-violet-600" /> Dashboard Perbaikan Radio
+        </h1>
+        {canViewArchive && (
+          <button
+            type="button"
+            onClick={() => setShowArchive((v) => !v)}
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-sm ${showArchive ? "bg-gray-800 text-white" : "bg-white"}`}
+          >
+            <Archive className="w-4 h-4" /> {showArchive ? "Arsip (aktif)" : "Lihat arsip"}
+          </button>
+        )}
       </div>
+
+      {!showArchive && (
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {cards.map((c) => (
+            <div key={c.label} className="bg-white rounded-xl border p-4 shadow-sm">
+              <p className="text-xs text-gray-500">{c.label}</p>
+              <p className="text-2xl font-bold mt-1">{c.value}</p>
+              <div className={`h-1 mt-2 rounded ${c.color}`} />
+            </div>
+          ))}
+        </div>
+      )}
 
       <input
         className="border rounded-lg px-3 py-2 w-full max-w-md"
-        placeholder="Cari SN, job, tiket..."
+        placeholder="Cari tiket, SN..."
         value={search}
         onChange={(e) => setSearch(e.target.value)}
       />
 
-      <div className="bg-white rounded-xl border overflow-hidden">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="text-left px-4 py-3">Job</th>
-              <th className="text-left px-4 py-3">Tiket</th>
-              <th className="text-left px-4 py-3">SN</th>
-              <th className="text-left px-4 py-3">Kerusakan</th>
-              <th className="text-left px-4 py-3">Teknisi</th>
-              <th className="text-left px-4 py-3">Status</th>
-              <th className="text-left px-4 py-3">Buka</th>
-            </tr>
-          </thead>
-          <tbody>
-            {jobs.map((j) => (
-              <tr key={j.id} className="border-t hover:bg-violet-50/40 cursor-pointer" onClick={() => openDetail(j.id)}>
-                <td className="px-4 py-3 font-mono text-xs">{j.jobNumber}</td>
-                <td className="px-4 py-3">{j.helpdeskTicketNumber}</td>
-                <td className="px-4 py-3">{j.radioSerialNumber}</td>
-                <td className="px-4 py-3 max-w-xs truncate">{j.damageDescription}</td>
-                <td className="px-4 py-3 font-medium">{j.assignedTechnicianName}</td>
-                <td className="px-4 py-3"><RadioRepairStatusBadge status={j.status} /></td>
-                <td className="px-4 py-3">{format(new Date(j.openedAt), "dd/MM/yy", { locale: localeId })}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="space-y-4">
+        {groups.length === 0 && <p className="text-center text-gray-400 py-8">Belum ada data</p>}
+        {groups.map((g) => (
+          <div key={g.helpdeskTicketNumber} className="bg-white rounded-xl border overflow-hidden">
+            <div className="px-4 py-3 bg-violet-50 border-b flex justify-between items-center">
+              <div>
+                <span className="font-semibold">{g.helpdeskTicketNumber}</span>
+                <span className="ml-2 text-xs text-gray-500">
+                  {g.radioCount} radio{g.radioCount > 1 ? "" : ""}
+                </span>
+              </div>
+            </div>
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 text-left">
+                <tr>
+                  <th className="px-4 py-2">SN</th>
+                  <th className="px-4 py-2">Kerusakan</th>
+                  <th className="px-4 py-2">Teknisi</th>
+                  <th className="px-4 py-2">Status</th>
+                  <th className="px-4 py-2">Buka</th>
+                  <th className="px-4 py-2 text-right">Aksi</th>
+                </tr>
+              </thead>
+              <tbody>
+                {g.radios.map((j) => (
+                  <tr key={j.id} className={`border-t ${j.isDeleted ? "opacity-60 bg-gray-50" : ""}`}>
+                    <td className="px-4 py-2 font-medium">{j.radioSerialNumber}</td>
+                    <td className="px-4 py-2 max-w-xs truncate">{j.damageDescription}</td>
+                    <td className="px-4 py-2">{j.assignedTechnicianName}</td>
+                    <td className="px-4 py-2">
+                      <RadioRepairStatusBadge status={j.status} />
+                    </td>
+                    <td className="px-4 py-2">{format(new Date(j.openedAt), "dd/MM/yy", { locale: localeId })}</td>
+                    <td className="px-4 py-2">{renderActions(j)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ))}
       </div>
 
       <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
         <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{detail?.jobNumber}</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 flex-wrap">
+              {detail?.helpdeskTicketNumber} — SN {detail?.radioSerialNumber}
+              {detail && <RadioRepairStatusBadge status={detail.status} />}
+            </DialogTitle>
           </DialogHeader>
           {detail && (
             <div className="space-y-4 text-sm">
-              <p>Tiket: <strong>{detail.helpdeskTicketNumber}</strong></p>
               <p>Teknisi: <strong>{detail.assignedTechnicianName}</strong></p>
               <p>Kerusakan: {detail.damageDescription}</p>
-              <RadioRepairStatusBadge status={detail.status} />
+              {detail.isDeleted && <p className="text-red-600 font-medium">Status: di arsip</p>}
 
-              {canUpdate && detail.status !== "HandedToWarehouse" && detail.status !== "ReturnedToHelpdesk" && detail.status !== "Cancelled" && (
+              {canUpdate && !detail.isDeleted && !LOCKED.has(detail.status) && (
                 <div className="flex flex-wrap gap-2">
                   {STATUS_OPTIONS.map((s) => (
-                    <button
-                      key={s.value}
-                      type="button"
-                      className="px-3 py-1 border rounded-lg hover:bg-violet-50"
-                      onClick={() => patchStatus(s.value)}
-                    >
+                    <button key={s.value} type="button" className="px-3 py-1 border rounded-lg hover:bg-violet-50" onClick={() => patchStatus(s.value)}>
                       {s.label}
                     </button>
                   ))}
                 </div>
               )}
 
-              {canSupervise && detail.status === "WaitingMaterialApproval" && (
+              {canSupervise && detail.status === "WaitingMaterialApproval" && !detail.isDeleted && (
                 <button type="button" className="px-4 py-2 bg-amber-600 text-white rounded-lg" onClick={approveMaterial}>
                   Setujui Material
                 </button>
               )}
 
-              {canUpdate && detail.status === "RepairCompleted" && hasAnyPermission("radio.handover.create.tek_wh", "radio.handover.create") && (
+              {canUpdate && detail.status === "RepairCompleted" && !detail.isDeleted && hasAnyPermission("radio.handover.create.tek_wh", "radio.handover.create") && (
                 <button type="button" className="px-4 py-2 bg-violet-600 text-white rounded-lg" onClick={() => setShowWh(true)}>
                   Serah terima ke Warehouse
                 </button>
+              )}
+
+              {detail.handovers && detail.handovers.length > 0 && (
+                <div>
+                  <h3 className="font-semibold mb-1">Serah terima</h3>
+                  <ul className="text-xs space-y-1 text-gray-600">
+                    {detail.handovers.map((h) => (
+                      <li key={h.id}>
+                        {h.handoverNumber} ({h.handoverType}) — {h.handedOverByName} → {h.receivedByName}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
 
               <div>
@@ -191,11 +370,43 @@ export default function RadioRepairDashboardPage() {
                   {(detail.statusLogs ?? []).map((l) => (
                     <li key={l.id}>
                       {format(new Date(l.at), "dd/MM HH:mm")} — {l.fromStatus ?? "—"} → {l.toStatus} ({l.userName})
-                      {l.note && `: ${l.note}`}
                     </li>
                   ))}
                 </ul>
               </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editJob && !!editForm} onOpenChange={() => setEditJob(null)}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit pekerjaan</DialogTitle></DialogHeader>
+          {editForm && (
+            <div className="space-y-3 text-sm">
+              <label className="block">
+                Tiket MKN
+                <input className="w-full border rounded-lg px-3 py-2 mt-1" value={editForm.helpdeskTicketNumber} onChange={(e) => setEditForm({ ...editForm, helpdeskTicketNumber: e.target.value })} />
+              </label>
+              <label className="block">
+                Serial number
+                <input className="w-full border rounded-lg px-3 py-2 mt-1" value={editForm.radioSerialNumber} onChange={(e) => setEditForm({ ...editForm, radioSerialNumber: e.target.value })} />
+              </label>
+              <label className="block">
+                Kerusakan
+                <textarea className="w-full border rounded-lg px-3 py-2 mt-1" rows={3} value={editForm.damageDescription} onChange={(e) => setEditForm({ ...editForm, damageDescription: e.target.value })} />
+              </label>
+              <label className="block">
+                Teknisi
+                <select className="w-full border rounded-lg px-3 py-2 mt-1" value={editForm.assignedTechnicianUserId} onChange={(e) => setEditForm({ ...editForm, assignedTechnicianUserId: Number(e.target.value) })}>
+                  {technicians.map((t) => (
+                    <option key={t.userId} value={t.userId}>{t.fullName}</option>
+                  ))}
+                </select>
+              </label>
+              <button type="button" disabled={savingEdit} className="w-full py-2 bg-violet-600 text-white rounded-lg" onClick={saveEdit}>
+                {savingEdit ? "Menyimpan..." : "Simpan"}
+              </button>
             </div>
           )}
         </DialogContent>
@@ -207,11 +418,7 @@ export default function RadioRepairDashboardPage() {
           {detail && (
             <TechnicianToWarehouseForm
               job={detail}
-              onSuccess={() => {
-                setShowWh(false);
-                setDetail(null);
-                load();
-              }}
+              onSuccess={() => { setShowWh(false); setDetail(null); load(); }}
               onCancel={() => setShowWh(false)}
             />
           )}

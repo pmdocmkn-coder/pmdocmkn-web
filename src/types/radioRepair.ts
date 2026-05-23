@@ -21,6 +21,14 @@ export interface RadioRepairJobList {
   assignedTechnicianName: string;
   openedAt: string;
   closedAt?: string | null;
+  isDeleted?: boolean;
+  deletedAt?: string | null;
+}
+
+export interface RadioRepairTicketGroup {
+  helpdeskTicketNumber: string;
+  radioCount: number;
+  radios: RadioRepairJobList[];
 }
 
 export interface RadioRepairDashboard {

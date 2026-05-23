@@ -8,6 +8,8 @@ const emptyRow = (): HandoverAccessoryItem => ({
   serialNumber: "",
 });
 
+const QUICK_ADD = ["Baterai", "Antenna", "Charger", "Speaker Mic", "Flexible Cable"];
+
 type Props = {
   items: HandoverAccessoryItem[];
   onChange: (items: HandoverAccessoryItem[]) => void;
@@ -24,6 +26,10 @@ export default function HandoverAccessoryList({ items, onChange }: Props) {
 
   const add = () => onChange([...rows, emptyRow()]);
 
+  const addPreset = (name: string) => {
+    onChange([...rows.filter((r) => r.itemName.trim()), { itemName: name, quantity: 1, unit: "EA", serialNumber: "" }]);
+  };
+
   const remove = (index: number) => {
     const next = rows.filter((_, i) => i !== index);
     onChange(next.length > 0 ? next : [emptyRow()]);
@@ -31,8 +37,11 @@ export default function HandoverAccessoryList({ items, onChange }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <p className="text-sm font-medium">Aksesoris</p>
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div>
+          <p className="text-sm font-medium">Aksesoris</p>
+          <p className="text-xs text-gray-500">SN baterai & aksesoris lain — isi nama barang + SN di bawah</p>
+        </div>
         <button
           type="button"
           onClick={add}
@@ -41,12 +50,24 @@ export default function HandoverAccessoryList({ items, onChange }: Props) {
           <Plus className="w-3 h-3" /> Tambah
         </button>
       </div>
+      <div className="flex flex-wrap gap-1">
+        {QUICK_ADD.map((name) => (
+          <button
+            key={name}
+            type="button"
+            onClick={() => addPreset(name)}
+            className="text-xs px-2 py-1 rounded-full border border-violet-200 text-violet-700 hover:bg-violet-50"
+          >
+            + {name}
+          </button>
+        ))}
+      </div>
       {rows.map((row, index) => (
         <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
           <div className="flex gap-2">
             <input
               className="flex-1 border rounded-lg px-3 py-2 text-sm"
-              placeholder="Nama barang *"
+              placeholder={index === 0 && row.itemName === "" ? "Nama barang (mis. Baterai) *" : "Nama barang *"}
               value={row.itemName}
               onChange={(e) => update(index, "itemName", e.target.value)}
             />
@@ -71,7 +92,11 @@ export default function HandoverAccessoryList({ items, onChange }: Props) {
           </div>
           <input
             className="w-full border rounded-lg px-3 py-2 text-sm"
-            placeholder="Serial Number (opsional)"
+            placeholder={
+              /baterai|battery/i.test(row.itemName)
+                ? "SN Baterai *"
+                : "Serial Number (opsional)"
+            }
             value={row.serialNumber ?? ""}
             onChange={(e) => update(index, "serialNumber", e.target.value)}
           />
