@@ -31,17 +31,20 @@ export interface UserOption {
 
 
 export interface RadioLookup {
-
   id: number;
-
   category: string;
-
   serialNumber?: string;
-
   type?: string;
-
+  company?: string;
+  division?: string;
+  department?: string;
+  nomorAset?: string;
+  nomorUnit?: string;
+  nomorLv?: string;
+  fleet?: string;
+  channel?: string;
+  ownerLabel?: string;
   label: string;
-
 }
 
 
@@ -55,6 +58,16 @@ export interface CreateRadioHandoverPayload {
   radioId?: number | null;
 
   radioSerialNumber: string;
+
+  equipmentName?: string;
+
+  unitNumber?: string;
+
+  radioOwnerLabel?: string;
+
+  ownerDivision?: string;
+
+  ownerDepartment?: string;
 
   batterySerialNumber?: string;
 
@@ -96,9 +109,21 @@ export interface RadioHandoverList {
 
   radioSerialNumber: string;
 
+  equipmentName?: string | null;
+
+  unitNumber?: string | null;
+
+  radioOwnerLabel?: string | null;
+
+  ownerDivision?: string | null;
+
+  ownerDepartment?: string | null;
+
   isDeleted?: boolean;
 
   deletedAt?: string | null;
+
+  receivedByUserId?: number;
 
   handedOverByName: string;
 
@@ -125,6 +150,14 @@ export interface RadioHandoverList {
 export interface RadioHandoverDetail extends RadioHandoverList {
 
   radioId?: number | null;
+
+  radioOwnerLabel?: string | null;
+
+  ownerDivision?: string | null;
+
+  ownerDepartment?: string | null;
+
+  damageDescription?: string | null;
 
   batterySerialNumber?: string | null;
 

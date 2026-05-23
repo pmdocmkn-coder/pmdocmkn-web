@@ -14,7 +14,11 @@ export interface RadioRepairJobList {
   helpdeskTicketNumber: string;
   radioSerialNumber: string;
   radioId?: number | null;
+  radioMasterRadioId?: string | null;
+  radioFleet?: string | null;
   radioCategory?: string | null;
+  equipmentName?: string | null;
+  previewPhotoBase64?: string | null;
   damageDescription: string;
   status: RadioRepairJobStatus;
   assignedTechnicianUserId: number;
@@ -43,9 +47,41 @@ export interface RadioRepairDashboard {
   cancelled: number;
 }
 
+export interface RadioRepairHandoverAccessory {
+  itemName: string;
+  quantity: number;
+  unit?: string | null;
+  description?: string | null;
+  serialNumber?: string | null;
+}
+
+export interface RadioRepairPrimaryHandover {
+  id: number;
+  handoverNumber: string;
+  handoverAt: string;
+  handedOverByName: string;
+  receivedByName: string;
+  status: string;
+  equipmentName?: string | null;
+  unitNumber?: string | null;
+  radioOwnerLabel?: string | null;
+  ownerDivision?: string | null;
+  ownerDepartment?: string | null;
+  radioSerialNumber: string;
+  batterySerialNumber?: string | null;
+  damageDescription: string;
+  accessories: RadioRepairHandoverAccessory[];
+}
+
 export interface RadioRepairJobDetail extends RadioRepairJobList {
   batterySerialNumber?: string | null;
+  equipmentName?: string | null;
+  unitNumber?: string | null;
+  radioOwnerLabel?: string | null;
+  ownerDivision?: string | null;
+  ownerDepartment?: string | null;
   openedByName: string;
+  primaryHandover?: RadioRepairPrimaryHandover | null;
   statusLogs: {
     id: number;
     fromStatus?: string | null;

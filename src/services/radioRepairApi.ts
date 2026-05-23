@@ -15,6 +15,11 @@ export type UpdateRadioRepairJobPayload = {
   damageDescription: string;
   assignedTechnicianUserId: number;
   radioId?: number | null;
+  equipmentName?: string;
+  unitNumber?: string;
+  radioOwnerLabel?: string;
+  ownerDivision?: string;
+  ownerDepartment?: string;
 };
 
 export const radioRepairApi = {

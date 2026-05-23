@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
-import { Search, X, Check } from "lucide-react";
+import { Eye, Search, X, Check } from "lucide-react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import type { RadioLookup } from "../../types/radioHandover";
+import RadioMasterDetailDialog from "./RadioMasterDetailDialog";
+import { formatRadioOwnerLabel } from "../../utils/radioOwnerLabel";
 
 type Props = {
   serial: string;
   radioId: number | null;
+  lookup?: RadioLookup | null;
   onSelect: (serial: string, radioId: number | null, lookup?: RadioLookup) => void;
   label?: string;
   required?: boolean;
@@ -15,11 +18,13 @@ type Props = {
 export default function RadioSerialLookupField({
   serial,
   radioId,
+  lookup,
   onSelect,
   label = "Serial Number Radio",
   required,
 }: Props) {
   const [open, setOpen] = useState(false);
+  const [masterOpen, setMasterOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [lookups, setLookups] = useState<RadioLookup[]>([]);
   const [loading, setLoading] = useState(false);
@@ -48,11 +53,25 @@ export default function RadioSerialLookupField({
     setOpen(false);
   };
 
+  const activeLookup = lookup ?? (radioId ? lookups.find((l) => l.id === radioId) : undefined);
+
   return (
     <div>
-      <label className="text-sm font-medium">
-        {label} {required && "*"}
-      </label>
+      <div className="flex items-center justify-between gap-2">
+        <label className="text-sm font-medium">
+          {label} {required && "*"}
+        </label>
+        {(serial.trim() || radioId) && (
+          <button
+            type="button"
+            title="Lihat detail master radio"
+            className="flex items-center gap-1 text-xs text-violet-700 hover:bg-violet-50 px-2 py-1 rounded-lg border border-violet-200"
+            onClick={() => setMasterOpen(true)}
+          >
+            <Eye className="w-3.5 h-3.5" /> Detail radio
+          </button>
+        )}
+      </div>
       <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
         <DialogPrimitive.Trigger asChild>
           <button
@@ -115,12 +134,15 @@ export default function RadioSerialLookupField({
                     key={l.id}
                     type="button"
                     onClick={() => pick(l.serialNumber ?? l.label, l.id, l)}
-                    className={`w-full flex items-center justify-between px-4 py-3.5 rounded-2xl mb-0.5 text-left text-sm hover:bg-violet-50 ${
+                    className={`w-full flex flex-col items-start px-4 py-3.5 rounded-2xl mb-0.5 text-left text-sm hover:bg-violet-50 ${
                       radioId === l.id ? "bg-violet-50 text-violet-700 font-bold" : "text-gray-700"
                     }`}
                   >
-                    <span>{l.label}</span>
-                    {radioId === l.id && <Check className="w-4 h-4" />}
+                    <span className="flex w-full justify-between items-center">
+                      <span>{l.label}</span>
+                      {radioId === l.id && <Check className="w-4 h-4 shrink-0" />}
+                    </span>
+                    <span className="text-xs text-gray-500 mt-0.5">{formatRadioOwnerLabel(l)}</span>
                   </button>
                 ))}
             </div>
@@ -133,8 +155,21 @@ export default function RadioSerialLookupField({
         </DialogPrimitive.Portal>
       </DialogPrimitive.Root>
       {serial && !radioId && (
-        <p className="text-xs text-amber-600 mt-1">SN manual (belum di master radio)</p>
+        <p className="text-xs text-amber-600 mt-1">SN manual — isi tipe/nama alat di bawah</p>
       )}
+      {activeLookup && radioId && (
+        <p className="text-xs text-violet-700 mt-1 truncate">
+          {formatRadioOwnerLabel(activeLookup)}
+          {activeLookup.division && ` · Div: ${activeLookup.division}`}
+          {activeLookup.department && ` · Dept: ${activeLookup.department}`}
+        </p>
+      )}
+      <RadioMasterDetailDialog
+        open={masterOpen}
+        onClose={() => setMasterOpen(false)}
+        lookup={activeLookup ?? null}
+        serialFallback={serial}
+      />
     </div>
   );
 }

@@ -5,7 +5,7 @@ import type { HandoverAccessoryItem, UserOption } from "../../types/radioHandove
 import { useToast } from "../../hooks/use-toast";
 import { isValidSignature } from "../../utils/signatureUtils";
 import { buildAccessoriesPayload } from "../../utils/handoverFormUtils";
-import RadioSerialLookupField from "./RadioSerialLookupField";
+import MultiRadioSerialList, { type RadioSerialLine } from "./MultiRadioSerialList";
 import HandoverAccessoryList from "./HandoverAccessoryList";
 import MultiPhotoUpload from "./MultiPhotoUpload";
 
@@ -14,12 +14,23 @@ type Props = {
   onCancel: () => void;
 };
 
+const initialLine = (): RadioSerialLine => ({
+  id: `${Date.now()}-init`,
+  serial: "",
+  radioId: null,
+  lookup: null,
+  equipmentName: "",
+  unitNumber: "",
+  radioOwnerLabel: "",
+  ownerDivision: "",
+  ownerDepartment: "",
+});
+
 export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props) {
   const { toast } = useToast();
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
   const [ticket, setTicket] = useState("");
-  const [serial, setSerial] = useState("");
-  const [radioId, setRadioId] = useState<number | null>(null);
+  const [radioLines, setRadioLines] = useState<RadioSerialLine[]>([initialLine()]);
   const [damage, setDamage] = useState("");
   const [techId, setTechId] = useState("");
   const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
@@ -42,13 +53,34 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
     const hdSig = (await sigHdRef.current?.exportNow()) ?? sigHandover;
     const tekSig = (await sigTekRef.current?.exportNow()) ?? sigReceiver;
 
+    const filledLines = radioLines
+      .map((r) => ({ ...r, serial: r.serial.trim() }))
+      .filter((r) => r.serial.length > 0);
+
     const missing: string[] = [];
     if (!ticket.trim()) missing.push("No tiket helpdesk");
-    if (!serial.trim()) missing.push("Serial number radio");
+    if (filledLines.length === 0) missing.push("Minimal satu serial number radio");
     if (!damage.trim()) missing.push("Keterangan kerusakan");
     if (!techId) missing.push("Teknisi penerima");
     if (photos.length === 0) missing.push("Foto radio (minimal 1)");
     if (!isValidSignature(hdSig)) missing.push("TTD Helpdesk — gambar tanda tangan di area putih");
+
+    const seen = new Set<string>();
+    const dup: string[] = [];
+    for (const r of filledLines) {
+      const key = r.serial.toLowerCase();
+      if (seen.has(key)) dup.push(r.serial);
+      else seen.add(key);
+    }
+    if (dup.length > 0) {
+      missing.push(`SN duplikat: ${[...new Set(dup)].join(", ")}`);
+    }
+
+    for (const r of filledLines) {
+      if (!r.radioId && !r.equipmentName.trim()) {
+        missing.push(`Tipe/nama alat untuk SN ${r.serial} (belum di master)`);
+      }
+    }
 
     if (missing.length > 0) {
       toast({
@@ -61,33 +93,80 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
 
     const { accessories: acc, batterySerialNumber } = buildAccessoriesPayload(accessories);
     const receiverOk = isValidSignature(tekSig);
+    const basePayload = {
+      handoverType: "HelpdeskToTechnician" as const,
+      helpdeskTicketNumber: ticket.trim(),
+      batterySerialNumber,
+      damageDescription: damage.trim(),
+      receivedByUserId: Number(techId),
+      radioPhotos: photos,
+      handedOverSignatureBase64: hdSig!,
+      receiverSignatureBase64: receiverOk ? tekSig! : undefined,
+      accessories: acc,
+      remarks: remarks.trim() || undefined,
+    };
 
     setSubmitting(true);
+    const failed: { sn: string; message: string }[] = [];
+    let ok = 0;
+
     try {
-      await radioHandoverApi.create({
-        handoverType: "HelpdeskToTechnician",
-        helpdeskTicketNumber: ticket.trim(),
-        radioId,
-        radioSerialNumber: serial.trim(),
-        batterySerialNumber,
-        damageDescription: damage.trim(),
-        receivedByUserId: Number(techId),
-        radioPhotos: photos,
-        handedOverSignatureBase64: hdSig!,
-        receiverSignatureBase64: receiverOk ? tekSig! : undefined,
-        accessories: acc,
-        remarks: remarks.trim() || undefined,
-      });
+      for (const line of filledLines) {
+        try {
+          await radioHandoverApi.create({
+            ...basePayload,
+            radioId: line.radioId,
+            radioSerialNumber: line.serial,
+            equipmentName: line.equipmentName.trim() || line.lookup?.type?.trim() || undefined,
+            unitNumber: line.unitNumber.trim() || undefined,
+            radioOwnerLabel: line.radioOwnerLabel.trim() || undefined,
+            ownerDivision: line.ownerDivision.trim() || undefined,
+            ownerDepartment: line.ownerDepartment.trim() || undefined,
+          });
+          ok += 1;
+        } catch (err: unknown) {
+          const ax = err as { response?: { data?: { message?: string } } };
+          const message =
+            ax.response?.data?.message ??
+            (err instanceof Error ? err.message : "Gagal menyimpan");
+          failed.push({ sn: line.serial, message });
+        }
+      }
+
+      if (ok === 0) {
+        toast({
+          title: "Gagal menyimpan",
+          description: failed.map((f) => `${f.sn}: ${f.message}`).join(" • "),
+          variant: "destructive",
+        });
+        return;
+      }
+
+      if (failed.length > 0) {
+        toast({
+          title: `Tersimpan ${ok} dari ${filledLines.length} radio`,
+          description: failed.map((f) => `${f.sn}: ${f.message}`).join(" • "),
+          variant: "destructive",
+        });
+        onSuccess();
+        return;
+      }
+
       toast({
-        title: receiverOk ? "Serah terima selesai" : "Disimpan — menunggu TTD teknisi",
-        description: receiverOk
-          ? "Kedua tanda tangan lengkap."
-          : "Teknisi penerima dapat melengkapi TTD dari daftar serah terima.",
+        title:
+          filledLines.length > 1
+            ? `${filledLines.length} radio tersimpan`
+            : receiverOk
+              ? "Serah terima selesai"
+              : "Disimpan — menunggu TTD teknisi",
+        description:
+          filledLines.length > 1
+            ? `Tiket ${ticket.trim()} — ${filledLines.length} SN, masing-masing job + STR terpisah.`
+            : receiverOk
+              ? "Kedua tanda tangan lengkap."
+              : "Teknisi penerima dapat melengkapi TTD dari daftar serah terima.",
       });
       onSuccess();
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Gagal menyimpan";
-      toast({ title: msg, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -104,15 +183,7 @@ export default function HelpdeskToTechnicianForm({ onSuccess, onCancel }: Props)
           onChange={(e) => setTicket(e.target.value)}
         />
       </div>
-      <RadioSerialLookupField
-        serial={serial}
-        radioId={radioId}
-        required
-        onSelect={(s, id) => {
-          setSerial(s);
-          setRadioId(id);
-        }}
-      />
+      <MultiRadioSerialList lines={radioLines} onChange={setRadioLines} />
       <div>
         <label className="text-sm font-medium">Keterangan Kerusakan *</label>
         <textarea className="w-full border rounded-lg px-3 py-2 mt-1" rows={3} value={damage} onChange={(e) => setDamage(e.target.value)} />

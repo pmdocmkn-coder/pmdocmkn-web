@@ -54,8 +54,16 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
         return null;
       }
       try {
-        const canvas = pad.getCanvas();
-        const png = canvas.toDataURL("image/png");
+        const src = pad.getCanvas();
+        const out = document.createElement("canvas");
+        out.width = src.width;
+        out.height = src.height;
+        const ctx = out.getContext("2d");
+        if (!ctx) throw new Error("Canvas tidak tersedia");
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, out.width, out.height);
+        ctx.drawImage(src, 0, 0);
+        const png = out.toDataURL("image/png");
         const jpeg = await compressDataUrl(png, IMAGE_PRESETS.signature);
         onChange?.(jpeg);
         return jpeg;
@@ -91,11 +99,22 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
       onChange?.(null);
     };
 
-    if (readOnly && value) {
+    if (readOnly) {
       return (
         <div className="space-y-1">
           <label className="text-sm font-medium text-gray-700">{label}</label>
-          <img src={value} alt={label} className="max-w-md border rounded-lg bg-white p-2" />
+          <div className="rounded-lg border-2 border-gray-200 bg-white p-4 min-h-[120px] flex items-center justify-center">
+            {value ? (
+              <img
+                src={value}
+                alt={label}
+                className="max-w-full max-h-36 object-contain"
+                style={{ background: "#ffffff" }}
+              />
+            ) : (
+              <span className="text-xs text-gray-400">Belum ada tanda tangan</span>
+            )}
+          </div>
         </div>
       );
     }

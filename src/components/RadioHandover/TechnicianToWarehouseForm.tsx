@@ -1,176 +1,161 @@
 import { useEffect, useState } from "react";
-
 import SignaturePadField from "../common/SignaturePadField";
-
 import { radioHandoverApi } from "../../services/radioHandoverApi";
-
 import type { RadioRepairJobDetail } from "../../types/radioRepair";
-
 import type { HandoverAccessoryItem, UserOption } from "../../types/radioHandover";
-
 import { useToast } from "../../hooks/use-toast";
-
 import HandoverAccessoryList from "./HandoverAccessoryList";
-
+import HandoverAccessoryHistory from "./HandoverAccessoryHistory";
 import MultiPhotoUpload from "./MultiPhotoUpload";
-
-
+import { buildAccessoriesPayload, toHandoverAccessoryItems } from "../../utils/handoverFormUtils";
 
 type Props = {
-
   job: RadioRepairJobDetail;
-
   onSuccess: () => void;
-
   onCancel: () => void;
-
 };
 
-
+function resolveHdHandoverId(job: RadioRepairJobDetail): number | undefined {
+  if (job.primaryHandover?.id) return job.primaryHandover.id;
+  return job.handovers?.find((h) => h.handoverType === "HelpdeskToTechnician")?.id;
+}
 
 export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: Props) {
-
   const { toast } = useToast();
-
   const [receivers, setReceivers] = useState<UserOption[]>([]);
-
   const [whId, setWhId] = useState("");
-
-  const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
-
+  const [inheritedAccessories, setInheritedAccessories] = useState<HandoverAccessoryItem[]>([]);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [additionalAccessories, setAdditionalAccessories] = useState<HandoverAccessoryItem[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
-
   const [sigTech, setSigTech] = useState<string | null>(null);
-
   const [sigWh, setSigWh] = useState<string | null>(null);
-
   const [submitting, setSubmitting] = useState(false);
 
-
-
   useEffect(() => {
-
     radioHandoverApi
-
       .getWarehouseReceivers()
-
       .then((list) => setReceivers(list ?? []))
-
       .catch(() => setReceivers([]));
-
   }, []);
 
+  useEffect(() => {
+    let cancelled = false;
 
+    const loadHistory = async () => {
+      setHistoryLoading(true);
+      try {
+        const phAcc = job.primaryHandover?.accessories;
+        if (phAcc && phAcc.length > 0) {
+          if (!cancelled) setInheritedAccessories(toHandoverAccessoryItems(phAcc));
+          return;
+        }
+
+        const hdId = resolveHdHandoverId(job);
+        if (!hdId) {
+          if (!cancelled) setInheritedAccessories([]);
+          return;
+        }
+
+        const detail = await radioHandoverApi.getById(hdId);
+        if (!cancelled) {
+          setInheritedAccessories(toHandoverAccessoryItems(detail.accessories ?? []));
+        }
+      } catch {
+        if (!cancelled) setInheritedAccessories([]);
+      } finally {
+        if (!cancelled) setHistoryLoading(false);
+      }
+    };
+
+    loadHistory();
+    return () => {
+      cancelled = true;
+    };
+  }, [job]);
 
   const submit = async () => {
-
-    const acc = accessories.filter((a) => a.itemName.trim());
-
     if (!whId || photos.length === 0 || !sigTech || !sigWh) {
-
       toast({ title: "Lengkapi foto, TTD teknisi & warehouse", variant: "destructive" });
-
       return;
-
     }
+
+    const merged = [...inheritedAccessories, ...additionalAccessories.filter((a) => a.itemName.trim())];
+    const { accessories: acc, batterySerialNumber } = buildAccessoriesPayload(merged);
 
     setSubmitting(true);
-
     try {
-
       await radioHandoverApi.create({
-
         handoverType: "TechnicianToWarehouse",
-
         radioRepairJobId: job.id,
-
         radioId: job.radioId ?? undefined,
-
         radioSerialNumber: job.radioSerialNumber,
-
-        batterySerialNumber: job.batterySerialNumber ?? undefined,
-
+        batterySerialNumber: batterySerialNumber ?? job.batterySerialNumber ?? undefined,
         receivedByUserId: Number(whId),
-
         radioPhotos: photos,
-
         handedOverSignatureBase64: sigTech,
-
         receiverSignatureBase64: sigWh,
-
         accessories: acc,
-
       });
-
       toast({ title: "Serah terima ke warehouse berhasil" });
-
       onSuccess();
-
-    } catch {
-
-      toast({ title: "Gagal menyimpan", variant: "destructive" });
-
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({
+        title: "Gagal menyimpan",
+        description: ax.response?.data?.message,
+        variant: "destructive",
+      });
     } finally {
-
       setSubmitting(false);
-
     }
-
   };
 
-
-
   return (
-
-    <div className="space-y-4">
-
+    <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
       <p className="text-sm text-gray-600">
-
         Job <strong>{job.jobNumber}</strong> — SN {job.radioSerialNumber}
-
       </p>
 
       <div>
-
         <label className="text-sm font-medium">Penerima Warehouse *</label>
-
         <select className="w-full border rounded-lg px-3 py-2 mt-1" value={whId} onChange={(e) => setWhId(e.target.value)}>
-
           <option value="">Pilih staff warehouse</option>
-
           {(receivers ?? []).map((r) => (
-
-            <option key={r.userId} value={r.userId}>{r.fullName}</option>
-
+            <option key={r.userId} value={r.userId}>
+              {r.fullName}
+            </option>
           ))}
-
         </select>
-
       </div>
 
       <MultiPhotoUpload photos={photos} onChange={setPhotos} required />
 
-      <HandoverAccessoryList items={accessories} onChange={setAccessories} />
+      <HandoverAccessoryHistory items={inheritedAccessories} loading={historyLoading} />
+
+      <HandoverAccessoryList
+        items={additionalAccessories}
+        onChange={setAdditionalAccessories}
+        optional
+        label="Tambahan aksesoris"
+      />
 
       <SignaturePadField label="TTD Teknisi (penyerah)" required value={sigTech} onChange={setSigTech} />
-
       <SignaturePadField label="TTD Warehouse (penerima)" required value={sigWh} onChange={setSigWh} />
 
-      <div className="flex gap-2 justify-end">
-
-        <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>Batal</button>
-
-        <button type="button" className="px-4 py-2 bg-violet-600 text-white rounded-lg" disabled={submitting} onClick={submit}>
-
-          {submitting ? "..." : "Serah Terima"}
-
+      <div className="flex gap-2 justify-end pt-2">
+        <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>
+          Batal
         </button>
-
+        <button
+          type="button"
+          className="px-4 py-2 bg-violet-600 text-white rounded-lg disabled:opacity-50"
+          disabled={submitting}
+          onClick={submit}
+        >
+          {submitting ? "Menyimpan..." : "Serah Terima"}
+        </button>
       </div>
-
     </div>
-
   );
-
 }
-

@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Archive, Plus, Package, Trash2, RotateCcw } from "lucide-react";
+import { Archive, Plus, Package, Trash2, RotateCcw, PenLine, Eye } from "lucide-react";
 import { hasPermission } from "../../utils/permissionUtils";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
 import HelpdeskToTechnicianForm from "./HelpdeskToTechnicianForm";
 import HandoverStatusBadge from "./HandoverStatusBadge";
+import DamagedEquipmentTagCard from "./DamagedEquipmentTagCard";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import { canCreateHandoverHd } from "../../utils/handoverPermissions";
@@ -34,6 +35,15 @@ function currentUserId(): number | null {
   }
 }
 
+function resolveHandoverPhotos(d: {
+  radioPhotos?: string[];
+  radioPhotoBase64?: string | null;
+}): string[] {
+  if (d.radioPhotos && d.radioPhotos.length > 0) return d.radioPhotos;
+  if (d.radioPhotoBase64) return [d.radioPhotoBase64];
+  return [];
+}
+
 export default function RadioHandoverPage() {
   const { toast } = useToast();
   const [items, setItems] = useState<RadioHandoverList[]>([]);
@@ -46,7 +56,11 @@ export default function RadioHandoverPage() {
   const [sigReceiverComplete, setSigReceiverComplete] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
+  const [sigRowReceiver, setSigRowReceiver] = useState<string | null>(null);
   const sigTekCompleteRef = useRef<SignaturePadHandle>(null);
+  const sigTekRowRef = useRef<SignaturePadHandle>(null);
+  const uid = currentUserId();
   const canDelete = hasPermission("radio.handover.delete");
   const canViewArchive = hasPermission("radio.handover.view.archive");
   const canDeletePermanent = hasPermission("radio.handover.delete.permanent");
@@ -65,9 +79,18 @@ export default function RadioHandoverPage() {
   }, [showArchive]);
 
   const openDetail = async (id: number) => {
-    const d = await radioHandoverApi.getById(id);
-    setDetail(d);
-    setSigReceiverComplete(null);
+    try {
+      const d = await radioHandoverApi.getById(id);
+      setDetail(d);
+      setSigReceiverComplete(null);
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({
+        title: "Gagal membuka detail",
+        description: ax.response?.data?.message,
+        variant: "destructive",
+      });
+    }
   };
 
   const openGallery = (e: React.MouseEvent, h: RadioHandoverList) => {
@@ -77,12 +100,7 @@ export default function RadioHandoverPage() {
     setGalleryIndex(0);
     setGalleryOpen(true);
     radioHandoverApi.getById(h.id).then((d) => {
-      const imgs =
-        d.radioPhotos?.length > 0
-          ? d.radioPhotos
-          : d.radioPhotoBase64
-            ? [d.radioPhotoBase64]
-            : [];
+      const imgs = resolveHandoverPhotos(d);
       if (imgs.length > 0) {
         setGalleryImages(imgs);
         setGalleryOpen(true);
@@ -105,10 +123,7 @@ export default function RadioHandoverPage() {
     }
     setCompleting(true);
     try {
-      await radioHandoverApi.completeReceiverSignature(detail.id, tekSig!);
-      toast({ title: "Serah terima selesai (Done)" });
-      setDetail(null);
-      load();
+      await completeReceiverForId(detail.id, tekSig!);
     } catch (err: unknown) {
       toast({
         title: err instanceof Error ? err.message : "Gagal menyimpan TTD",
@@ -119,10 +134,43 @@ export default function RadioHandoverPage() {
     }
   };
 
-  const canSignAsReceiver =
-    detail?.status === "PendingReceiverSignature" &&
-    detail.handoverType === "HelpdeskToTechnician" &&
-    currentUserId() === detail.receivedByUserId;
+  const canTechnicianSign = (h: RadioHandoverList) =>
+    !showArchive &&
+    h.status === "PendingReceiverSignature" &&
+    h.handoverType === "HelpdeskToTechnician" &&
+    uid != null &&
+    h.receivedByUserId === uid;
+
+  const canSignAsReceiver = detail != null && canTechnicianSign(detail);
+
+  const completeReceiverForId = async (handoverId: number, tekSig: string) => {
+    await radioHandoverApi.completeReceiverSignature(handoverId, tekSig);
+    toast({ title: "Serah terima selesai (Done)" });
+    setSignRow(null);
+    setSigRowReceiver(null);
+    if (detail?.id === handoverId) setDetail(null);
+    load();
+  };
+
+  const completeReceiverFromRow = async () => {
+    if (!signRow) return;
+    const tekSig = (await sigTekRowRef.current?.exportNow()) ?? sigRowReceiver;
+    if (!isValidSignature(tekSig)) {
+      toast({ title: "Gambar TTD teknisi di area putih", variant: "destructive" });
+      return;
+    }
+    setCompleting(true);
+    try {
+      await completeReceiverForId(signRow.id, tekSig!);
+    } catch (err: unknown) {
+      toast({
+        title: err instanceof Error ? err.message : "Gagal menyimpan TTD",
+        variant: "destructive",
+      });
+    } finally {
+      setCompleting(false);
+    }
+  };
 
   return (
     <div className="p-6 space-y-6">
@@ -187,7 +235,11 @@ export default function RadioHandoverPage() {
                 <td className="px-4 py-3 font-mono text-xs">{h.handoverNumber}</td>
                 <td className="px-4 py-3">{handoverTypeLabel(h.handoverType)}</td>
                 <td className="px-4 py-3">{h.helpdeskTicketNumber ?? "—"}</td>
-                <td className="px-4 py-3">{h.radioSerialNumber}</td>
+                <td className="px-4 py-3">
+                  <div className="font-medium">{h.radioSerialNumber}</div>
+                  {h.equipmentName && <div className="text-xs text-gray-500">{h.equipmentName}</div>}
+                  {h.unitNumber && <div className="text-xs text-gray-400">Unit {h.unitNumber}</div>}
+                </td>
                 <td className="px-4 py-3">
                   <HandoverStatusBadge status={h.status} />
                 </td>
@@ -210,6 +262,28 @@ export default function RadioHandoverPage() {
                 <td className="px-4 py-3">{h.handedOverByName} → {h.receivedByName}</td>
                 <td className="px-4 py-3">{format(new Date(h.handoverAt), "dd MMM yyyy HH:mm", { locale: localeId })}</td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex justify-end gap-1">
+                  <button
+                    type="button"
+                    className="p-2 border rounded-lg hover:bg-violet-50 text-violet-700"
+                    title="Lihat detail & tag peralatan rusak"
+                    onClick={() => openDetail(h.id)}
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  {canTechnicianSign(h) && (
+                    <button
+                      type="button"
+                      className="p-2 border rounded-lg text-violet-700 hover:bg-violet-50 border-violet-200"
+                      title="Tanda tangan penerima (TTD)"
+                      onClick={() => {
+                        setSignRow(h);
+                        setSigRowReceiver(null);
+                      }}
+                    >
+                      <PenLine className="w-4 h-4" />
+                    </button>
+                  )}
                   {canDelete && !showArchive && (
                     <button type="button" className="p-2 border rounded-lg text-red-600 hover:bg-red-50" title="Hapus" onClick={async () => {
                       if (!window.confirm(`Hapus STR ${h.handoverNumber}?`)) return;
@@ -257,6 +331,7 @@ export default function RadioHandoverPage() {
                       )}
                     </div>
                   )}
+                  </div>
                 </td>
               </tr>
             ))}
@@ -281,6 +356,44 @@ export default function RadioHandoverPage() {
         </Dialog>
       )}
 
+      <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSigRowReceiver(null); }}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>TTD Teknisi — {signRow?.handoverNumber}</DialogTitle>
+          </DialogHeader>
+          {signRow && (
+            <div className="space-y-3 text-sm">
+              <p className="text-gray-600">
+                Tiket {signRow.helpdeskTicketNumber ?? "—"} · SN {signRow.radioSerialNumber}
+              </p>
+              <p className="text-amber-800 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                Helpdesk sudah menyerahkan. Lengkapi tanda tangan sebagai penerima ({signRow.receivedByName}).
+              </p>
+              <SignaturePadField
+                ref={sigTekRowRef}
+                label="TTD Teknisi (penerima) *"
+                required
+                value={sigRowReceiver}
+                onChange={setSigRowReceiver}
+              />
+              <div className="flex gap-2 justify-end pt-1">
+                <button type="button" className="px-4 py-2 border rounded-lg" onClick={() => setSignRow(null)}>
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  disabled={completing}
+                  onClick={completeReceiverFromRow}
+                  className="px-4 py-2 bg-violet-600 text-white rounded-lg disabled:opacity-50"
+                >
+                  {completing ? "Menyimpan..." : "Simpan TTD & Done"}
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
@@ -291,18 +404,32 @@ export default function RadioHandoverPage() {
           </DialogHeader>
           {detail && (
             <div className="space-y-4 text-sm">
-              <p>
-                Tiket: {detail.helpdeskTicketNumber} | SN: {detail.radioSerialNumber} | Status job:{" "}
-                {detail.jobStatus}
+              <DamagedEquipmentTagCard
+                data={{
+                  handoverNumber: detail.handoverNumber,
+                  handedOverByName: detail.handedOverByName,
+                  receivedByName: detail.receivedByName,
+                  handoverAt: detail.handoverAt,
+                  equipmentName: detail.equipmentName,
+                  unitNumber: detail.unitNumber,
+                  radioSerialNumber: detail.radioSerialNumber,
+                  radioOwnerLabel: detail.radioOwnerLabel,
+                  ownerDivision: detail.ownerDivision,
+                  ownerDepartment: detail.ownerDepartment,
+                  damageDescription: detail.damageDescription,
+                  accessories: detail.accessories ?? [],
+                  helpdeskTicketNumber: detail.helpdeskTicketNumber,
+                }}
+              />
+              <p className="text-gray-600">
+                Status job: <strong>{detail.jobStatus}</strong>
+                {detail.radioId && (
+                  <span className="ml-2 text-violet-700">· Terhubung master radio #{detail.radioId}</span>
+                )}
               </p>
               {detail.remarks && <p className="text-gray-600">Catatan: {detail.remarks}</p>}
               {(() => {
-                const imgs =
-                  detail.radioPhotos?.length > 0
-                    ? detail.radioPhotos
-                    : detail.radioPhotoBase64
-                      ? [detail.radioPhotoBase64]
-                      : [];
+                const imgs = resolveHandoverPhotos(detail);
                 if (imgs.length === 0) return null;
                 return (
                   <div>
@@ -322,7 +449,7 @@ export default function RadioHandoverPage() {
                   </div>
                 );
               })()}
-              {detail.accessories?.length > 0 && (
+              {(detail.accessories?.length ?? 0) > 0 && (
                 <table className="w-full text-xs border rounded overflow-hidden">
                   <thead className="bg-gray-50">
                     <tr>

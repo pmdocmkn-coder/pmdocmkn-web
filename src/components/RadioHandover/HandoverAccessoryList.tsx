@@ -13,10 +13,20 @@ const QUICK_ADD = ["Baterai", "Antenna", "Charger", "Speaker Mic", "Flexible Cab
 type Props = {
   items: HandoverAccessoryItem[];
   onChange: (items: HandoverAccessoryItem[]) => void;
+  /** Tanpa baris kosong default; cocok untuk tambahan opsional. */
+  optional?: boolean;
+  label?: string;
+  hint?: string;
 };
 
-export default function HandoverAccessoryList({ items, onChange }: Props) {
-  const rows = items.length > 0 ? items : [emptyRow()];
+export default function HandoverAccessoryList({
+  items,
+  onChange,
+  optional,
+  label = "Aksesoris",
+  hint,
+}: Props) {
+  const rows = items.length > 0 ? items : optional ? [] : [emptyRow()];
 
   const update = (index: number, field: keyof HandoverAccessoryItem, value: string | number) => {
     const next = [...rows];
@@ -39,8 +49,16 @@ export default function HandoverAccessoryList({ items, onChange }: Props) {
     <div className="space-y-2">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
-          <p className="text-sm font-medium">Aksesoris</p>
-          <p className="text-xs text-gray-500">SN baterai & aksesoris lain — isi nama barang + SN di bawah</p>
+          <p className="text-sm font-medium">
+            {label}
+            {optional && <span className="text-gray-400 font-normal"> (opsional)</span>}
+          </p>
+          <p className="text-xs text-gray-500">
+            {hint ??
+              (optional
+                ? "Tambahkan barang baru jika ada perubahan kelengkapan sejak HD → Teknisi"
+                : "SN baterai & aksesoris lain — isi nama barang + SN di bawah")}
+          </p>
         </div>
         <button
           type="button"
@@ -62,6 +80,9 @@ export default function HandoverAccessoryList({ items, onChange }: Props) {
           </button>
         ))}
       </div>
+      {optional && rows.length === 0 && (
+        <p className="text-xs text-gray-400 italic">Belum ada tambahan. Klik Tambah jika perlu.</p>
+      )}
       {rows.map((row, index) => (
         <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
           <div className="flex gap-2">
