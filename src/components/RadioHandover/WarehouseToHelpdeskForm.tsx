@@ -6,10 +6,11 @@ import type { RadioRepairJobList } from "../../types/radioRepair";
 import { EMPTY_GREEN_TAG } from "../../types/equipmentTag";
 import type { GreenTagFields } from "../../types/equipmentTag";
 import { useToast } from "../../hooks/use-toast";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import HandoverAccessoryList from "./HandoverAccessoryList";
 import MultiPhotoUpload from "./MultiPhotoUpload";
-import GreenTagFieldsForm from "./GreenTagFieldsForm";
 import GoodEquipmentTagCard from "./GoodEquipmentTagCard";
+import DamagedEquipmentTagCard from "./DamagedEquipmentTagCard";
 
 type Props = {
   job: RadioRepairJobList;
@@ -24,10 +25,6 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [remarks, setRemarks] = useState("");
-  const [greenFields, setGreenFields] = useState<GreenTagFields>({
-    ...EMPTY_GREEN_TAG,
-    repairDataDescription: job.damageDescription || "",
-  });
   const [sigWh, setSigWh] = useState<string | null>(null);
   const [sigHd, setSigHd] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -45,10 +42,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       toast({ title: "Lengkapi penerima helpdesk, foto, dan kedua TTD", variant: "destructive" });
       return;
     }
-    if (!greenFields.repairDataDescription?.trim()) {
-      toast({ title: "Data perbaikan wajib untuk tag hijau", variant: "destructive" });
-      return;
-    }
+
     setSubmitting(true);
     try {
       await radioHandoverApi.create({
@@ -64,16 +58,6 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         receiverSignatureBase64: sigHd,
         accessories: acc,
         remarks: remarks || undefined,
-        originFrom: greenFields.originFrom?.trim() || job.radioOwnerLabel || undefined,
-        repairDataDescription: greenFields.repairDataDescription?.trim(),
-        repairedByName: greenFields.repairedByName?.trim() || job.assignedTechnicianName,
-        frequencyError: greenFields.frequencyError?.trim() || undefined,
-        afReading: greenFields.afReading?.trim() || undefined,
-        powerReading: greenFields.powerReading?.trim() || undefined,
-        voltageOutNoLoad: greenFields.voltageOutNoLoad?.trim() || undefined,
-        voltageOutWithLoad: greenFields.voltageOutWithLoad?.trim() || undefined,
-        physicalCondition: greenFields.physicalCondition?.trim() || undefined,
-        displayCondition: greenFields.displayCondition?.trim() || undefined,
       });
       toast({ title: "Serah terima ke Helpdesk (tag hijau) berhasil" });
       onSuccess();
@@ -90,55 +74,126 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   };
 
   return (
-    <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-2">
-      <div className="rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-900">
-        <strong>Tag hijau — peralatan baik.</strong> Radio selesai diperbaiki dan dikembalikan ke Helpdesk.
+    <div className="flex flex-col max-h-[94vh]">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto space-y-4 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 custom-scrollbar">
+        {/* Tag Preview Card */}
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-gray-600">Pratinjau Tag Hijau</p>
+          {job.equipmentTagType === "Damaged" ? (
+            <DamagedEquipmentTagCard
+              data={{
+                handoverNumber: "STR-…",
+                helpdeskTicketNumber: job.helpdeskTicketNumber,
+                handoverAt: new Date().toISOString(),
+                handedOverByName: "Warehouse",
+                receivedByName: "Helpdesk",
+                equipmentName: job.equipmentName,
+                unitNumber: job.unitNumber,
+                radioSerialNumber: job.radioSerialNumber,
+                radioOwnerLabel: job.radioOwnerLabel,
+                radioMasterId: job.radioId,
+                radioMasterRadioId: job.radioMasterRadioId,
+                radioFleet: job.radioFleet,
+                radioCategory: job.radioCategory,
+                damageDescription: job.damageDescription,
+                accessories: [],
+              }}
+            />
+          ) : (
+            <GoodEquipmentTagCard
+              data={{
+                handoverNumber: "STR-…",
+                helpdeskTicketNumber: job.helpdeskTicketNumber,
+                handoverAt: new Date().toISOString(),
+                handedOverByName: "Warehouse",
+                receivedByName: "Helpdesk",
+                equipmentName: job.equipmentName,
+                unitNumber: job.unitNumber,
+                radioSerialNumber: job.radioSerialNumber,
+                radioOwnerLabel: job.radioOwnerLabel,
+                radioMasterRadioId: job.radioMasterRadioId,
+                radioFleet: job.radioFleet,
+                originFrom: job.originFrom || job.radioOwnerLabel,
+                repairDataDescription: job.repairDataDescription,
+                repairedByName: job.repairedByName || job.assignedTechnicianName,
+                frequencyError: job.frequencyError,
+                afReading: job.afReading,
+                powerReading: job.powerReading,
+                voltageOutNoLoad: job.voltageOutNoLoad,
+                voltageOutWithLoad: job.voltageOutWithLoad,
+                physicalCondition: job.physicalCondition,
+                displayCondition: job.displayCondition,
+                handoverType: "WarehouseToHelpdesk",
+              }}
+            />
+          )}
+        </div>
+
+        {/* Helpdesk Receiver Selection */}
+        <div className="space-y-2">
+          <label className="text-sm font-medium text-gray-900">Penerima Helpdesk *</label>
+          <Select value={hdId} onValueChange={setHdId}>
+            <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+              <SelectValue placeholder="Pilih staff helpdesk" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[300px]">
+              {(receivers ?? []).map((r) => (
+                <SelectItem key={r.userId} value={r.userId.toString()}>
+                  <div className="flex flex-col">
+                    <span className="font-medium">{r.fullName}</span>
+                    <span className="text-xs text-gray-500">@{r.username}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        {/* Photos */}
+        <MultiPhotoUpload photos={photos} onChange={setPhotos} required label="Foto Radio" />
+        
+        {/* Accessories */}
+        <HandoverAccessoryList items={accessories} onChange={setAccessories} />
+        
+        {/* Signatures */}
+        <SignaturePadField 
+          label="TTD Warehouse (penyerah)" 
+          required 
+          value={sigWh} 
+          onChange={setSigWh} 
+        />
+        <SignaturePadField 
+          label="TTD Helpdesk (penerima)" 
+          required 
+          value={sigHd} 
+          onChange={setSigHd} 
+        />
+        
+        {/* Remarks */}
+        <div className="space-y-2 pb-4">
+          <label className="text-sm font-medium text-gray-900">Catatan</label>
+          <input 
+            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors" 
+            value={remarks} 
+            onChange={(e) => setRemarks(e.target.value)}
+            placeholder="Catatan tambahan (opsional)"
+          />
+        </div>
       </div>
-      <p className="text-sm text-gray-600">
-        Tiket <strong>{job.helpdeskTicketNumber}</strong> — SN {job.radioSerialNumber}
-      </p>
-      <GreenTagFieldsForm value={greenFields} onChange={setGreenFields} />
-      <GoodEquipmentTagCard
-        data={{
-          handoverNumber: "STR-…",
-          helpdeskTicketNumber: job.helpdeskTicketNumber,
-          handoverAt: new Date().toISOString(),
-          handedOverByName: "Warehouse",
-          receivedByName: "Helpdesk",
-          equipmentName: job.equipmentName,
-          radioSerialNumber: job.radioSerialNumber,
-          originFrom: greenFields.originFrom || job.radioOwnerLabel,
-          repairDataDescription: greenFields.repairDataDescription,
-          repairedByName: greenFields.repairedByName || job.assignedTechnicianName,
-          handoverType: "WarehouseToHelpdesk",
-        }}
-      />
-      <div>
-        <label className="text-sm font-medium">Penerima Helpdesk *</label>
-        <select className="w-full border rounded-lg px-3 py-2 mt-1" value={hdId} onChange={(e) => setHdId(e.target.value)}>
-          <option value="">Pilih staff helpdesk</option>
-          {(receivers ?? []).map((r) => (
-            <option key={r.userId} value={r.userId}>
-              {r.fullName} ({r.username})
-            </option>
-          ))}
-        </select>
-      </div>
-      <MultiPhotoUpload photos={photos} onChange={setPhotos} required />
-      <HandoverAccessoryList items={accessories} onChange={setAccessories} />
-      <SignaturePadField label="TTD Warehouse (penyerah)" required value={sigWh} onChange={setSigWh} />
-      <SignaturePadField label="TTD Helpdesk (penerima)" required value={sigHd} onChange={setSigHd} />
-      <div>
-        <label className="text-sm font-medium">Catatan</label>
-        <input className="w-full border rounded-lg px-3 py-2 mt-1" value={remarks} onChange={(e) => setRemarks(e.target.value)} />
-      </div>
-      <div className="flex gap-2 justify-end pt-2">
-        <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>
+
+      {/* Footer Buttons - Outside scrollable area */}
+      <div className="flex justify-between gap-2 pt-4 border-t bg-white shrink-0 -mx-4 px-4 sm:-mx-6 sm:px-6 pb-4 sm:pb-0">
+        <button 
+          type="button" 
+          className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]" 
+          onClick={onCancel}
+        >
           Batal
         </button>
         <button
           type="button"
-          className="px-4 py-2 bg-violet-600 text-white rounded-lg disabled:opacity-50"
+          className="px-4 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-700 transition-colors min-w-[140px]"
           disabled={submitting}
           onClick={submit}
         >

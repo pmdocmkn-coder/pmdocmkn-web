@@ -213,13 +213,14 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
   };
 
   return (
-    <div className="space-y-4 max-h-[75vh] flex flex-col">
-      <div className="flex gap-1 flex-wrap">
+    <div className="flex flex-col max-h-[94vh]">
+      {/* Step indicator - mobile optimized */}
+      <div className="flex gap-1 overflow-x-auto pb-2 no-scrollbar shrink-0">
         {STEPS.map((label, i) => (
           <span
             key={label}
-            className={`text-xs px-2 py-1 rounded-full ${
-              i === step ? "bg-violet-600 text-white" : i < step ? "bg-violet-100 text-violet-700" : "bg-gray-100 text-gray-400"
+            className={`text-[10px] sm:text-xs px-2 py-1 rounded-full whitespace-nowrap shrink-0 ${
+              i === step ? "bg-violet-600 text-white font-medium" : i < step ? "bg-violet-100 text-violet-700" : "bg-gray-100 text-gray-400"
             }`}
           >
             {i + 1}. {label}
@@ -227,30 +228,88 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto pr-1 space-y-4 min-h-0">
+      {/* Scrollable Content */}
+      <div className="flex-1 overflow-y-auto space-y-3 py-3 -mx-4 px-4 sm:-mx-6 sm:px-6 custom-scrollbar">
         {step === 0 && (
           <div className="space-y-3">
-            <p className="text-sm text-gray-600">Pilih jenis tag fisik untuk serah terima ke teknisi/workshop.</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <p className="text-sm text-gray-700 leading-relaxed">
+              Pilih jenis tag fisik untuk serah terima ke teknisi/workshop.
+            </p>
+            
+            {/* Tag selection cards - mobile optimized */}
+            <div className="space-y-3">
+              {/* Yellow Tag */}
               <button
                 type="button"
                 onClick={() => setTagType("Damaged")}
-                className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                  tagType === "Damaged" ? "border-amber-500 bg-amber-50" : "border-gray-200 hover:border-amber-300"
+                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                  tagType === "Damaged" 
+                    ? "border-amber-500 bg-amber-50 shadow-md ring-2 ring-amber-200" 
+                    : "border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50/30"
                 }`}
               >
-                <p className="font-bold text-amber-900">Tag kuning</p>
-                <p className="text-xs text-amber-800 mt-1">PERALATAN RUSAK — radio masuk perbaikan</p>
+                <div className="flex items-start gap-3">
+                  {/* Icon/Indicator */}
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    tagType === "Damaged" ? "bg-amber-400" : "bg-gray-200"
+                  }`}>
+                    <div className="w-6 h-6 rounded-full border-2 border-gray-900" />
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-base text-amber-900 mb-1">Tag kuning</p>
+                    <p className="text-xs text-amber-800 leading-relaxed">
+                      PERALATAN RUSAK — radio masuk perbaikan
+                    </p>
+                  </div>
+                  
+                  {/* Checkmark */}
+                  {tagType === "Damaged" && (
+                    <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
               </button>
+
+              {/* Green Tag */}
               <button
                 type="button"
                 onClick={() => setTagType("Good")}
-                className={`p-4 rounded-xl border-2 text-left transition-colors ${
-                  tagType === "Good" ? "border-emerald-500 bg-emerald-50" : "border-gray-200 hover:border-emerald-300"
+                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                  tagType === "Good" 
+                    ? "border-emerald-500 bg-emerald-50 shadow-md ring-2 ring-emerald-200" 
+                    : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30"
                 }`}
               >
-                <p className="font-bold text-emerald-900">Tag hijau</p>
-                <p className="text-xs text-emerald-800 mt-1">PERALATAN BAIK — kondisi baik / inspeksi</p>
+                <div className="flex items-start gap-3">
+                  {/* Icon/Indicator */}
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                    tagType === "Good" ? "bg-emerald-400" : "bg-gray-200"
+                  }`}>
+                    <div className="w-6 h-6 rounded-full border-2 border-gray-900" />
+                  </div>
+                  
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-base text-emerald-900 mb-1">Tag hijau</p>
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      PERALATAN BAIK — kondisi baik / inspeksi
+                    </p>
+                  </div>
+                  
+                  {/* Checkmark */}
+                  {tagType === "Good" && (
+                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
               </button>
             </div>
           </div>
@@ -272,10 +331,10 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
         {step === 2 && (
           <>
             {tagType === "Damaged" && (
-              <div>
-                <label className="text-sm font-medium">Keterangan kerusakan *</label>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-900">Keterangan kerusakan *</label>
                 <textarea
-                  className="w-full border rounded-lg px-3 py-2 mt-1"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
                   rows={3}
                   value={damage}
                   onChange={(e) => setDamage(e.target.value)}
@@ -290,8 +349,8 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                 originPrefilled={defaultOriginFrom(radioLines, sharedDefaults)}
               />
             )}
-            <div>
-              <p className="text-xs font-medium text-gray-600 mb-2">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-600">
                 Pratinjau tag {mergedLines(radioLines, sharedDefaults).length > 1 ? "(per SN)" : ""}
               </p>
               <HandoverWizardTagCarousel
@@ -309,9 +368,13 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
 
         {step === 3 && (
           <>
-            <div>
-              <label className="text-sm font-medium">Teknisi penerima *</label>
-              <select className="w-full border rounded-lg px-3 py-2 mt-1" value={techId} onChange={(e) => setTechId(e.target.value)}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-900">Teknisi penerima *</label>
+              <select 
+                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors bg-white" 
+                value={techId} 
+                onChange={(e) => setTechId(e.target.value)}
+              >
                 <option value="">Pilih teknisi</option>
                 {technicians.map((t) => (
                   <option key={t.userId} value={t.userId}>
@@ -367,7 +430,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
             <SignaturePadField ref={sigHdRef} label="TTD Helpdesk" required value={sigHandover} onChange={setSigHandover} />
             <SignaturePadField ref={sigTekRef} label="TTD Teknisi (opsional)" value={sigReceiver} onChange={setSigReceiver} />
             <input
-              className="w-full border rounded-lg px-3 py-2 text-sm"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
               placeholder="Catatan opsional"
               value={remarks}
               onChange={(e) => setRemarks(e.target.value)}
@@ -376,23 +439,32 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
         )}
       </div>
 
-      <div className="flex justify-between gap-2 pt-2 border-t shrink-0">
-        <button type="button" className="px-4 py-2 border rounded-lg text-sm" onClick={step === 0 ? onCancel : () => setStep((s) => s - 1)}>
+      {/* Footer buttons - Outside scrollable area */}
+      <div className="flex justify-between gap-2 pt-4 border-t bg-white shrink-0 -mx-4 px-4 sm:-mx-6 sm:px-6 pb-4 sm:pb-0">
+        <button 
+          type="button" 
+          className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]" 
+          onClick={step === 0 ? onCancel : () => setStep((s) => s - 1)}
+        >
           {step === 0 ? "Batal" : (
-            <span className="flex items-center gap-1">
+            <span className="flex items-center justify-center gap-1">
               <ChevronLeft className="w-4 h-4" /> Kembali
             </span>
           )}
         </button>
         {step < STEPS.length - 1 ? (
-          <button type="button" className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm flex items-center gap-1" onClick={next}>
+          <button 
+            type="button" 
+            className="px-4 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-medium hover:bg-violet-700 transition-colors flex items-center gap-1 min-w-[90px] justify-center" 
+            onClick={next}
+          >
             Lanjut <ChevronRight className="w-4 h-4" />
           </button>
         ) : (
           <button
             type="button"
             disabled={submitting}
-            className="px-4 py-2 bg-violet-600 text-white rounded-lg text-sm disabled:opacity-50"
+            className="px-4 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-700 transition-colors min-w-[140px]"
             onClick={submit}
           >
             {submitting ? "Menyimpan..." : "Simpan serah terima"}

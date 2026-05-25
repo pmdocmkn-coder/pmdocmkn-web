@@ -1,6 +1,7 @@
+import { useEffect, useState } from "react";
 import type { GreenTagFields } from "../../types/equipmentTag";
-
-type Props = {
+import { radioHandoverApi } from "../../services/radioHandoverApi";
+import type { UserOption } from "../../types/radioHandover";type Props = {
   value: GreenTagFields;
   onChange: (v: GreenTagFields) => void;
   /** Sudah terisi dari langkah Tiket & radio — tampilkan read-only */
@@ -9,6 +10,11 @@ type Props = {
 
 export default function GreenTagFieldsForm({ value, onChange, originPrefilled }: Props) {
   const set = (key: keyof GreenTagFields, v: string) => onChange({ ...value, [key]: v });
+
+  const [techs, setTechs] = useState<UserOption[]>([]);
+  useEffect(() => {
+    radioHandoverApi.getTechnicians().then(setTechs).catch(() => {});
+  }, []);
 
   return (
     <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
@@ -46,10 +52,14 @@ export default function GreenTagFieldsForm({ value, onChange, originPrefilled }:
       <label className="block text-sm">
         <span className="font-medium">Diperbaiki oleh</span>
         <input
+          list="tech-list"
           className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
           value={value.repairedByName ?? ""}
           onChange={(e) => set("repairedByName", e.target.value)}
         />
+        <datalist id="tech-list">
+          {techs.map(t => <option key={t.userId} value={t.fullName} />)}
+        </datalist>
       </label>
       <div className="grid grid-cols-2 gap-3">
         <label className="block text-sm">

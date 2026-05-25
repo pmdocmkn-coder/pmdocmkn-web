@@ -21,6 +21,17 @@ export interface RadioRepairJobList {
   radioOwnerLabel?: string | null;
   previewPhotoBase64?: string | null;
   damageDescription: string;
+  equipmentTagType?: "Good" | "Damaged" | null;
+  originFrom?: string | null;
+  repairDataDescription?: string | null;
+  repairedByName?: string | null;
+  frequencyError?: string | null;
+  afReading?: string | null;
+  powerReading?: string | null;
+  voltageOutNoLoad?: string | null;
+  voltageOutWithLoad?: string | null;
+  physicalCondition?: string | null;
+  displayCondition?: string | null;
   status: RadioRepairJobStatus;
   assignedTechnicianUserId: number;
   assignedTechnicianName: string;
@@ -108,6 +119,7 @@ export interface RadioRepairJobDetail extends RadioRepairJobList {
     userName: string;
     at: string;
   }[];
+
   handovers: {
     id: number;
     handoverNumber: string;

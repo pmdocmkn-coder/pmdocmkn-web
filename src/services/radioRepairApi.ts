@@ -56,9 +56,25 @@ export const radioRepairApi = {
   update: (id: number, payload: UpdateRadioRepairJobPayload) =>
     api.patch(`/api/radio-repair-jobs/${id}`, payload).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
-  technicianUpdate: (id: number, damageDescription: string) =>
+  technicianUpdate: (
+    id: number,
+    payload: {
+      damageDescription?: string;
+      equipmentTagType?: string;
+      originFrom?: string | null;
+      repairDataDescription?: string | null;
+      repairedByName?: string | null;
+      frequencyError?: string | null;
+      afReading?: string | null;
+      powerReading?: string | null;
+      voltageOutNoLoad?: string | null;
+      voltageOutWithLoad?: string | null;
+      physicalCondition?: string | null;
+      displayCondition?: string | null;
+    }
+  ) =>
     api
-      .patch(`/api/radio-repair-jobs/${id}/notes`, { damageDescription })
+      .patch(`/api/radio-repair-jobs/${id}/notes`, payload)
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
   updateStatus: (id: number, status: RadioRepairJobStatus, note?: string, customStatusId?: number | null) =>
@@ -82,4 +98,6 @@ export const radioRepairApi = {
 
   deletePermanent: (id: number) =>
     api.delete(`/api/radio-repair-jobs/${id}/permanent`).then((r) => unwrapData(r)),
+
+  resetTestingData: () => api.delete("/api/radio-repair-jobs/reset-testing-data").then((r) => unwrapData(r)),
 };

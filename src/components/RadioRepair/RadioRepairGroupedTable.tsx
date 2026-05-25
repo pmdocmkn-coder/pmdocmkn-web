@@ -2,7 +2,7 @@ import { Fragment, useState, useRef, useEffect } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse } from "lucide-react";
-import type { RadioRepairJobList, RadioRepairJobStatus } from "../../types/radioRepair";
+import type { RadioRepairJobList, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import { HandoverPhotoThumb } from "../RadioHandover/HandoverPhotoThumbnails";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
 import {
@@ -38,9 +38,10 @@ type Props = {
   onSoftDelete: (job: RadioRepairJobList) => void;
   onRestore: (id: number) => void;
   onDeletePermanent: (job: RadioRepairJobList) => void;
-  onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus) => void;
+  onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
   isJobLocked: (status: RadioRepairJobList["status"]) => boolean;
+  customStatuses?: RepairJobCustomStatus[];
 };
 
 export default function RadioRepairGroupedTable({
@@ -63,21 +64,24 @@ export default function RadioRepairGroupedTable({
   onQuickStatus,
   onQuickHandoverWh,
   isJobLocked,
+  customStatuses = [],
 }: Props) {
   const colCount = 11;
 
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm min-w-[1000px]">
-        <thead className="bg-gray-50 text-left text-xs font-semibold text-gray-600 border-b">
-          <tr>
-            <th className="px-3 py-3 w-14">Foto</th>
-            <th className="px-3 py-3">SN</th>
-            <th className="px-3 py-3">Alat</th>
-            <th className="px-3 py-3">ID Radio</th>
-            <th className="px-3 py-3">Fleet</th>
-            <th className="px-3 py-3">Kerusakan</th>
-            <th className="px-3 py-3">Teknisi</th>
+    <>
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden md:block hidden">
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm min-w-[1000px]">
+          <thead className="bg-gray-50 text-left text-xs font-semibold text-gray-600 border-b">
+            <tr>
+              <th className="px-3 py-3 w-14">Foto</th>
+              <th className="px-3 py-3">SN</th>
+              <th className="px-3 py-3">Alat</th>
+              <th className="px-3 py-3">ID Radio</th>
+              <th className="px-3 py-3">Fleet</th>
+              <th className="px-3 py-3">Kerusakan</th>
+              <th className="px-3 py-3">Teknisi</th>
             <th className="px-3 py-3">Status</th>
             <th className="px-3 py-3">Tanggal masuk</th>
             <th className="px-3 py-3">Lama workshop</th>
@@ -133,12 +137,279 @@ export default function RadioRepairGroupedTable({
                     onQuickStatus={onQuickStatus}
                     onQuickHandoverWh={onQuickHandoverWh}
                     isJobLocked={isJobLocked}
+                    customStatuses={customStatuses}
                   />
                 ))}
               </Fragment>
             ))}
         </tbody>
       </table>
+      </div>
+    </div>
+
+    {/* ====== MOBILE CARD LAYOUT ====== */}
+    <div className="md:hidden space-y-4">
+      {loading ? (
+        <div className="text-center py-8 text-gray-500 text-sm">Memuat data...</div>
+      ) : groups.length === 0 ? (
+        <div className="text-center py-8 text-gray-500 text-sm">Belum ada data perbaikan</div>
+      ) : (
+        groups.map(({ ticket, radios }) => (
+          <div key={ticket} className="space-y-3">
+            <div className="flex items-center gap-2 px-1">
+              <span className="font-bold text-violet-900 text-sm">{ticket}</span>
+              <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 font-bold">
+                {radios.length} radio
+              </span>
+            </div>
+            <div className="space-y-3">
+              {radios.map((j) => {
+                const days = getWorkshopDays(j.openedAt, j.closedAt);
+                return (
+                  <div key={j.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2.5 relative">
+                    {/* Row 1: Category Badge + Date */}
+                    <div className="flex justify-between items-start">
+                      <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                        {j.radioCategory || "Perbaikan"}
+                      </span>
+                      <span className="text-xs text-gray-400 font-medium">
+                        {j.openedAt ? format(new Date(j.openedAt), "dd MMM yyyy", { locale: localeId }) : "-"}
+                      </span>
+                    </div>
+
+                    {/* Row 2: SN + Unit/Alat */}
+                    <div>
+                      <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        Unit: {j.unitNumber || "-"} • Alat: {j.equipmentName || "-"}
+                      </p>
+                    </div>
+
+                    {/* Row 3: Detail Grid Box */}
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+                      <div><span className="text-gray-400">ID Radio:</span> <span className="font-mono">{j.radioMasterRadioId || "-"}</span></div>
+                      <div><span className="text-gray-400">Teknisi:</span> <span className="font-medium">{j.assignedTechnicianName || "-"}</span></div>
+                      <div className="col-span-2 flex items-baseline gap-1"><span className="text-gray-400 shrink-0">Kerusakan:</span> <span className="text-gray-800 line-clamp-1" title={j.damageDescription}>{j.damageDescription}</span></div>
+                      <div className="col-span-2 flex items-center gap-1.5 mt-0.5 pt-1.5 border-t border-gray-200/50">
+                        <span className="text-gray-400">Durasi:</span>
+                        <span className={`inline-block text-[10px] px-2 py-0.5 rounded border whitespace-nowrap font-medium ${workshopDurationBadgeClass(days)}`}>
+                          {formatWorkshopDuration(j.openedAt, j.closedAt)}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Row 4: Fleet Tag */}
+                    {j.radioFleet && (
+                      <div className="flex flex-wrap items-center gap-1">
+                        <span className="text-xs text-gray-400 mr-1 font-medium">Fleet:</span>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-mono font-semibold bg-red-50 border-red-200 text-red-600">
+                          {j.radioFleet}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Row 5: Status & Actions */}
+                    <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-gray-100">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <RadioRepairStatusBadge
+                          status={j.status}
+                          customStatusLabel={j.customStatusLabel}
+                          customStatusColor={j.customStatusColor}
+                        />
+                      </div>
+                      <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          onClick={() => onOpenDetail(j.id)}
+                          className="text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                          title="Detail"
+                        >
+                          <Eye className="w-4 h-4" />
+                        </button>
+
+                        {!showArchive && !isJobLocked(j.status) && canUpdate && (
+                          <MobileQuickActionDropdown
+                            job={j}
+                            customStatuses={customStatuses}
+                            onQuickStatus={onQuickStatus}
+                            onQuickHandoverWh={onQuickHandoverWh}
+                            canHandoverWh={canHandoverWh}
+                          />
+                        )}
+
+                        {canEdit && !showArchive && (
+                          <button
+                            type="button"
+                            onClick={() => onOpenEdit(j)}
+                            className="text-gray-500 hover:text-violet-600 p-1.5 rounded-lg hover:bg-violet-50 transition-colors"
+                            title="Edit"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {canDelete && !showArchive && (
+                          <button
+                            type="button"
+                            onClick={() => onSoftDelete(j)}
+                            className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Hapus"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+
+                        {showArchive && canViewArchive && (
+                          <button
+                            type="button"
+                            onClick={() => onRestore(j.id)}
+                            className="inline-flex items-center justify-center h-7 px-2.5 border border-amber-200 rounded-lg text-amber-700 bg-amber-50 text-[10px] font-semibold transition-colors"
+                          >
+                            <RotateCcw className="w-3.5 h-3.5 mr-1" /> Pulihkan
+                          </button>
+                        )}
+
+                        {showArchive && canDeletePermanent && (
+                          <button
+                            type="button"
+                            onClick={() => onDeletePermanent(j)}
+                            className="text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                            title="Hapus Permanen"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+    </>
+  );
+}
+
+function MobileQuickActionDropdown({
+  job,
+  customStatuses = [],
+  onQuickStatus,
+  onQuickHandoverWh,
+  canHandoverWh,
+}: {
+  job: RadioRepairJobList;
+  customStatuses?: RepairJobCustomStatus[];
+  onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
+  onQuickHandoverWh: (job: RadioRepairJobList) => void;
+  canHandoverWh: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  const nextList = allowedNextStatuses(job.status);
+  const canShowCustom = customStatuses.length > 0 && ["InProgress", "Received"].includes(job.status);
+  const showBackToProgress = !!job.customStatusId;
+  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || (job.status === "RepairCompleted" && canHandoverWh);
+
+  if (!hasActions) return null;
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        className="inline-flex items-center justify-center h-8 px-3 border border-violet-200 rounded-xl text-violet-700 bg-violet-50 text-xs font-semibold shrink-0"
+      >
+        Aksi <ChevronDown className="w-3 h-3 ml-1" />
+      </button>
+      
+      {open && (
+        <div className="absolute right-0 bottom-full mb-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[180px] py-1 overflow-hidden">
+          {nextList.length > 0 && (
+            <>
+              <p className="px-3 py-1.5 text-xs text-gray-400 border-b border-gray-100 bg-gray-50 font-medium">
+                Status sistem:
+              </p>
+              {nextList.map((ns) => (
+                <button
+                  key={ns}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(false);
+                    onQuickStatus(job, ns, null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+                >
+                  {statusActionLabel(job.status, ns)}
+                </button>
+              ))}
+            </>
+          )}
+
+          {showBackToProgress && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onQuickStatus(job, "InProgress", null);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors border-t border-gray-100"
+            >
+              Kembali ke Progress
+            </button>
+          )}
+
+          {canShowCustom && (
+            <>
+              <p className="px-3 py-1.5 text-xs text-gray-400 border-y border-gray-100 mt-1 bg-gray-50 font-medium">
+                Status tambahan:
+              </p>
+              {customStatuses
+                .filter((cs) => cs.id !== job.customStatusId)
+                .map((cs) => (
+                  <button
+                    key={cs.id}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setOpen(false);
+                      onQuickStatus(job, "InProgress", cs.id);
+                    }}
+                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-violet-50 transition-colors flex items-center gap-2"
+                  >
+                    <span className={`w-2 h-2 rounded-full ${cs.color}`} />
+                    {cs.label}
+                  </button>
+                ))}
+            </>
+          )}
+          
+          {job.status === "RepairCompleted" && canHandoverWh && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onQuickHandoverWh(job);
+              }}
+              className="w-full text-left px-4 py-2 text-xs hover:bg-violet-50 text-violet-700 flex items-center font-medium border-t border-gray-100 mt-1 pt-1"
+            >
+              <Warehouse className="w-3.5 h-3.5 mr-1.5" />
+              Serah ke WH
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -161,9 +432,10 @@ type RowProps = {
   onSoftDelete: (job: RadioRepairJobList) => void;
   onRestore: (id: number) => void;
   onDeletePermanent: (job: RadioRepairJobList) => void;
-  onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus) => void;
+  onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
   isJobLocked: (status: RadioRepairJobList["status"]) => boolean;
+  customStatuses: RepairJobCustomStatus[];
 };
 
 function RadioRepairRow({
@@ -185,6 +457,7 @@ function RadioRepairRow({
   onQuickStatus,
   onQuickHandoverWh,
   isJobLocked,
+  customStatuses,
 }: RowProps) {
   const days = getWorkshopDays(j.openedAt, j.closedAt);
   const locked = isJobStatusLocked(j.status as RadioRepairJobStatus) || !!j.isDeleted;
@@ -244,7 +517,8 @@ function RadioRepairRow({
             <StatusDropdown
               job={j}
               nextStatuses={nextStatuses}
-              onSelect={(s) => onQuickStatus(j, s)}
+              customStatuses={customStatuses}
+              onSelect={(s, cid) => onQuickStatus(j, s, cid)}
             />
           )}
 
@@ -314,11 +588,13 @@ function RadioRepairRow({
 function StatusDropdown({
   job,
   nextStatuses,
+  customStatuses,
   onSelect,
 }: {
   job: RadioRepairJobList;
   nextStatuses: RadioRepairJobStatus[];
-  onSelect: (s: RadioRepairJobStatus) => void;
+  customStatuses: RepairJobCustomStatus[];
+  onSelect: (s: RadioRepairJobStatus, customId?: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -332,6 +608,9 @@ function StatusDropdown({
     return () => document.removeEventListener("mousedown", handler);
   }, [open]);
 
+  const canShowCustom = customStatuses.length > 0 && ["InProgress", "Received"].includes(job.status);
+  const showBackToProgress = !!job.customStatusId;
+
   return (
     <div ref={ref} className="relative">
       <button
@@ -344,9 +623,9 @@ function StatusDropdown({
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[160px] py-1 overflow-hidden">
-          <p className="px-3 py-1.5 text-xs text-gray-400 border-b border-gray-100">
-            Ubah ke:
+        <div className="absolute right-0 top-full mt-1 z-50 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[180px] py-1 overflow-hidden">
+          <p className="px-3 py-1.5 text-xs text-gray-400 border-b border-gray-100 bg-gray-50 font-medium">
+            Status sistem:
           </p>
           {nextStatuses.map((s) => (
             <button
@@ -362,6 +641,45 @@ function StatusDropdown({
               {statusActionLabel(job.status as RadioRepairJobStatus, s)}
             </button>
           ))}
+          
+          {showBackToProgress && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onSelect("InProgress", null);
+                setOpen(false);
+              }}
+              className="w-full text-left px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors border-t border-gray-100"
+            >
+              Kembali ke Progress
+            </button>
+          )}
+
+          {canShowCustom && (
+            <>
+              <p className="px-3 py-1.5 text-xs text-gray-400 border-y border-gray-100 mt-1 bg-gray-50 font-medium">
+                Status tambahan:
+              </p>
+              {customStatuses
+                .filter((cs) => cs.id !== job.customStatusId)
+                .map((cs) => (
+                <button
+                  key={cs.id}
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelect("InProgress", cs.id);
+                    setOpen(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-violet-50 transition-colors flex items-center gap-2"
+                >
+                  <span className={`w-2 h-2 rounded-full ${cs.color}`} />
+                  {cs.label}
+                </button>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>

@@ -11,7 +11,9 @@ import {
   PackageCheck,
   ClipboardList,
   Loader2,
+  Home,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
@@ -81,7 +83,9 @@ function HandoverHistoryTable({
   onOpenGallery,
 }: HandoverTableProps) {
   return (
-    <div className="bg-white rounded-xl border overflow-hidden shadow-sm">
+    <>
+    {/* ====== DESKTOP TABLE ====== */}
+    <div className="bg-white rounded-xl border overflow-hidden shadow-sm hidden md:block">
       <table className="w-full text-sm">
         <thead className="bg-gray-50/80 text-left border-b">
           <tr>
@@ -186,11 +190,89 @@ function HandoverHistoryTable({
         </tbody>
       </table>
     </div>
+
+    {/* ====== MOBILE CARD LAYOUT ====== */}
+    <div className="md:hidden space-y-3">
+      {loading ? (
+        <div className="text-center py-8 text-gray-500 text-sm">
+          <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
+          Memuat data...
+        </div>
+      ) : items.length === 0 ? (
+        <EmptyState message={emptyMessage} />
+      ) : (
+        items.map((h) => (
+          <div key={h.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2.5 relative">
+            {/* Row 1: Flow Type Badge + Date */}
+            <div className="flex justify-between items-start">
+              <span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full border ${handoverTypeBadgeClass(h.handoverType)}`}>
+                {handoverTypeLabel(h.handoverType)}
+              </span>
+              <span className="text-xs text-gray-400 font-medium">
+                {h.handoverAt ? format(new Date(h.handoverAt), "dd MMM yyyy", { locale: localeId }) : "-"}
+              </span>
+            </div>
+
+            {/* Row 2: SN + Unit/Alat */}
+            <div>
+              <p className="text-sm font-bold text-gray-900">{h.radioSerialNumber}</p>
+              <p className="text-xs text-gray-500 mt-0.5">
+                Unit: {h.unitNumber || "-"} • Alat: {h.equipmentName || "-"}
+              </p>
+            </div>
+
+            {/* Row 3: Detail Grid Box */}
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+              <div><span className="text-gray-400">STR:</span> <span className="font-mono font-medium text-violet-700">{h.handoverNumber}</span></div>
+              <div><span className="text-gray-400">Tiket HD:</span> <span className="font-mono">{h.helpdeskTicketNumber || "-"}</span></div>
+              <div className="col-span-2 flex items-baseline gap-1.5 pt-1.5 border-t border-gray-200/50 mt-0.5">
+                <span className="text-gray-400 shrink-0">Alur:</span>
+                <div className="flex items-center gap-1 text-gray-700 font-medium">
+                  <span className="truncate max-w-[80px]" title={h.handedOverByName}>{h.handedOverByName}</span>
+                  <ArrowRight className="w-3 h-3 text-violet-500 shrink-0 mx-0.5" />
+                  <span className="truncate max-w-[80px]" title={h.receivedByName}>{h.receivedByName}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 4: Status & Actions */}
+            <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-gray-100">
+              <div className="flex flex-wrap items-center gap-2">
+                <HandoverStatusBadge status={h.status} />
+              </div>
+              <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
+                {h.previewPhotoBase64 || h.photoCount > 0 ? (
+                  <div className="relative mr-1" onClick={(e) => e.stopPropagation()}>
+                    <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
+                    {h.photoCount > 1 && (
+                      <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                        {h.photoCount}
+                      </span>
+                    )}
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => onOpenDetail(h.id)}
+                  className="text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+                  title="Detail"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+    </>
   );
 }
 
 export default function RadioHandoverWarehousePage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [incoming, setIncoming] = useState<RadioHandoverList[]>([]);
   const [outgoing, setOutgoing] = useState<RadioHandoverList[]>([]);
   const [pendingJobs, setPendingJobs] = useState<RadioRepairJobList[]>([]);
@@ -275,9 +357,29 @@ export default function RadioHandoverWarehousePage() {
   };
 
   return (
-    <div className="p-6 space-y-6 max-w-7xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+    <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
+      {/* ====== MOBILE INTEGRATED HEADER ====== */}
+      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
+        <div className="flex items-start justify-between pb-4">
+          <div>
+            <div className="flex items-center gap-1.5 mb-1 opacity-80">
+              <span className="text-[10px] font-bold text-violet-600 tracking-wider uppercase">Radio Management</span>
+            </div>
+            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
+              Radio Masuk WH
+            </h1>
+          </div>
+          <button
+            onClick={() => navigate("/dashboard")}
+            className="w-10 h-10 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center hover:bg-violet-100 transition-colors shrink-0"
+          >
+            <Home className="h-4 w-4" strokeWidth={2.5} />
+          </button>
+        </div>
+      </div>
+
+      {/* ====== DESKTOP HEADER ====== */}
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
             <Warehouse className="w-7 h-7 text-violet-600 shrink-0" />
@@ -291,60 +393,65 @@ export default function RadioHandoverWarehousePage() {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-3 gap-2 md:gap-4">
         <Card className="border-amber-200 bg-amber-50/50">
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardDescription className="text-amber-800/80 flex items-center gap-1.5">
-              <PackageCheck className="w-4 h-4" />
-              Siap ke Helpdesk
+          <CardHeader className="pb-1 md:pb-2 pt-3 md:pt-4 px-3 md:px-4">
+            <CardDescription className="text-amber-800/80 flex items-center gap-1 md:gap-1.5 text-[10px] md:text-sm">
+              <PackageCheck className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Siap ke Helpdesk</span>
+              <span className="sm:hidden">Siap HD</span>
             </CardDescription>
-            <CardTitle className="text-3xl text-amber-900">{pendingJobs.length}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl text-amber-900">{pendingJobs.length}</CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0">
-            <p className="text-xs text-amber-700/80">Job status HandedToWarehouse</p>
+          <CardContent className="px-3 md:px-4 pb-3 md:pb-4 pt-0">
+            <p className="text-[10px] md:text-xs text-amber-700/80 hidden sm:block">Job status HandedToWarehouse</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardDescription className="flex items-center gap-1.5">
-              <ArrowDownLeft className="w-4 h-4 text-violet-600" />
-              Masuk dari Teknisi
+          <CardHeader className="pb-1 md:pb-2 pt-3 md:pt-4 px-3 md:px-4">
+            <CardDescription className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-sm">
+              <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
+              <span className="hidden sm:inline">Masuk dari Teknisi</span>
+              <span className="sm:hidden">Masuk</span>
             </CardDescription>
-            <CardTitle className="text-3xl text-gray-900">{incoming.length}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl text-gray-900">{incoming.length}</CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0">
-            <p className="text-xs text-gray-500">Histori Tek → WH</p>
+          <CardContent className="px-3 md:px-4 pb-3 md:pb-4 pt-0">
+            <p className="text-[10px] md:text-xs text-gray-500 hidden sm:block">Histori Tek → WH</p>
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2 pt-4 px-4">
-            <CardDescription className="flex items-center gap-1.5">
-              <ArrowUpRight className="w-4 h-4 text-indigo-600" />
-              Serah ke Helpdesk
+          <CardHeader className="pb-1 md:pb-2 pt-3 md:pt-4 px-3 md:px-4">
+            <CardDescription className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-sm">
+              <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
+              <span className="hidden sm:inline">Serah ke Helpdesk</span>
+              <span className="sm:hidden">Keluar</span>
             </CardDescription>
-            <CardTitle className="text-3xl text-gray-900">{outgoing.length}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl text-gray-900">{outgoing.length}</CardTitle>
           </CardHeader>
-          <CardContent className="px-4 pb-4 pt-0">
-            <p className="text-xs text-gray-500">Histori WH → HD</p>
+          <CardContent className="px-3 md:px-4 pb-3 md:pb-4 pt-0">
+            <p className="text-[10px] md:text-xs text-gray-500 hidden sm:block">Histori WH → HD</p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pending jobs — daftar untuk semua; tombol WH→HD hanya jika punya radio.handover.create.wh_hd */}
+      {/* Pending jobs */}
       {pendingJobs.length > 0 && (
         <section className="space-y-3">
           <div className="flex items-center gap-2">
             <ClipboardList className="w-5 h-5 text-amber-600" />
-            <h2 className="text-lg font-semibold text-gray-900">
-              {canCreateHandoverWhHd() ? "Perlu tindakan — serah ke Helpdesk" : "Menunggu serah ke Helpdesk"}
+            <h2 className="text-base md:text-lg font-semibold text-gray-900">
+              {canCreateHandoverWhHd() ? "Perlu tindakan" : "Menunggu serah"}
             </h2>
           </div>
-          <p className="text-sm text-gray-600">
+          <p className="text-xs md:text-sm text-gray-600">
             {canCreateHandoverWhHd()
-              ? "Radio sudah diterima dari teknisi. Lengkapi foto, aksesoris, dan tanda tangan Warehouse serta Helpdesk."
-              : "Radio sudah diterima dari teknisi dan menunggu proses serah ke Helpdesk oleh petugas warehouse yang berwenang."}
+              ? "Radio sudah diterima dari teknisi. Lengkapi foto, aksesoris, dan tanda tangan."
+              : "Radio sudah diterima dari teknisi dan menunggu proses serah ke Helpdesk."}
           </p>
-          <div className="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm">
+
+          {/* Desktop table */}
+          <div className="bg-white rounded-xl border border-amber-200 overflow-hidden shadow-sm hidden md:block">
             <table className="w-full text-sm">
               <thead className="bg-amber-50 border-b border-amber-100">
                 <tr>
@@ -379,28 +486,62 @@ export default function RadioHandoverWarehousePage() {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile cards for pending jobs */}
+          <div className="md:hidden space-y-3">
+            {pendingJobs.map((j) => (
+              <div key={j.id} className="bg-white rounded-2xl p-4 shadow-sm border border-amber-200">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <div className="font-bold text-gray-900">{j.radioSerialNumber}</div>
+                    {j.helpdeskTicketNumber && (
+                      <div className="text-xs font-mono text-gray-600 mt-0.5">Tiket: {j.helpdeskTicketNumber}</div>
+                    )}
+                  </div>
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-amber-100 text-amber-800 text-[10px] font-bold">Siap HD</span>
+                </div>
+                <div className="mt-2 text-xs text-gray-600">
+                  <span className="text-gray-400">Teknisi:</span> <span className="font-medium">{j.assignedTechnicianName}</span>
+                </div>
+                {canCreateHandoverWhHd() && (
+                  <div className="mt-3 pt-3 border-t border-amber-100">
+                    <button
+                      type="button"
+                      onClick={() => setReturnJob(j)}
+                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-violet-600 text-white text-xs font-semibold rounded-xl hover:bg-violet-700 shadow-sm transition-colors"
+                    >
+                      <ArrowRight className="w-3.5 h-3.5" />
+                      Serah ke Helpdesk
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
         </section>
       )}
 
       {/* History tabs */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Histori serah terima</h2>
+        <h2 className="text-base md:text-lg font-semibold text-gray-900">Histori serah terima</h2>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="bg-gray-100 p-1 h-auto">
-            <TabsTrigger value="incoming" className="gap-2 px-4 py-2 data-[state=active]:shadow-sm">
-              <ArrowDownLeft className="w-4 h-4" />
-              Masuk dari Teknisi
+          <TabsList className="bg-gray-100 p-1 h-auto w-full md:w-auto">
+            <TabsTrigger value="incoming" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
+              <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Masuk dari Teknisi</span>
+              <span className="sm:hidden">Masuk</span>
               {!loadingIncoming && incoming.length > 0 && (
-                <span className="ml-1 bg-violet-100 text-violet-700 text-xs px-1.5 py-0.5 rounded-full font-medium">
+                <span className="ml-1 bg-violet-100 text-violet-700 text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
                   {incoming.length}
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="outgoing" className="gap-2 px-4 py-2 data-[state=active]:shadow-sm">
-              <ArrowUpRight className="w-4 h-4" />
-              Serah ke Helpdesk
+            <TabsTrigger value="outgoing" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
+              <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
+              <span className="hidden sm:inline">Serah ke Helpdesk</span>
+              <span className="sm:hidden">Keluar</span>
               {!loadingOutgoing && outgoing.length > 0 && (
-                <span className="ml-1 bg-indigo-100 text-indigo-700 text-xs px-1.5 py-0.5 rounded-full font-medium">
+                <span className="ml-1 bg-indigo-100 text-indigo-700 text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
                   {outgoing.length}
                 </span>
               )}

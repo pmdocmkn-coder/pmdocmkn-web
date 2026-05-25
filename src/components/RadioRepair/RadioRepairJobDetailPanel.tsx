@@ -8,11 +8,14 @@ import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioApi, type RadioDto } from "../../services/radioApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
 import { repairJobCustomStatusApi } from "../../services/repairJobCustomStatusApi";
+import RadioRepairStatusBadge, { STATUS_CONFIG } from "./RadioRepairStatusBadge";
 import RepairJobCustomStatusManager from "./RepairJobCustomStatusManager";
 import HandoverTagPreview from "../RadioHandover/HandoverTagPreview";
 import HandoverTimeline from "../RadioHandover/HandoverTimeline";
 import HandoverPhotoThumbnails from "../RadioHandover/HandoverPhotoThumbnails";
 import SignaturePadField from "../common/SignaturePadField";
+import type { GreenTagFields } from "../../types/equipmentTag";
+import GreenTagFieldsForm from "../RadioHandover/GreenTagFieldsForm";
 import {
   allowedNextStatuses,
   isJobStatusLocked,
@@ -66,13 +69,39 @@ export default function RadioRepairJobDetailPanel({
 
   // Edit catatan kerusakan oleh teknisi
   const [editingDamage, setEditingDamage] = useState(false);
+  const [tagTypeInput, setTagTypeInput] = useState<"Good" | "Damaged">(job.equipmentTagType === "Good" ? "Good" : "Damaged");
   const [damageInput, setDamageInput] = useState(job.damageDescription);
+  const [greenTagInput, setGreenTagInput] = useState<GreenTagFields>({
+    originFrom: job.originFrom || [job.radioOwnerLabel, job.ownerDivision].filter(Boolean).join(" - ") || "",
+    repairDataDescription: job.repairDataDescription ?? undefined,
+    repairedByName: job.repairedByName ?? undefined,
+    frequencyError: job.frequencyError ?? undefined,
+    afReading: job.afReading ?? undefined,
+    powerReading: job.powerReading ?? undefined,
+    voltageOutNoLoad: job.voltageOutNoLoad ?? undefined,
+    voltageOutWithLoad: job.voltageOutWithLoad ?? undefined,
+    physicalCondition: job.physicalCondition ?? undefined,
+    displayCondition: job.displayCondition ?? undefined,
+  });
   const [savingDamage, setSavingDamage] = useState(false);
 
   // Sync input saat job berubah (misal setelah refresh)
   useEffect(() => {
+    setTagTypeInput(job.equipmentTagType === "Good" ? "Good" : "Damaged");
     setDamageInput(job.damageDescription);
-  }, [job.damageDescription]);
+    setGreenTagInput({
+      originFrom: job.originFrom || [job.radioOwnerLabel, job.ownerDivision].filter(Boolean).join(" - ") || "",
+      repairDataDescription: job.repairDataDescription ?? undefined,
+      repairedByName: job.repairedByName ?? undefined,
+      frequencyError: job.frequencyError ?? undefined,
+      afReading: job.afReading ?? undefined,
+      powerReading: job.powerReading ?? undefined,
+      voltageOutNoLoad: job.voltageOutNoLoad ?? undefined,
+      voltageOutWithLoad: job.voltageOutWithLoad ?? undefined,
+      physicalCondition: job.physicalCondition ?? undefined,
+      displayCondition: job.displayCondition ?? undefined,
+    });
+  }, [job]);
 
   const ph = job.primaryHandover;
   const handoverId = ph?.id ?? job.handovers?.find((h) => h.handoverType === "HelpdeskToTechnician")?.id;
@@ -114,14 +143,17 @@ export default function RadioRepairJobDetailPanel({
   };
 
   const saveDamage = async () => {
-    const trimmed = damageInput.trim();
-    if (!trimmed || trimmed === job.damageDescription) {
-      setEditingDamage(false);
-      return;
-    }
     setSavingDamage(true);
     try {
-      const updated = await radioRepairApi.technicianUpdate(job.id, trimmed);
+      const payload: Parameters<typeof radioRepairApi.technicianUpdate>[1] = {
+        damageDescription: damageInput,
+        equipmentTagType: tagTypeInput,
+      };
+      if (tagTypeInput === "Good") {
+        Object.assign(payload, greenTagInput);
+      }
+      
+      const updated = await radioRepairApi.technicianUpdate(job.id, payload);
       setEditingDamage(false);
       onJobUpdated?.(updated);
     } catch {
@@ -130,6 +162,21 @@ export default function RadioRepairJobDetailPanel({
       setSavingDamage(false);
     }
   };
+  const previewDetail = handoverDetail ? {
+    ...handoverDetail,
+    equipmentTagType: job.equipmentTagType ?? handoverDetail.equipmentTagType,
+    damageDescription: job.damageDescription ?? handoverDetail.damageDescription,
+    originFrom: job.originFrom ?? handoverDetail.originFrom,
+    repairDataDescription: job.repairDataDescription ?? handoverDetail.repairDataDescription,
+    repairedByName: job.repairedByName ?? handoverDetail.repairedByName,
+    frequencyError: job.frequencyError ?? handoverDetail.frequencyError,
+    afReading: job.afReading ?? handoverDetail.afReading,
+    powerReading: job.powerReading ?? handoverDetail.powerReading,
+    voltageOutNoLoad: job.voltageOutNoLoad ?? handoverDetail.voltageOutNoLoad,
+    voltageOutWithLoad: job.voltageOutWithLoad ?? handoverDetail.voltageOutWithLoad,
+    physicalCondition: job.physicalCondition ?? handoverDetail.physicalCondition,
+    displayCondition: job.displayCondition ?? handoverDetail.displayCondition,
+  } : null;
 
   return (
     <div className="space-y-4 text-sm">
@@ -142,34 +189,65 @@ export default function RadioRepairJobDetailPanel({
         )}
       </div>
 
-      {handoverDetail ? <HandoverTagPreview detail={handoverDetail} /> : null}
+      {previewDetail ? <HandoverTagPreview detail={previewDetail} /> : null}
 
-      {/* Edit keterangan kerusakan — hanya untuk teknisi yang punya radio.repair.update */}
+      {/* Edit keterangan kerusakan / Tag Hijau — hanya untuk teknisi yang punya radio.repair.update */}
       {canUpdate && !locked && (
-        <div className="border rounded-lg p-3 bg-amber-50/60 border-amber-200 space-y-2">
+        <div className={`border rounded-lg p-3 space-y-2 ${tagTypeInput === "Good" ? "bg-emerald-50/60 border-emerald-200" : "bg-amber-50/60 border-amber-200"}`}>
           <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-amber-800">Keterangan kerusakan</p>
+            <p className={`text-xs font-semibold ${tagTypeInput === "Good" ? "text-emerald-800" : "text-amber-800"}`}>
+              {tagTypeInput === "Good" ? "Data Perbaikan" : "Keterangan kerusakan"}
+            </p>
             {!editingDamage && (
               <button
                 type="button"
-                onClick={() => { setDamageInput(job.damageDescription); setEditingDamage(true); }}
-                className="flex items-center gap-1 text-xs text-amber-700 hover:text-amber-900 px-2 py-1 rounded hover:bg-amber-100"
+                onClick={() => setEditingDamage(true)}
+                className={`flex items-center gap-1 text-xs px-2 py-1 rounded ${tagTypeInput === "Good" ? "text-emerald-700 hover:text-emerald-900 hover:bg-emerald-100" : "text-amber-700 hover:text-amber-900 hover:bg-amber-100"}`}
               >
-                <Pencil className="w-3 h-3" /> Edit
+                <Pencil className="w-3 h-3" /> Edit Data
               </button>
             )}
           </div>
           {editingDamage ? (
-            <div className="space-y-2">
-              <textarea
-                className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-                rows={3}
-                value={damageInput}
-                onChange={(e) => setDamageInput(e.target.value)}
-                disabled={savingDamage}
-                autoFocus
-              />
-              <div className="flex gap-2 justify-end">
+            <div className="space-y-4">
+              <div className="flex gap-4 p-2 bg-white rounded-lg border">
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tagType"
+                    checked={tagTypeInput === "Damaged"}
+                    onChange={() => setTagTypeInput("Damaged")}
+                  />
+                  <span>Tag Kuning (Rusak)</span>
+                </label>
+                <label className="flex items-center gap-2 text-sm cursor-pointer">
+                  <input
+                    type="radio"
+                    name="tagType"
+                    checked={tagTypeInput === "Good"}
+                    onChange={() => setTagTypeInput("Good")}
+                  />
+                  <span>Tag Hijau (Bagus)</span>
+                </label>
+              </div>
+
+              {tagTypeInput === "Damaged" ? (
+                <textarea
+                  className="w-full border border-amber-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+                  rows={3}
+                  value={damageInput}
+                  onChange={(e) => setDamageInput(e.target.value)}
+                  disabled={savingDamage}
+                  placeholder="Keterangan kerusakan..."
+                />
+              ) : (
+                <GreenTagFieldsForm
+                  value={greenTagInput}
+                  onChange={setGreenTagInput}
+                />
+              )}
+
+              <div className="flex gap-2 justify-end pt-2 border-t">
                 <button
                   type="button"
                   onClick={() => setEditingDamage(false)}
@@ -181,15 +259,27 @@ export default function RadioRepairJobDetailPanel({
                 <button
                   type="button"
                   onClick={saveDamage}
-                  disabled={savingDamage || !damageInput.trim()}
-                  className="flex items-center gap-1 px-3 py-1.5 text-xs bg-amber-600 text-white rounded-lg hover:bg-amber-700 disabled:opacity-50"
+                  disabled={savingDamage}
+                  className={`flex items-center gap-1 px-3 py-1.5 text-xs text-white rounded-lg disabled:opacity-50 ${tagTypeInput === "Good" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
                 >
                   <Check className="w-3 h-3" /> {savingDamage ? "Menyimpan..." : "Simpan"}
                 </button>
               </div>
             </div>
           ) : (
-            <p className="text-sm text-gray-700">{job.damageDescription}</p>
+            <div>
+              {job.equipmentTagType === "Good" ? (
+                <p className="text-sm text-emerald-900 line-clamp-2">
+                  <span className="font-semibold block text-xs mb-1">Peralatan Bagus (Tag Hijau)</span>
+                  {job.repairDataDescription || "-"}
+                </p>
+              ) : (
+                <p className="text-sm text-gray-700 line-clamp-2">
+                  <span className="font-semibold block text-xs mb-1 text-amber-900">Peralatan Rusak (Tag Kuning)</span>
+                  {job.damageDescription}
+                </p>
+              )}
+            </div>
           )}
         </div>
       )}
@@ -373,6 +463,10 @@ export default function RadioRepairJobDetailPanel({
           {(job.statusLogs ?? []).map((l) => {
             const isEdit = l.note?.startsWith("[Edit oleh teknisi]");
             const isSameStatus = l.fromStatus === l.toStatus;
+            const formatStatus = (s?: string | null) => {
+              if (!s) return "—";
+              return STATUS_CONFIG[s]?.label ?? s.replace(/([A-Z])/g, ' $1').trim();
+            };
             return (
               <li
                 key={l.id}
@@ -404,16 +498,16 @@ export default function RadioRepairJobDetailPanel({
                   ) : (
                     <p className="mt-0.5">
                       {isSameStatus ? (
-                        <span className="text-gray-500">Status tetap: <strong>{l.toStatus}</strong></span>
+                        <span className="text-gray-500">Status tetap: <strong>{formatStatus(l.toStatus)}</strong></span>
                       ) : (
                         <>
-                          <span className="text-gray-500">{l.fromStatus ?? "—"}</span>
+                          <span className="text-gray-500">{formatStatus(l.fromStatus)}</span>
                           {" → "}
-                          <strong className="text-violet-700">{l.toStatus}</strong>
+                          <strong className="text-violet-700">{formatStatus(l.toStatus)}</strong>
                         </>
                       )}
                       {l.note && !isEdit && (
-                        <span className="text-gray-400 ml-1">— {l.note}</span>
+                        <span className="text-gray-400 ml-2">— {l.note}</span>
                       )}
                     </p>
                   )}
