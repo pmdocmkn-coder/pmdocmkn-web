@@ -4,6 +4,7 @@ import type { UpdateRadioRepairJobPayload } from "../../services/radioRepairApi"
 import type { RadioLookup, UserOption } from "../../types/radioHandover";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import RadioSerialLookupField from "../RadioHandover/RadioSerialLookupField";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type Props = {
   job: RadioRepairJobDetail;
@@ -89,7 +90,7 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
   };
 
   return (
-    <div className="space-y-3 text-sm max-h-[70vh] overflow-y-auto pr-1">
+    <div className="space-y-3 text-sm">
       <label className="block">
         Tiket MKN
         <input
@@ -178,24 +179,30 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
         />
       </label>
 
-      <label className="block">
-        Teknisi *
-        <select
-          className="w-full border rounded-lg px-3 py-2 mt-1"
-          value={form.assignedTechnicianUserId || ""}
-          onChange={(e) => setForm({ ...form, assignedTechnicianUserId: Number(e.target.value) })}
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">Teknisi *</label>
+        <Select
+          value={form.assignedTechnicianUserId ? String(form.assignedTechnicianUserId) : ""}
+          onValueChange={(v) => setForm({ ...form, assignedTechnicianUserId: Number(v) })}
         >
-          <option value="">Pilih teknisi</option>
-          {!techInList && job.assignedTechnicianUserId > 0 && (
-            <option value={job.assignedTechnicianUserId}>{job.assignedTechnicianName}</option>
-          )}
-          {technicians.map((t) => (
-            <option key={t.userId} value={t.userId}>
-              {t.fullName} ({t.username})
-            </option>
-          ))}
-        </select>
-      </label>
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+            <SelectValue placeholder="Pilih teknisi" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {!techInList && job.assignedTechnicianUserId > 0 && (
+              <SelectItem value={String(job.assignedTechnicianUserId)}>
+                <span className="font-medium">{job.assignedTechnicianName}</span>
+              </SelectItem>
+            )}
+            {technicians.map((t) => (
+              <SelectItem key={t.userId} value={t.userId.toString()}>
+                <span className="font-medium">{t.fullName}</span>{" "}
+                <span className="text-xs text-gray-500">(@{t.username})</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <button
         type="button"

@@ -16,6 +16,7 @@ import HandoverAccessoryList from "./HandoverAccessoryList";
 import MultiPhotoUpload from "./MultiPhotoUpload";
 import HandoverWizardTagCarousel from "./HandoverWizardTagCarousel";
 import { defaultOriginFrom, mergedLines } from "../../utils/handoverLineTagUtils";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type Props = {
   onSuccess: () => void;
@@ -50,6 +51,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
   const [tagType, setTagType] = useState<EquipmentTagType>("Damaged");
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
   const [ticket, setTicket] = useState("");
+  const [noJobErp, setNoJobErp] = useState("");
   const [sharedDefaults, setSharedDefaults] = useState<SharedRadioDefaults>(emptyDefaults());
   const [entryMode, setEntryMode] = useState<EntryMode>("single");
   const [radioLines, setRadioLines] = useState<RadioSerialLine[]>([initialLine()]);
@@ -141,6 +143,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
     const base = {
       handoverType: "HelpdeskToTechnician" as const,
       helpdeskTicketNumber: ticket.trim(),
+      noJobErp: noJobErp.trim() || undefined,
       equipmentTagType: tagType,
       batterySerialNumber,
       damageDescription: tagType === "Damaged" ? damage.trim() : damage.trim() || undefined,
@@ -242,9 +245,9 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
               <button
                 type="button"
                 onClick={() => setTagType("Damaged")}
-                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                className={`relative w-full p-4 rounded-xl border-2 text-left transition-colors ${
                   tagType === "Damaged" 
-                    ? "border-amber-500 bg-amber-50 shadow-md ring-2 ring-amber-200" 
+                    ? "border-amber-500 bg-amber-50" 
                     : "border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50/30"
                 }`}
               >
@@ -257,7 +260,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                   </div>
                   
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-8">
                     <p className="font-bold text-base text-amber-900 mb-1">Tag kuning</p>
                     <p className="text-xs text-amber-800 leading-relaxed">
                       PERALATAN RUSAK — radio masuk perbaikan
@@ -265,13 +268,17 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                   </div>
                   
                   {/* Checkmark */}
-                  {tagType === "Damaged" && (
-                    <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
+                  <div className="flex items-center self-center shrink-0 w-6 h-6">
+                    {tagType === "Damaged" ? (
+                      <div className="w-6 h-6 rounded-full bg-amber-500 flex items-center justify-center shadow-sm">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-6 h-6 rounded-full border-2 border-gray-200" />
+                    )}
+                  </div>
                 </div>
               </button>
 
@@ -279,9 +286,9 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
               <button
                 type="button"
                 onClick={() => setTagType("Good")}
-                className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
+                className={`relative w-full p-4 rounded-xl border-2 text-left transition-colors ${
                   tagType === "Good" 
-                    ? "border-emerald-500 bg-emerald-50 shadow-md ring-2 ring-emerald-200" 
+                    ? "border-emerald-500 bg-emerald-50" 
                     : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30"
                 }`}
               >
@@ -294,7 +301,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                   </div>
                   
                   {/* Content */}
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 pr-8">
                     <p className="font-bold text-base text-emerald-900 mb-1">Tag hijau</p>
                     <p className="text-xs text-emerald-800 leading-relaxed">
                       PERALATAN BAIK — kondisi baik / inspeksi
@@ -302,13 +309,17 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                   </div>
                   
                   {/* Checkmark */}
-                  {tagType === "Good" && (
-                    <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shrink-0">
-                      <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                      </svg>
-                    </div>
-                  )}
+                  <div className="flex items-center self-center shrink-0 w-6 h-6">
+                    {tagType === "Good" ? (
+                      <div className="w-6 h-6 rounded-full bg-emerald-500 flex items-center justify-center shadow-sm">
+                        <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                        </svg>
+                      </div>
+                    ) : (
+                      <div className="w-6 h-6 rounded-full border-2 border-gray-200" />
+                    )}
+                  </div>
                 </div>
               </button>
             </div>
@@ -319,6 +330,8 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
           <HandoverRadioEntryStep
             ticket={ticket}
             onTicketChange={setTicket}
+            noJobErp={noJobErp}
+            onNoJobErpChange={setNoJobErp}
             entryMode={entryMode}
             onEntryModeChange={setEntryMode}
             radioLines={radioLines}
@@ -368,20 +381,21 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
 
         {step === 3 && (
           <>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-900">Teknisi penerima *</label>
-              <select 
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors bg-white" 
-                value={techId} 
-                onChange={(e) => setTechId(e.target.value)}
-              >
-                <option value="">Pilih teknisi</option>
-                {technicians.map((t) => (
-                  <option key={t.userId} value={t.userId}>
-                    {t.fullName} ({t.username})
-                  </option>
-                ))}
-              </select>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Teknisi penerima *</label>
+              <Select value={techId} onValueChange={setTechId}>
+                <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+                  <SelectValue placeholder="Pilih teknisi" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {technicians.map((t) => (
+                    <SelectItem key={t.userId} value={t.userId.toString()}>
+                      <span className="font-medium">{t.fullName}</span>{" "}
+                      <span className="text-xs text-gray-500">(@{t.username})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             {mergedLines(radioLines, sharedDefaults).length > 1 ? (
               <div className="space-y-3 rounded-xl border border-violet-100 bg-violet-50/30 p-3">

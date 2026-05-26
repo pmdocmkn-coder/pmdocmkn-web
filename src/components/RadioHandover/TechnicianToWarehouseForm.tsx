@@ -7,6 +7,7 @@ import { useToast } from "../../hooks/use-toast";
 import HandoverAccessoryList from "./HandoverAccessoryList";
 import HandoverAccessoryHistory from "./HandoverAccessoryHistory";
 import MultiPhotoUpload from "./MultiPhotoUpload";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { buildAccessoriesPayload, toHandoverAccessoryItems } from "../../utils/handoverFormUtils";
 
 type Props = {
@@ -118,21 +119,26 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
   };
 
   return (
-    <div className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+    <div className="space-y-4">
       <p className="text-sm text-gray-600">
         Tiket <strong>{job.helpdeskTicketNumber}</strong> — SN {job.radioSerialNumber}
       </p>
 
-      <div>
-        <label className="text-sm font-medium">Penerima Warehouse *</label>
-        <select className="w-full border rounded-lg px-3 py-2 mt-1" value={whId} onChange={(e) => setWhId(e.target.value)}>
-          <option value="">Pilih staff warehouse</option>
-          {(receivers ?? []).map((r) => (
-            <option key={r.userId} value={r.userId}>
-              {r.fullName}
-            </option>
-          ))}
-        </select>
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">Penerima Warehouse *</label>
+        <Select value={whId} onValueChange={setWhId}>
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+            <SelectValue placeholder="Pilih staff warehouse" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {(receivers ?? []).map((r) => (
+              <SelectItem key={r.userId} value={r.userId.toString()}>
+                <span className="font-medium">{r.fullName}</span>{" "}
+                <span className="text-xs text-gray-500">(@{r.username})</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <MultiPhotoUpload photos={photos} onChange={setPhotos} required />

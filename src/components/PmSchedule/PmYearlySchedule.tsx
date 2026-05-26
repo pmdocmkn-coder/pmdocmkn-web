@@ -43,6 +43,26 @@ const MONTHS_SHORT = [
   "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
 ];
 
+const getWeekColor = (week: number) => {
+  switch (week) {
+    case 1: return "bg-sky-500";
+    case 2: return "bg-emerald-500";
+    case 3: return "bg-amber-500";
+    case 4: return "bg-rose-500";
+    default: return "bg-slate-500";
+  }
+};
+
+const getWeekDetailClass = (week: number) => {
+  switch (week) {
+    case 1: return "bg-sky-500 shadow-md shadow-sky-500/30 hover:bg-sky-600 hover:scale-110 active:scale-95";
+    case 2: return "bg-emerald-500 shadow-md shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 active:scale-95";
+    case 3: return "bg-amber-500 shadow-md shadow-amber-500/30 hover:bg-amber-600 hover:scale-110 active:scale-95";
+    case 4: return "bg-rose-500 shadow-md shadow-rose-500/30 hover:bg-rose-600 hover:scale-110 active:scale-95";
+    default: return "bg-slate-500 shadow-md shadow-slate-500/30 hover:bg-slate-600 hover:scale-110 active:scale-95";
+  }
+};
+
 export default function PmYearlySchedule() {
   const { toast } = useToast();
   const [year, setYear] = useState<number>(new Date().getFullYear());
@@ -349,7 +369,7 @@ export default function PmYearlySchedule() {
                                       <div
                                         key={w}
                                         className={`h-4 rounded-[3px] transition-colors w-full ${
-                                          isScheduled ? "bg-emerald-500" : "bg-slate-200/70"
+                                          isScheduled ? getWeekColor(w) : "bg-slate-200/70"
                                         }`}
                                       ></div>
                                     );
@@ -390,21 +410,15 @@ export default function PmYearlySchedule() {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 px-1">
-          <span className="text-[10px] text-slate-400 font-medium">Keterangan:</span>
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-[3px]">
-              {[true, false, true, false].map((active, i) => (
-                <div key={i} className={`w-3 h-4 rounded-sm ${active ? "bg-emerald-500" : "bg-slate-200/70"}`}></div>
-              ))}
+        <div className="flex flex-wrap items-center gap-4 px-1 mt-2">
+          <span className="text-[10px] text-slate-400 font-medium">Keterangan Terjadwal:</span>
+          {[1, 2, 3, 4].map((w) => (
+            <div key={w} className="flex items-center gap-1.5">
+              <div className={`w-3 h-4 rounded-sm ${getWeekColor(w)}`}></div>
+              <span className="text-[10px] text-slate-500 font-medium">Week {w}</span>
             </div>
-            <span className="text-[10px] text-slate-500 font-medium ml-1">= Week 1, 2, 3, 4</span>
-          </div>
-          <div className="flex items-center gap-1.5">
-            <div className="w-3 h-4 rounded-sm bg-emerald-500"></div>
-            <span className="text-[10px] text-slate-500 font-medium">Terjadwal</span>
-          </div>
-          <div className="flex items-center gap-1.5">
+          ))}
+          <div className="flex items-center gap-1.5 ml-2">
             <div className="w-3 h-4 rounded-sm bg-slate-200/70"></div>
             <span className="text-[10px] text-slate-500 font-medium">Kosong</span>
           </div>
@@ -559,7 +573,7 @@ export default function PmYearlySchedule() {
                                       isUpdating
                                         ? "bg-slate-100 cursor-wait"
                                         : isScheduled
-                                          ? "bg-emerald-500 shadow-md shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 active:scale-95"
+                                          ? getWeekDetailClass(week)
                                           : "bg-white border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:scale-110 active:scale-95"
                                     }`}
                                   >
@@ -573,7 +587,7 @@ export default function PmYearlySchedule() {
                                   <div
                                     className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center ${
                                       isScheduled
-                                        ? "bg-emerald-500"
+                                        ? getWeekColor(week)
                                         : "bg-white border-2 border-slate-200"
                                     }`}
                                   >

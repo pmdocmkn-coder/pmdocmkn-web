@@ -660,6 +660,7 @@ export default function RadioRepairDashboardPage() {
           onOpenPhoto={openRowPhoto}
           onOpenDetail={openDetail}
           onOpenEdit={openEdit}
+          onOpenBorrowRequest={(job) => navigate(`/warehouse-borrow/request?repairJobId=${job.id}`)}
           onSoftDelete={softDelete}
           onRestore={restore}
           onDeletePermanent={deletePermanent}
@@ -705,7 +706,7 @@ export default function RadioRepairDashboardPage() {
       />
 
       <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               {detail?.helpdeskTicketNumber} — SN {detail?.radioSerialNumber}
@@ -738,7 +739,7 @@ export default function RadioRepairDashboardPage() {
       </Dialog>
 
       <Dialog open={!!editJob} onOpenChange={() => setEditJob(null)}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit pekerjaan</DialogTitle>
           </DialogHeader>
@@ -749,7 +750,7 @@ export default function RadioRepairDashboardPage() {
       </Dialog>
 
       <Dialog open={showWh && !!detail} onOpenChange={setShowWh}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Teknisi → Warehouse</DialogTitle>
           </DialogHeader>

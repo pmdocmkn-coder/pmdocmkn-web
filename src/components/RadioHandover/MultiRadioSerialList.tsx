@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
 import RadioSerialLookupField from "./RadioSerialLookupField";
 import RadioMasterSummaryCard from "./RadioMasterSummaryCard";
@@ -36,6 +37,7 @@ type Props = {
 };
 
 export default function MultiRadioSerialList({ lines, onChange, compactMode }: Props) {
+  const [editingMasterId, setEditingMasterId] = useState<string | null>(null);
   const rows = lines.length > 0 ? lines : [newLine()];
 
   const patch = (id: string, patch: Partial<RadioSerialLine>) => {
@@ -87,7 +89,11 @@ export default function MultiRadioSerialList({ lines, onChange, compactMode }: P
                 onSelect={(s, id, l) => onSelect(row.id, s, id, l)}
               />
               {compactMode && row.serial.trim() && (
-                <RadioMasterSummaryCard line={row} compact />
+                <RadioMasterSummaryCard 
+                  line={row} 
+                  compact 
+                  onEditManual={() => setEditingMasterId(editingMasterId === row.id ? null : row.id)}
+                />
               )}
             </div>
             {rows.length > 1 && (
@@ -121,9 +127,9 @@ export default function MultiRadioSerialList({ lines, onChange, compactMode }: P
                 </label>
               )}
 
-              {!compactMode && (
+              {(!compactMode || editingMasterId === row.id) && (
                 <>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
                     <label className="block text-sm sm:col-span-2">
                       <span className="font-medium text-gray-700">Pemilik radio</span>
                       <span className="text-xs text-gray-500 block mb-1">

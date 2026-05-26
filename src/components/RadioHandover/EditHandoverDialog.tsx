@@ -11,6 +11,7 @@ import MultiPhotoUpload from "./MultiPhotoUpload";
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import GreenTagFieldsForm from "./GreenTagFieldsForm";
 import RadioSerialLookupField from "./RadioSerialLookupField";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 
 type Props = {
   detail: RadioHandoverDetail;
@@ -117,13 +118,12 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
   return (
     <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl flex flex-col max-h-[94vh]">
+      <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Edit Serah Terima: {detail.handoverNumber}</DialogTitle>
         </DialogHeader>
         
-        {/* Scrollable Content Area */}
-        <div className="flex-1 overflow-y-auto space-y-4 pb-2 -mx-4 px-4 sm:-mx-6 sm:px-6">
+        <div className="space-y-4">
           {/* Tiket & Serial - Responsive Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
@@ -213,20 +213,21 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           )}
 
           {/* Technician Selection */}
-          <div className="space-y-2 pt-2 border-t">
-            <label className="text-sm font-medium text-gray-900">Teknisi penerima *</label>
-            <select 
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors bg-white" 
-              value={techId} 
-              onChange={(e) => setTechId(e.target.value)}
-            >
-              <option value="">Pilih teknisi</option>
-              {technicians.map((t) => (
-                <option key={t.userId} value={t.userId}>
-                  {t.fullName} ({t.username})
-                </option>
-              ))}
-            </select>
+          <div className="space-y-1 pt-2 border-t">
+            <label className="text-sm font-medium text-gray-700">Teknisi penerima *</label>
+            <Select value={techId} onValueChange={setTechId}>
+              <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+                <SelectValue placeholder="Pilih teknisi" />
+              </SelectTrigger>
+              <SelectContent className="max-h-[300px]">
+                {technicians.map((t) => (
+                  <SelectItem key={t.userId} value={t.userId.toString()}>
+                    <span className="font-medium">{t.fullName}</span>{" "}
+                    <span className="text-xs text-gray-500">(@{t.username})</span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Photos */}
@@ -255,8 +256,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           </div>
         </div>
 
-        {/* Footer Buttons - Outside scrollable area */}
-        <div className="flex justify-between gap-2 pt-4 border-t bg-white shrink-0 -mx-4 px-4 sm:-mx-6 sm:px-6 pb-4 sm:pb-0">
+        {/* Action Buttons */}
+        <div className="flex justify-between gap-2 pt-4 border-t">
           <button 
             type="button" 
             className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]" 

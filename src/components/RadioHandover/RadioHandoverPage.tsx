@@ -603,7 +603,7 @@ export default function RadioHandoverPage() {
       {/* HD -> Tek create dialog */}
       {showCreate && (
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <ArrowUpRight className="w-5 h-5 text-blue-600" />
@@ -677,7 +677,7 @@ export default function RadioHandoverPage() {
 
       {/* Detail dialog */}
       <Dialog open={!!detail || detailLoading} onOpenChange={() => { if (!detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 pr-8">
               {detailLoading ? (

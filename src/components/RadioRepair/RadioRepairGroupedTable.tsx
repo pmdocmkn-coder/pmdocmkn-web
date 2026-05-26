@@ -40,6 +40,7 @@ type Props = {
   onDeletePermanent: (job: RadioRepairJobList) => void;
   onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
+  onOpenBorrowRequest: (job: RadioRepairJobList) => void;
   isJobLocked: (status: RadioRepairJobList["status"]) => boolean;
   customStatuses?: RepairJobCustomStatus[];
 };
@@ -63,6 +64,7 @@ export default function RadioRepairGroupedTable({
   onDeletePermanent,
   onQuickStatus,
   onQuickHandoverWh,
+  onOpenBorrowRequest,
   isJobLocked,
   customStatuses = [],
 }: Props) {
@@ -136,6 +138,7 @@ export default function RadioRepairGroupedTable({
                     onDeletePermanent={onDeletePermanent}
                     onQuickStatus={onQuickStatus}
                     onQuickHandoverWh={onQuickHandoverWh}
+                    onOpenBorrowRequest={onOpenBorrowRequest}
                     isJobLocked={isJobLocked}
                     customStatuses={customStatuses}
                   />
@@ -233,6 +236,7 @@ export default function RadioRepairGroupedTable({
                             customStatuses={customStatuses}
                             onQuickStatus={onQuickStatus}
                             onQuickHandoverWh={onQuickHandoverWh}
+                            onOpenBorrowRequest={onOpenBorrowRequest}
                             canHandoverWh={canHandoverWh}
                           />
                         )}
@@ -298,12 +302,14 @@ function MobileQuickActionDropdown({
   customStatuses = [],
   onQuickStatus,
   onQuickHandoverWh,
+  onOpenBorrowRequest,
   canHandoverWh,
 }: {
   job: RadioRepairJobList;
   customStatuses?: RepairJobCustomStatus[];
   onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
+  onOpenBorrowRequest: (job: RadioRepairJobList) => void;
   canHandoverWh: boolean;
 }) {
   const [open, setOpen] = useState(false);
@@ -322,7 +328,8 @@ function MobileQuickActionDropdown({
   const nextList = allowedNextStatuses(job.status);
   const canShowCustom = customStatuses.length > 0 && ["InProgress", "Received"].includes(job.status);
   const showBackToProgress = !!job.customStatusId;
-  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || (job.status === "RepairCompleted" && canHandoverWh);
+  const canBorrow = job.status === "InProgress";
+  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || (job.status === "RepairCompleted" && canHandoverWh) || canBorrow;
 
   if (!hasActions) return null;
 
@@ -408,6 +415,20 @@ function MobileQuickActionDropdown({
               Serah ke WH
             </button>
           )}
+
+          {canBorrow && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onOpenBorrowRequest(job);
+              }}
+              className="w-full text-left px-4 py-2 text-xs hover:bg-amber-50 text-amber-700 flex items-center font-medium border-t border-gray-100 mt-1 pt-1"
+            >
+              <Warehouse className="w-3.5 h-3.5 mr-1.5" />
+              Pinjam Part
+            </button>
+          )}
         </div>
       )}
     </div>
@@ -434,6 +455,7 @@ type RowProps = {
   onDeletePermanent: (job: RadioRepairJobList) => void;
   onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
+  onOpenBorrowRequest: (job: RadioRepairJobList) => void;
   isJobLocked: (status: RadioRepairJobList["status"]) => boolean;
   customStatuses: RepairJobCustomStatus[];
 };
@@ -456,6 +478,7 @@ function RadioRepairRow({
   onDeletePermanent,
   onQuickStatus,
   onQuickHandoverWh,
+  onOpenBorrowRequest,
   isJobLocked,
   customStatuses,
 }: RowProps) {
@@ -576,6 +599,17 @@ function RadioRepairRow({
                 </button>
               )}
             </>
+          )}
+
+          {canUpdate && (j.status === "InProgress") && (
+            <button
+              type="button"
+              title="Pinjam Part"
+              className="p-1.5 border rounded-lg hover:bg-amber-50 bg-white text-amber-600"
+              onClick={() => onOpenBorrowRequest(j)}
+            >
+              <Warehouse className="w-4 h-4" />
+            </button>
           )}
         </div>
       </td>

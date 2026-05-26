@@ -12,6 +12,7 @@ import {
   ClipboardList,
   Loader2,
   Home,
+  Search,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -286,6 +287,21 @@ export default function RadioHandoverWarehousePage() {
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("incoming");
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredIncoming = incoming.filter((h) => 
+    h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.helpdeskTicketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.handoverNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.handedOverByName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredOutgoing = outgoing.filter((h) => 
+    h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.helpdeskTicketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.handoverNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.receivedByName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const load = useCallback(() => {
     setLoadingIncoming(true);
@@ -523,7 +539,19 @@ export default function RadioHandoverWarehousePage() {
 
       {/* History tabs */}
       <section className="space-y-4">
-        <h2 className="text-base md:text-lg font-semibold text-gray-900">Histori serah terima</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <h2 className="text-base md:text-lg font-semibold text-gray-900">Histori serah terima</h2>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            <input 
+              type="text"
+              placeholder="Cari SN, Tiket, atau Nama..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white"
+            />
+          </div>
+        </div>
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="bg-gray-100 p-1 h-auto w-full md:w-auto">
             <TabsTrigger value="incoming" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
@@ -553,7 +581,7 @@ export default function RadioHandoverWarehousePage() {
               Daftar radio yang sudah diserahkan teknisi ke warehouse (Tek → WH).
             </p>
             <HandoverHistoryTable
-              items={incoming}
+              items={filteredIncoming}
               loading={loadingIncoming}
               flowLabel="Teknisi → Warehouse"
               emptyMessage="Belum ada radio masuk dari teknisi"
@@ -567,7 +595,7 @@ export default function RadioHandoverWarehousePage() {
               Daftar radio yang sudah diserahkan warehouse ke helpdesk (WH → HD).
             </p>
             <HandoverHistoryTable
-              items={outgoing}
+              items={filteredOutgoing}
               loading={loadingOutgoing}
               flowLabel="Warehouse → Helpdesk"
               emptyMessage="Belum ada serah terima ke helpdesk"
@@ -581,8 +609,8 @@ export default function RadioHandoverWarehousePage() {
       {/* WH → HD form dialog */}
       {canCreateHandoverWhHd() && returnJob && (
         <Dialog open={!!returnJob} onOpenChange={() => setReturnJob(null)}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader className="pr-10 sm:pr-12">
               <DialogTitle className="flex items-center gap-2">
                 <ArrowUpRight className="w-5 h-5 text-indigo-600" />
                 Serah Terima Warehouse → Helpdesk
@@ -608,9 +636,9 @@ export default function RadioHandoverWarehousePage() {
 
       {/* Detail dialog */}
       <Dialog open={!!detail || detailLoading} onOpenChange={() => { if (!detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex flex-wrap items-center gap-2 pr-8">
+        <DialogContent className="max-w-3xl">
+          <DialogHeader className="pr-8 sm:pr-10">
+            <DialogTitle className="flex flex-wrap items-center gap-2">
               {detailLoading ? (
                 <span className="flex items-center gap-2 text-gray-500">
                   <Loader2 className="w-4 h-4 animate-spin" />

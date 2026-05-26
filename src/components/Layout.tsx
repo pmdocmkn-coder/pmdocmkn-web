@@ -29,7 +29,10 @@ export const searchableItems = [
   { name: "Companies", path: "/companies", section: "Letter Numbering" },
   { name: "Document Types", path: "/document-types", section: "Letter Numbering" },
   { name: "Settings", path: "/settings", section: "System" },
-  { name: "Profile", path: "/profile", section: "System" }
+  { name: "Profile", path: "/profile", section: "System" },
+  { name: "Histori Peminjaman", path: "/warehouse/borrow-history", section: "Warehouse" },
+  { name: "Ajuan Pinjam Part", path: "/warehouse/borrow-request", section: "Warehouse" },
+  { name: "Supervisi Warehouse", path: "/warehouse/supervision", section: "Warehouse" }
 ];
 
 interface LayoutProps {
@@ -97,7 +100,7 @@ const Layout: React.FC<LayoutProps> = ({
                 onFocus={() => setIsSearchFocused(true)}
                 onBlur={() => setTimeout(() => setIsSearchFocused(false), 200)}
                 placeholder="Search features, records..."
-                className="w-full pl-12 pr-4 py-2.5 bg-slate-50/80 border border-transparent hover:border-slate-200 focus:border-indigo-500/30 focus:bg-white rounded-xl text-sm outline-none transition-all placeholder:text-slate-400"
+                className="w-full pl-12 pr-4 py-2.5 bg-slate-50/80 border border-transparent hover:border-slate-200 focus:border-indigo-500/30 focus:bg-white rounded-full text-sm outline-none transition-all placeholder:text-slate-400 shadow-sm"
               />
 
               {/* Search Dropdown */}

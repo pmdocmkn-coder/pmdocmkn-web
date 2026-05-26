@@ -74,9 +74,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   };
 
   return (
-    <div className="flex flex-col max-h-[94vh]">
-      {/* Scrollable Content */}
-      <div className="flex-1 overflow-y-auto space-y-4 py-2 -mx-4 px-4 sm:-mx-6 sm:px-6 custom-scrollbar">
+    <div className="space-y-4">
         {/* Tag Preview Card */}
         <div className="space-y-2">
           <p className="text-xs font-medium text-gray-600">Pratinjau Tag Hijau</p>
@@ -140,10 +138,8 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
             <SelectContent className="max-h-[300px]">
               {(receivers ?? []).map((r) => (
                 <SelectItem key={r.userId} value={r.userId.toString()}>
-                  <div className="flex flex-col">
-                    <span className="font-medium">{r.fullName}</span>
-                    <span className="text-xs text-gray-500">@{r.username}</span>
-                  </div>
+                  <span className="font-medium">{r.fullName}</span>{" "}
+                  <span className="text-xs text-gray-500">(@{r.username})</span>
                 </SelectItem>
               ))}
             </SelectContent>
@@ -180,10 +176,8 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
             placeholder="Catatan tambahan (opsional)"
           />
         </div>
-      </div>
-
-      {/* Footer Buttons - Outside scrollable area */}
-      <div className="flex justify-between gap-2 pt-4 border-t bg-white shrink-0 -mx-4 px-4 sm:-mx-6 sm:px-6 pb-4 sm:pb-0">
+      {/* Action Buttons */}
+      <div className="flex justify-between gap-2 pt-4 border-t">
         <button 
           type="button" 
           className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]" 

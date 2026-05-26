@@ -59,9 +59,16 @@ export default function RadioMasterSummaryCard({ line, compact, onEditManual }: 
   const l = line.lookup!;
   return (
     <div className={`rounded-lg border border-emerald-200 bg-emerald-50/60 ${compact ? "p-2.5" : "p-3"}`}>
-      <div className="flex items-center gap-2 mb-2">
-        <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-        <p className="text-xs font-semibold text-emerald-900">Terdaftar di master radio — data terisi otomatis</p>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          <p className="text-xs font-semibold text-emerald-900">Terdaftar di master radio — data terisi otomatis</p>
+        </div>
+        {onEditManual && (
+          <button type="button" onClick={onEditManual} className="text-[10px] text-emerald-700 hover:text-emerald-900 flex items-center gap-1 bg-emerald-100/50 hover:bg-emerald-200/50 px-2 py-1 rounded transition-colors">
+            <Pencil className="w-3 h-3" /> Edit data
+          </button>
+        )}
       </div>
       <div className={`grid gap-2 ${compact ? "grid-cols-2" : "grid-cols-2 sm:grid-cols-3"}`}>
         <Field label="Tipe / nama alat" value={line.equipmentName || l.type || "—"} />

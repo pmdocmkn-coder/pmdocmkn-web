@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Plus, Radio, Layers, Loader2 } from "lucide-react";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { useToast } from "../../hooks/use-toast";
@@ -55,6 +55,8 @@ async function resolveSerialFromMaster(sn: string): Promise<RadioSerialLine> {
 type Props = {
   ticket: string;
   onTicketChange: (v: string) => void;
+  noJobErp: string;
+  onNoJobErpChange: (v: string) => void;
   entryMode: EntryMode;
   onEntryModeChange: (m: EntryMode) => void;
   radioLines: RadioSerialLine[];
@@ -66,6 +68,8 @@ type Props = {
 export default function HandoverRadioEntryStep({
   ticket,
   onTicketChange,
+  noJobErp,
+  onNoJobErpChange,
   entryMode,
   onEntryModeChange,
   radioLines,
@@ -74,6 +78,7 @@ export default function HandoverRadioEntryStep({
   onSharedDefaultsChange,
 }: Props) {
   const { toast } = useToast();
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [bulkSnText, setBulkSnText] = useState("");
   const [resolvingBulk, setResolvingBulk] = useState(false);
   const [showManualForLine, setShowManualForLine] = useState<string | null>(null);
@@ -155,14 +160,28 @@ export default function HandoverRadioEntryStep({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label className="text-sm font-medium">No Tiket Helpdesk *</label>
-        <input
-          className="w-full border rounded-lg px-3 py-2 mt-1"
-          placeholder="#MKN/0526/0669"
-          value={ticket}
-          onChange={(e) => onTicketChange(e.target.value)}
-        />
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label className="text-sm font-medium">No Tiket Helpdesk *</label>
+          <input
+            className="w-full border rounded-lg px-3 py-2 mt-1"
+            placeholder="#MKN/0526/0669"
+            value={ticket}
+            onChange={(e) => onTicketChange(e.target.value)}
+          />
+        </div>
+        <div>
+          <label className="text-sm font-medium">No Job ERP (MKNSmart)</label>
+          <div className="relative mt-1">
+            <input
+              type="text"
+              placeholder="Contoh: MKN/0526/1113 (Opsional)"
+              className="w-full border rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
+              value={noJobErp}
+              onChange={(e) => onNoJobErpChange(e.target.value)}
+            />
+          </div>
+        </div>
       </div>
 
       <div>
@@ -211,11 +230,16 @@ export default function HandoverRadioEntryStep({
             required
             onSelect={onSingleSelect}
           />
-          <RadioMasterSummaryCard line={singleLine} />
+          <RadioMasterSummaryCard 
+            line={singleLine} 
+            onEditManual={() => setShowManualForLine(singleLine.id === showManualForLine ? null : singleLine.id)} 
+          />
 
           {(!singleLine.radioId || showManualForLine === singleLine.id) && (
             <div className="rounded-xl border border-gray-200 p-3 space-y-3 bg-gray-50/50">
-              <p className="text-xs font-medium text-gray-600">Data manual (jika SN tidak di master)</p>
+              <p className="text-xs font-medium text-gray-600">
+                {singleLine.radioId ? "Edit data (opsional)" : "Data manual (jika SN tidak di master)"}
+              </p>
               <label className="block text-sm">
                 <span className="font-medium">Tipe / nama alat *</span>
                 <input

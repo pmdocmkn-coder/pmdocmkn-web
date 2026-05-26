@@ -40,7 +40,7 @@ const DialogContent = React.forwardRef<
       className={cn(
         // Mobile: bottom sheet with safe area and proper spacing
         "fixed bottom-0 left-0 right-0 z-50 bg-background rounded-t-3xl shadow-2xl",
-        "max-h-[94vh]", // Removed flex flex-col - let children control layout
+        "max-h-[94vh] flex flex-col",
         "pb-safe", // Safe area for iOS
         // Desktop: centered modal
         "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto",
@@ -63,8 +63,8 @@ const DialogContent = React.forwardRef<
         <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
       </div>
       
-      {/* Content - children control their own scroll */}
-      <div className="px-4 sm:px-6">
+      {/* Content wrapper — scrollable, clips at modal boundary */}
+      <div className="p-4 sm:p-6 overflow-y-auto flex-1 min-h-0">
         {children}
       </div>
       

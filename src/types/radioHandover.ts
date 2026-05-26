@@ -60,6 +60,7 @@ export interface CreateRadioHandoverPayload {
   handoverType: RadioHandoverType;
 
   helpdeskTicketNumber?: string;
+  noJobErp?: string | null;
 
   radioId?: number | null;
 
@@ -123,6 +124,7 @@ export interface RadioHandoverList {
   radioRepairJobId: number;
 
   helpdeskTicketNumber?: string;
+  noJobErp?: string | null;
 
   radioSerialNumber: string;
 
