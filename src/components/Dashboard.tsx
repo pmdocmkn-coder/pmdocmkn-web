@@ -19,7 +19,8 @@ import {
   Settings,
   BookOpen,
   CalendarDays,
-  Video
+  Video,
+  Package
 } from "lucide-react";
 import { Variants } from "framer-motion";
 
@@ -207,6 +208,15 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       color: "from-slate-500 to-gray-500",
       tab: "docs",
       permission: "docs.view",
+    },
+    {
+      id: "warehouse-borrow",
+      icon: Package,
+      title: "Warehouse Peminjaman",
+      description: "Manajemen Peminjaman Part.",
+      color: "from-violet-500 to-purple-500",
+      tab: "warehouse/borrow-history",
+      permission: "warehouse.borrow.view",
     },
     {
       id: "settings",

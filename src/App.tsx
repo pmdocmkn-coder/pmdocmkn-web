@@ -40,6 +40,12 @@ import KpiMonitoringPage from "./components/Kpi/KpiMonitoringPage";
 import PmSchedulePage from "./components/PmSchedule/PmSchedulePage";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
+import RadioRepairDashboardPage from "./components/RadioRepair/RadioRepairDashboardPage";
+import RadioHandoverPage from "./components/RadioHandover/RadioHandoverPage";
+import RadioHandoverWarehousePage from "./components/RadioHandover/RadioHandoverWarehousePage";
+import WarehouseBorrowHistoryPage from "./components/WarehouseBorrow/WarehouseBorrowHistoryPage";
+import WarehouseBorrowRequestPage from "./components/WarehouseBorrow/WarehouseBorrowRequestPage";
+import WarehouseSupervisionPage from "./components/WarehouseBorrow/WarehouseSupervisionPage";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -62,6 +68,8 @@ function getDefaultRoute(): string {
   if (hasPermission("inspeksi.menu")) return "/inspeksi-kpc";
   if (hasPermission("docs.view")) return "/docs";
   if (hasPermission("call.record.menu")) return "/callrecords";
+  if (hasPermission("radio.repair.menu") || hasPermission("radio.repair.view"))
+    return "/radio-repair-dashboard";
 
   // Fallback: kalau tidak ada permission apapun, ke profile
   return "/profile";
@@ -102,15 +110,23 @@ function ProtectedRoute({ children }: { children: JSX.Element }) {
 // ✅ ROUTE GUARD: CEK PERMISSION SEBELUM RENDER PAGE
 function PermissionGuard({
   permission,
+  anyOf,
   children,
 }: {
-  permission: string;
+  permission?: string;
+  anyOf?: string[];
   children: JSX.Element;
 }) {
-  const hasAccess = hasPermission(permission);
+  const hasAccess = anyOf?.length
+    ? anyOf.some((p) => hasPermission(p))
+    : permission
+      ? hasPermission(permission)
+      : false;
 
   if (!hasAccess) {
-    console.warn(`⚠️ Access denied to route requiring: ${permission}`);
+    console.warn(
+      `⚠️ Access denied — required: ${anyOf?.join(" | ") ?? permission}`
+    );
     return <Navigate to={getDefaultRoute()} replace />;
   }
 
@@ -246,6 +262,36 @@ function AppContent() {
           <Route path="/radio-scrap" element={
             <PermissionGuard permission="radio.scrap.view" >
               <RadioScrapPage />
+            </PermissionGuard>
+          } />
+          <Route path="/radio-repair-dashboard" element={
+            <PermissionGuard anyOf={["radio.repair.menu", "radio.repair.view"]}>
+              <RadioRepairDashboardPage />
+            </PermissionGuard>
+          } />
+          <Route path="/radio-handover" element={
+            <PermissionGuard anyOf={["radio.handover.menu", "radio.handover.view"]}>
+              <RadioHandoverPage />
+            </PermissionGuard>
+          } />
+          <Route path="/radio-handover/warehouse" element={
+            <PermissionGuard anyOf={["radio.handover.menu", "radio.handover.view"]}>
+              <RadioHandoverWarehousePage />
+            </PermissionGuard>
+          } />
+          <Route path="/warehouse/borrow-history" element={
+            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.view"]}>
+              <WarehouseBorrowHistoryPage />
+            </PermissionGuard>
+          } />
+          <Route path="/warehouse/borrow-request" element={
+            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.create"]}>
+              <WarehouseBorrowRequestPage />
+            </PermissionGuard>
+          } />
+          <Route path="/warehouse/supervision" element={
+            <PermissionGuard permission="warehouse.borrow.supervise">
+              <WarehouseSupervisionPage />
             </PermissionGuard>
           } />
 

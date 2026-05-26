@@ -29,6 +29,10 @@ import {
   Link2,
   CalendarDays,
   Video,
+  Wrench,
+  Package,
+  Warehouse,
+  ClipboardCheck,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -221,6 +225,51 @@ const radioMenu: NavItem[] = [
     permission: "radio.scrap.view",
     forAll: true,
   },
+  {
+    name: "Dashboard Perbaikan",
+    path: "/radio-repair-dashboard",
+    icon: Wrench,
+    id: "radio-repair-dashboard",
+    permission: "radio.repair.menu",
+  },
+  {
+    name: "Serah Terima Radio",
+    path: "/radio-handover",
+    icon: Package,
+    id: "radio-handover",
+    permission: "radio.handover.menu",
+  },
+  {
+    name: "Radio Masuk WH",
+    path: "/radio-handover/warehouse",
+    icon: Warehouse,
+    id: "radio-handover-warehouse",
+    permission: "radio.handover.view",
+  },
+];
+
+const warehouseMenu: NavItem[] = [
+  {
+    name: "Histori Peminjaman",
+    path: "/warehouse/borrow-history",
+    icon: ClipboardList,
+    id: "warehouse-borrow-history",
+    permission: "warehouse.borrow.view",
+  },
+  {
+    name: "Ajuan Pinjam Part",
+    path: "/warehouse/borrow-request",
+    icon: Package,
+    id: "warehouse-borrow-request",
+    permission: "warehouse.borrow.create",
+  },
+  {
+    name: "Supervisi Warehouse",
+    path: "/warehouse/supervision",
+    icon: ClipboardCheck,
+    id: "warehouse-supervision",
+    permission: "warehouse.borrow.supervise",
+  },
 ];
 
 export default function Sidebar({
@@ -248,8 +297,12 @@ export default function Sidebar({
   const filteredRadioMenu = radioMenu.filter(
     (item) => item.forAll || !item.permission || hasPermission(item.permission)
   );
+  const filteredWarehouseMenu = warehouseMenu.filter(
+    (item) => !item.permission || hasPermission(item.permission)
+  );
 
   const [isRadioOpen, setIsRadioOpen] = useState(true);
+  const [isWarehouseOpen, setIsWarehouseOpen] = useState(true);
   const mobileNavRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to active menu item when mobile sidebar opens
@@ -420,7 +473,7 @@ export default function Sidebar({
           )}
 
         {
-          hasPermission("radio.management.menu") && filteredRadioMenu.length > 0 && (
+          filteredRadioMenu.length > 0 && (
             <div className={isMobileView ? 'mt-2' : 'mt-4'}>
               {!isCollapsed || isMobileView ? (
                 <>
@@ -473,6 +526,38 @@ export default function Sidebar({
             </div>
           )}
 
+        {filteredWarehouseMenu.length > 0 && (
+            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
+              {!isCollapsed || isMobileView ? (
+                <>
+                  <button
+                    onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
+                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
+                  >
+                    <span>Warehouse</span>
+                    <ChevronDown className={`w-4 h-4 transition-transform ${isWarehouseOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  <AnimatePresence>
+                    {isWarehouseOpen && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className={isMobileView ? '' : 'space-y-1 mt-1'}>
+                        {isMobileView ? (
+                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
+                            {filteredWarehouseMenu.map((item) => (
+                              <MobileSubLink key={item.id} item={item} onClick={() => setIsMobileMenuOpen(false)} />
+                            ))}
+                          </div>
+                        ) : (
+                          filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
+                        )}
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </>
+              ) : (
+                filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
+              )}
+            </div>
+          )}
 
         {
           hasPermission("letter.menu") && filteredLetterNumbers.length > 0 && (

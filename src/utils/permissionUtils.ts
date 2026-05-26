@@ -5,6 +5,10 @@
  * @param permission Kode permission yang ingin dicek (contoh: 'role.create')
  * @returns true jika user memiliki permission tersebut, false jika tidak.
  */
+export const hasAnyPermission = (...permissions: string[]): boolean => {
+    return permissions.some((p) => hasPermission(p));
+};
+
 export const hasPermission = (permission: string): boolean => {
     // 1. Cek User Role (Super Admin bypass semua permission)
     const userStr = localStorage.getItem("user");
