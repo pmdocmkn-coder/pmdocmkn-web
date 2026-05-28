@@ -1,6 +1,6 @@
 import { api } from "./api";
 import { unwrapData, unwrapList, unwrapPaged } from "../utils/apiResponse";
-import type { WarehouseBorrowDetail, WarehouseBorrowList } from "../types/warehouseBorrow";
+import type { WarehouseBorrowDetail, WarehouseBorrowItem, WarehouseBorrowList } from "../types/warehouseBorrow";
 
 export const warehouseBorrowApi = {
   getAll: (params?: Record<string, unknown>) =>
@@ -15,11 +15,10 @@ export const warehouseBorrowApi = {
     api.get(`/api/warehouse-part-borrows/${id}`).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
   create: (body: {
-    partDescription: string;
-    partCode?: string;
-    quantity: number;
+    items: WarehouseBorrowItem[];
     purpose?: string;
     relatedRepairJobId?: number;
+    ticketNumber?: string;
   }) => api.post("/api/warehouse-part-borrows", body).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
   approve: (id: number, note?: string) =>
@@ -28,11 +27,13 @@ export const warehouseBorrowApi = {
   reject: (id: number, reason: string) =>
     api.patch(`/api/warehouse-part-borrows/${id}/reject`, { reason }).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
-  issue: (id: number) =>
-    api.patch(`/api/warehouse-part-borrows/${id}/issue`).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
+  issue: (id: number, body?: { issuerSignatureBase64?: string; receiverSignatureBase64?: string }) =>
+    api.patch(`/api/warehouse-part-borrows/${id}/issue`, body ?? {}).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
-  return: (id: number, body?: { returnCondition?: string; returnNote?: string }) =>
+  return: (id: number, body?: { returnCondition?: string; returnNote?: string; returnIssuerSignatureBase64?: string; returnReceiverSignatureBase64?: string }) =>
     api.patch(`/api/warehouse-part-borrows/${id}/return`, body ?? {}).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
-  cancel: (id: number) => api.delete(`/api/warehouse-part-borrows/${id}`),
+  cancel: (id: number) => api.post(`/api/warehouse-part-borrows/${id}/cancel`),
+
+  delete: (id: number) => api.delete(`/api/warehouse-part-borrows/${id}`),
 };

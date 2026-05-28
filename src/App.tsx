@@ -46,6 +46,7 @@ import RadioHandoverWarehousePage from "./components/RadioHandover/RadioHandover
 import WarehouseBorrowHistoryPage from "./components/WarehouseBorrow/WarehouseBorrowHistoryPage";
 import WarehouseBorrowRequestPage from "./components/WarehouseBorrow/WarehouseBorrowRequestPage";
 import WarehouseSupervisionPage from "./components/WarehouseBorrow/WarehouseSupervisionPage";
+import WarehouseCatalogPage from "./components/WarehouseBorrow/WarehouseCatalogPage";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -292,6 +293,11 @@ function AppContent() {
           <Route path="/warehouse/supervision" element={
             <PermissionGuard permission="warehouse.borrow.supervise">
               <WarehouseSupervisionPage />
+            </PermissionGuard>
+          } />
+          <Route path="/warehouse/catalog" element={
+            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.supervise"]}>
+              <WarehouseCatalogPage />
             </PermissionGuard>
           } />
 

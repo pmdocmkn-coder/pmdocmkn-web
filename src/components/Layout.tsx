@@ -32,7 +32,8 @@ export const searchableItems = [
   { name: "Profile", path: "/profile", section: "System" },
   { name: "Histori Peminjaman", path: "/warehouse/borrow-history", section: "Warehouse" },
   { name: "Ajuan Pinjam Part", path: "/warehouse/borrow-request", section: "Warehouse" },
-  { name: "Supervisi Warehouse", path: "/warehouse/supervision", section: "Warehouse" }
+  { name: "Supervisi Warehouse", path: "/warehouse/supervision", section: "Warehouse" },
+  { name: "Master Data Part", path: "/warehouse/catalog", section: "Warehouse" }
 ];
 
 interface LayoutProps {

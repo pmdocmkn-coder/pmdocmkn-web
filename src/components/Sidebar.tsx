@@ -33,6 +33,7 @@ import {
   Package,
   Warehouse,
   ClipboardCheck,
+  Database,
 } from "lucide-react";
 
 interface SidebarProps {
@@ -268,6 +269,13 @@ const warehouseMenu: NavItem[] = [
     path: "/warehouse/supervision",
     icon: ClipboardCheck,
     id: "warehouse-supervision",
+    permission: "warehouse.borrow.supervise",
+  },
+  {
+    name: "Master Data Part",
+    path: "/warehouse/catalog",
+    icon: Database,
+    id: "warehouse-catalog",
     permission: "warehouse.borrow.supervise",
   },
 ];
