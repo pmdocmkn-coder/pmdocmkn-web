@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { useToast } from "../../hooks/use-toast";
 import { Textarea } from "../ui/textarea";
+import SignaturePadField from "../common/SignaturePadField";
 import WarehouseBorrowDetailModal from "./WarehouseBorrowDetailModal";
 import { useAuth } from "../../contexts/AuthContext";
 
@@ -40,16 +41,11 @@ export default function WarehouseBorrowHistoryPage() {
   const [showUserSuggestions, setShowUserSuggestions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
-  // Signature canvas refs & state
-  const issuerCanvasRef = useRef<HTMLCanvasElement>(null);
-  const receiverCanvasRef = useRef<HTMLCanvasElement>(null);
-  const returnIssuerCanvasRef = useRef<HTMLCanvasElement>(null);
-  const returnReceiverCanvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [issuerSigned, setIssuerSigned] = useState(false);
-  const [receiverSigned, setReceiverSigned] = useState(false);
-  const [returnIssuerSigned, setReturnIssuerSigned] = useState(false);
-  const [returnReceiverSigned, setReturnReceiverSigned] = useState(false);
+  // Signature state
+  const [issuerSigned, setIssuerSigned] = useState<string | null>(null);
+  const [receiverSigned, setReceiverSigned] = useState<string | null>(null);
+  const [returnIssuerSigned, setReturnIssuerSigned] = useState<string | null>(null);
+  const [returnReceiverSigned, setReturnReceiverSigned] = useState<string | null>(null);
 
   // Detail & Delete States
   const [detailTargetId, setDetailTargetId] = useState<number | null>(null);
@@ -85,6 +81,10 @@ export default function WarehouseBorrowHistoryPage() {
   const closeDialog = () => {
     setActiveItem(null);
     setActionType(null);
+    setIssuerSigned(null);
+    setReceiverSigned(null);
+    setReturnIssuerSigned(null);
+    setReturnReceiverSigned(null);
   };
 
   const handleIssue = async () => {
@@ -95,11 +95,9 @@ export default function WarehouseBorrowHistoryPage() {
     }
     setSubmitting(true);
     try {
-      const issuerSig = issuerCanvasRef.current?.toDataURL("image/png");
-      const receiverSig = receiverCanvasRef.current?.toDataURL("image/png");
       await warehouseBorrowApi.issue(activeItem.id, {
-        issuerSignatureBase64: issuerSig,
-        receiverSignatureBase64: receiverSig,
+        issuerSignatureBase64: issuerSigned,
+        receiverSignatureBase64: receiverSigned,
       });
       toast({ title: "Berhasil", description: "Status part berhasil diubah menjadi Telah Diberikan (Issued)." });
       closeDialog();
@@ -119,13 +117,11 @@ export default function WarehouseBorrowHistoryPage() {
     }
     setSubmitting(true);
     try {
-      const retIssuerSig = returnIssuerCanvasRef.current?.toDataURL("image/png");
-      const retReceiverSig = returnReceiverCanvasRef.current?.toDataURL("image/png");
       await warehouseBorrowApi.return(activeItem.id, {
         returnCondition,
         returnNote,
-        returnIssuerSignatureBase64: returnIssuerSigned ? retIssuerSig : undefined,
-        returnReceiverSignatureBase64: returnReceiverSigned ? retReceiverSig : undefined,
+        returnIssuerSignatureBase64: returnIssuerSigned ?? undefined,
+        returnReceiverSignatureBase64: returnReceiverSigned ?? undefined,
         returnedByName: returnedByName.trim() || undefined,
       });
       toast({ title: "Berhasil", description: "Pengembalian part berhasil dicatat." });
@@ -186,40 +182,6 @@ export default function WarehouseBorrowHistoryPage() {
     (u.username && u.username.toLowerCase().includes(returnedByName.toLowerCase()))
   ).slice(0, 5);
 
-  // Canvas drawing helpers
-  const startDraw = (canvas: HTMLCanvasElement, e: React.MouseEvent | React.TouchEvent) => {
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    setIsDrawing(true);
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-  };
-
-  const draw = (canvas: HTMLCanvasElement, e: React.MouseEvent | React.TouchEvent) => {
-    if (!isDrawing) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const x = "touches" in e ? e.touches[0].clientX - rect.left : e.clientX - rect.left;
-    const y = "touches" in e ? e.touches[0].clientY - rect.top : e.clientY - rect.top;
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#1e293b";
-    ctx.lineTo(x, y);
-    ctx.stroke();
-  };
-
-  const stopDraw = () => setIsDrawing(false);
-
-  const clearCanvas = (canvas: HTMLCanvasElement | null) => {
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (ctx) ctx.clearRect(0, 0, canvas.width, canvas.height);
-  };
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PendingApproval":
@@ -236,40 +198,6 @@ export default function WarehouseBorrowHistoryPage() {
         return <span className="px-2 py-1 bg-gray-100 text-gray-700 rounded-md text-xs font-semibold whitespace-nowrap">{status}</span>;
     }
   };
-
-  // Render signature canvas block (reusable)
-  const renderSignatureCanvas = (
-    label: string,
-    canvasRef: React.RefObject<HTMLCanvasElement | null>,
-    signed: boolean,
-    setSigned: (v: boolean) => void,
-  ) => (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <label className="text-xs font-semibold text-gray-700">{label}</label>
-        <button
-          type="button"
-          className="text-xs text-red-500 hover:text-red-700"
-          onClick={() => { clearCanvas(canvasRef.current); setSigned(false); }}
-        >
-          Hapus
-        </button>
-      </div>
-      <canvas
-        ref={canvasRef as React.RefObject<HTMLCanvasElement>}
-        width={240}
-        height={120}
-        className="w-full border-2 border-dashed border-gray-300 rounded-xl bg-white cursor-crosshair touch-none"
-        onMouseDown={(e) => { startDraw(canvasRef.current!, e); setSigned(true); }}
-        onMouseMove={(e) => draw(canvasRef.current!, e)}
-        onMouseUp={stopDraw}
-        onMouseLeave={stopDraw}
-        onTouchStart={(e) => { e.preventDefault(); startDraw(canvasRef.current!, e); setSigned(true); }}
-        onTouchMove={(e) => { e.preventDefault(); draw(canvasRef.current!, e); }}
-        onTouchEnd={stopDraw}
-      />
-    </div>
-  );
 
   // Render items list for modals
   const renderItemsList = (b: WarehouseBorrowList) => (
@@ -551,10 +479,6 @@ export default function WarehouseBorrowHistoryPage() {
       <Dialog open={actionType === "issue" && !!activeItem} onOpenChange={(open) => {
         if (!open) {
           closeDialog();
-          setIssuerSigned(false);
-          setReceiverSigned(false);
-          clearCanvas(issuerCanvasRef.current);
-          clearCanvas(receiverCanvasRef.current);
         }
       }}>
         <DialogContent className="max-w-lg">
@@ -586,21 +510,15 @@ export default function WarehouseBorrowHistoryPage() {
               </div>
 
               {/* Dual Signature */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                {renderSignatureCanvas("TTD Penyerah", issuerCanvasRef, issuerSigned, setIssuerSigned)}
-                {renderSignatureCanvas("TTD Penerima", receiverCanvasRef, receiverSigned, setReceiverSigned)}
+              <div className="space-y-4">
+                <SignaturePadField label="TTD Penyerah" required value={issuerSigned} onChange={setIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
+                <SignaturePadField label="TTD Penerima" required value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowedByName} />
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              closeDialog();
-              setIssuerSigned(false);
-              setReceiverSigned(false);
-              clearCanvas(issuerCanvasRef.current);
-              clearCanvas(receiverCanvasRef.current);
-            }}>Batal</Button>
+            <Button variant="outline" onClick={closeDialog}>Batal</Button>
             <Button
               className="bg-indigo-600 hover:bg-indigo-700 text-white"
               onClick={handleIssue}
@@ -616,10 +534,6 @@ export default function WarehouseBorrowHistoryPage() {
       <Dialog open={actionType === "return" && !!activeItem} onOpenChange={(open) => {
         if (!open) {
           closeDialog();
-          setReturnIssuerSigned(false);
-          setReturnReceiverSigned(false);
-          clearCanvas(returnIssuerCanvasRef.current);
-          clearCanvas(returnReceiverCanvasRef.current);
         }
       }}>
         <DialogContent className="max-w-lg">
@@ -718,22 +632,16 @@ export default function WarehouseBorrowHistoryPage() {
                 </div>
 
                 {/* Return Dual Signature */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {renderSignatureCanvas("TTD Penyerah", returnIssuerCanvasRef, returnIssuerSigned, setReturnIssuerSigned)}
-                  {renderSignatureCanvas("TTD Penerima", returnReceiverCanvasRef, returnReceiverSigned, setReturnReceiverSigned)}
+                <div className="space-y-4">
+                  <SignaturePadField label="TTD Penyerah" required value={returnIssuerSigned} onChange={setReturnIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
+                  <SignaturePadField label="TTD Penerima" required value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={returnedByName || activeItem.borrowedByName} />
                 </div>
               </div>
             </div>
           )}
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => {
-              closeDialog();
-              setReturnIssuerSigned(false);
-              setReturnReceiverSigned(false);
-              clearCanvas(returnIssuerCanvasRef.current);
-              clearCanvas(returnReceiverCanvasRef.current);
-            }}>Batal</Button>
+            <Button variant="outline" onClick={closeDialog}>Batal</Button>
             <Button 
               className="bg-emerald-600 hover:bg-emerald-700 text-white" 
               onClick={handleReturn} 
