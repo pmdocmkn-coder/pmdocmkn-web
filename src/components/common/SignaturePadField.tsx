@@ -151,15 +151,16 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
         >
           <SignatureCanvas
             ref={padRef}
-            penColor="#111827"
-            minWidth={1}
-            maxWidth={2.5}
-            velocityFilterWeight={0.7}
+            penColor="#1a1a2e"
+            minWidth={0.8}
+            maxWidth={3}
+            velocityFilterWeight={0.4}
+            dotSize={1.5}
             canvasProps={{
               width: canvasWidth,
               height: PAD_HEIGHT,
               className: "block touch-none",
-              style: { width: canvasWidth, height: PAD_HEIGHT, display: "block" },
+              style: { width: "100%", height: PAD_HEIGHT, display: "block" },
             }}
             onEnd={handleEnd}
           />
