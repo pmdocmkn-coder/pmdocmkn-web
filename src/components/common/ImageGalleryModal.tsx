@@ -19,15 +19,19 @@ export default function ImageGalleryModal({ images, index, open, onClose, onInde
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      // Stop propagation so Radix Dialog underneath doesn't also close
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+      if (e.key === "Escape") { e.preventDefault(); onClose(); }
       if (e.key === "ArrowRight" && resolved.length > 1) onIndexChange((index + 1) % resolved.length);
       if (e.key === "ArrowLeft" && resolved.length > 1)
         onIndexChange((index - 1 + resolved.length) % resolved.length);
     };
-    window.addEventListener("keydown", onKey);
+    // Use capture phase to intercept before Radix Dialog
+    window.addEventListener("keydown", onKey, true);
     return () => {
       document.body.style.overflow = prev;
-      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("keydown", onKey, true);
     };
   }, [open, index, resolved.length, onClose, onIndexChange]);
 
@@ -36,7 +40,8 @@ export default function ImageGalleryModal({ images, index, open, onClose, onInde
   return createPortal(
     <div
       className="fixed inset-0 bg-black/95 z-[200] flex items-center justify-center p-4"
-      onClick={onClose}
+      onClick={(e) => { e.stopPropagation(); onClose(); }}
+      onPointerDownCapture={(e) => e.stopPropagation()}
       role="dialog"
       aria-modal="true"
     >

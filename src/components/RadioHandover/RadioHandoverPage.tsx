@@ -676,8 +676,13 @@ export default function RadioHandoverPage() {
       </Dialog>
 
       {/* Detail dialog */}
-      <Dialog open={!!detail || detailLoading} onOpenChange={() => { if (!detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={!!detail || detailLoading} onOpenChange={(open) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}>
+        <DialogContent 
+          className="max-w-3xl" 
+          onInteractOutside={(e) => {
+            if (galleryOpen) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 pr-8">
               {detailLoading ? (
