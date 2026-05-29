@@ -842,6 +842,13 @@ export const userApi = {
     return response.data.data;
   },
 
+  lookup: async (): Promise<{ id: number; name: string; username: string }[]> => {
+    console.log("📡 Fetching all active users for lookup...");
+    const response = await api.get("/api/users/lookup");
+    console.log("✅ Lookup Users fetched:", response.data);
+    return response.data.data;
+  },
+
   getById: async (id: number): Promise<User> => {
     console.log("📡 Fetching user by ID:", id);
     const response = await api.get(`/api/users/${id}`);

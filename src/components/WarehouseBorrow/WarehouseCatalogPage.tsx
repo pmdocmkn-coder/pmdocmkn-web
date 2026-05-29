@@ -310,10 +310,10 @@ export default function WarehouseCatalogPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
+        {totalPages > 0 && (
           <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200">
             <p className="text-xs text-gray-500">
-              Menampilkan {(page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalCount)} dari {totalCount} item
+              Menampilkan {totalCount === 0 ? 0 : (page - 1) * pageSize + 1}–{Math.min(page * pageSize, totalCount)} dari {totalCount} item
             </p>
             <div className="flex gap-1">
               <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)} className="h-8 text-xs">

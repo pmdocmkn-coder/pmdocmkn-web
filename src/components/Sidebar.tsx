@@ -199,8 +199,7 @@ const radioMenu: NavItem[] = [
     path: "/radio-internal",
     icon: Radio,
     id: "radio-internal",
-    permission: "radio.view",
-    forAll: true,
+    permission: "radio.kpc.menu",
   },
   {
     name: "Radio Contractor",
@@ -208,7 +207,6 @@ const radioMenu: NavItem[] = [
     icon: Building2,
     id: "radio-contractor",
     permission: "radio.view",
-    forAll: true,
   },
   {
     name: "Radio Unit",
@@ -216,7 +214,6 @@ const radioMenu: NavItem[] = [
     icon: RadioReceiver,
     id: "radio-unit",
     permission: "radio.view",
-    forAll: true,
   },
   {
     name: "Radio Scrap",
@@ -224,7 +221,6 @@ const radioMenu: NavItem[] = [
     icon: Trash2,
     id: "radio-scrap",
     permission: "radio.scrap.view",
-    forAll: true,
   },
   {
     name: "Dashboard Perbaikan",
@@ -535,37 +531,37 @@ export default function Sidebar({
           )}
 
         {filteredWarehouseMenu.length > 0 && (
-            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
-              {!isCollapsed || isMobileView ? (
-                <>
-                  <button
-                    onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
-                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
-                  >
-                    <span>Warehouse</span>
-                    <ChevronDown className={`w-4 h-4 transition-transform ${isWarehouseOpen ? "rotate-180" : ""}`} />
-                  </button>
-                  <AnimatePresence>
-                    {isWarehouseOpen && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className={isMobileView ? '' : 'space-y-1 mt-1'}>
-                        {isMobileView ? (
-                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
-                            {filteredWarehouseMenu.map((item) => (
-                              <MobileSubLink key={item.id} item={item} onClick={() => setIsMobileMenuOpen(false)} />
-                            ))}
-                          </div>
-                        ) : (
-                          filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              ) : (
-                filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
-              )}
-            </div>
-          )}
+          <div className={isMobileView ? 'mt-2' : 'mt-4'}>
+            {!isCollapsed || isMobileView ? (
+              <>
+                <button
+                  onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
+                  className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
+                >
+                  <span>Warehouse</span>
+                  <ChevronDown className={`w-4 h-4 transition-transform ${isWarehouseOpen ? "rotate-180" : ""}`} />
+                </button>
+                <AnimatePresence>
+                  {isWarehouseOpen && (
+                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className={isMobileView ? '' : 'space-y-1 mt-1'}>
+                      {isMobileView ? (
+                        <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
+                          {filteredWarehouseMenu.map((item) => (
+                            <MobileSubLink key={item.id} item={item} onClick={() => setIsMobileMenuOpen(false)} />
+                          ))}
+                        </div>
+                      ) : (
+                        filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
+                      )}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </>
+            ) : (
+              filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
+            )}
+          </div>
+        )}
 
         {
           hasPermission("letter.menu") && filteredLetterNumbers.length > 0 && (

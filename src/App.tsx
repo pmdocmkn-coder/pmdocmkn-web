@@ -69,6 +69,8 @@ function getDefaultRoute(): string {
   if (hasPermission("inspeksi.menu")) return "/inspeksi-kpc";
   if (hasPermission("docs.view")) return "/docs";
   if (hasPermission("call.record.menu")) return "/callrecords";
+  if (hasPermission("warehouse.borrow.supervise")) return "/warehouse/supervision";
+  if (hasPermission("warehouse.borrow.menu") || hasPermission("warehouse.borrow.view")) return "/warehouse/borrow-history";
   if (hasPermission("radio.repair.menu") || hasPermission("radio.repair.view"))
     return "/radio-repair-dashboard";
 
@@ -387,19 +389,19 @@ function AppRoutes() {
     <Routes>
       <Route
         path="/"
-        element={!user ? <Login /> : <Navigate to="/dashboard" replace />}
+        element={!user ? <Login /> : <DefaultRoute />}
       />
       <Route
         path="/register"
-        element={!user ? <Register /> : <Navigate to="/dashboard" replace />}
+        element={!user ? <Register /> : <DefaultRoute />}
       />
       <Route
         path="/forgot-password"
-        element={!user ? <ForgotPassword /> : <Navigate to="/dashboard" replace />}
+        element={!user ? <ForgotPassword /> : <DefaultRoute />}
       />
       <Route
         path="/reset-password"
-        element={!user ? <ResetPassword /> : <Navigate to="/dashboard" replace />}
+        element={!user ? <ResetPassword /> : <DefaultRoute />}
       />
       <Route path="/verify/gatepass/:token" element={<VerifyPage />} />
       <Route

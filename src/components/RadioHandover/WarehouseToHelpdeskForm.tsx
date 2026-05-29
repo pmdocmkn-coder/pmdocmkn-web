@@ -154,13 +154,13 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         
         {/* Signatures */}
         <SignaturePadField 
-          label="TTD Warehouse (penyerah)" 
+          label="TTD Penyerah" 
           required 
           value={sigWh} 
           onChange={setSigWh} 
         />
         <SignaturePadField 
-          label="TTD Helpdesk (penerima)" 
+          label="TTD Penerima" 
           required 
           value={sigHd} 
           onChange={setSigHd} 

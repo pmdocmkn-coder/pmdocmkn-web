@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
 import { Button } from "../ui/button";
-import { Loader2, Package, Calendar, User, FileText, CheckCircle2, RotateCcw } from "lucide-react";
+import { Loader2, Package, Calendar, User, FileText, CheckCircle2, RotateCcw, PenTool } from "lucide-react";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import type { WarehouseBorrowDetail } from "../../types/warehouseBorrow";
 
@@ -81,7 +81,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
           ) : (
             <div className="space-y-6">
               {/* Header Info */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><User className="w-3.5 h-3.5"/> Teknisi</span>
                   <p className="text-sm font-semibold text-gray-800">{data.borrowedByName}</p>
@@ -93,12 +93,8 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                   </p>
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3.5 h-3.5"/> No. Job</span>
-                  <p className="text-sm font-semibold text-indigo-600">{data.relatedJobNumber || "â€”"}</p>
-                </div>
-                <div className="space-y-1">
                   <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3.5 h-3.5"/> No. Tiket</span>
-                  <p className="text-sm font-semibold text-indigo-600">{data.ticketNumber || "â€”"}</p>
+                  <p className="text-sm font-semibold text-indigo-600">{data.ticketNumber || "—"}</p>
                 </div>
               </div>
 
@@ -159,6 +155,82 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                         <p className="text-gray-700 bg-white p-2 rounded-lg mt-1 border border-indigo-100/50">{data.returnNote}</p>
                       </div>
                     )}
+                    {data.returnedByName && data.returnedByName !== data.borrowedByName && (
+                      <div className="col-span-2">
+                        <span className="text-gray-500 text-xs uppercase font-medium">Dikembalikan Oleh</span>
+                        <p className="font-semibold text-amber-700 bg-amber-50 p-2 rounded-lg mt-1 border border-amber-100">
+                          ⚠️ {data.returnedByName} <span className="text-xs font-normal text-gray-500">(bukan peminjam asli: {data.borrowedByName})</span>
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Signatures */}
+              {(data.issuerSignatureBase64 || data.receiverSignatureBase64) && (
+                <div>
+                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-1.5">
+                    <PenTool className="w-4 h-4 text-indigo-500" />
+                    Tanda Tangan Penyerahan
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
+                      <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penyerah</p>
+                      {data.issuerSignatureBase64 ? (
+                        <img src={data.issuerSignatureBase64} alt="TTD Admin" className="h-16 mx-auto object-contain mix-blend-multiply" />
+                      ) : (
+                        <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
+                      )}
+                      <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
+                        {data.statusLogs.find(l => l.toStatus === "Issued")?.userName || "—"}
+                      </p>
+                    </div>
+                    <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
+                      <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penerima</p>
+                      {data.receiverSignatureBase64 ? (
+                        <img src={data.receiverSignatureBase64} alt="TTD Teknisi" className="h-16 mx-auto object-contain mix-blend-multiply" />
+                      ) : (
+                        <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
+                      )}
+                      <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
+                        {data.borrowedByName}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Return Signatures */}
+              {(data.returnIssuerSignatureBase64 || data.returnReceiverSignatureBase64) && (
+                <div>
+                  <h4 className="text-sm font-bold text-gray-800 mb-3 flex items-center gap-1.5">
+                    <PenTool className="w-4 h-4 text-emerald-500" />
+                    Tanda Tangan Pengembalian
+                  </h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
+                      <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penyerah</p>
+                      {data.returnReceiverSignatureBase64 ? (
+                        <img src={data.returnReceiverSignatureBase64} alt="TTD Teknisi Return" className="h-16 mx-auto object-contain mix-blend-multiply" />
+                      ) : (
+                        <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
+                      )}
+                      <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
+                        {data.returnedByName || data.borrowedByName}
+                      </p>
+                    </div>
+                    <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
+                      <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penerima</p>
+                      {data.returnIssuerSignatureBase64 ? (
+                        <img src={data.returnIssuerSignatureBase64} alt="TTD Admin Return" className="h-16 mx-auto object-contain mix-blend-multiply" />
+                      ) : (
+                        <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
+                      )}
+                      <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
+                        {data.statusLogs.find(l => l.toStatus === "Returned")?.userName || "—"}
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}

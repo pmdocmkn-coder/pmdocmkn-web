@@ -746,8 +746,8 @@ export default function RadioHandoverWarehousePage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} />
-                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} />
+                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
+                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
               </div>
 
               <div className="flex justify-end pt-2 border-t">
