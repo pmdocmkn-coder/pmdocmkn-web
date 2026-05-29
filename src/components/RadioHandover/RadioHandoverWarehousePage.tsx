@@ -635,8 +635,13 @@ export default function RadioHandoverWarehousePage() {
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!detail || detailLoading} onOpenChange={() => { if (!detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={!!detail || detailLoading} onOpenChange={(open) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}>
+        <DialogContent 
+          className="max-w-3xl"
+          onInteractOutside={(e) => {
+            if (galleryOpen) e.preventDefault();
+          }}
+        >
           <DialogHeader className="pr-8 sm:pr-10">
             <DialogTitle className="flex flex-wrap items-center gap-2">
               {detailLoading ? (
@@ -746,8 +751,8 @@ export default function RadioHandoverWarehousePage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} />
-                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} />
+                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
+                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
               </div>
 
               <div className="flex justify-end pt-2 border-t">

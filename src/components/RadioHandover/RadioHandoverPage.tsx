@@ -550,7 +550,7 @@ export default function RadioHandoverPage() {
           <CardHeader className="pb-2 pt-4 px-4">
             <CardDescription className="text-amber-800/80 flex items-center gap-1.5">
               <Clock className="w-4 h-4" />
-              Menunggu TTD Teknisi
+              Menunggu TTD Penerima
             </CardDescription>
             <CardTitle className="text-3xl text-amber-900">{pendingCount}</CardTitle>
           </CardHeader>
@@ -640,7 +640,7 @@ export default function RadioHandoverPage() {
       <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSigRowReceiver(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>TTD Teknisi — {signRow?.handoverNumber}</DialogTitle>
+            <DialogTitle>TTD Penerima — {signRow?.handoverNumber}</DialogTitle>
           </DialogHeader>
           {signRow && (
             <div className="space-y-3 text-sm">
@@ -652,7 +652,7 @@ export default function RadioHandoverPage() {
               </p>
               <SignaturePadField
                 ref={sigTekRowRef}
-                label="TTD Teknisi (penerima) *"
+                label="TTD Penerima *"
                 required
                 value={sigRowReceiver}
                 onChange={setSigRowReceiver}
@@ -676,8 +676,13 @@ export default function RadioHandoverPage() {
       </Dialog>
 
       {/* Detail dialog */}
-      <Dialog open={!!detail || detailLoading} onOpenChange={() => { if (!detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={!!detail || detailLoading} onOpenChange={(open) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}>
+        <DialogContent 
+          className="max-w-3xl" 
+          onInteractOutside={(e) => {
+            if (galleryOpen) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex flex-wrap items-center gap-2 pr-8">
               {detailLoading ? (
@@ -787,13 +792,13 @@ export default function RadioHandoverPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} />
+                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
                 {detail.hasReceiverSignature ? (
-                  <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} />
+                  <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
                 ) : currentUserId() === detail.receivedByUserId ? (
                   <div className="space-y-2 border border-amber-200 bg-amber-50/50 rounded-lg p-3">
                     <p className="text-amber-800 font-medium">Lengkapi TTD sebagai teknisi penerima</p>
-                    <SignaturePadField label="TTD Teknisi (penerima)" readOnly />
+                    <SignaturePadField label="TTD Penerima" readOnly />
                     <p className="text-xs text-amber-700">Tutup detail dan gunakan tombol (Pen) di baris tabel untuk tanda tangan.</p>
                   </div>
                 ) : (

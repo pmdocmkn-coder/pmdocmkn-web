@@ -24,10 +24,11 @@ type SignaturePadFieldProps = {
   onChange?: (base64: string | null) => void;
   readOnly?: boolean;
   disabled?: boolean;
+  signerName?: string | null;
 };
 
 const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>(
-  function SignaturePadField({ label, required, value, onChange, readOnly, disabled }, ref) {
+  function SignaturePadField({ label, required, value, onChange, readOnly, disabled, signerName }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const padRef = useRef<SignatureCanvas>(null);
     const [canvasWidth, setCanvasWidth] = useState(400);
@@ -101,18 +102,23 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
 
     if (readOnly) {
       return (
-        <div className="space-y-1">
-          <label className="text-sm font-medium text-gray-700">{label}</label>
-          <div className="rounded-lg border-2 border-gray-200 bg-white p-4 min-h-[120px] flex items-center justify-center">
+        <div className="space-y-1 text-center">
+          <label className="text-xs font-semibold text-gray-500 mb-2 block">{label}</label>
+          <div className="rounded-xl border border-gray-200 bg-white p-3 flex flex-col items-center justify-center min-h-[120px]">
             {value ? (
               <img
                 src={value}
                 alt={label}
-                className="max-w-full max-h-36 object-contain"
+                className="max-w-full max-h-24 object-contain mix-blend-multiply"
                 style={{ background: "#ffffff" }}
               />
             ) : (
-              <span className="text-xs text-gray-400">Belum ada tanda tangan</span>
+              <span className="text-xs text-gray-300 italic">Belum ada tanda tangan</span>
+            )}
+            {signerName && (
+              <p className="text-xs font-medium text-gray-700 mt-2 border-t border-gray-100 pt-1.5 w-full">
+                {signerName}
+              </p>
             )}
           </div>
         </div>

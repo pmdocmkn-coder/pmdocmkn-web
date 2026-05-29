@@ -301,8 +301,8 @@ export default function RadioRepairJobDetailPanel({
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-            <SignaturePadField label="TTD Penyerah (HD)" readOnly value={handoverDetail.handedOverSignatureBase64} />
-            <SignaturePadField label="TTD Penerima (Tek)" readOnly value={handoverDetail.receiverSignatureBase64} />
+            <SignaturePadField label="TTD Penyerah" readOnly value={handoverDetail.handedOverSignatureBase64} signerName={handoverDetail.handedOverByName} />
+            <SignaturePadField label="TTD Penerima" readOnly value={handoverDetail.receiverSignatureBase64} signerName={handoverDetail.receivedByName} />
           </div>
         </div>
       )}

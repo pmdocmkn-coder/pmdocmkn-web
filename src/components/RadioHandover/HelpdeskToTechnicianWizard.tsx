@@ -441,8 +441,8 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
               <MultiPhotoUpload photos={photos} onChange={setPhotos} required />
             )}
             <HandoverAccessoryList items={accessories} onChange={setAccessories} />
-            <SignaturePadField ref={sigHdRef} label="TTD Helpdesk" required value={sigHandover} onChange={setSigHandover} />
-            <SignaturePadField ref={sigTekRef} label="TTD Teknisi (opsional)" value={sigReceiver} onChange={setSigReceiver} />
+            <SignaturePadField ref={sigHdRef} label="TTD Penyerah" required value={sigHandover} onChange={setSigHandover} />
+            <SignaturePadField ref={sigTekRef} label="TTD Penerima (opsional)" value={sigReceiver} onChange={setSigReceiver} />
             <input
               className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
               placeholder="Catatan opsional"

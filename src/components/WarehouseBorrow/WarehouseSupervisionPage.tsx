@@ -129,13 +129,13 @@ export default function WarehouseSupervisionPage() {
                 </div>
                 <div className="p-4 flex-1 flex flex-col gap-3">
                   <div>
-                    <h3 className="font-bold text-gray-900 line-clamp-2" title={b.partDescription}>
-                      {b.partDescription}
+                    <h3 className="font-bold text-gray-900 line-clamp-2" title={b.items?.[0]?.partDescription ?? "-"}>
+                      {b.items?.[0]?.partDescription ?? "-"}{b.items && b.items.length > 1 ? ` (+${b.items.length - 1} lainnya)` : ""}
                     </h3>
                     <div className="text-sm text-gray-500 mt-1 flex items-center justify-between">
-                      <span className="truncate">{b.partCode || "Tanpa kode part"}</span>
+                      <span className="truncate">{b.items?.[0]?.partCode || "Tanpa kode part"}</span>
                       <span className="font-bold text-violet-600 bg-violet-50 px-2 py-0.5 rounded text-xs">
-                        Qty: {b.quantity}
+                        {b.items?.length ?? 0} barang
                       </span>
                     </div>
                   </div>
@@ -191,11 +191,15 @@ export default function WarehouseSupervisionPage() {
                 </div>
                 <div className="pt-1">
                   <span className="text-gray-500 block mb-1">Part yang dipinjam:</span>
-                  <div className="font-semibold text-gray-900">{activeItem.partDescription}</div>
-                  <div className="text-gray-500 flex justify-between mt-1">
-                    <span>{activeItem.partCode || "-"}</span>
-                    <span className="font-bold text-violet-700">x{activeItem.quantity}</span>
-                  </div>
+                  {activeItem.items && activeItem.items.map((item, idx) => (
+                    <div key={idx} className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-gray-100 mb-1">
+                      <div>
+                        <div className="font-semibold text-gray-900">{item.partDescription}</div>
+                        {item.partCode && <div className="text-xs text-gray-500 font-mono">{item.partCode}</div>}
+                      </div>
+                      <span className="font-bold text-violet-700 ml-2">x{item.quantity}</span>
+                    </div>
+                  ))}
                 </div>
                 {activeItem.relatedJobNumber && (
                   <div className="pt-2 border-t border-gray-200 mt-2">

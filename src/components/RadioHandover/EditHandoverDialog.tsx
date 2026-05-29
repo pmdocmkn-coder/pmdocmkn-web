@@ -239,7 +239,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           {/* Signature */}
           <SignaturePadField 
             ref={sigTekRef} 
-            label="TTD Teknisi (opsional - dapat diwakilkan)" 
+            label="TTD Penerima (opsional)" 
             value={sigReceiver} 
             onChange={setSigReceiver} 
           />

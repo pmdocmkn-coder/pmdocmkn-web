@@ -73,9 +73,9 @@ const Login: React.FC = () => {
       setUsername('');
       setPassword('');
 
-      // Read intended destination from location state or default to dashboard
+      // Read intended destination from location state or default to root
       const locationState = location.state as { from?: { pathname: string } };
-      const from = locationState?.from?.pathname || '/dashboard';
+      const from = locationState?.from?.pathname || '/';
 
       // Redirect to intended destination
       setTimeout(() => {

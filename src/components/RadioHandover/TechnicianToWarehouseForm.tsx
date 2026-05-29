@@ -152,8 +152,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         label="Tambahan aksesoris"
       />
 
-      <SignaturePadField ref={sigTechRef} label="TTD Teknisi (penyerah)" required value={sigTech} onChange={setSigTech} />
-      <SignaturePadField ref={sigWhRef} label="TTD Warehouse (penerima)" required value={sigWh} onChange={setSigWh} />
+      <SignaturePadField ref={sigTechRef} label="TTD Penyerah" required value={sigTech} onChange={setSigTech} />
+      <SignaturePadField ref={sigWhRef} label="TTD Penerima" required value={sigWh} onChange={setSigWh} />
 
       <div className="flex gap-2 justify-end pt-2">
         <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>

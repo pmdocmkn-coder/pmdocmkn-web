@@ -705,8 +705,13 @@ export default function RadioRepairDashboardPage() {
         onIndexChange={setGalleryIndex}
       />
 
-      <Dialog open={!!detail} onOpenChange={() => setDetail(null)}>
-        <DialogContent className="max-w-3xl">
+      <Dialog open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
+        <DialogContent 
+          className="max-w-3xl" 
+          onInteractOutside={(e) => {
+            if (galleryOpen) e.preventDefault();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               {detail?.helpdeskTicketNumber} — SN {detail?.radioSerialNumber}

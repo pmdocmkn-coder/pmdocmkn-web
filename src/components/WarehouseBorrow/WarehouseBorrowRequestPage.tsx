@@ -1,14 +1,41 @@
 import { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
+import { warehousePartApi } from "../../services/warehousePartApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
-import type { RadioRepairJobDetail } from "../../types/radioRepair";
+import type { RadioRepairJobDetail, RadioRepairJobList } from "../../types/radioRepair";
+import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
+import type { WarehouseBorrowItem } from "../../types/warehouseBorrow";
 import { useToast } from "../../hooks/use-toast";
 import { motion } from "framer-motion";
-import { PackageOpen, ArrowLeft, Wrench, AlertCircle, Search } from "lucide-react";
+import { PackageOpen, ArrowLeft, Wrench, AlertCircle, Search, Plus, Trash2 } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
+
+interface BorrowItemRow {
+  key: number;
+  partDescription: string;
+  partCode: string;
+  quantity: number;
+  suggestions: WarehousePartCatalogItem[];
+  searching: boolean;
+  showSuggestions: boolean;
+}
+
+let rowKeyCounter = 0;
+
+function createEmptyRow(): BorrowItemRow {
+  return {
+    key: ++rowKeyCounter,
+    partDescription: "",
+    partCode: "",
+    quantity: 1,
+    suggestions: [],
+    searching: false,
+    showSuggestions: false,
+  };
+}
 
 export default function WarehouseBorrowRequestPage() {
   const { toast } = useToast();
@@ -16,19 +43,31 @@ export default function WarehouseBorrowRequestPage() {
   const [params] = useSearchParams();
   const jobId = params.get("repairJobId");
 
-  const [part, setPart] = useState("");
-  const [code, setCode] = useState("");
-  const [qty, setQty] = useState(1);
+  // Multi-item rows
+  const [rows, setRows] = useState<BorrowItemRow[]>([createEmptyRow()]);
+
+  // Ticket / Job search (combined into one input)
+  const [ticketSearch, setTicketSearch] = useState("");
+  const [jobSuggestions, setJobSuggestions] = useState<RadioRepairJobList[]>([]);
+  const [jobPicking, setJobPicking] = useState(false);
+  const [selectedRepairJobId, setSelectedRepairJobId] = useState<number | null>(
+    jobId ? Number(jobId) : null
+  );
+  const [ticketNumber, setTicketNumber] = useState("");
+  const [showJobSuggestions, setShowJobSuggestions] = useState(false);
+
   const [purpose, setPurpose] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  
+
   const [jobDetail, setJobDetail] = useState<RadioRepairJobDetail | null>(null);
   const [loadingJob, setLoadingJob] = useState(!!jobId);
 
+  // Load linked job detail
   useEffect(() => {
     if (jobId) {
-      radioRepairApi.getById(Number(jobId), false)
-        .then(res => setJobDetail(res))
+      radioRepairApi
+        .getById(Number(jobId), false)
+        .then((res) => setJobDetail(res))
         .catch(() => {
           toast({ title: "Gagal memuat data pekerjaan", variant: "destructive" });
         })
@@ -36,31 +75,121 @@ export default function WarehouseBorrowRequestPage() {
     }
   }, [jobId, toast]);
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!part.trim()) {
-      toast({ title: "Deskripsi part wajib diisi", variant: "destructive" });
+  // Debounced part search per row
+  useEffect(() => {
+    const timers = rows.map((row, idx) => {
+      return setTimeout(async () => {
+        if (!row.partDescription.trim()) {
+          updateRow(idx, { suggestions: [], searching: false });
+          return;
+        }
+        updateRow(idx, { searching: true });
+        try {
+          const items = await warehousePartApi.search(row.partDescription, 6);
+          updateRow(idx, { suggestions: items, searching: false, showSuggestions: true });
+        } catch {
+          updateRow(idx, { suggestions: [], searching: false });
+        }
+      }, 300);
+    });
+    return () => timers.forEach(clearTimeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows.map((r) => r.partDescription).join("|")]);
+
+  // Debounced ticket/job search
+  useEffect(() => {
+    if (!ticketSearch.trim()) {
+      setJobSuggestions([]);
       return;
     }
-    
+    const timer = setTimeout(async () => {
+      setJobPicking(true);
+      try {
+        const res = await radioRepairApi.getAll({
+          search: ticketSearch,
+          page: 1,
+          pageSize: 5,
+        });
+        setJobSuggestions(res.data ?? []);
+        setShowJobSuggestions(true);
+      } catch {
+        setJobSuggestions([]);
+      } finally {
+        setJobPicking(false);
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [ticketSearch]);
+
+  const updateRow = (idx: number, updates: Partial<BorrowItemRow>) => {
+    setRows((prev) =>
+      prev.map((r, i) => (i === idx ? { ...r, ...updates } : r))
+    );
+  };
+
+  const removeRow = (idx: number) => {
+    setRows((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  const addRow = () => {
+    setRows((prev) => [...prev, createEmptyRow()]);
+  };
+
+  const selectPartSuggestion = (idx: number, item: WarehousePartCatalogItem) => {
+    updateRow(idx, {
+      partDescription: item.partName,
+      partCode: item.partCode,
+      suggestions: [],
+      showSuggestions: false,
+    });
+  };
+
+  const selectJobSuggestion = (job: RadioRepairJobList) => {
+    setSelectedRepairJobId(job.id);
+    setTicketSearch(job.helpdeskTicketNumber);
+    setTicketNumber(job.helpdeskTicketNumber);
+    setShowJobSuggestions(false);
+    setJobSuggestions([]);
+  };
+
+  const submit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const validItems: WarehouseBorrowItem[] = rows
+      .filter((r) => r.partDescription.trim())
+      .map((r) => ({
+        partDescription: r.partDescription.trim(),
+        partCode: r.partCode.trim() || undefined,
+        quantity: r.quantity,
+      }));
+
+    if (validItems.length === 0) {
+      toast({ title: "Minimal 1 barang harus diisi", variant: "destructive" });
+      return;
+    }
+
+    // Use ticketSearch as the ticket number if no job was selected from dropdown
+    const finalTicket = ticketNumber || ticketSearch.trim() || undefined;
+
     setSubmitting(true);
     try {
       await warehouseBorrowApi.create({
-        partDescription: part,
-        partCode: code || undefined,
-        quantity: qty,
+        items: validItems,
         purpose: purpose || undefined,
-        relatedRepairJobId: jobId ? Number(jobId) : undefined,
+        relatedRepairJobId:
+          selectedRepairJobId ?? (jobId ? Number(jobId) : undefined),
+        ticketNumber: finalTicket,
       });
       toast({ title: "Permintaan peminjaman berhasil dikirim" });
-      
+
       if (jobId) {
         navigate("/radio/repair/dashboard");
       } else {
-        setPart("");
-        setCode("");
+        setRows([createEmptyRow()]);
         setPurpose("");
-        setQty(1);
+        setTicketSearch("");
+        setTicketNumber("");
+        setSelectedRepairJobId(null);
       }
     } catch {
       toast({ title: "Gagal mengirim permintaan", variant: "destructive" });
@@ -144,60 +273,189 @@ export default function WarehouseBorrowRequestPage() {
               </div>
             )}
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm font-semibold text-gray-700">Nama / Deskripsi Part <span className="text-red-500">*</span></label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input 
-                    placeholder="Contoh: Baterai Motorola XiR P8668i..." 
-                    className="pl-9 h-11"
-                    value={part}
-                    onChange={(e) => setPart(e.target.value)}
-                    required
-                  />
-                </div>
+            {/* ── MULTI-ITEM SECTION ── */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-bold text-gray-800">
+                  Daftar Barang yang Dipinjam <span className="text-red-500">*</span>
+                </label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-8 text-violet-700 border-violet-200 hover:bg-violet-50"
+                  onClick={addRow}
+                >
+                  <Plus className="w-3.5 h-3.5 mr-1" /> Tambah Barang
+                </Button>
               </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Kode Part (Opsional)</label>
-                <Input 
-                  placeholder="Contoh: PMNN4409BR" 
-                  className="h-11 font-mono text-sm"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                />
-              </div>
+              {rows.map((row, idx) => (
+                <motion.div
+                  key={row.key}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="bg-gray-50 border border-gray-200 rounded-xl p-4 space-y-3"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-violet-600 bg-violet-100 px-2 py-0.5 rounded-full">
+                      Barang #{idx + 1}
+                    </span>
+                    {rows.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeRow(idx)}
+                        className="text-red-400 hover:text-red-600 p-1 rounded-lg hover:bg-red-50 transition-colors"
+                        title="Hapus barang"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
 
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-gray-700">Kuantitas</label>
-                <Input 
-                  type="number" 
-                  min={1} 
-                  className="h-11"
-                  value={qty}
-                  onChange={(e) => setQty(Number(e.target.value))}
-                  required
-                />
-              </div>
+                  {/* Part Name Search */}
+                  <div className="space-y-1.5 relative">
+                    <label className="text-xs font-semibold text-gray-600">Nama / Deskripsi Part</label>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <Input
+                        placeholder="Contoh: Baterai Motorola XiR P8668i..."
+                        className="pl-9 h-10 bg-white"
+                        value={row.partDescription}
+                        onChange={(e) =>
+                          updateRow(idx, { partDescription: e.target.value, showSuggestions: true })
+                        }
+                        onFocus={() => updateRow(idx, { showSuggestions: true })}
+                        onBlur={() => setTimeout(() => updateRow(idx, { showSuggestions: false }), 200)}
+                        required
+                      />
+                    </div>
+                    {row.searching && <p className="text-xs text-violet-600">Mencari daftar part...</p>}
+                    {row.showSuggestions && row.suggestions.length > 0 && (
+                      <ul className="absolute z-10 left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 bg-white shadow-lg divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                        {row.suggestions.map((item) => (
+                          <li key={item.id}>
+                            <button
+                              type="button"
+                              className="w-full text-left px-3 py-2 hover:bg-violet-50 transition-colors"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => selectPartSuggestion(idx, item)}
+                            >
+                              <div className="text-sm font-semibold text-gray-800">{item.partName}</div>
+                              <div className="text-xs text-gray-500">{item.partCode}</div>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <label className="text-sm font-semibold text-gray-700">Keperluan (Opsional)</label>
-                <Textarea 
-                  placeholder={jobId ? "Deskripsikan bagian spesifik yang rusak..." : "Tujuan penggunaan part..."}
-                  rows={3}
-                  className="resize-none"
-                  value={purpose}
-                  onChange={(e) => setPurpose(e.target.value)}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-600">Kode Part</label>
+                      <Input
+                        placeholder="Contoh: PMNN4409BR"
+                        className="h-10 font-mono text-sm bg-white"
+                        value={row.partCode}
+                        onChange={(e) => updateRow(idx, { partCode: e.target.value })}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-600">Kuantitas</label>
+                      <Input
+                        type="number"
+                        min={1}
+                        className="h-10 bg-white"
+                        value={row.quantity}
+                        onChange={(e) => updateRow(idx, { quantity: Number(e.target.value) || 1 })}
+                        required
+                      />
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+
+              {/* Add more button (bottom, for mobile convenience) */}
+              <button
+                type="button"
+                onClick={addRow}
+                className="w-full py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/50 transition-all flex items-center justify-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" /> Tambah Barang Lainnya
+              </button>
+            </div>
+
+            {/* ── TICKET SEARCH (COMBINED SINGLE INPUT) ── */}
+            <div className="space-y-2 relative">
+              <label className="text-sm font-semibold text-gray-700">No. Tiket / Pekerjaan (Opsional)</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <Input
+                  placeholder="Ketik nomor tiket atau SN radio — pilih dari daftar atau ketik manual"
+                  className="pl-9 h-11"
+                  value={ticketSearch}
+                  onChange={(e) => {
+                    setTicketSearch(e.target.value);
+                    setTicketNumber("");
+                    setSelectedRepairJobId(null);
+                    setShowJobSuggestions(true);
+                  }}
+                  onFocus={() => setShowJobSuggestions(true)}
+                  onBlur={() => setTimeout(() => setShowJobSuggestions(false), 200)}
                 />
               </div>
+              {jobPicking && <p className="text-xs text-violet-600">Mencari tiket...</p>}
+              {ticketSearch.trim() && !selectedRepairJobId && !jobPicking && (
+                <p className="text-xs text-gray-400">
+                  Tekan <strong>Ajukan Peminjaman</strong> untuk menggunakan "<span className="font-mono text-gray-600">{ticketSearch.trim()}</span>" sebagai nomor tiket manual.
+                </p>
+              )}
+              {selectedRepairJobId && (
+                <p className="text-xs text-emerald-600 flex items-center gap-1">
+                  ✓ Terhubung dengan pekerjaan repair #{selectedRepairJobId}
+                </p>
+              )}
+              {showJobSuggestions && jobSuggestions.length > 0 && (
+                <ul className="absolute z-10 left-0 right-0 mt-1 rounded-xl border border-gray-200 bg-white shadow-lg divide-y divide-gray-100 max-h-48 overflow-y-auto">
+                  {jobSuggestions.map((item) => (
+                    <li key={item.id}>
+                      <button
+                        type="button"
+                        className="w-full text-left px-3 py-2.5 hover:bg-violet-50 transition-colors"
+                        onMouseDown={(e) => e.preventDefault()}
+                        onClick={() => selectJobSuggestion(item)}
+                      >
+                        <div className="text-sm font-semibold text-gray-800">{item.helpdeskTicketNumber}</div>
+                        <div className="text-xs text-gray-500">SN {item.radioSerialNumber} • {item.equipmentName ?? "-"}</div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            {/* Purpose */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Keperluan (Opsional)</label>
+              <Textarea
+                placeholder={jobId ? "Deskripsikan bagian spesifik yang rusak..." : "Tujuan penggunaan part..."}
+                rows={3}
+                className="resize-none"
+                value={purpose}
+                onChange={(e) => setPurpose(e.target.value)}
+              />
             </div>
 
             <div className="pt-4 border-t border-gray-100 flex justify-end gap-3">
               <Button type="button" variant="outline" onClick={() => navigate(-1)} className="h-11 px-6">
                 Batal
               </Button>
-              <Button type="submit" disabled={submitting || !part.trim()} className="h-11 px-8 bg-violet-600 hover:bg-violet-700 font-semibold shadow-md shadow-violet-200">
+              <Button
+                type="submit"
+                disabled={submitting || rows.every((r) => !r.partDescription.trim())}
+                className="h-11 px-8 bg-violet-600 hover:bg-violet-700 font-semibold shadow-md shadow-violet-200"
+              >
                 {submitting ? "Memproses..." : "Ajukan Peminjaman"}
               </Button>
             </div>

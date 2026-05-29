@@ -160,28 +160,14 @@ export default function HandoverRadioEntryStep({
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="text-sm font-medium">No Tiket Helpdesk *</label>
-          <input
-            className="w-full border rounded-lg px-3 py-2 mt-1"
-            placeholder="#MKN/0526/0669"
-            value={ticket}
-            onChange={(e) => onTicketChange(e.target.value)}
-          />
-        </div>
-        <div>
-          <label className="text-sm font-medium">No Job ERP (MKNSmart)</label>
-          <div className="relative mt-1">
-            <input
-              type="text"
-              placeholder="Contoh: MKN/0526/1113 (Opsional)"
-              className="w-full border rounded-lg px-3 py-2 bg-white focus:ring-2 focus:ring-violet-500 focus:border-violet-500"
-              value={noJobErp}
-              onChange={(e) => onNoJobErpChange(e.target.value)}
-            />
-          </div>
-        </div>
+      <div>
+        <label className="text-sm font-medium">No Tiket Helpdesk *</label>
+        <input
+          className="w-full border rounded-lg px-3 py-2 mt-1"
+          placeholder="#MKN/0526/0669"
+          value={ticket}
+          onChange={(e) => onTicketChange(e.target.value)}
+        />
       </div>
 
       <div>
