@@ -108,6 +108,19 @@ const getRslStatus = (value: number | null): string => {
   return "critical";
 };
 
+const getRslColor = (value: number | null | undefined): string => {
+  const status = getRslStatus(value ?? null);
+  const colors = {
+    too_strong: "bg-red-200",
+    optimal: "bg-green-200",
+    warning: "bg-yellow-200",
+    sub_optimal: "bg-orange-200",
+    critical: "bg-red-300",
+    no_data: "bg-gray-100",
+  };
+  return colors[status as keyof typeof colors] || colors.no_data;
+};
+
 const getAvailableYears = (histories: NecRslHistoryItemDto[]) => {
   if (histories.length === 0) return [new Date().getFullYear()];
   const years = [
@@ -778,8 +791,30 @@ const NecHistoryPage: React.FC = () => {
                     }}
                   />
                   <Tooltip
-                    formatter={(value: any) => [`${value} dBm`, "Average RSL"]}
-                    labelFormatter={(label) => `Link: ${label}`}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      const data = payload[0];
+                      const value = data.value as number;
+                      const tower = data.payload.tower;
+                      return (
+                        <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700 max-w-xs">
+                          <p className="font-bold text-sm mb-1 text-purple-300">{data.payload.linkName}</p>
+                          <p className="text-xs text-gray-400 mb-2">{tower}</p>
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-gray-300">RSL:</span>
+                              <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-gray-300">Status:</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslColor(value)} ${getRslTextColor(value)}`}>
+                                {getRslStatusLabel(value)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
                   />
                   <Legend wrapperStyle={{ paddingTop: "10px" }} />
                   <ReferenceLine
@@ -1048,7 +1083,30 @@ const NecHistoryPage: React.FC = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis domain={[-70, -30]} />
-                <Tooltip />
+                <Tooltip
+                  content={({ active, payload }) => {
+                    if (!active || !payload || !payload.length) return null;
+                    const data = payload[0];
+                    const value = data.value as number;
+                    return (
+                      <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700">
+                        <p className="font-bold text-sm mb-2 text-indigo-300">{data.payload.date}</p>
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-gray-300">Rata-rata RSL:</span>
+                            <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-xs text-gray-300">Status:</span>
+                            <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslColor(value)} ${getRslTextColor(value)}`}>
+                              {getRslStatusLabel(value)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  }}
+                />
                 <Legend />
                 <ReferenceLine
                   y={-45}
@@ -1079,6 +1137,7 @@ const NecHistoryPage: React.FC = () => {
                   dataKey="value"
                   stroke="#8884d8"
                   fill="#8884d8"
+                  name="Rata-rata RSL"
                 />
               </AreaChart>
             </ResponsiveContainer>

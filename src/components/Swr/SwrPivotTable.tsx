@@ -1082,7 +1082,7 @@ const SwrPivotTable: React.FC = () => {
                                         <div className="bg-gray-800/50 p-3 rounded">
                                           <p className="text-xs text-gray-400 mb-1">FPWR</p>
                                           <div className="flex items-center justify-between">
-                                            <p className="text-lg font-bold">{fpwr.toFixed(1)} W</p>
+                                            <p className="text-lg font-bold">{fpwr.toFixed(2)} W</p>
                                             <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${getFpwrColor(fpwr).split(' ')[0]} text-black border`}>
                                               {getFpwrStatus(fpwr).toUpperCase()}
                                             </span>
@@ -1158,7 +1158,7 @@ const SwrPivotTable: React.FC = () => {
                               <div className="relative">
                                 {isDataPresent ? (
                                   <>
-                                    {fpwr !== null && fpwr !== undefined ? fpwr.toFixed(1) : "-"}
+                                    {fpwr !== null && fpwr !== undefined ? fpwr.toFixed(2) : "-"}
                                     {hasNote && (
                                       <span className="absolute -top-1 -right-1 text-blue-600 text-xs bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center border border-blue-300 shadow-sm">
                                         📝

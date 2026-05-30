@@ -220,6 +220,25 @@ const LinkInternalPage: React.FC = () => {
     const [editingNote, setEditingNote] = useState<{ linkId: number; linkName: string; monthKey: string; monthLabel: string } | null>(null);
     const [noteText, setNoteText] = useState("");
 
+    // Load notes from localStorage on mount
+    useEffect(() => {
+        const savedNotes = localStorage.getItem('internalLinkPivotNotes');
+        if (savedNotes) {
+            try {
+                setPivotNotes(JSON.parse(savedNotes));
+            } catch (e) {
+                console.error('Failed to parse saved notes:', e);
+            }
+        }
+    }, []);
+
+    // Save notes to localStorage whenever they change
+    useEffect(() => {
+        if (Object.keys(pivotNotes).length > 0) {
+            localStorage.setItem('internalLinkPivotNotes', JSON.stringify(pivotNotes));
+        }
+    }, [pivotNotes]);
+
     // Delete confirm
     const [confirmDelete, setConfirmDelete] = useState<{ type: "link" | "history"; id: number } | null>(null);
 
@@ -234,6 +253,119 @@ const LinkInternalPage: React.FC = () => {
     // Chart filters (shared between monthly and yearly)
     const [chartLinkFilter, setChartLinkFilter] = useState<string | null>(null);
     const [chartTypeFilter, setChartTypeFilter] = useState<string | null>(null);
+
+    // Line Chart Detail Modal State
+    const [pinnedTooltip, setPinnedTooltip] = useState<{ month: string; data: any[] } | null>(null);
+    
+    // Highlighted line state
+    const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
+    const [highlightedLineData, setHighlightedLineData] = useState<Array<{month: string, value: number | null, notes: string[] | null}> | null>(null);
+    const [highlightedLineColor, setHighlightedLineColor] = useState<string>('#06b6d4');
+
+    // ============================================
+    // HELPER: Get monthly data for highlighted line with notes
+    // ============================================
+    const getMonthlyDataForLink = (linkName: string) => {
+        const link = pivotData.pivotLinks.find(l => l.linkName === linkName);
+        if (!link) return null;
+        
+        const result = monthNames.map((month, idx) => {
+            const key = `${month}-${selectedYear.toString().slice(-2)}`;
+            const value = link.monthlyValues[key];
+            
+            // Find notes from allHistories (backend) for this link and month
+            const monthHistories = allHistories.filter(h => {
+                const d = new Date(h.date);
+                return h.internalLinkId === link.id && 
+                       d.getFullYear() === selectedYear && 
+                       d.getMonth() === idx &&
+                       h.notes && h.notes.trim() !== '';
+            });
+            
+            const backendNotes = monthHistories.map(h => h.notes).filter((n): n is string => !!n && n.trim() !== '');
+            
+            // Get notes from localStorage (pivotNotes)
+            const pivotKey = `${link.id}-${month}-${selectedYear.toString().slice(-2)}`;
+            const localNote = pivotNotes[pivotKey];
+            
+            // Combine both sources
+            const allNotes = [...backendNotes];
+            if (localNote && localNote.trim() !== '') {
+                allNotes.push(localNote);
+            }
+            
+            // Debug log for Apr
+            if (month === 'Apr' && allNotes.length > 0) {
+                console.log('Apr notes found:', allNotes, 'for link:', linkName);
+            }
+            
+            return {
+                month,
+                value,
+                notes: allNotes.length > 0 ? allNotes : null
+            };
+        });
+        
+        return result;
+    };
+
+    // ============================================
+    // PIVOT TABLE DATA (Memoized for performance)
+    // ============================================
+    const CHART_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#a855f7'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    const pivotData = useMemo(() => {
+        // Build pivot data from allHistories
+        const filteredLinks = links.filter(link => {
+            if (pivotLinkFilter && !link.linkName.toLowerCase().includes(pivotLinkFilter.toLowerCase())) return false;
+            if (pivotTypeFilter && link.type !== pivotTypeFilter) return false;
+            return true;
+        });
+        
+        const pivotLinks = filteredLinks.map(link => {
+            const monthlyValues: Record<string, number | null> = {};
+            monthNames.forEach((m, idx) => {
+                const key = `${m}-${selectedYear.toString().slice(-2)}`;
+                const vals = allHistories.filter(h => {
+                    const d = new Date(h.date);
+                    return h.internalLinkId === link.id && d.getFullYear() === selectedYear && d.getMonth() === idx && h.rslNearEnd != null;
+                });
+                monthlyValues[key] = vals.length > 0 ? vals.reduce((acc, h) => acc + h.rslNearEnd!, 0) / vals.length : null;
+            });
+            return { ...link, monthlyValues };
+        });
+
+        // Line chart data
+        const lineChartData = monthNames.map(month => {
+            const point: Record<string, any> = { month };
+            pivotLinks.forEach(link => {
+                const key = `${month}-${selectedYear.toString().slice(-2)}`;
+                point[link.linkName] = link.monthlyValues[key];
+            });
+            return point;
+        });
+
+        // Pie chart data
+        const statusCount = { too_strong: 0, optimal: 0, warning: 0, sub_optimal: 0, critical: 0 };
+        pivotLinks.forEach(link => {
+            Object.values(link.monthlyValues).forEach(val => {
+                if (val !== null) {
+                    const s = getRslStatus(val);
+                    if (s !== 'no_data') statusCount[s as keyof typeof statusCount]++;
+                }
+            });
+        });
+        const pieData = [
+            { name: 'Too Strong', value: statusCount.too_strong, fill: '#ef4444' },
+            { name: 'Optimal', value: statusCount.optimal, fill: '#10b981' },
+            { name: 'Warning', value: statusCount.warning, fill: '#f59e0b' },
+            { name: 'Sub-optimal', value: statusCount.sub_optimal, fill: '#fb923c' },
+            { name: 'Critical', value: statusCount.critical, fill: '#dc2626' },
+        ].filter(d => d.value > 0);
+
+        return { pivotLinks, lineChartData, pieData };
+    }, [links, allHistories, pivotLinkFilter, pivotTypeFilter, selectedYear]);
 
     // ============================================
     // DATA FETCHING
@@ -611,7 +743,31 @@ const LinkInternalPage: React.FC = () => {
                                         <CartesianGrid strokeDasharray="3 3" />
                                         <XAxis dataKey="linkName" angle={-45} textAnchor="end" height={100} interval={0} tick={{ fontSize: 9 }} />
                                         <YAxis domain={[-70, -30]} label={{ value: "RSL (dBm)", angle: -90, position: "insideLeft" }} />
-                                        <Tooltip formatter={(value: any) => [`${value} dBm`, "Average RSL"]} />
+                                        <Tooltip 
+                                            content={({ active, payload }) => {
+                                                if (!active || !payload || !payload.length) return null;
+                                                const data = payload[0];
+                                                const value = data.value as number;
+                                                const status = getRslStatus(value);
+                                                return (
+                                                    <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700 max-w-xs">
+                                                        <p className="font-bold text-sm mb-2 text-blue-300">{data.payload.linkName}</p>
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <span className="text-xs text-gray-300">RSL:</span>
+                                                                <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <span className="text-xs text-gray-300">Status:</span>
+                                                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslColor(value)} ${getRslTextColor(value)}`}>
+                                                                    {getRslStatusLabel(value)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }}
+                                        />
                                         <Legend wrapperStyle={{ paddingTop: "10px" }} />
                                         <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" label={{ value: "Optimal (-45)", position: "right", fill: "#10b981", fontSize: 10 }} />
                                         <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: "Warning (-55)", position: "right", fill: "#f59e0b", fontSize: 10 }} />
@@ -779,12 +935,36 @@ const LinkInternalPage: React.FC = () => {
                                 <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis dataKey="date" />
                                 <YAxis domain={[-70, -30]} />
-                                <Tooltip formatter={(value: any) => [`${value} dBm`, "Rata-rata RSL"]} />
+                                <Tooltip 
+                                    content={({ active, payload }) => {
+                                        if (!active || !payload || !payload.length) return null;
+                                        const data = payload[0];
+                                        const value = data.value as number | null;
+                                        if (value === null) return null;
+                                        return (
+                                            <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700">
+                                                <p className="font-bold text-sm mb-2 text-indigo-300">{data.payload.date}</p>
+                                                <div className="space-y-1">
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="text-xs text-gray-300">Rata-rata RSL:</span>
+                                                        <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between gap-3">
+                                                        <span className="text-xs text-gray-300">Status:</span>
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslColor(value)} ${getRslTextColor(value)}`}>
+                                                            {getRslStatusLabel(value)}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }}
+                                />
                                 <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" label={{ value: "Optimal Max (-45)", position: "insideBottomRight", fill: "#10b981" }} />
                                 <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: "Warning (-55)", position: "insideBottomRight", fill: "#f59e0b" }} />
                                 <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" label={{ value: "Sub-optimal (-60)", position: "insideBottomRight", fill: "#fb923c" }} />
                                 <ReferenceLine y={-65} stroke="#dc2626" strokeDasharray="3 3" label={{ value: "Critical (-65)", position: "insideBottomRight", fill: "#dc2626" }} />
-                                <Area type="monotone" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} name="⇒ value" />
+                                <Area type="monotone" dataKey="value" stroke="#6366f1" fill="#6366f1" fillOpacity={0.3} name="Rata-rata RSL" />
                             </AreaChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -1376,268 +1556,623 @@ const LinkInternalPage: React.FC = () => {
                     </Card>
 
                     {/* Line Chart — RSL per Link */}
-                    {(() => {
-                        if (loading) {
-                            return (
-                                <div className="space-y-6">
-                                    <Skeleton className="h-[400px] w-full" />
-                                    <Skeleton className="h-[300px] w-full" />
-                                    <Skeleton className="h-[400px] w-full" />
-                                </div>
-                            );
-                        }
-
-                        const CHART_COLORS = ['#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', '#06b6d4', '#ec4899', '#14b8a6', '#f97316', '#6366f1', '#84cc16', '#a855f7'];
-                        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-                        // Build pivot data from allHistories
-                        const filteredLinks = links.filter(link => {
-                            if (pivotLinkFilter && !link.linkName.toLowerCase().includes(pivotLinkFilter.toLowerCase())) return false;
-                            if (pivotTypeFilter && link.type !== pivotTypeFilter) return false;
-                            return true;
-                        });
-                        const pivotLinks = filteredLinks.map(link => {
-                            const monthlyValues: Record<string, number | null> = {};
-                            monthNames.forEach((m, idx) => {
-                                const key = `${m}-${selectedYear.toString().slice(-2)}`;
-                                const vals = allHistories.filter(h => {
-                                    const d = new Date(h.date);
-                                    return h.internalLinkId === link.id && d.getFullYear() === selectedYear && d.getMonth() === idx && h.rslNearEnd != null;
-                                });
-                                monthlyValues[key] = vals.length > 0 ? vals.reduce((acc, h) => acc + h.rslNearEnd!, 0) / vals.length : null;
-                            });
-                            return { ...link, monthlyValues };
-                        });
-
-                        // Line chart data
-                        const lineChartData = monthNames.map(month => {
-                            const point: Record<string, any> = { month };
-                            pivotLinks.forEach(link => {
-                                const key = `${month}-${selectedYear.toString().slice(-2)}`;
-                                point[link.linkName] = link.monthlyValues[key];
-                            });
-                            return point;
-                        });
-
-                        // Pie chart data
-                        const statusCount = { too_strong: 0, optimal: 0, warning: 0, sub_optimal: 0, critical: 0 };
-                        pivotLinks.forEach(link => {
-                            Object.values(link.monthlyValues).forEach(val => {
-                                if (val !== null) {
-                                    const s = getRslStatus(val);
-                                    if (s !== 'no_data') statusCount[s as keyof typeof statusCount]++;
-                                }
-                            });
-                        });
-                        const pieData = [
-                            { name: 'Too Strong', value: statusCount.too_strong, fill: '#ef4444' },
-                            { name: 'Optimal', value: statusCount.optimal, fill: '#10b981' },
-                            { name: 'Warning', value: statusCount.warning, fill: '#f59e0b' },
-                            { name: 'Sub-optimal', value: statusCount.sub_optimal, fill: '#fb923c' },
-                            { name: 'Critical', value: statusCount.critical, fill: '#dc2626' },
-                        ].filter(d => d.value > 0);
-
-                        return (
-                            <>
-                                {/* Line Chart */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
+                    {loading ? (
+                        <div className="space-y-6">
+                            <Skeleton className="h-[400px] w-full" />
+                            <Skeleton className="h-[300px] w-full" />
+                            <Skeleton className="h-[400px] w-full" />
+                        </div>
+                    ) : (
+                        <div className="space-y-8">
+                            {/* Line Chart */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2">
                                             <div className="w-1 h-6 bg-blue-600 rounded" />
                                             Grafik Garis Rata-rata RSL per Link
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="space-y-4">
-                                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm text-blue-800">
-                                                <div className="flex items-start gap-2">
-                                                    <Activity className="w-5 h-5 mt-0.5 flex-shrink-0" />
-                                                    <div>
-                                                        <p className="font-semibold mb-1">Menampilkan {pivotLinks.length} link</p>
-                                                        <p className="text-xs">Hover pada garis untuk melihat detail nilai. Scroll legend di bawah untuk melihat semua link.</p>
+                                        </div>
+                                        <span className="text-sm font-normal text-gray-500">{pivotData.pivotLinks.length} link</span>
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="space-y-6">
+                                        {/* Quick Access Month Selector - Prominent */}
+                                        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 shadow-lg">
+                                            <div className="flex items-center justify-between mb-3">
+                                                <h4 className="text-white font-bold flex items-center gap-2">
+                                                    <Activity className="w-5 h-5" />
+                                                    Akses Cepat - Klik Bulan untuk Lihat Semua Link
+                                                </h4>
+                                                <span className="text-blue-100 text-xs bg-white/20 px-3 py-1 rounded-full">
+                                                    {pivotData.pivotLinks.length} total link
+                                                </span>
+                                            </div>
+                                            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+                                                {monthNames.map((month, idx) => {
+                                                    const validLinks = pivotData.pivotLinks.filter(link => {
+                                                        const key = `${month}-${selectedYear.toString().slice(-2)}`;
+                                                        return link.monthlyValues[key] !== null;
+                                                    });
+                                                    
+                                                    return (
+                                                        <button
+                                                            key={month}
+                                                            onClick={() => {
+                                                                const payload = validLinks.map((link) => {
+                                                                    const key = `${month}-${selectedYear.toString().slice(-2)}`;
+                                                                    return {
+                                                                        name: link.linkName,
+                                                                        value: link.monthlyValues[key],
+                                                                        color: CHART_COLORS[pivotData.pivotLinks.indexOf(link) % CHART_COLORS.length]
+                                                                    };
+                                                                });
+                                                                setPinnedTooltip({ month, data: payload });
+                                                            }}
+                                                            className="px-3 py-2.5 bg-white hover:bg-blue-50 text-blue-700 rounded-lg font-bold text-sm transition-all hover:shadow-xl active:scale-95 border-2 border-transparent hover:border-blue-300 group"
+                                                        >
+                                                            <div className="text-base group-hover:scale-110 transition-transform">{month}</div>
+                                                            <div className="text-xs text-blue-600 font-semibold mt-0.5">{validLinks.length} link</div>
+                                                        </button>
+                                                    );
+                                                })}
+                                            </div>
+                                            <p className="text-blue-100 text-xs mt-3 text-center">
+                                                💡 Klik bulan untuk membuka daftar lengkap dengan scroll
+                                            </p>
+                                        </div>
+                                        
+                                        {/* Monthly Detail Panel - Shows when line is highlighted */}
+                                        {highlightedLine && highlightedLineData && (
+                                            <div className="bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 rounded-xl p-1 shadow-2xl animate-in slide-in-from-top duration-500">
+                                                <div className="bg-white rounded-lg p-4">
+                                                    <div className="flex items-center justify-between mb-3">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-3 h-3 rounded-full bg-blue-500 animate-pulse" />
+                                                            <h4 className="font-bold text-lg text-gray-800">{highlightedLine}</h4>
+                                                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full font-semibold">
+                                                                Detail Nilai Bulanan
+                                                            </span>
+                                                        </div>
+                                                        <button 
+                                                            onClick={() => {
+                                                                setHighlightedLine(null);
+                                                                setHighlightedLineData(null);
+                                                            }}
+                                                            className="text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full p-1 transition-all"
+                                                            title="Close (Klik untuk menutup)"
+                                                        >
+                                                            <X className="w-5 h-5" />
+                                                        </button>
                                                     </div>
-                                                </div>
-                                            </div>
-                                            <div className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4">
-                                                <ResponsiveContainer width="100%" height={500}>
-                                                    <LineChart data={lineChartData} margin={{ top: 20, right: 60, left: 20, bottom: 20 }}>
-                                                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                                                        <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                                                        <YAxis domain={[-95, -30]} label={{ value: 'RSL (dBm)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }} tick={{ fontSize: 11, fill: '#6b7280' }} />
-                                                        <Tooltip formatter={(value: any) => value !== null && value !== undefined ? `${value} dBm` : 'No Data'}
-                                                            contentStyle={{ backgroundColor: 'rgba(255,255,255,0.96)', border: '1px solid #e5e7eb', borderRadius: '8px', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)' }} />
-                                                        <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Optimal (-45)', position: 'right', fill: '#10b981', fontSize: 10, fontWeight: 600 }} />
-                                                        <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Warning (-55)', position: 'right', fill: '#f59e0b', fontSize: 10, fontWeight: 600 }} />
-                                                        <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Sub-opt (-60)', position: 'right', fill: '#fb923c', fontSize: 10, fontWeight: 600 }} />
-                                                        <ReferenceLine y={-65} stroke="#dc2626" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Critical (-65)', position: 'right', fill: '#dc2626', fontSize: 10, fontWeight: 600 }} />
-                                                        {pivotLinks.map((link, idx) => (
-                                                            <Line key={link.linkName} type="monotone" dataKey={link.linkName} stroke={CHART_COLORS[idx % CHART_COLORS.length]}
-                                                                strokeWidth={2} dot={{ r: 3, strokeWidth: 2 }} activeDot={{ r: 5 }} connectNulls={false} name={link.linkName} />
-                                                        ))}
-                                                    </LineChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                            {/* Legend */}
-                                            <div className="border rounded-lg bg-white">
-                                                <div className="bg-gray-50 px-4 py-2 border-b">
-                                                    <h4 className="text-sm font-semibold text-gray-700">Legend - Daftar Link</h4>
-                                                </div>
-                                                <div className="max-h-40 overflow-y-auto p-3">
-                                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                                                        {pivotLinks.map((link, idx) => (
-                                                            <div key={idx} className="flex items-center gap-2 text-xs">
-                                                                <div className="w-8 h-0.5 flex-shrink-0" style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} />
-                                                                <span className="truncate" title={link.linkName}>{link.linkName}</span>
+                                                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                                                        {highlightedLineData.map((data, idx) => (
+                                                            <div 
+                                                                key={idx} 
+                                                                className={`rounded-xl p-4 border-2 transition-all hover:scale-105 hover:shadow-lg ${
+                                                                    data.notes 
+                                                                        ? 'border-amber-400 bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-50 shadow-amber-200/50' 
+                                                                        : 'border-blue-300 bg-gradient-to-br from-blue-50 via-indigo-50 to-blue-50 shadow-blue-200/50'
+                                                                } shadow-md`}
+                                                                style={{
+                                                                    animation: `fadeIn 0.3s ease-out ${idx * 0.05}s both`
+                                                                }}
+                                                                title={data.notes ? data.notes.join(' | ') : undefined}
+                                                            >
+                                                                {/* Month Header */}
+                                                                <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-200">
+                                                                    <div className="text-sm font-black text-blue-700 tracking-wide">{data.month}</div>
+                                                                    {data.notes && data.notes.length > 0 && (
+                                                                        <div className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse shadow-lg shadow-amber-500/50" title="Ada catatan" />
+                                                                    )}
+                                                                </div>
+                                                                
+                                                                {/* Value Display */}
+                                                                {data.value !== null ? (
+                                                                    <div className="mb-3">
+                                                                        <div className="flex items-baseline justify-center gap-1.5 mb-1">
+                                                                            <span className={`text-2xl font-black font-mono ${getRslTextColor(data.value)}`}>
+                                                                                {data.value.toFixed(2)}
+                                                                            </span>
+                                                                            <span className="text-xs font-bold text-gray-600">dBm</span>
+                                                                        </div>
+                                                                        <div className={`text-center text-[10px] font-bold px-2 py-1 rounded-full ${
+                                                                            getRslStatus(data.value) === 'optimal' ? 'bg-green-100 text-green-700' :
+                                                                            getRslStatus(data.value) === 'warning' ? 'bg-yellow-100 text-yellow-700' :
+                                                                            getRslStatus(data.value) === 'critical' ? 'bg-red-100 text-red-700' :
+                                                                            'bg-gray-100 text-gray-600'
+                                                                        }`}>
+                                                                            {getRslStatusLabel(data.value)}
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="mb-3 text-center">
+                                                                        <div className="text-base text-gray-400 font-bold">—</div>
+                                                                        <div className="text-[10px] text-gray-500 font-semibold">No data</div>
+                                                                    </div>
+                                                                )}
+                                                                
+                                                                {/* Notes Section */}
+                                                                {data.notes && data.notes.length > 0 && (
+                                                                    <div className="mt-3 pt-3 border-t-2 border-amber-300">
+                                                                        <div className="text-[10px] font-bold text-amber-700 mb-1.5 flex items-center gap-1">
+                                                                            <span>📝</span> Catatan
+                                                                        </div>
+                                                                        <div className="text-[11px] text-amber-900 leading-snug line-clamp-2 font-medium">
+                                                                            {data.notes[0]}
+                                                                        </div>
+                                                                        {data.notes.length > 1 && (
+                                                                            <div className="text-[10px] text-amber-600 mt-1.5 font-semibold bg-amber-100 px-2 py-0.5 rounded-full inline-block">
+                                                                                +{data.notes.length - 1} lagi
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         ))}
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Pie Chart */}
-                                <Card>
-                                    <CardHeader>
-                                        <CardTitle className="flex items-center gap-2">
-                                            <div className="w-1 h-6 bg-green-600 rounded" />
-                                            Distribusi Status Link
-                                        </CardTitle>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
-                                            <div className="flex justify-center">
-                                                <ResponsiveContainer width="100%" height={320}>
-                                                    <PieChart>
-                                                        <Pie data={pieData} cx="50%" cy="50%" labelLine={true}
-                                                            label={(entry) => `${entry.name}: ${((entry.percent ?? 0) * 100).toFixed(0)}%`}
-                                                            outerRadius={100} fill="#8884d8" dataKey="value">
-                                                            {pieData.map((entry, i) => <Cell key={`cell-${i}`} fill={entry.fill} />)}
-                                                        </Pie>
-                                                        <Tooltip formatter={(value: any) => [`${value} data points`, 'Jumlah']}
-                                                            contentStyle={{ backgroundColor: 'rgba(255,255,255,0.96)', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
-                                                    </PieChart>
-                                                </ResponsiveContainer>
-                                            </div>
-                                            <div className="space-y-3">
-                                                {pieData.map((entry, idx) => (
-                                                    <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-4 h-4 rounded" style={{ backgroundColor: entry.fill }} />
-                                                            <span className="font-medium text-sm">{entry.name}</span>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <p className="text-lg font-bold">{entry.value}</p>
-                                                            <p className="text-xs text-gray-500">data points</p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    </CardContent>
-                                </Card>
-
-                                {/* Pivot Table */}
-                                <Card>
-                                    <CardContent className="pt-6">
-                                        <div className="overflow-x-auto rounded-md border">
-                                            <table className="w-full border-collapse text-sm bg-white">
-                                                <thead>
-                                                    <tr className="bg-blue-600 text-white">
-                                                        <th className="border px-4 py-3 sticky left-0 bg-blue-600 z-10 min-w-[60px]">No</th>
-                                                        <th className="border px-4 py-3 sticky left-[60px] bg-blue-600 z-10 min-w-[220px]">Link</th>
-                                                        <th colSpan={12} className="border px-4 py-3">RSL - dBm</th>
-                                                    </tr>
-                                                    <tr className="bg-blue-500 text-white">
-                                                        <th className="border px-4 py-2"></th>
-                                                        <th className="border px-4 py-2"></th>
-                                                        {monthNames.map((month, idx) => (
-                                                            <th key={idx} className="border px-3 py-2 min-w-[100px]">
-                                                                {month}-{selectedYear.toString().slice(-2)}
-                                                            </th>
-                                                        ))}
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {pivotLinks.map((row, rowIdx) => (
-                                                        <tr key={rowIdx} className="group hover:bg-gray-50">
-                                                            <td className="border px-4 py-3 text-center sticky left-0 bg-white z-10 group-hover:bg-gray-50">{rowIdx + 1}</td>
-                                                            <td className="border px-4 py-3 sticky left-[60px] bg-white z-10 group-hover:bg-gray-50">
-                                                                <div className="font-semibold">{row.linkName}</div>
-                                                                <div className="text-xs text-gray-500">IP: {row.ipAddress || '-'}</div>
-                                                            </td>
-                                                            {monthNames.map((month, monthIdx) => {
-                                                                const key = `${row.id}-${month}-${selectedYear.toString().slice(-2)}`;
-                                                                const value = row.monthlyValues[`${month}-${selectedYear.toString().slice(-2)}`];
-                                                                const note = pivotNotes[key];
-                                                                const isDataPresent = value !== null && value !== undefined;
-                                                                const isHovered = hoveredCell?.rowIdx === rowIdx && hoveredCell?.colIdx === monthIdx;
-                                                                return (
-                                                                    <td key={monthIdx}
-                                                                        onMouseEnter={() => setHoveredCell({ rowIdx, colIdx: monthIdx, linkId: row.id, linkName: row.linkName, month, monthIdx, value })}
-                                                                        onMouseLeave={() => setHoveredCell(null)}
-                                                                        className={`border px-2 py-2 text-center font-mono relative cursor-pointer ${isDataPresent ? `${getRslColor(value)} ${getRslTextColor(value)}` : 'bg-gray-50'
-                                                                            } ${isHovered ? 'ring-2 ring-blue-500' : ''}`}>
-                                                                        {isDataPresent ? (
-                                                                            <>
-                                                                                <div className="font-bold">
-                                                                                    {value!.toFixed(1)}
-                                                                                    {note && <span className="ml-1 text-blue-600 text-xs">📝</span>}
-                                                                                </div>
-                                                                                <div className="text-xs opacity-75">dBm</div>
-                                                                            </>
-                                                                        ) : note ? (
-                                                                            <div className="text-xs text-gray-600 italic px-1">
-                                                                                {note.length > 20 ? `${note.substring(0, 20)}...` : note}
-                                                                            </div>
-                                                                        ) : (
-                                                                            <div className="text-gray-400 text-sm">-</div>
-                                                                        )}
-
-                                                                        {/* Hover Popup */}
-                                                                        {isHovered && (
-                                                                            <div className={`absolute left-1/2 transform -translate-x-1/2 ${rowIdx < 3 ? 'top-full mt-2' : 'bottom-full mb-2'} w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50`}>
-                                                                                <div className="relative">
-                                                                                    <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${rowIdx < 3 ? '-top-2 border-b-8 border-b-gray-900' : '-bottom-2 border-t-8 border-t-gray-900'}`} />
-                                                                                    <div className="mb-2">
-                                                                                        <h4 className="font-bold">{row.linkName}</h4>
-                                                                                        <p className="text-gray-300 text-xs">{month} {selectedYear}</p>
+                                        )}
+                                        
+                                        {/* Chart Container */}
+                                        <div className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4 relative overflow-hidden">
+                                            {highlightedLine && (
+                                                <>
+                                                    <div className="line-shimmer-overlay" style={{
+                                                        background: `linear-gradient(
+                                                            90deg,
+                                                            transparent 0%,
+                                                            transparent 20%,
+                                                            ${highlightedLineColor}33 35%,
+                                                            ${highlightedLineColor}4D 50%,
+                                                            ${highlightedLineColor}33 65%,
+                                                            transparent 80%,
+                                                            transparent 100%
+                                                        )`
+                                                    }} />
+                                                    {/* SVG Gradient for flowing effect */}
+                                                    <svg width="0" height="0" style={{ position: 'absolute' }}>
+                                                        <defs>
+                                                            <linearGradient id="flowingGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                                <stop offset="0%" stopColor={highlightedLineColor} stopOpacity="0.3" />
+                                                                <stop offset="30%" stopColor={highlightedLineColor} stopOpacity="0.6">
+                                                                    <animate attributeName="offset" values="0;0.3;0.6;1;1;0" dur="3s" repeatCount="indefinite" />
+                                                                    <animate attributeName="stop-opacity" values="0.6;0.8;1;0.8;0.6;0.6" dur="3s" repeatCount="indefinite" />
+                                                                </stop>
+                                                                <stop offset="50%" stopColor={highlightedLineColor} stopOpacity="1">
+                                                                    <animate attributeName="offset" values="0.1;0.4;0.7;1;1;0.1" dur="3s" repeatCount="indefinite" />
+                                                                </stop>
+                                                                <stop offset="70%" stopColor={highlightedLineColor} stopOpacity="0.6">
+                                                                    <animate attributeName="offset" values="0.2;0.5;0.8;1;1;0.2" dur="3s" repeatCount="indefinite" />
+                                                                    <animate attributeName="stop-opacity" values="0.6;0.8;1;0.8;0.6;0.6" dur="3s" repeatCount="indefinite" />
+                                                                </stop>
+                                                                <stop offset="100%" stopColor={highlightedLineColor} stopOpacity="0.3" />
+                                                            </linearGradient>
+                                                        </defs>
+                                                    </svg>
+                                                </>
+                                            )}
+                                            <ResponsiveContainer width="100%" height={500}>
+                                                <LineChart data={pivotData.lineChartData} margin={{ top: 20, right: 60, left: 20, bottom: 20 }}
+                                                    onClick={(e) => {
+                                                        if (e && e.activeLabel && e.activePayload) {
+                                                            const validPayload = e.activePayload.filter((entry: any) => entry.value !== null && entry.value !== undefined);
+                                                            if (validPayload.length > 0) {
+                                                                setPinnedTooltip({ month: e.activeLabel as string, data: validPayload });
+                                                            }
+                                                        }
+                                                    }}>
+                                                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                                                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                                                    <YAxis domain={[-95, -30]} label={{ value: 'RSL (dBm)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                                                    <Tooltip 
+                                                        content={({ active, payload, label }) => {
+                                                            if (!active || !payload || !payload.length) return null;
+                                                            const validPayload = payload.filter(entry => entry.value !== null && entry.value !== undefined);
+                                                            if (validPayload.length === 0) return null;
+                                                            
+                                                            return (
+                                                                <div className="bg-white border-2 border-blue-400 rounded-xl shadow-2xl p-4 max-w-md pointer-events-auto">
+                                                                    <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-100">
+                                                                        <p className="font-bold text-base text-blue-700">{label} {selectedYear}</p>
+                                                                        <span className="text-xs font-semibold text-white bg-blue-600 px-2 py-1 rounded-full">{validPayload.length} link</span>
+                                                                    </div>
+                                                                    <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                                                                        {validPayload.map((entry, idx) => {
+                                                                            const isHighlighted = highlightedLine === entry.name;
+                                                                            return (
+                                                                                <div 
+                                                                                    key={idx} 
+                                                                                    onClick={() => {
+                                                                                        const linkName = entry.name as string;
+                                                                                        const linkIndex = pivotData.pivotLinks.findIndex(l => l.linkName === linkName);
+                                                                                        const linkColor = CHART_COLORS[linkIndex % CHART_COLORS.length];
+                                                                                        setHighlightedLine(linkName);
+                                                                                        setHighlightedLineData(getMonthlyDataForLink(linkName));
+                                                                                        setHighlightedLineColor(linkColor);
+                                                                                    }}
+                                                                                    className={`flex items-center justify-between gap-3 text-sm py-1.5 px-2 rounded cursor-pointer transition-all ${
+                                                                                        isHighlighted 
+                                                                                            ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105' 
+                                                                                            : 'hover:bg-blue-50 border-2 border-transparent'
+                                                                                    }`}
+                                                                                >
+                                                                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                                                                        <div 
+                                                                                            className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${isHighlighted ? 'animate-pulse scale-125' : ''}`} 
+                                                                                            style={{ backgroundColor: entry.color }} 
+                                                                                        />
+                                                                                        <span className={`text-gray-800 truncate font-medium ${isHighlighted ? 'font-bold text-blue-700' : ''}`} title={entry.name as string}>
+                                                                                            {entry.name}
+                                                                                        </span>
                                                                                     </div>
-                                                                                    {isDataPresent && (
-                                                                                        <div className="mb-3">
-                                                                                            <p className="text-lg font-bold">{value!.toFixed(1)} dBm</p>
-                                                                                            <span className={`px-2 py-1 rounded text-xs text-black font-medium ${getRslColor(value)}`}>
-                                                                                                {getRslStatusLabel(value)}
-                                                                                            </span>
-                                                                                        </div>
-                                                                                    )}
-                                                                                    {note && (
-                                                                                        <div className="mb-3 p-2 bg-yellow-900/30 rounded">
-                                                                                            <p className="font-semibold">📝 Catatan:</p>
-                                                                                            <p className="text-sm">{note}</p>
-                                                                                        </div>
-                                                                                    )}
-                                                                                    <button
-                                                                                        onClick={() => {
-                                                                                            setEditingNote({ linkId: row.id, linkName: row.linkName, monthKey: key, monthLabel: `${month} ${selectedYear}` });
-                                                                                            setNoteText(note || '');
-                                                                                            setIsNoteModalOpen(true);
-                                                                                        }}
-                                                                                        className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors">
-                                                                                        {note ? '✏️ Edit Note' : '📝 Add Note'}
-                                                                                    </button>
+                                                                                    <div className="flex items-baseline gap-1">
+                                                                                        <span className={`font-mono font-bold ${isHighlighted ? 'text-blue-700 text-base' : 'text-gray-900'}`}>
+                                                                                            {(entry.value as number).toFixed(1)}
+                                                                                        </span>
+                                                                                        <span className="text-[10px] font-semibold text-gray-500">dBm</span>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </td>
-                                                                );
-                                                            })}
-                                                        </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                    {validPayload.length > 5 && (
+                                                                        <div className="pt-3 mt-3 border-t text-center">
+                                                                            <p className="text-xs text-blue-600 font-semibold">
+                                                                                ↕️ Scroll untuk lihat semua {validPayload.length} link
+                                                                            </p>
+                                                                            <p className="text-xs text-gray-500 mt-1">
+                                                                                💡 Klik link untuk highlight di grafik
+                                                                            </p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            );
+                                                        }}
+                                                        cursor={{ stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5 5' }}
+                                                        wrapperStyle={{ pointerEvents: 'auto' }}
+                                                    />
+                                                    <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Optimal (-45)', position: 'right', fill: '#10b981', fontSize: 10, fontWeight: 600 }} />
+                                                    <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Warning (-55)', position: 'right', fill: '#f59e0b', fontSize: 10, fontWeight: 600 }} />
+                                                    <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Sub-opt (-60)', position: 'right', fill: '#fb923c', fontSize: 10, fontWeight: 600 }} />
+                                                    <ReferenceLine y={-65} stroke="#dc2626" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Critical (-65)', position: 'right', fill: '#dc2626', fontSize: 10, fontWeight: 600 }} />
+                                                    {pivotData.pivotLinks.map((link, idx) => {
+                                                        const isHighlighted = highlightedLine === link.linkName;
+                                                        const shouldHide = highlightedLine && !isHighlighted;
+                                                        const lineColor = CHART_COLORS[idx % CHART_COLORS.length];
+                                                        
+                                                        if (shouldHide) return null; // Hide other lines completely
+                                                        
+                                                        // Convert hex color to RGB for drop-shadow
+                                                        const hexToRgb = (hex: string) => {
+                                                            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                                                            return result ? {
+                                                                r: parseInt(result[1], 16),
+                                                                g: parseInt(result[2], 16),
+                                                                b: parseInt(result[3], 16)
+                                                            } : { r: 6, g: 182, b: 212 };
+                                                        };
+                                                        
+                                                        const rgb = hexToRgb(lineColor);
+                                                        const shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+                                                        
+                                                        return (
+                                                            <Line 
+                                                                key={link.linkName} 
+                                                                type="monotone" 
+                                                                dataKey={link.linkName} 
+                                                                stroke={isHighlighted ? 'url(#flowingGradient)' : lineColor}
+                                                                strokeWidth={isHighlighted ? 7 : 2} 
+                                                                dot={{ 
+                                                                    r: isHighlighted ? 7 : 3, 
+                                                                    strokeWidth: isHighlighted ? 3 : 2, 
+                                                                    fill: isHighlighted ? '#ffffff' : lineColor,
+                                                                    stroke: lineColor
+                                                                }} 
+                                                                activeDot={{ 
+                                                                    r: isHighlighted ? 9 : 5,
+                                                                    fill: '#ffffff',
+                                                                    stroke: lineColor,
+                                                                    strokeWidth: 3
+                                                                }} 
+                                                                connectNulls={false} 
+                                                                name={link.linkName}
+                                                                className={isHighlighted ? 'highlighted-line' : ''}
+                                                                style={isHighlighted ? {
+                                                                    filter: `drop-shadow(0 0 10px ${shadowColor}) drop-shadow(0 0 6px ${shadowColor})`
+                                                                } : undefined}
+                                                            />
+                                                        );
+                                                    })}
+                                                </LineChart>
+                                            </ResponsiveContainer>
                                         </div>
+
+                                        {/* Detail Modal (Dialog) - Clean & Mobile Responsive */}
+                                        <Dialog open={pinnedTooltip !== null} onOpenChange={(open) => !open && setPinnedTooltip(null)}>
+                                            <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+                                                {/* Header */}
+                                                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
+                                                    <div className="flex items-center justify-between">
+                                                        <div>
+                                                            <h2 className="text-3xl md:text-4xl font-black mb-2">{pinnedTooltip?.month} {selectedYear}</h2>
+                                                            <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                                                                <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                                                                <span className="text-sm font-bold">{pinnedTooltip?.data.length} link tersedia</span>
+                                                            </div>
+                                                        </div>
+                                                        <button
+                                                            onClick={() => setPinnedTooltip(null)}
+                                                            className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all hover:scale-110 active:scale-95 flex-shrink-0"
+                                                        >
+                                                            <X className="w-6 h-6" />
+                                                        </button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Hint */}
+                                                <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                                                    <p className="text-sm text-blue-700 flex items-center gap-2 font-semibold">
+                                                        <span className="text-lg">💡</span>
+                                                        Klik link untuk highlight di grafik
+                                                    </p>
+                                                </div>
+
+                                                {/* Content - Scrollable */}
+                                                <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
+                                                    <div className="grid grid-cols-1 gap-3">
+                                                        {pinnedTooltip?.data.map((entry: any, idx: number) => {
+                                                            const isHighlighted = highlightedLine === entry.name;
+                                                            return (
+                                                                <div 
+                                                                    key={idx} 
+                                                                    onClick={() => {
+                                                                        const linkName = entry.name;
+                                                                        const linkIndex = pivotData.pivotLinks.findIndex(l => l.linkName === linkName);
+                                                                        const linkColor = CHART_COLORS[linkIndex % CHART_COLORS.length];
+                                                                        setHighlightedLine(linkName);
+                                                                        setHighlightedLineData(getMonthlyDataForLink(linkName));
+                                                                        setHighlightedLineColor(linkColor);
+                                                                    }}
+                                                                    className={`flex items-center justify-between gap-4 p-5 rounded-2xl transition-all cursor-pointer group ${
+                                                                        isHighlighted 
+                                                                            ? 'bg-gradient-to-r from-blue-500 to-indigo-500 shadow-xl scale-[1.02] ring-4 ring-blue-200' 
+                                                                            : 'bg-white hover:shadow-lg border-2 border-gray-200 hover:border-blue-300'
+                                                                    }`}
+                                                                >
+                                                                    {/* Left: Dot + Name */}
+                                                                    <div className="flex items-center gap-4 flex-1 min-w-0">
+                                                                        <div 
+                                                                            className={`w-5 h-5 rounded-full flex-shrink-0 transition-all ${
+                                                                                isHighlighted 
+                                                                                    ? 'ring-4 ring-white/50 scale-110' 
+                                                                                    : 'ring-2 ring-gray-300'
+                                                                            }`} 
+                                                                            style={{ backgroundColor: entry.color }} 
+                                                                        />
+                                                                        <span className={`text-base font-bold truncate ${
+                                                                            isHighlighted 
+                                                                                ? 'text-white' 
+                                                                                : 'text-gray-800 group-hover:text-gray-900'
+                                                                        }`} title={entry.name}>
+                                                                            {entry.name}
+                                                                        </span>
+                                                                    </div>
+                                                                    
+                                                                    {/* Right: Value Box */}
+                                                                    <div className={`flex items-center gap-2 px-5 py-3 rounded-xl ${
+                                                                        isHighlighted 
+                                                                            ? 'bg-white/20 backdrop-blur-sm' 
+                                                                            : 'bg-gradient-to-r from-gray-100 to-gray-50'
+                                                                    }`}>
+                                                                        <span className={`font-mono font-black text-2xl ${
+                                                                            isHighlighted ? 'text-white' : 'text-gray-900'
+                                                                        }`}>
+                                                                            {entry.value.toFixed(1)}
+                                                                        </span>
+                                                                        <span className={`text-sm font-bold ${
+                                                                            isHighlighted ? 'text-white/80' : 'text-gray-500'
+                                                                        }`}>
+                                                                            dBm
+                                                                        </span>
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            </DialogContent>
+                                        </Dialog>
+                                        
+                                        {/* Compact Legend with Better Scroll */}
+                                        <div className="border rounded-xl bg-white shadow-sm">
+                                            <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b flex items-center justify-between">
+                                                <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                                                    Legend ({pivotData.pivotLinks.length} Link)
+                                                </h4>
+                                                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full">💡 Klik untuk highlight</span>
+                                            </div>
+                                            <ScrollArea className="h-32">
+                                                <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                                                    {pivotData.pivotLinks.map((link, idx) => {
+                                                        const isHighlighted = highlightedLine === link.linkName;
+                                                        return (
+                                                            <div 
+                                                                key={idx} 
+                                                                onClick={() => {
+                                                                    const linkName = link.linkName;
+                                                                    const linkIndex = idx;
+                                                                    const linkColor = CHART_COLORS[linkIndex % CHART_COLORS.length];
+                                                                    setHighlightedLine(linkName);
+                                                                    setHighlightedLineData(getMonthlyDataForLink(linkName));
+                                                                    setHighlightedLineColor(linkColor);
+                                                                }}
+                                                                className={`flex items-center gap-2 text-xs p-2 rounded-lg transition-all cursor-pointer group ${
+                                                                    isHighlighted 
+                                                                        ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105' 
+                                                                        : 'hover:bg-gray-50 border-2 border-transparent'
+                                                                }`}
+                                                            >
+                                                                <div 
+                                                                    className={`w-8 h-1 rounded-full flex-shrink-0 transition-all ${isHighlighted ? 'h-2 animate-pulse' : 'group-hover:h-1.5'}`} 
+                                                                    style={{ backgroundColor: CHART_COLORS[idx % CHART_COLORS.length] }} 
+                                                                />
+                                                                <span className={`truncate font-medium ${isHighlighted ? 'text-blue-700 font-bold' : 'text-gray-700'}`} title={link.linkName}>
+                                                                    {link.linkName}
+                                                                </span>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </ScrollArea>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Pie Chart */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <div className="w-1 h-6 bg-green-600 rounded" />
+                                        Distribusi Status Link
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
+                                        <div className="flex justify-center">
+                                            <ResponsiveContainer width="100%" height={320}>
+                                                <PieChart>
+                                                    <Pie data={pivotData.pieData} cx="50%" cy="50%" labelLine={true}
+                                                        label={(entry) => `${entry.name}: ${((entry.percent ?? 0) * 100).toFixed(0)}%`}
+                                                        outerRadius={100} fill="#8884d8" dataKey="value">
+                                                        {pivotData.pieData.map((entry, i) => <Cell key={`cell-${i}`} fill={entry.fill} />)}
+                                                    </Pie>
+                                                    <Tooltip formatter={(value: any) => [`${value} data points`, 'Jumlah']}
+                                                        contentStyle={{ backgroundColor: 'rgba(255,255,255,0.96)', border: '1px solid #e5e7eb', borderRadius: '8px' }} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        </div>
+                                        <div className="space-y-3">
+                                            {pivotData.pieData.map((entry, idx) => (
+                                                <div key={idx} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="w-4 h-4 rounded" style={{ backgroundColor: entry.fill }} />
+                                                        <span className="font-medium text-sm">{entry.name}</span>
+                                                    </div>
+                                                    <div className="text-right">
+                                                        <p className="text-lg font-bold">{entry.value}</p>
+                                                        <p className="text-xs text-gray-500">data points</p>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Pivot Table */}
+                            <Card>
+                                <CardContent className="pt-6">
+                                    <div className="overflow-x-auto rounded-md border">
+                                        <table className="w-full border-collapse text-sm bg-white">
+                                            <thead>
+                                                <tr className="bg-blue-600 text-white">
+                                                    <th className="border px-4 py-3 sticky left-0 bg-blue-600 z-10 min-w-[60px]">No</th>
+                                                    <th className="border px-4 py-3 sticky left-[60px] bg-blue-600 z-10 min-w-[220px]">Link</th>
+                                                    <th colSpan={12} className="border px-4 py-3">RSL - dBm</th>
+                                                </tr>
+                                                <tr className="bg-blue-500 text-white">
+                                                    <th className="border px-4 py-2"></th>
+                                                    <th className="border px-4 py-2"></th>
+                                                    {monthNames.map((month, idx) => (
+                                                        <th key={idx} className="border px-3 py-2 min-w-[100px]">
+                                                            {month}-{selectedYear.toString().slice(-2)}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {pivotData.pivotLinks.map((row, rowIdx) => (
+                                                    <tr key={rowIdx} className="group hover:bg-gray-50">
+                                                        <td className="border px-4 py-3 text-center sticky left-0 bg-white z-10 group-hover:bg-gray-50">{rowIdx + 1}</td>
+                                                        <td className="border px-4 py-3 sticky left-[60px] bg-white z-10 group-hover:bg-gray-50">
+                                                            <div className="font-semibold">{row.linkName}</div>
+                                                            <div className="text-xs text-gray-500">IP: {row.ipAddress || '-'}</div>
+                                                        </td>
+                                                        {monthNames.map((month, monthIdx) => {
+                                                            const key = `${row.id}-${month}-${selectedYear.toString().slice(-2)}`;
+                                                            const value = row.monthlyValues[`${month}-${selectedYear.toString().slice(-2)}`];
+                                                            const note = pivotNotes[key];
+                                                            const isDataPresent = value !== null && value !== undefined;
+                                                            const isHovered = hoveredCell?.rowIdx === rowIdx && hoveredCell?.colIdx === monthIdx;
+                                                            return (
+                                                                <td key={monthIdx}
+                                                                    onMouseEnter={() => setHoveredCell({ rowIdx, colIdx: monthIdx, linkId: row.id, linkName: row.linkName, month, monthIdx, value })}
+                                                                    onMouseLeave={() => setHoveredCell(null)}
+                                                                    className={`border px-2 py-2 text-center font-mono relative cursor-pointer ${isDataPresent ? `${getRslColor(value)} ${getRslTextColor(value)}` : 'bg-gray-50'
+                                                                        } ${isHovered ? 'ring-2 ring-blue-500' : ''}`}>
+                                                                    {isDataPresent ? (
+                                                                        <>
+                                                                            <div className="font-bold">
+                                                                                {value!.toFixed(1)}
+                                                                                {note && <span className="ml-1 text-blue-600 text-xs">📝</span>}
+                                                                            </div>
+                                                                            <div className="text-xs opacity-75">dBm</div>
+                                                                        </>
+                                                                    ) : note ? (
+                                                                        <div className="text-xs text-gray-600 italic px-1">
+                                                                            {note.length > 20 ? `${note.substring(0, 20)}...` : note}
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="text-gray-400 text-sm">-</div>
+                                                                    )}
+
+                                                                    {/* Hover Popup */}
+                                                                    {isHovered && (
+                                                                        <div className={`absolute left-1/2 transform -translate-x-1/2 ${rowIdx < 3 ? 'top-full mt-2' : 'bottom-full mb-2'} w-64 p-3 bg-gray-900 text-white text-xs rounded shadow-lg z-50`}>
+                                                                            <div className="relative">
+                                                                                <div className={`absolute left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-8 border-r-8 border-transparent ${rowIdx < 3 ? '-top-2 border-b-8 border-b-gray-900' : '-bottom-2 border-t-8 border-t-gray-900'}`} />
+                                                                                <div className="mb-2">
+                                                                                    <h4 className="font-bold">{row.linkName}</h4>
+                                                                                    <p className="text-gray-300 text-xs">{month} {selectedYear}</p>
+                                                                                </div>
+                                                                                {isDataPresent && (
+                                                                                    <div className="mb-3">
+                                                                                        <p className="text-lg font-bold">{value!.toFixed(1)} dBm</p>
+                                                                                        <span className={`px-2 py-1 rounded text-xs text-black font-medium ${getRslColor(value)}`}>
+                                                                                            {getRslStatusLabel(value)}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                )}
+                                                                                {note && (
+                                                                                    <div className="mb-3 p-2 bg-yellow-900/30 rounded">
+                                                                                        <p className="font-semibold">📝 Catatan:</p>
+                                                                                        <p className="text-sm">{note}</p>
+                                                                                    </div>
+                                                                                )}
+                                                                                <button
+                                                                                    onClick={() => {
+                                                                                        setEditingNote({ linkId: row.id, linkName: row.linkName, monthKey: key, monthLabel: `${month} ${selectedYear}` });
+                                                                                        setNoteText(note || '');
+                                                                                        setIsNoteModalOpen(true);
+                                                                                    }}
+                                                                                    className="w-full px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded text-xs font-medium transition-colors">
+                                                                                    {note ? '✏️ Edit Note' : '📝 Add Note'}
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </td>
+                                                            );
+                                                        })}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
 
                                         {/* Status Legend */}
                                         <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
@@ -1653,10 +2188,9 @@ const LinkInternalPage: React.FC = () => {
                                         </div>
                                     </CardContent>
                                 </Card>
-                            </>
-                        );
-                    })()}
-                </TabsContent>
+                            </div>
+                        )}
+                    </TabsContent>
 
                 {/* ============================================ */}
                 {/* TAB: KELOLA LINK */}
@@ -2473,9 +3007,33 @@ const LinkInternalPage: React.FC = () => {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => { setIsNoteModalOpen(false); setEditingNote(null); }}>Batal</Button>
+                        {editingNote && pivotNotes[editingNote.monthKey] && (
+                            <Button variant="destructive" onClick={() => {
+                                if (editingNote) {
+                                    setPivotNotes(prev => {
+                                        const newNotes = { ...prev };
+                                        delete newNotes[editingNote.monthKey];
+                                        return newNotes;
+                                    });
+                                }
+                                setIsNoteModalOpen(false);
+                                setEditingNote(null);
+                                setNoteText('');
+                                toast({ title: 'Berhasil', description: 'Catatan berhasil dihapus' });
+                            }}>Hapus</Button>
+                        )}
                         <Button onClick={() => {
                             if (editingNote) {
-                                setPivotNotes(prev => ({ ...prev, [editingNote.monthKey]: noteText }));
+                                if (noteText.trim() === '') {
+                                    // If empty, delete the note
+                                    setPivotNotes(prev => {
+                                        const newNotes = { ...prev };
+                                        delete newNotes[editingNote.monthKey];
+                                        return newNotes;
+                                    });
+                                } else {
+                                    setPivotNotes(prev => ({ ...prev, [editingNote.monthKey]: noteText }));
+                                }
                             }
                             setIsNoteModalOpen(false);
                             setEditingNote(null);
