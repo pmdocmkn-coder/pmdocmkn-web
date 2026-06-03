@@ -20,7 +20,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
     Plus, Edit, Trash, Search, Eye, Image, Camera, X, Check, ChevronsUpDown,
     ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight,
-    Wifi, WifiOff, Settings, Activity, Link2, ChevronDown, Filter, RefreshCw, Home,
+    Wifi, WifiOff, Settings, Activity, Link2, ChevronDown, Filter, RefreshCw, Home, Calendar
 } from "lucide-react";
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -973,7 +973,8 @@ const LinkInternalPage: React.FC = () => {
                 <Card>
                     <CardHeader><CardTitle>Statistik Detail Per Link</CardTitle></CardHeader>
                     <CardContent>
-                        <div className="overflow-x-auto border rounded-xl shadow-sm">
+                        {/* ---- DESKTOP TABLE ---- */}
+                        <div className="hidden md:block overflow-x-auto border rounded-xl shadow-sm">
                             <table className="w-full min-w-max text-xs text-left border-collapse">
                                 <thead>
                                     <tr>
@@ -1046,6 +1047,83 @@ const LinkInternalPage: React.FC = () => {
                                     })}
                                 </tbody>
                             </table>
+                        </div>
+
+                        {/* ---- MOBILE CARD VIEW ---- */}
+                        <div className="md:hidden space-y-3 mt-4 mb-8">
+                            {groupKeys.map((groupName, idx) => {
+                                const groupLinks = groupedLinks[groupName];
+                                const txLink = groupLinks.find(l => l.directionString === 'TX') || groupLinks[0];
+                                const rxLink = groupLinks.find(l => l.directionString === 'RX') || groupLinks[groupLinks.length > 1 ? 1 : 0];
+
+                                // Calculate yearly average for the group
+                                const allGroupHist = allHistories.filter(h => groupLinks.some(gl => gl.id === h.internalLinkId) && new Date(h.date).getFullYear() === selectedYear && h.rslNearEnd != null);
+                                const groupAvg = allGroupHist.length > 0 ? Math.round((allGroupHist.reduce((a, b) => a + b.rslNearEnd!, 0) / allGroupHist.length) * 10) / 10 : null;
+
+                                return (
+                                    <div key={groupName} className="bg-white rounded-2xl border border-orange-50 shadow-sm overflow-hidden">
+                                        {/* Card Header */}
+                                        <div className="p-4 pb-3">
+                                            <div className="flex items-start justify-between mb-2">
+                                                <div className="flex-1 pr-2">
+                                                    <p className="text-[10px] font-bold text-amber-600/70 uppercase tracking-wider">#{idx + 1}</p>
+                                                    <button onClick={() => {
+                                                        setSelectedGroupName(groupName);
+                                                        setSelectedGroupLinks(groupLinks);
+                                                        setShowGroupDetailModal(true);
+                                                    }} className="text-[13px] font-black text-slate-800 leading-tight mt-0.5 text-left hover:text-blue-600 transition-colors">
+                                                        {groupName}
+                                                    </button>
+                                                </div>
+                                                {groupAvg !== null && (
+                                                    <span className={"px-2.5 py-1 rounded-full text-[10px] font-black " + (getRslStatus(groupAvg) === 'optimal' ? 'bg-green-100 text-green-700' : getRslStatus(groupAvg) === 'too_strong' ? 'bg-pink-100 text-pink-700' : getRslStatus(groupAvg) === 'warning' ? 'bg-amber-100 text-amber-700' : getRslStatus(groupAvg) === 'sub_optimal' ? 'bg-orange-100 text-orange-700' : 'bg-red-100 text-red-700')}>
+                                                        {groupAvg.toFixed(1)} dBm
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Monthly TX/RX Data — Horizontal Scroll */}
+                                        <div className="px-4 pb-4">
+                                            <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-1">
+                                                {months.map((monthName, monthIdx) => {
+                                                    const histTx = allHistories.filter(h => {
+                                                        const d = new Date(h.date);
+                                                        return h.internalLinkId === txLink?.id && d.getFullYear() === selectedYear && d.getMonth() === monthIdx && h.rslNearEnd != null;
+                                                    });
+                                                    const txVal = histTx.length > 0 ? Math.round(histTx.reduce((a, b) => a + b.rslNearEnd!, 0) / histTx.length) : null;
+                                                    
+                                                    const histRx = allHistories.filter(h => {
+                                                        const d = new Date(h.date);
+                                                        return h.internalLinkId === rxLink?.id && d.getFullYear() === selectedYear && d.getMonth() === monthIdx && h.rslNearEnd != null;
+                                                    });
+                                                    const rxVal = histRx.length > 0 ? Math.round(histRx.reduce((a, b) => a + b.rslNearEnd!, 0) / histRx.length) : null;
+
+                                                    if (txVal === null && rxVal === null) return null;
+
+                                                    return (
+                                                        <div key={monthIdx} className="shrink-0 bg-slate-50 rounded-xl p-2 min-w-[56px] text-center border border-slate-100">
+                                                            <p className="text-[8px] font-bold text-slate-400 uppercase mb-1.5">{monthName.substring(0, 3)}</p>
+                                                            {txVal !== null && (
+                                                                <div className="flex items-center justify-center gap-1 mb-0.5">
+                                                                    <span className="text-[7px] font-bold text-[#42bbed]">TX</span>
+                                                                    <span className={"text-[10px] font-black font-mono " + getRslTextColor(txVal)}>{txVal}</span>
+                                                                </div>
+                                                            )}
+                                                            {rxVal !== null && (
+                                                                <div className="flex items-center justify-center gap-1">
+                                                                    <span className="text-[7px] font-bold text-red-500">RX</span>
+                                                                    <span className={"text-[10px] font-black font-mono " + getRslTextColor(rxVal)}>{rxVal}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
                         </div>
 
                         {/* Peringatan Detail Per Link (Cards) */}
@@ -1755,7 +1833,7 @@ const LinkInternalPage: React.FC = () => {
                                             )}
                                             <ResponsiveContainer width="100%" height={500}>
                                                 <LineChart data={pivotData.lineChartData} margin={{ top: 20, right: 60, left: 20, bottom: 20 }}
-                                                    onClick={(e) => {
+                                                    onClick={(e: any) => {
                                                         if (e && e.activeLabel && e.activePayload) {
                                                             const validPayload = e.activePayload.filter((entry: any) => entry.value !== null && entry.value !== undefined);
                                                             if (validPayload.length > 0) {
@@ -2511,32 +2589,27 @@ const LinkInternalPage: React.FC = () => {
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                                 <CardTitle>Grafik Performa Bulanan</CardTitle>
                                 <div className="flex items-center gap-2">
-                                    {/* Mobile pill buttons */}
-                                    <div className="flex sm:hidden gap-2 overflow-x-auto no-scrollbar">
-                                        <Button
-                                            variant="outline" size="sm"
-                                            onClick={() => setActiveMobileFilter("chart-year")}
-                                            className={cn("rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium border-gray-200 bg-blue-50 text-blue-700 border-blue-200")}
-                                        >
-                                            <span>Tahun: {selectedYear}</span>
-                                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                                        </Button>
-                                        <Button
-                                            variant="outline" size="sm"
-                                            onClick={() => setActiveMobileFilter("chart-month")}
-                                            className={cn("rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium border-gray-200 bg-blue-50 text-blue-700 border-blue-200")}
-                                        >
-                                            <span>Bulan: {["Jan","Feb","Mar","Apr","Mei","Jun","Jul","Agt","Sep","Okt","Nov","Des"][selectedMonth - 1]}</span>
-                                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                                        </Button>
+                                    {/* Mobile pill buttons — NEC style */}
+                                    <div className="flex md:hidden gap-2 overflow-x-auto no-scrollbar">
+                                        <button onClick={() => setActiveMobileFilter("chart-year")} className="flex items-center gap-1 h-8 px-3 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold whitespace-nowrap">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            <span>{selectedYear}</span>
+                                            <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
+                                        </button>
+                                        <button onClick={() => setActiveMobileFilter("chart-month")} className="flex items-center gap-1 h-8 px-3 rounded-full bg-violet-50 border border-violet-200 text-violet-700 text-xs font-semibold whitespace-nowrap">
+                                            <span className="truncate max-w-[80px]">
+                                                {new Date(0, selectedMonth - 1).toLocaleString("id-ID", { month: "short" })}
+                                            </span>
+                                            <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
+                                        </button>
                                     </div>
                                     {/* Desktop selects */}
                                     <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
-                                        className="hidden sm:block border rounded-md px-3 py-1.5 text-sm">
+                                        className="hidden md:block border rounded-md px-3 py-1.5 text-sm">
                                         {availableYears().map(y => <option key={y} value={y}>{y}</option>)}
                                     </select>
                                     <select value={selectedMonth} onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                                        className="hidden sm:block border rounded-md px-3 py-1.5 text-sm">
+                                        className="hidden md:block border rounded-md px-3 py-1.5 text-sm">
                                         {["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"].map((m, i) => (
                                             <option key={i} value={i + 1}>{m}</option>
                                         ))}
@@ -2557,18 +2630,17 @@ const LinkInternalPage: React.FC = () => {
                             <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
                                 <CardTitle>Grafik Ringkasan Tahunan</CardTitle>
                                 <div className="flex items-center gap-2">
-                                    {/* Mobile pill button */}
-                                    <Button
-                                        variant="outline" size="sm"
-                                        onClick={() => setActiveMobileFilter("chart-year")}
-                                        className={cn("sm:hidden rounded-full whitespace-nowrap flex items-center gap-2 h-9 px-4 text-sm font-medium border-blue-200 bg-blue-50 text-blue-700")}
-                                    >
-                                        <span>Tahun: {selectedYear}</span>
-                                        <ChevronDown className="w-3.5 h-3.5 opacity-50" />
-                                    </Button>
+                                    {/* Mobile pill button — NEC style */}
+                                    <div className="flex md:hidden gap-2 overflow-x-auto no-scrollbar">
+                                        <button onClick={() => setActiveMobileFilter("chart-year")} className="flex items-center gap-1 h-8 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold whitespace-nowrap">
+                                            <Calendar className="w-3.5 h-3.5" />
+                                            <span>Tahun: {selectedYear}</span>
+                                            <ChevronDown className="w-3 h-3 opacity-70 ml-0.5" />
+                                        </button>
+                                    </div>
                                     {/* Desktop select */}
                                     <select value={selectedYear} onChange={(e) => setSelectedYear(Number(e.target.value))}
-                                        className="hidden sm:block border rounded-md px-3 py-1.5 text-sm">
+                                        className="hidden md:block border rounded-md px-3 py-1.5 text-sm">
                                         {availableYears().map(y => <option key={y} value={y}>{y}</option>)}
                                     </select>
                                 </div>
