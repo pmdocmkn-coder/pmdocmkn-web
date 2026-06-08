@@ -1,0 +1,190 @@
+const renderMonthlyChart = () => {
+        const barData = getMonthlyChartData();
+        const pieData = getPieChartData();
+        if (loading) {
+            return (
+                <div className="space-y-6 p-4">
+                    <div className="flex justify-between">
+                        <Skeleton className="h-8 w-64" />
+                        <Skeleton className="h-8 w-64" />
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <Skeleton className="h-[400px] w-full" />
+                        <Skeleton className="h-[300px] w-full" />
+                    </div>
+                    <Skeleton className="h-[400px] w-full" />
+                </div>
+            );
+        }
+
+        const monthNames = ["", "Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const filteredLinks = links.filter(l => {
+            if (chartLinkFilter && !l.linkName.toLowerCase().includes(chartLinkFilter.toLowerCase())) return false;
+            if (chartTypeFilter && l.type !== chartTypeFilter) return false;
+            return true;
+        });
+
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <h3 className="text-xl font-semibold">Performa Bulanan - {monthNames[selectedMonth]} {selectedYear}</h3>
+                    <div className="flex flex-wrap gap-2">
+                        <Input placeholder="Cari link..." className="w-[160px]" value={chartLinkFilter ?? ""}
+                            onChange={(e) => setChartLinkFilter(e.target.value || null)} />
+                        {/* Mobile pill button for type filter */}
+                        <Button
+                            variant="outline" size="sm"
+                            onClick={() => setActiveMobileFilter("chart-type")}
+                            className={cn(
+                                "md:hidden rounded-full flex items-center gap-1.5 h-9 px-3 text-sm font-medium border-gray-200",
+                                chartTypeFilter ? "bg-blue-50 text-blue-700 border-blue-200" : "bg-white text-gray-600"
+                            )}
+                        >
+                            <span>{chartTypeFilter ? LINK_TYPE_OPTIONS.find(o => o.value === chartTypeFilter)?.label : "Semua Tipe"}</span>
+                            <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                        </Button>
+                        {/* Desktop Select */}
+                        <Select value={chartTypeFilter ?? "all"} onValueChange={(v) => setChartTypeFilter(v === "all" ? null : v)}>
+                            <SelectTrigger className="hidden md:flex w-[120px]"><SelectValue placeholder="Tipe" /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="all">Semua Tipe</SelectItem>
+                                {LINK_TYPE_OPTIONS.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <Card>
+                        <CardHeader><CardTitle>Grafik Bar Rata-rata RSL</CardTitle></CardHeader>
+                        <CardContent>
+                            {barData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={400}>
+                                    <BarChart data={barData} margin={{ top: 20, right: 80, left: 20, bottom: 100 }}>
+                                        <CartesianGrid strokeDasharray="3 3" />
+                                        <XAxis dataKey="linkName" angle={-45} textAnchor="end" height={100} interval={0} tick={{ fontSize: 9 }} />
+                                        <YAxis domain={[-70, -30]} label={{ value: "RSL (dBm)", angle: -90, position: "insideLeft" }} />
+                                        <Tooltip 
+                                            content={({ active, payload }) => {
+                                                if (!active || !payload || !payload.length) return null;
+                                                const data = payload[0];
+                                                const value = data.value as number;
+                                                const status = getRslStatus(value);
+                                                return (
+                                                    <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700 max-w-xs">
+                                                        <p className="font-bold text-sm mb-2 text-blue-300">{data.payload.linkName}</p>
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <span className="text-xs text-gray-300">RSL:</span>
+                                                                <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                                                            </div>
+                                                            <div className="flex items-center justify-between gap-3">
+                                                                <span className="text-xs text-gray-300">Status:</span>
+                                                                <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslColor(value)} ${getRslTextColor(value)}`}>
+                                                                    {getRslStatusLabel(value)}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            }}
+                                        />
+                                        <Legend wrapperStyle={{ paddingTop: "10px" }} />
+                                        <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" label={{ value: "Optimal (-45)", position: "right", fill: "#10b981", fontSize: 10 }} />
+                                        <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" label={{ value: "Warning (-55)", position: "right", fill: "#f59e0b", fontSize: 10 }} />
+                                        <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" label={{ value: "Sub-opt (-60)", position: "right", fill: "#fb923c", fontSize: 10 }} />
+                                        <ReferenceLine y={-65} stroke="#dc2626" strokeDasharray="3 3" label={{ value: "Critical (-65)", position: "right", fill: "#dc2626", fontSize: 10 }} />
+                                        <Bar dataKey="avgRsl" fill="#3b82f6" name="Average RSL" radius={[8, 8, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            ) : <p className="text-center text-gray-400 py-10">Belum ada data RSL</p>}
+                        </CardContent>
+                    </Card>
+
+                    <Card>
+                        <CardHeader><CardTitle>Distribusi Status Link</CardTitle></CardHeader>
+                        <CardContent>
+                            {pieData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={300}>
+                                    <PieChart>
+                                        <Pie data={pieData} cx="50%" cy="50%" labelLine={false}
+                                            label={({ name, percent }) => `${name}: ${(percent! * 100).toFixed(0)}%`}
+                                            outerRadius={80} fill="#8884d8" dataKey="value">
+                                            {pieData.map((entry, index) => <Cell key={`cell-${index}`} fill={entry.fill} />)}
+                                        </Pie>
+                                        <Tooltip formatter={(value) => `${value} links`} />
+                                        <Legend />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : <p className="text-center text-gray-400 py-10">Belum ada data</p>}
+                        </CardContent>
+                    </Card>
+                </div>
+
+                <Card>
+                    <CardHeader><CardTitle>Detail Per Link</CardTitle></CardHeader>
+                    <CardContent>
+                        <ScrollArea className="h-[400px]">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Link</TableHead>
+                                        <TableHead>Tipe</TableHead>
+                                        <TableHead>IP Address</TableHead>
+                                        <TableHead>RSL Near End</TableHead>
+                                        <TableHead>Status RSL</TableHead>
+                                        <TableHead>Service</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {filteredLinks.map(link => {
+                                        // Compute average RSL from history for selected month/year
+                                        const histRsl = allHistories
+                                            .filter(h => {
+                                                const d = new Date(h.date);
+                                                return h.internalLinkId === link.id && d.getFullYear() === selectedYear && d.getMonth() + 1 === selectedMonth && h.rslNearEnd != null;
+                                            })
+                                            .map(h => h.rslNearEnd!);
+                                        const avgRsl = histRsl.length > 0 ? Math.round((histRsl.reduce((a, b) => a + b, 0) / histRsl.length) * 10) / 10 : null;
+
+                                        return (
+                                            <TableRow key={link.id}>
+                                                <TableCell className="font-medium">{link.linkName}</TableCell>
+                                                <TableCell>
+                                                    <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getLinkTypeBadgeClass(link.type)}`}>
+                                                        {link.type || "-"}
+                                                    </span>
+                                                </TableCell>
+                                                <TableCell className="font-mono text-xs">{link.ipAddress || "-"}</TableCell>
+                                                <TableCell>
+                                                    {avgRsl != null ? (
+                                                        <span className={`font-mono font-semibold ${getRslTextColor(avgRsl)}`}>
+                                                            {avgRsl.toFixed(1)} dBm
+                                                        </span>
+                                                    ) : <span className="text-gray-400">-</span>}
+                                                </TableCell>
+                                                <TableCell>
+                                                    {avgRsl != null ? (
+                                                        <span className={`px-2 py-0.5 rounded text-xs font-semibold ${getRslColor(avgRsl)} ${getRslTextColor(avgRsl)}`}>{getRslStatusLabel(avgRsl)}</span>
+                                                    ) : "-"}
+                                                </TableCell>
+                                                <TableCell>
+                                                    <span className="px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                                        {getServiceTypeLabel(link.serviceType)}
+                                                    </span>
+                                                </TableCell>
+                                            </TableRow>
+                                        );
+                                    })}
+                                </TableBody>
+                            </Table>
+                        </ScrollArea>
+                    </CardContent>
+                </Card>
+            </div>
+        );
+    };
+
+    // ============================================
+    // RENDER: YEARLY CHART
+    // ============================================
+    

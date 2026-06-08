@@ -14,6 +14,7 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -35,7 +36,7 @@ import { necSignalApi } from "../../services/necSignalService";
 import type { NecYearlyPivotDto } from "../../types/necSignal";
 
 // Threshold RSL
-import { ChevronDown, Filter } from "lucide-react";
+import { ChevronDown, Filter, X, Activity } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const RSL_THRESHOLDS = {
@@ -142,6 +143,8 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
   const [pivotData, setPivotData] = useState<PivotData[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [towers, setTowers] = useState<string[]>([]);
+  const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
+  const [highlightedLineColor, setHighlightedLineColor] = useState<string | null>(null);
 
   const [hoveredCell, setHoveredCell] = useState<{
     rowIdx: number;
@@ -160,6 +163,7 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
   } | null>(null);
   const [noteText, setNoteText] = useState("");
   const [activeMobileFilter, setActiveMobileFilter] = useState<string | null>(null);
+  const [pinnedTooltip, setPinnedTooltip] = useState<{ month: string; data: any[] } | null>(null);
 
   const months = [
     "Jan",
@@ -412,222 +416,357 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
         </CardHeader>
       </Card>
 
-      {/* Charts - Improved Layout */}
+      {/* Charts */}
       <div className="space-y-6">
-        {/* Line Chart - Full Width */}
-        <div className="bg-white p-5 rounded-[1.25rem] shadow-[0px_12px_32px_rgba(25,28,29,0.04)] border border-gray-100/60 transition-shadow hover:shadow-[0px_16px_40px_rgba(25,28,29,0.06)]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-gray-900 font-bold text-sm tracking-tight">Grafik Rata-rata RSL per Link</h2>
-              <p className="text-[10px] text-gray-500 font-medium mt-0.5">RSL History - Year {selectedYear} • {pivotData.length} links</p>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" className="text-gray-400 w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
-            </svg>
-          </div>
+        {/* Line Chart */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-1 h-6 bg-blue-600 rounded" />
+                Grafik Garis Rata-rata RSL per Link
+              </div>
+              <span className="text-sm font-normal text-gray-500">{pivotData.length} link</span>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-6">
+              {/* Akses Cepat Month Selector */}
+              <div className="bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-4 shadow-lg">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-white font-bold flex items-center gap-2">
+                    <Activity className="w-5 h-5" />
+                    Akses Cepat - Klik Bulan untuk Lihat Detail
+                  </h4>
+                  <span className="text-blue-100 text-xs bg-white/20 px-3 py-1 rounded-full">
+                    {pivotData.length} total link
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-12 gap-2">
+                  {months.map((month) => {
+                    const validLinks = pivotData.filter(link => {
+                      const key = formatMonthKey(month);
+                      return link.monthlyValues[key] !== null && link.monthlyValues[key] !== undefined;
+                    });
+                    return (
+                      <button
+                        key={month}
+                        onClick={() => {
+                          const payload = validLinks.map((link) => {
+                            const key = formatMonthKey(month);
+                            return {
+                              name: link.linkName,
+                              value: link.monthlyValues[key],
+                              color: COLORS[pivotData.indexOf(link) % COLORS.length]
+                            };
+                          });
+                          setPinnedTooltip({ month, data: payload });
+                        }}
+                        className="px-3 py-2.5 bg-white hover:bg-blue-50 text-blue-700 rounded-lg font-bold text-sm transition-all hover:shadow-xl active:scale-95 border-2 border-transparent hover:border-blue-300 group"
+                      >
+                        <div className="text-base group-hover:scale-110 transition-transform">{month}</div>
+                        <div className="text-xs text-blue-600 font-semibold mt-0.5">{validLinks.length} link</div>
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-blue-100 text-xs mt-3 text-center">
+                  💡 Klik bulan untuk membuka daftar lengkap dengan scroll
+                </p>
+              </div>
 
-          <div className="space-y-4">
-            {/* Mobile scroll hint */}
-            <div className="md:hidden flex items-center gap-1.5 text-[10px] text-blue-600 font-medium bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
-              <svg xmlns="http://www.w3.org/2000/svg" className="w-3.5 h-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-              </svg>
-              <span>Menampilkan {pivotData.length} link · Scroll legend di bawah untuk melihat semua link.</span>
-            </div>
-            {/* Chart Container */}
-            <div className="overflow-x-auto no-scrollbar">
-              <div className="min-w-[600px] h-[350px]">
-                <ResponsiveContainer width="100%" height="100%">
+              {/* Chart Container */}
+              <div className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4 relative overflow-hidden">
+                {highlightedLine && (
+                  <>
+                    <div className="line-shimmer-overlay" style={{
+                      background: `linear-gradient(90deg, transparent 0%, transparent 20%, ${highlightedLineColor}33 35%, ${highlightedLineColor}4D 50%, ${highlightedLineColor}33 65%, transparent 80%, transparent 100%)`
+                    }} />
+                    <svg width="0" height="0" style={{ position: 'absolute' }}>
+                      <defs>
+                        <linearGradient id="flowingGradientNec" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor={highlightedLineColor || "#3b82f6"} stopOpacity={0.3} />
+                          <stop offset="30%" stopColor={highlightedLineColor || "#3b82f6"} stopOpacity={0.6}>
+                            <animate attributeName="offset" values="0;0.3;0.6;1;1;0" dur="3s" repeatCount="indefinite" />
+                            <animate attributeName="stop-opacity" values="0.6;0.8;1;0.8;0.6;0.6" dur="3s" repeatCount="indefinite" />
+                          </stop>
+                          <stop offset="50%" stopColor={highlightedLineColor || "#3b82f6"} stopOpacity={1}>
+                            <animate attributeName="offset" values="0.1;0.4;0.7;1;1;0.1" dur="3s" repeatCount="indefinite" />
+                          </stop>
+                          <stop offset="70%" stopColor={highlightedLineColor || "#3b82f6"} stopOpacity={0.6}>
+                            <animate attributeName="offset" values="0.2;0.5;0.8;1;1;0.2" dur="3s" repeatCount="indefinite" />
+                            <animate attributeName="stop-opacity" values="0.6;0.8;1;0.8;0.6;0.6" dur="3s" repeatCount="indefinite" />
+                          </stop>
+                          <stop offset="100%" stopColor={highlightedLineColor || "#3b82f6"} stopOpacity={0.3} />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </>
+                )}
+                <ResponsiveContainer width="100%" height={500}>
                   <LineChart
                     data={chartData}
-                    margin={{ top: 20, right: 60, left: 10, bottom: 20 }}
+                    margin={{ top: 20, right: 60, left: 20, bottom: 20 }}
+                    onClick={(e: any) => {
+                      if (e && e.activeLabel && e.activePayload) {
+                        const validPayload = e.activePayload.filter((entry: any) => entry.value !== null && entry.value !== undefined);
+                        if (validPayload.length > 0) {
+                          setPinnedTooltip({ month: e.activeLabel as string, data: validPayload });
+                        }
+                      }
+                    }}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" vertical={false} />
-                    <XAxis
-                      dataKey="month"
-                      angle={0}
-                      textAnchor="middle"
-                      height={30}
-                      tick={{ fontSize: 10, fill: "#6b7280" }}
-                      interval={0}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      domain={[-70, -30]}
-                      label={{
-                        value: "RSL (dBm)",
-                        angle: -90,
-                        position: "insideLeft",
-                        style: { fontSize: 10, fill: "#9ca3af" },
-                      }}
-                      tick={{ fontSize: 10, fill: "#9ca3af", fontWeight: 500 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
+                    <YAxis domain={[-95, -30]} label={{ value: 'RSL (dBm)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }} tick={{ fontSize: 11, fill: '#6b7280' }} />
                     <Tooltip
                       content={({ active, payload, label }) => {
-                        if (active && payload && payload.length) {
-                          return (
-                            <div className="bg-white/95 p-3 border border-gray-200 shadow-lg rounded-xl max-h-[250px] md:max-h-[350px] overflow-y-auto no-scrollbar outline-none pointer-events-auto">
-                              <p className="font-bold text-gray-800 mb-2 pb-2 border-b border-gray-100 sticky top-0 bg-white/95">{label}</p>
-                              <div className="space-y-1.5">
-                                {payload.map((entry: any, index: number) => {
-                                  if (entry.value === null || entry.value === undefined) return null;
-                                  return (
-                                    <div key={index} className="flex justify-between items-center gap-4 text-xs font-medium">
-                                      <span style={{ color: entry.color }} className="truncate max-w-[120px] md:max-w-[200px]" title={entry.name}>
+                        if (!active || !payload || !payload.length) return null;
+                        const validPayload = payload.filter(entry => entry.value !== null && entry.value !== undefined);
+                        if (validPayload.length === 0) return null;
+
+                        return (
+                          <div className="bg-white border-2 border-blue-400 rounded-xl shadow-2xl p-4 max-w-md pointer-events-auto">
+                            <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-100">
+                              <p className="font-bold text-base text-blue-700">{label} {selectedYear}</p>
+                              <span className="text-xs font-semibold text-white bg-blue-600 px-2 py-1 rounded-full">{validPayload.length} link</span>
+                            </div>
+                            <div className="space-y-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar">
+                              {validPayload.map((entry, idx) => {
+                                const isHighlighted = highlightedLine === entry.name;
+                                const linkIndex = pivotData.findIndex(l => l.linkName === entry.name);
+                                const actualColor = linkIndex >= 0 ? COLORS[linkIndex % COLORS.length] : entry.color;
+                                return (
+                                  <div
+                                    key={idx}
+                                    onClick={() => {
+                                      const linkName = entry.name as string;
+                                      setHighlightedLine(linkName);
+                                      setHighlightedLineColor(actualColor);
+                                    }}
+                                    className={`flex items-center justify-between gap-3 text-sm py-1.5 px-2 rounded cursor-pointer transition-all ${
+                                      isHighlighted
+                                        ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105'
+                                        : 'hover:bg-blue-50 border-2 border-transparent'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 flex-1 min-w-0">
+                                      <div
+                                        className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${isHighlighted ? 'animate-pulse scale-125' : ''}`}
+                                        style={{ backgroundColor: actualColor }}
+                                      />
+                                      <span className={`text-gray-800 truncate font-medium ${isHighlighted ? 'font-bold text-blue-700' : ''}`} title={entry.name as string}>
                                         {entry.name}
                                       </span>
-                                      <span className="font-bold text-gray-700">
-                                        {entry.value} dBm
-                                      </span>
                                     </div>
-                                  );
-                                })}
-                              </div>
+                                    <div className="flex items-baseline gap-1">
+                                      <span className={`font-mono font-bold ${isHighlighted ? 'text-blue-700 text-base' : 'text-gray-900'}`}>
+                                        {(entry.value as number).toFixed(1)}
+                                      </span>
+                                      <span className="text-[10px] font-semibold text-gray-500">dBm</span>
+                                    </div>
+                                  </div>
+                                );
+                              })}
                             </div>
-                          );
-                        }
-                        return null;
+                            {validPayload.length > 5 && (
+                              <div className="pt-3 mt-3 border-t text-center">
+                                <p className="text-xs text-blue-600 font-semibold">
+                                  ↕️ Scroll untuk lihat semua {validPayload.length} link
+                                </p>
+                                <p className="text-xs text-gray-500 mt-1">
+                                  💡 Klik link untuk highlight di grafik
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
                       }}
-                      wrapperStyle={{ zIndex: 110, pointerEvents: 'auto' }}
+                      cursor={{ stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5 5' }}
+                      wrapperStyle={{ pointerEvents: 'auto' }}
                     />
+                    <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Optimal (-45)', position: 'right', fill: '#10b981', fontSize: 10, fontWeight: 600 }} />
+                    <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Warning (-55)', position: 'right', fill: '#f59e0b', fontSize: 10, fontWeight: 600 }} />
+                    <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Sub-opt (-60)', position: 'right', fill: '#fb923c', fontSize: 10, fontWeight: 600 }} />
+                    <ReferenceLine y={-65} stroke="#dc2626" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: 'Critical (-65)', position: 'right', fill: '#dc2626', fontSize: 10, fontWeight: 600 }} />
+                    {pivotData.map((link, idx) => {
+                      const isHighlighted = highlightedLine === link.linkName;
+                      const shouldHide = highlightedLine && !isHighlighted;
+                      const lineColor = COLORS[idx % COLORS.length];
 
-                    {/* Threshold Error Zones & Lines (Optional but modern clean view) */}
-                    <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Optimal (-45)", position: "right", fill: "#10b981", fontSize: 9 }} />
-                    <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Warning (-55)", position: "right", fill: "#f59e0b", fontSize: 9 }} />
-                    <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Sub-opt (-60)", position: "right", fill: "#fb923c", fontSize: 9 }} />
-                    <ReferenceLine y={-65} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Critical (-65)", position: "right", fill: "#ef4444", fontSize: 9 }} />
+                      if (shouldHide) return null;
 
-                    {/* Lines for all links */}
-                    {pivotData.map((link, idx) => (
-                      <Line
-                        key={link.linkName}
-                        type="monotone"
-                        dataKey={link.linkName}
-                        stroke={COLORS[idx % COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 0 }} /* Hide dots initially like the design, show on active */
-                        activeDot={{ r: 4, strokeWidth: 0 }}
-                        connectNulls={false}
-                        name={link.linkName}
-                      />
-                    ))}
+                      const hexToRgb = (hex: string) => {
+                        const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                        return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 6, g: 182, b: 212 };
+                      };
+                      const rgb = hexToRgb(lineColor);
+                      const shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+
+                      return (
+                        <Line
+                          key={link.linkName}
+                          type="monotone"
+                          dataKey={link.linkName}
+                          stroke={isHighlighted ? 'url(#flowingGradientNec)' : lineColor}
+                          strokeWidth={isHighlighted ? 7 : 2}
+                          dot={{ r: isHighlighted ? 7 : 3, strokeWidth: isHighlighted ? 3 : 2, fill: isHighlighted ? '#ffffff' : lineColor, stroke: lineColor }}
+                          activeDot={{ r: isHighlighted ? 9 : 5, fill: '#ffffff', stroke: lineColor, strokeWidth: 3 }}
+                          connectNulls={false}
+                          name={link.linkName}
+                          style={isHighlighted ? { filter: `drop-shadow(0 0 10px ${shadowColor}) drop-shadow(0 0 6px ${shadowColor})` } : undefined}
+                        />
+                      );
+                    })}
                   </LineChart>
                 </ResponsiveContainer>
               </div>
-            </div>
 
-            {/* Legend - Custom Grid to fit Mobile */}
-            <div className="mt-4 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2.5 max-h-40 overflow-y-auto no-scrollbar">
-              {pivotData.map((link, idx) => (
-                <div key={idx} className="flex items-center gap-2">
-                  <span 
-                    className="w-2.5 h-0.5 rounded-full flex-shrink-0" 
-                    style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                  ></span>
-                  <span 
-                    className="text-[9px] font-semibold text-gray-500 truncate" 
-                    title={link.linkName}
-                  >
-                    {link.linkName}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Pie Chart - Full Width */}
-        <div className="bg-white p-5 rounded-[1.25rem] shadow-[0px_12px_32px_rgba(25,28,29,0.04)] border border-gray-100/60 transition-shadow hover:shadow-[0px_16px_40px_rgba(25,28,29,0.06)]">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-gray-900 font-bold text-sm tracking-tight">Distribusi Status Link</h2>
-              <p className="text-[10px] text-gray-500 font-medium mt-0.5">Proporsi kondisi sinyal pada jaringan NEC</p>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" className="text-gray-400 w-5 h-5 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z" />
-            </svg>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-            {/* Chart */}
-            <div className="flex justify-center -ml-4">
-              <ResponsiveContainer width="100%" height={280}>
-                <PieChart>
-                  <Pie
-                    data={generatePieChartData()}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 }) => {
-                      const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                      const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                      const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-
-                      return percent > 0 ? (
-                        <text
-                          x={x}
-                          y={y}
-                          fill="white"
-                          textAnchor="middle"
-                          dominantBaseline="central"
-                          fontSize="11"
-                          fontWeight="bold"
-                        >
-                          {`${(percent * 100).toFixed(0)}%`}
-                        </text>
-                      ) : null;
-                    }}
-                    outerRadius="95%"
-                    fill="#8884d8"
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {generatePieChartData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    formatter={(value) => [`${value} data points`, "Jumlah"]}
-                    contentStyle={{
-                      backgroundColor: "rgba(255, 255, 255, 0.98)",
-                      border: "1px solid #f3f4f6",
-                      borderRadius: "12px",
-                      boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)",
-                      fontSize: "12px",
-                      fontWeight: 600
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            {/* Statistics */}
-            <div className="space-y-2.5">
-              {generatePieChartData().map((entry, idx) => (
-                <div
-                  key={idx}
-                  className="flex items-center justify-between p-3.5 bg-gray-50/80 hover:bg-gray-50 rounded-xl border border-gray-100/50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
+              {/* Legend */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-2.5 max-h-40 overflow-y-auto custom-scrollbar">
+                {pivotData.map((link, idx) => {
+                  const isHighlighted = highlightedLine === link.linkName;
+                  const baseColor = COLORS[idx % COLORS.length];
+                  return (
                     <div
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: entry.fill }}
-                    />
-                    <span className="font-semibold text-xs text-gray-700">{entry.name}</span>
+                      key={idx}
+                      className={`flex items-center gap-2 cursor-pointer p-1.5 rounded-md transition-all duration-200 ${
+                        isHighlighted ? 'bg-blue-50 ring-1 ring-blue-200 shadow-sm' : 'hover:bg-gray-50'
+                      } ${highlightedLine && !isHighlighted ? 'opacity-40' : 'opacity-100'}`}
+                      onClick={() => {
+                        if (isHighlighted) {
+                          setHighlightedLine(null);
+                          setHighlightedLineColor(null);
+                        } else {
+                          setHighlightedLine(link.linkName);
+                          setHighlightedLineColor(baseColor);
+                        }
+                      }}
+                    >
+                      <span className={`w-3 h-3 rounded-full flex-shrink-0 transition-transform ${isHighlighted ? 'scale-125' : ''}`} style={{ backgroundColor: baseColor }} />
+                      <span className={`text-[10px] truncate ${isHighlighted ? 'font-bold text-blue-800' : 'font-medium text-gray-600'}`} title={link.linkName}>
+                        {link.linkName}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Pinned Tooltip Dialog */}
+              <Dialog open={pinnedTooltip !== null} onOpenChange={(open) => !open && setPinnedTooltip(null)}>
+                <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+                  <DialogHeader className="sr-only"><DialogTitle>Detail Link</DialogTitle><DialogDescription>Detail nilai RSL per link</DialogDescription></DialogHeader>
+                  {/* Header */}
+                  <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-3xl md:text-4xl font-black mb-2">{pinnedTooltip?.month} {selectedYear}</h2>
+                        <div className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-sm px-4 py-2 rounded-full">
+                          <div className="w-2 h-2 bg-white rounded-full animate-pulse" />
+                          <span className="text-sm font-bold">{pinnedTooltip?.data.length} link tersedia</span>
+                        </div>
+                      </div>
+                      <button onClick={() => setPinnedTooltip(null)} className="w-10 h-10 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-all hover:scale-110 active:scale-95 flex-shrink-0">
+                        <X className="w-6 h-6" />
+                      </button>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-gray-900">{entry.value}</p>
+                  {/* Hint */}
+                  <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                    <p className="text-sm text-blue-700 flex items-center gap-2 font-semibold"><span className="text-lg">💡</span> Klik link untuk highlight di grafik</p>
                   </div>
-                </div>
-              ))}
+                  {/* Content */}
+                  <div className="flex-1 overflow-y-auto p-6 bg-gray-50 custom-scrollbar">
+                    <div className="grid grid-cols-1 gap-3">
+                      {pinnedTooltip?.data.map((entry: any, idx: number) => {
+                        const isHighlighted = highlightedLine === entry.name;
+                        return (
+                          <div
+                            key={idx}
+                            onClick={() => { setHighlightedLine(entry.name); setHighlightedLineColor(entry.color); }}
+                            className={`flex items-center justify-between gap-4 p-5 rounded-2xl transition-all cursor-pointer group ${
+                              isHighlighted
+                                ? 'bg-gradient-to-r from-blue-500 to-indigo-500 shadow-xl scale-[1.02] ring-4 ring-blue-200'
+                                : 'bg-white hover:shadow-lg border-2 border-gray-200 hover:border-blue-300'
+                            }`}
+                          >
+                            <div className="flex items-center gap-4 flex-1 min-w-0">
+                              <div className={`w-5 h-5 rounded-full flex-shrink-0 transition-all ${isHighlighted ? 'ring-4 ring-white/50 scale-110' : 'ring-2 ring-gray-300'}`} style={{ backgroundColor: entry.color }} />
+                              <span className={`text-base font-bold truncate ${isHighlighted ? 'text-white' : 'text-gray-800'}`} title={entry.name}>{entry.name}</span>
+                            </div>
+                            <div className={`flex items-center gap-2 px-5 py-3 rounded-xl ${isHighlighted ? 'bg-white/20 backdrop-blur-sm' : 'bg-gradient-to-r from-gray-100 to-gray-50'}`}>
+                              <span className={`font-mono font-black text-2xl ${isHighlighted ? 'text-white' : 'text-gray-900'}`}>
+                                {entry.value !== null && entry.value !== undefined ? Number(entry.value).toFixed(1) : '—'}
+                              </span>
+                              <span className={`text-sm font-bold ${isHighlighted ? 'text-blue-100' : 'text-gray-500'}`}>dBm</span>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
+
+        {/* Pie Chart */}
+        <Card>
+          <CardHeader><CardTitle>Distribusi Status Link</CardTitle></CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+              {/* Chart */}
+              <div className="flex justify-center">
+                <ResponsiveContainer width="100%" height={280}>
+                  <PieChart>
+                    <Pie
+                      data={generatePieChartData()}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 }) => {
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                        const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                        return percent > 0 ? (
+                          <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="bold">
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        ) : null;
+                      }}
+                      outerRadius="95%"
+                      fill="#8884d8"
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {generatePieChartData().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [`${value} data points`, "Jumlah"]} />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              {/* Statistics */}
+              <div className="space-y-2.5">
+                {generatePieChartData().map((entry, idx) => (
+                  <div key={idx} className="flex items-center justify-between p-3.5 bg-gray-50/80 hover:bg-gray-50 rounded-xl border border-gray-100/50 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
+                      <span className="font-semibold text-xs text-gray-700">{entry.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-gray-900">{entry.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
 
       {/* Pivot Table */}
       <Card>

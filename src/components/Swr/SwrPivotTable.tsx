@@ -148,6 +148,9 @@ const SwrPivotTable: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const { toast } = useToast();
 
+  const [highlightedLine, setHighlightedLine] = useState<string | null>(null);
+  const [highlightedLineColor, setHighlightedLineColor] = useState<string>('#3b82f6');
+
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 16;
 
@@ -765,86 +768,218 @@ const SwrPivotTable: React.FC = () => {
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <Skeleton className="h-[350px] w-full" />
+              <Skeleton className="h-[450px] w-full" />
             ) : (
-              <div className="h-[350px]" style={{ minWidth: '200px', minHeight: '200px' }}>
-                <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={lineChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" />
-                    <XAxis
-                      dataKey="month"
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <YAxis
-                      domain={[1, 3]}
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <RechartsTooltip
-                      formatter={(value: any, name: any) => {
-                        if (value === null || value === undefined) return ["No Data", name];
-                        return [`${value.toFixed(2)}`, name];
-                      }}
-                      labelFormatter={(label) => `Bulan: ${label}`}
-                      contentStyle={{
-                        backgroundColor: 'white',
-                        border: '1px solid #e0e0e0',
-                        borderRadius: '6px',
-                        fontSize: '12px'
-                      }}
-                    />
-                    <ReferenceLine
-                      y={1.5}
-                      stroke="#10b981"
-                      strokeDasharray="3 3"
-                      strokeWidth={1}
-                    />
-                    <ReferenceLine
-                      y={2.0}
-                      stroke="#ef4444"
-                      strokeDasharray="3 3"
-                      strokeWidth={1}
-                    />
+              <div className="bg-gradient-to-br from-gray-50 to-white border rounded-lg p-4 relative overflow-hidden">
+                {highlightedLine && (
+                  <>
+                    <div className="line-shimmer-overlay pointer-events-none" style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 0,
+                      background: `linear-gradient(
+                        90deg,
+                        transparent 0%,
+                        transparent 20%,
+                        ${highlightedLineColor}33 35%,
+                        ${highlightedLineColor}4D 50%,
+                        ${highlightedLineColor}33 65%,
+                        transparent 80%,
+                        transparent 100%
+                      )`
+                    }} />
+                    <svg width="0" height="0" style={{ position: 'absolute' }}>
+                      <defs>
+                        <linearGradient id="flowingGradientSwr" x1="0%" y1="0%" x2="100%" y2="0%">
+                          <stop offset="0%" stopColor={highlightedLineColor} stopOpacity="0.3" />
+                          <stop offset="30%" stopColor={highlightedLineColor} stopOpacity="0.6">
+                            <animate attributeName="offset" values="0;0.3;0.6;1;1;0" dur="3s" repeatCount="indefinite" />
+                            <animate attributeName="stop-opacity" values="0.6;0.8;1;0.8;0.6;0.6" dur="3s" repeatCount="indefinite" />
+                          </stop>
+                          <stop offset="50%" stopColor={highlightedLineColor} stopOpacity="1">
+                            <animate attributeName="offset" values="0.1;0.4;0.7;1;1;0.1" dur="3s" repeatCount="indefinite" />
+                          </stop>
+                          <stop offset="70%" stopColor={highlightedLineColor} stopOpacity="0.6">
+                            <animate attributeName="offset" values="0.2;0.5;0.8;1;1;0.2" dur="3s" repeatCount="indefinite" />
+                            <animate attributeName="stop-opacity" values="0.6;0.8;1;0.8;0.6;0.6" dur="3s" repeatCount="indefinite" />
+                          </stop>
+                          <stop offset="100%" stopColor={highlightedLineColor} stopOpacity="0.3" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                  </>
+                )}
+                <div className="overflow-x-auto w-full custom-scrollbar pb-2 relative z-10">
+                  <div style={{ minWidth: '600px', height: 450 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={lineChartData} margin={{ top: 20, right: 60, left: 0, bottom: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+                        <XAxis
+                          dataKey="month"
+                          tick={{ fontSize: 11, fill: '#6b7280' }}
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <YAxis
+                          domain={[1, 3]}
+                          tick={{ fontSize: 11, fill: '#6b7280' }}
+                          axisLine={false}
+                          tickLine={false}
+                          label={{ value: 'VSWR', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }}
+                        />
+                        <RechartsTooltip
+                          content={({ active, payload, label }) => {
+                            if (!active || !payload || !payload.length) return null;
+                            const validPayload = payload.filter((p: any) => p.value !== null && p.value !== undefined);
+                            if (validPayload.length === 0) return null;
+                            
+                            return (
+                              <div className="bg-white border-2 border-blue-400 rounded-xl shadow-2xl p-4 max-w-md pointer-events-auto">
+                                <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-100">
+                                  <p className="font-bold text-base text-blue-700">{label} {selectedYear}</p>
+                                  <span className="text-xs font-semibold text-white bg-blue-600 px-2 py-1 rounded-full">{validPayload.length} link</span>
+                                </div>
+                                <div className={`grid gap-2 max-h-80 overflow-y-auto pr-2 custom-scrollbar ${validPayload.length > 5 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                                  {validPayload.map((entry: any, idx: number) => {
+                                    const isHighlighted = highlightedLine === entry.name;
+                                    const linkIndex = paginatedData.findIndex(l => l.channelName === entry.name);
+                                    const actualColor = linkIndex >= 0 ? COLORS[linkIndex % COLORS.length] : entry.color;
 
-                    {/* TAMPILKAN SEMUA CHANNEL DI HALAMAN */}
-                    {paginatedData.map((link, idx) => (
-                      <Line
-                        key={link.channelName}
-                        type="monotone"
-                        dataKey={link.channelName}
-                        stroke={COLORS[idx % COLORS.length]}
-                        strokeWidth={2}
-                        dot={{ r: 3 }}
-                        activeDot={{ r: 5 }}
-                        connectNulls={true}
-                      />
-                    ))}
-                  </LineChart>
-                </ResponsiveContainer>
+                                    return (
+                                      <div 
+                                        key={idx} 
+                                        onClick={() => {
+                                          const linkName = entry.name as string;
+                                          setHighlightedLine(linkName);
+                                          setHighlightedLineColor(actualColor);
+                                        }}
+                                        className={`flex items-center justify-between gap-2 py-1.5 px-3 rounded-lg cursor-pointer transition-all ${
+                                          isHighlighted 
+                                            ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105' 
+                                            : 'hover:bg-blue-50 border-2 border-transparent'
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 flex-1 min-w-0">
+                                          <div 
+                                            className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${isHighlighted ? 'animate-pulse scale-125' : ''}`} 
+                                            style={{ backgroundColor: actualColor }} 
+                                          />
+                                          <span className={`text-[12px] text-gray-800 truncate font-medium ${isHighlighted ? 'font-bold text-blue-800' : ''}`} title={entry.name as string}>
+                                            {entry.name}
+                                          </span>
+                                        </div>
+                                        <div className="flex items-baseline gap-1.5 ml-2">
+                                          <span className={`font-mono font-black ${isHighlighted ? 'text-blue-700 text-sm' : 'text-gray-900 text-xs'}`}>
+                                            {Number(entry.value).toFixed(2)}
+                                          </span>
+                                          <span className="text-[10px] font-bold text-gray-400">VSWR</span>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                {validPayload.length > 5 && (
+                                  <div className="pt-3 mt-3 border-t text-center">
+                                    <p className="text-xs text-blue-600 font-semibold">
+                                      ↕️ Scroll untuk lihat semua {validPayload.length} link
+                                    </p>
+                                    <p className="text-xs text-gray-500 mt-1">
+                                      💡 Klik link untuk highlight di grafik
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          }}
+                          cursor={{ stroke: '#3b82f6', strokeWidth: 2, strokeDasharray: '5 5' }}
+                          wrapperStyle={{ pointerEvents: 'auto' }}
+                        />
+                        <ReferenceLine y={1.5} stroke="#10b981" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: "Batas Normal (1.5)", position: "right", fill: "#10b981", fontSize: 10, fontWeight: 600 }} />
+                        <ReferenceLine y={2.0} stroke="#f59e0b" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: "Warning (2.0)", position: "right", fill: "#f59e0b", fontSize: 10, fontWeight: 600 }} />
+                        <ReferenceLine y={2.5} stroke="#dc2626" strokeDasharray="3 3" strokeWidth={1.5} label={{ value: "Critical (2.5)", position: "right", fill: "#dc2626", fontSize: 10, fontWeight: 600 }} />
+
+                        {paginatedData.map((link, idx) => {
+                          const isHighlighted = highlightedLine === link.channelName;
+                          const shouldHide = highlightedLine && !isHighlighted;
+                          const lineColor = COLORS[idx % COLORS.length];
+
+                          if (shouldHide) return null;
+
+                          const hexToRgb = (hex: string) => {
+                            const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+                            return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 59, g: 130, b: 246 };
+                          };
+                          const rgb = hexToRgb(lineColor);
+                          const shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
+
+                          return (
+                            <Line
+                              key={link.channelName}
+                              type="monotone"
+                              dataKey={link.channelName}
+                              stroke={isHighlighted ? 'url(#flowingGradientSwr)' : lineColor}
+                              strokeWidth={isHighlighted ? 6 : 2}
+                              dot={{ 
+                                r: isHighlighted ? 6 : 3, 
+                                strokeWidth: isHighlighted ? 3 : 2, 
+                                fill: isHighlighted ? '#ffffff' : lineColor,
+                                stroke: lineColor 
+                              }}
+                              activeDot={{ r: isHighlighted ? 8 : 5, fill: '#ffffff', stroke: lineColor, strokeWidth: 3 }}
+                              connectNulls={true}
+                              name={link.channelName}
+                              className={isHighlighted ? 'highlighted-line' : ''}
+                              style={isHighlighted ? { filter: `drop-shadow(0 0 8px ${shadowColor})` } : undefined}
+                            />
+                          );
+                        })}
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
               </div>
             )}
 
-            {/* Legenda untuk semua channel */}
             {!isLoading && paginatedData.length > 0 && (
-              <div className="mt-4 border rounded-lg p-3 bg-gray-50">
-                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                  {paginatedData.map((link, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-xs bg-white px-2 py-1.5 rounded border">
-                      <div
-                        className="w-3 h-0.5"
-                        style={{ backgroundColor: COLORS[idx % COLORS.length] }}
-                      />
-                      <span className="truncate max-w-[120px] font-medium">{link.channelName}</span>
-                      <span className="text-[10px] text-gray-500">({link.siteType.charAt(0)})</span>
-                    </div>
-                  ))}
+              <div className="mt-6 border rounded-xl bg-white shadow-sm">
+                <div className="bg-gradient-to-r from-gray-50 to-gray-100 px-4 py-3 border-b flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+                    Legend ({paginatedData.length} Link)
+                  </h4>
+                  <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded-full border">💡 Klik untuk highlight</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-2 text-center">
-                  Menampilkan {paginatedData.length} channel sesuai filter dan halaman
-                </p>
+                <div className="h-40 overflow-y-auto custom-scrollbar">
+                  <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+                    {paginatedData.map((link, idx) => {
+                      const isHighlighted = highlightedLine === link.channelName;
+                      return (
+                        <div 
+                          key={idx} 
+                          onClick={() => {
+                            if (isHighlighted) {
+                              setHighlightedLine(null);
+                            } else {
+                              setHighlightedLine(link.channelName);
+                              setHighlightedLineColor(COLORS[idx % COLORS.length]);
+                            }
+                          }}
+                          className={`flex items-center gap-2 text-xs p-2 rounded-lg transition-all cursor-pointer group select-none ${
+                            isHighlighted 
+                              ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105' 
+                              : 'hover:bg-gray-50 border-2 border-transparent'
+                          }`}
+                        >
+                          <div 
+                            className={`w-8 h-1 rounded-full flex-shrink-0 transition-all ${isHighlighted ? 'h-2 animate-pulse' : 'group-hover:h-1.5'}`} 
+                            style={{ backgroundColor: COLORS[idx % COLORS.length] }} 
+                          />
+                          <span className={`truncate font-medium ${isHighlighted ? 'text-blue-700 font-bold' : 'text-gray-700'}`} title={link.channelName}>
+                            {link.channelName} <span className="text-[10px] opacity-70">({link.siteType.charAt(0)})</span>
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             )}
             {isLoading && <Skeleton className="h-10 w-full mt-4" />}
@@ -924,9 +1059,74 @@ const SwrPivotTable: React.FC = () => {
       {/* 📊 TABEL PIVOT UTAMA */}
       <Card>
         <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
-            <thead>
-              <tr className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
+          {/* Mobile Pivot View */}
+          <div className="md:hidden flex flex-col gap-4 p-4">
+            {isLoading ? (
+              [...Array(4)].map((_, i) => <Skeleton key={i} className="h-32 w-full rounded-xl" />)
+            ) : paginatedData.length > 0 ? (
+              paginatedData.map((row, rowIdx) => {
+                const hasAnyNote = Object.values(row.notes || {}).some(note => note?.trim());
+                return (
+                  <div key={rowIdx} className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
+                    <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Radio className="w-4 h-4 text-blue-600" />
+                        <span className="font-bold text-sm">{row.channelName}</span>
+                        {hasAnyNote && <span className="text-xs text-blue-600 bg-blue-100 px-1.5 py-0.5 rounded-full">📝</span>}
+                      </div>
+                      <span className={`px-2 py-1 rounded text-[10px] font-medium ${row.siteType === 'Trunking' ? 'bg-purple-100 text-purple-800' : 'bg-green-100 text-green-800'}`}>
+                        {row.siteType}
+                      </span>
+                    </div>
+                    <div className="p-3">
+                      <div className="flex gap-2 overflow-x-auto custom-scrollbar pb-2">
+                        {months.map(m => {
+                          const key = formatMonthKey(m);
+                          const fpwr = row.monthlyFpwr[key];
+                          const vswr = row.monthlyVswr[key];
+                          const note = row.notes?.[key];
+                          const historyId = row.historyIds?.[key];
+                          const hasNote = shouldShowNoteIcon(note);
+                          
+                          return (
+                            <div key={m}
+                              onClick={() => {
+                                if (hasPermission('swr.update')) {
+                                  openNoteModal(row.channelName, key, note, historyId, row.siteName);
+                                }
+                              }}
+                              className={`flex-shrink-0 min-w-[100px] border rounded p-2 text-center cursor-pointer relative ${getSwrColor(vswr)}`}
+                            >
+                              <div className="text-[10px] font-bold text-gray-500 mb-1 border-b pb-1">{key}</div>
+                              <div className="grid grid-cols-2 gap-1 text-xs">
+                                 <div className="flex flex-col">
+                                   <span className="text-[9px] text-gray-400">VSWR</span>
+                                   <span className={`font-mono font-medium ${getSwrTextColor(vswr)}`}>{vswr !== null && vswr !== undefined ? vswr.toFixed(2) : "-"}</span>
+                                 </div>
+                                 <div className="flex flex-col border-l border-black/10">
+                                   <span className="text-[9px] text-gray-400">FPWR</span>
+                                   <span className={`font-mono font-medium ${getFpwrTextColor(fpwr)}`}>{fpwr !== null && fpwr !== undefined ? fpwr.toFixed(0) : "-"}</span>
+                                 </div>
+                              </div>
+                              {hasNote && <span className="absolute -top-1 -right-1 text-blue-600 text-[10px] bg-blue-100 rounded-full w-4 h-4 flex items-center justify-center border border-blue-300 shadow-sm">📝</span>}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-10 text-gray-400">Tidak ada data ditemukan</div>
+            )}
+          </div>
+          
+          {/* Desktop Pivot View */}
+          <div className="hidden md:block">
+            <table className="w-full border-collapse text-sm">
+              <thead>
+                <tr className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white">
                 <th className="p-4 text-left border-b border-white/20 sticky left-0 bg-blue-600 z-20" rowSpan={2}>
                   Channel
                 </th>
@@ -1082,7 +1282,7 @@ const SwrPivotTable: React.FC = () => {
                                         <div className="bg-gray-800/50 p-3 rounded">
                                           <p className="text-xs text-gray-400 mb-1">FPWR</p>
                                           <div className="flex items-center justify-between">
-                                            <p className="text-lg font-bold">{fpwr.toFixed(1)} W</p>
+                                            <p className="text-lg font-bold">{fpwr.toFixed(2)} W</p>
                                             <span className={`px-2 py-0.5 rounded text-[10px] font-medium ${getFpwrColor(fpwr).split(' ')[0]} text-black border`}>
                                               {getFpwrStatus(fpwr).toUpperCase()}
                                             </span>
@@ -1158,7 +1358,7 @@ const SwrPivotTable: React.FC = () => {
                               <div className="relative">
                                 {isDataPresent ? (
                                   <>
-                                    {fpwr !== null && fpwr !== undefined ? fpwr.toFixed(1) : "-"}
+                                    {fpwr !== null && fpwr !== undefined ? fpwr.toFixed(2) : "-"}
                                     {hasNote && (
                                       <span className="absolute -top-1 -right-1 text-blue-600 text-xs bg-blue-100 rounded-full w-5 h-5 flex items-center justify-center border border-blue-300 shadow-sm">
                                         📝
@@ -1200,6 +1400,7 @@ const SwrPivotTable: React.FC = () => {
               )}
             </tbody>
           </table>
+          </div>
         </CardContent>
 
         {/* Pagination */}

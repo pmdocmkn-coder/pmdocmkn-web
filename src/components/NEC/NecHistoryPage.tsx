@@ -108,6 +108,19 @@ const getRslStatus = (value: number | null): string => {
   return "critical";
 };
 
+const getRslColor = (value: number | null | undefined): string => {
+  const status = getRslStatus(value ?? null);
+  const colors = {
+    too_strong: "bg-red-200",
+    optimal: "bg-green-200",
+    warning: "bg-yellow-200",
+    sub_optimal: "bg-orange-200",
+    critical: "bg-red-300",
+    no_data: "bg-gray-100",
+  };
+  return colors[status as keyof typeof colors] || colors.no_data;
+};
+
 const getAvailableYears = (histories: NecRslHistoryItemDto[]) => {
   if (histories.length === 0) return [new Date().getFullYear()];
   const years = [
@@ -755,7 +768,9 @@ const NecHistoryPage: React.FC = () => {
               <CardTitle>Grafik Bar Rata-rata RSL</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={500}>
+              <div className="overflow-x-auto w-full custom-scrollbar pb-2">
+                <div style={{ minWidth: `${Math.max(100, generateMonthlyBarChartData().length * 40)}px`, height: 400 }}>
+                  <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={generateMonthlyBarChartData()}
                   margin={{ top: 20, right: 80, left: 20, bottom: 140 }}
@@ -777,99 +792,148 @@ const NecHistoryPage: React.FC = () => {
                       position: "insideLeft",
                     }}
                   />
+                  <defs>
+                    <linearGradient id="barGradientNec" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={1}/>
+                      <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.8}/>
+                    </linearGradient>
+                  </defs>
                   <Tooltip
-                    formatter={(value: any) => [`${value} dBm`, "Average RSL"]}
-                    labelFormatter={(label) => `Link: ${label}`}
+                    cursor={{ fill: 'transparent' }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      const data = payload[0];
+                      const value = data.value as number;
+                      const tower = data.payload.tower;
+                      return (
+                        <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700 max-w-xs">
+                          <p className="font-bold text-sm mb-1 text-blue-300">{data.payload.linkName}</p>
+                          <p className="text-[10px] font-bold text-gray-400 mb-2 pb-2 border-b border-gray-700 uppercase tracking-wider">{tower}</p>
+                          <div className="space-y-1 mt-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-gray-300">RSL:</span>
+                              <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                              <span className="text-xs text-gray-300">Status:</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslBadgeStyle(value)}`}>
+                                {getRslStatusLabel(value)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
                   />
                   <Legend wrapperStyle={{ paddingTop: "10px" }} />
                   <ReferenceLine
                     y={-45}
                     stroke="#10b981"
                     strokeDasharray="3 3"
-                    label={{
-                      value: "Optimal (-45)",
-                      position: "right",
-                      fill: "#10b981",
-                      fontSize: 10,
-                      offset: 10,
-                    }}
+                    strokeOpacity={0.5}
+                    label={{ value: "Optimal (-45)", position: "right", fill: "#10b981", fontSize: 9 }}
                   />
                   <ReferenceLine
                     y={-55}
                     stroke="#f59e0b"
                     strokeDasharray="3 3"
-                    label={{
-                      value: "Warning (-55)",
-                      position: "right",
-                      fill: "#f59e0b",
-                      fontSize: 10,
-                      offset: 10,
-                    }}
+                    strokeOpacity={0.5}
+                    label={{ value: "Warning (-55)", position: "right", fill: "#f59e0b", fontSize: 9 }}
                   />
                   <ReferenceLine
                     y={-60}
                     stroke="#fb923c"
                     strokeDasharray="3 3"
-                    label={{
-                      value: "Sub-opt (-60)",
-                      position: "right",
-                      fill: "#fb923c",
-                      fontSize: 10,
-                      offset: 10,
-                    }}
+                    strokeOpacity={0.5}
+                    label={{ value: "Sub-opt (-60)", position: "right", fill: "#fb923c", fontSize: 9 }}
                   />
                   <ReferenceLine
                     y={-65}
-                    stroke="#dc2626"
+                    stroke="#ef4444"
                     strokeDasharray="3 3"
-                    label={{
-                      value: "Critical (-65)",
-                      position: "right",
-                      fill: "#dc2626",
-                      fontSize: 10,
-                      offset: 10,
-                    }}
+                    strokeOpacity={0.5}
+                    label={{ value: "Critical (-65)", position: "right", fill: "#ef4444", fontSize: 9 }}
                   />
                   <Bar
                     dataKey="avgRsl"
                     fill="#3b82f6"
                     name="Average RSL"
                     radius={[8, 8, 0, 0]}
+                    maxBarSize={40}
                   />
                 </BarChart>
               </ResponsiveContainer>
+              </div>
+            </div>
             </CardContent>
           </Card>
 
+          {/* Pie Chart */}
           <Card>
             <CardHeader>
               <CardTitle>Distribusi Status Link</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={generatePieChartData()}
-                    cx="50%"
-                    cy="50%"
-                    labelLine={false}
-                    label={({ name, percent }) =>
-                      typeof percent === "number"
-                        ? `${name}: ${(percent * 100).toFixed(0)}%`
-                        : `${name}: 0%`
-                    }
-                    outerRadius={80}
-                    fill="#8884d8"
-                    dataKey="value"
+              <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 items-center">
+              <div className="flex justify-center -ml-4">
+                <ResponsiveContainer width="100%" height={250}>
+                  <PieChart>
+                    <Pie
+                      data={generatePieChartData()}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 }) => {
+                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+                        const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
+                        const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
+                        return percent > 0 ? (
+                          <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="bold">
+                            {`${(percent * 100).toFixed(0)}%`}
+                          </text>
+                        ) : null;
+                      }}
+                      outerRadius="95%"
+                      fill="#8884d8"
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {generatePieChartData().map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} />
+                      ))}
+                    </Pie>
+                    <Tooltip
+                      formatter={(value) => [`${value} data points`, "Jumlah"]}
+                      contentStyle={{
+                        backgroundColor: "rgba(255, 255, 255, 0.98)",
+                        border: "1px solid #f3f4f6",
+                        borderRadius: "12px",
+                        boxShadow: "0 10px 15px -3px rgba(0, 0, 0, 0.05)",
+                        fontSize: "12px",
+                        fontWeight: 600
+                      }}
+                    />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+              
+              <div className="space-y-2 lg:pr-2">
+                {generatePieChartData().map((entry, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between p-2.5 bg-gray-50/80 hover:bg-gray-50 rounded-xl border border-gray-100/50 transition-colors"
                   >
-                    {generatePieChartData().map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.fill} />
-                    ))}
-                  </Pie>
-                  <Tooltip formatter={(value) => `${value} links`} />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.fill }} />
+                      <span className="font-semibold text-[11px] text-gray-700">{entry.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-[13px] font-bold text-gray-900">{entry.value}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
             </CardContent>
           </Card>
         </div>
@@ -1043,45 +1107,95 @@ const NecHistoryPage: React.FC = () => {
             <CardTitle>Grafik Area Rata-rata Bulanan</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={350}>
-              <AreaChart data={generateYearlyChartData()}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis domain={[-70, -30]} />
-                <Tooltip />
-                <Legend />
-                <ReferenceLine
-                  y={-45}
-                  stroke="#10b981"
-                  strokeDasharray="3 3"
-                  label="Optimal Max (-45)"
-                />
-                <ReferenceLine
-                  y={-55}
-                  stroke="#f59e0b"
-                  strokeDasharray="3 3"
-                  label="Warning (-55)"
-                />
-                <ReferenceLine
-                  y={-60}
-                  stroke="#fb923c"
-                  strokeDasharray="3 3"
-                  label="Sub-optimal (-60)"
-                />
-                <ReferenceLine
-                  y={-65}
-                  stroke="#dc2626"
-                  strokeDasharray="3 3"
-                  label="Critical (-65)"
-                />
-                <Area
-                  type="monotone"
-                  dataKey="value"
-                  stroke="#8884d8"
-                  fill="#8884d8"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+          <div className="overflow-x-auto w-full custom-scrollbar pb-2">
+            <div className="min-w-[600px] h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart 
+                  data={generateYearlyChartData()}
+                  margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                >
+                  <defs>
+                    <linearGradient id="colorAreaNec" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                    <filter id="glowAreaNec" x="-20%" y="-20%" width="140%" height="140%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" vertical={false} />
+                  <XAxis 
+                    dataKey="date" 
+                    tick={{ fontSize: 11, fill: '#6b7280' }} 
+                    axisLine={false} 
+                    tickLine={false} 
+                    dy={10}
+                  />
+                  <YAxis 
+                    domain={[-70, -30]} 
+                    tick={{ fontSize: 11, fill: '#6b7280' }} 
+                    axisLine={false} 
+                    tickLine={false}
+                    dx={-10}
+                  />
+                  <Tooltip
+                    cursor={{ stroke: '#e2e8f0', strokeWidth: 2, strokeDasharray: '5 5' }}
+                    content={({ active, payload }) => {
+                      if (!active || !payload || !payload.length) return null;
+                      const data = payload[0];
+                      const value = data.value as number;
+                      return (
+                        <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-2xl border border-gray-700 max-w-xs">
+                          <p className="font-bold text-sm mb-3 pb-2 border-b border-gray-700 text-purple-300">{data.payload.date} {yearlyData.year}</p>
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-xs text-gray-300">Rata-rata RSL:</span>
+                              <span className="font-mono font-bold text-base">{value.toFixed(1)} dBm</span>
+                            </div>
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-xs text-gray-300">Status:</span>
+                              <span className={`px-2 py-0.5 rounded text-xs font-bold ${getRslBadgeStyle(value)}`}>
+                                {getRslStatusLabel(value)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Legend 
+                    wrapperStyle={{ paddingTop: "20px" }}
+                    content={(props) => (
+                      <div className="flex justify-center mt-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-4 h-1 rounded bg-purple-500"></span>
+                          <span className="text-xs font-bold text-gray-600">Rata-rata RSL Network</span>
+                        </div>
+                      </div>
+                    )}
+                  />
+                  <ReferenceLine y={-45} stroke="#10b981" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Optimal (-45)", position: "right", fill: "#10b981", fontSize: 9 }} />
+                  <ReferenceLine y={-55} stroke="#f59e0b" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Warning (-55)", position: "right", fill: "#f59e0b", fontSize: 9 }} />
+                  <ReferenceLine y={-60} stroke="#fb923c" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Sub-opt (-60)", position: "right", fill: "#fb923c", fontSize: 9 }} />
+                  <ReferenceLine y={-65} stroke="#ef4444" strokeDasharray="3 3" strokeOpacity={0.5} strokeWidth={1} label={{ value: "Critical (-65)", position: "right", fill: "#ef4444", fontSize: 9 }} />
+                  <Area
+                    type="monotone"
+                    dataKey="value"
+                    stroke="#8b5cf6"
+                    strokeWidth={3}
+                    fill="url(#colorAreaNec)"
+                    name="Rata-rata RSL"
+                    activeDot={{ r: 6, fill: "#8b5cf6", stroke: "#fff", strokeWidth: 2 }}
+                    filter="url(#glowAreaNec)"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
           </CardContent>
         </Card>
 
@@ -1090,62 +1204,69 @@ const NecHistoryPage: React.FC = () => {
             <CardTitle>Statistik Detail Per Link</CardTitle>
           </CardHeader>
           <CardContent>
-            <ScrollArea className="h-[400px]">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {yearlyData.towers.map((tower, towerIdx) =>
-                  Object.entries(tower.links).map(
-                    ([linkName, linkData], linkIdx) => (
-                      <div
-                        key={`${towerIdx}-${linkIdx}`}
-                        className="border rounded-lg p-4 bg-gray-50"
-                      >
-                        <div className="flex items-start justify-between mb-2">
-                          <div className="flex-1">
-                            <h5 className="font-semibold text-sm">
-                              {linkName}
-                            </h5>
-                            <p className="text-xs text-gray-500">
-                              {tower.towerName}
-                            </p>
-                          </div>
+          
+          <ScrollArea className="h-[400px] pr-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {yearlyData.towers.map((tower, towerIdx) =>
+                Object.entries(tower.links).map(
+                  ([linkName, linkData], linkIdx) => (
+                    <div
+                      key={`${towerIdx}-${linkIdx}`}
+                      className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 hover:shadow-md transition-shadow group"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex-1 pr-2">
+                          <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wider">{tower.towerName}</p>
+                          <h5 className="text-[13px] font-black text-gray-800 leading-tight mt-0.5 group-hover:text-blue-600 transition-colors">{linkName}</h5>
                         </div>
+                        <span className={`px-2.5 py-1 rounded-md text-[9px] font-bold uppercase tracking-wider ${getRslBadgeStyle(linkData.yearlyAvg)}`}>
+                          {getRslStatusLabel(linkData.yearlyAvg)}
+                        </span>
+                      </div>
 
-                        <div className="mt-3 space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-xs text-gray-600">
-                              Rata-rata Tahunan:
-                            </span>
-                            <span className="font-bold text-sm">
-                              {linkData.yearlyAvg.toFixed(1)} dBm
-                            </span>
-                          </div>
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] text-gray-500 font-medium">Rata-rata Tahunan</span>
+                        <span className={`text-[16px] font-black font-mono ${getRslTextColor(linkData.yearlyAvg)}`}>
+                          {linkData.yearlyAvg.toFixed(1)} <span className="text-[10px] font-bold text-gray-400">dBm</span>
+                        </span>
+                      </div>
+                      
+                      <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden mt-2">
+                        <div className={`absolute left-0 top-0 h-full rounded-full ${getRslBarColor(linkData.yearlyAvg)}`}
+                          style={{ width: `${getRslBarPercent(linkData.yearlyAvg)}%` }} />
+                      </div>
+                      <div className="flex justify-between mt-1 mb-2">
+                        <span className="text-[9px] text-gray-400">-70</span>
+                        <span className="text-[9px] text-gray-400">-30</span>
+                      </div>
 
-                          {linkData.warnings.length > 0 && (
-                            <div className="mt-2 pt-2 border-t">
-                              <div className="flex items-start gap-1">
-                                <AlertTriangle className="h-3 w-3 text-red-600 mt-0.5 flex-shrink-0" />
-                                <div className="flex-1">
-                                  <p className="text-xs font-semibold text-red-600 mb-1">
-                                    Peringatan:
-                                  </p>
-                                  <ul className="text-xs text-red-600 space-y-1">
-                                    {linkData.warnings.map((warning, wIdx) => (
-                                      <li key={wIdx} className="leading-tight">
-                                        • {warning}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                </div>
+                      {linkData.warnings.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-red-50/50">
+                          <div className="flex items-start gap-1.5">
+                            <div className="mt-0.5 shrink-0 bg-red-100 p-1 rounded-full">
+                              <AlertTriangle className="h-3 w-3 text-red-600" />
+                            </div>
+                            <div className="flex-1">
+                              <p className="text-[10px] font-bold text-red-700 uppercase tracking-wide mb-1">
+                                Peringatan
+                              </p>
+                              <div className="space-y-1.5">
+                                {linkData.warnings.map((warning, wIdx) => (
+                                  <div key={wIdx} className="text-[10px] text-red-600 font-medium bg-red-50 px-2 py-1 rounded-md leading-tight border border-red-100/50">
+                                    {warning}
+                                  </div>
+                                ))}
                               </div>
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    )
+                      )}
+                    </div>
                   )
-                )}
-              </div>
-            </ScrollArea>
+                )
+              )}
+            </div>
+          </ScrollArea>
           </CardContent>
         </Card>
       </div>
