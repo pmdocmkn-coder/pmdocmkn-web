@@ -7,6 +7,7 @@ import RadioRepairStatsCards from "./RadioRepairStatsCards";
 import RadioRepairGroupedTable, { type TicketJobGroup } from "./RadioRepairGroupedTable";
 import { radioRepairApi, type UpdateRadioRepairJobPayload } from "../../services/radioRepairApi";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
+import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import type {
   RadioRepairDashboard,
   RadioRepairJobDetail,
@@ -20,6 +21,7 @@ import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
 import RadioRepairJobDetailPanel from "./RadioRepairJobDetailPanel";
 import RadioRepairJobEditForm from "./RadioRepairJobEditForm";
 import TechnicianToWarehouseForm from "../RadioHandover/TechnicianToWarehouseForm";
+import WorkshopTechnicianManager from "./WorkshopTechnicianManager";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
@@ -92,6 +94,17 @@ export default function RadioRepairDashboardPage() {
   const [galleryIndex, setGalleryIndex] = useState(0);
 
   const [customStatuses, setCustomStatuses] = useState<RepairJobCustomStatus[]>([]);
+
+  // Workshop Technician picker state
+  const [workshopTechs, setWorkshopTechs] = useState<WorkshopTechnicianDto[]>([]);
+  const [techPickerOpen, setTechPickerOpen] = useState(false);
+  const [pendingAction, setPendingAction] = useState<{
+    type: "status" | "approve";
+    jobId: number;
+    status?: RadioRepairJobStatus;
+    customStatusId?: number | null;
+    resumeStatus?: "InProgress" | "Monitoring";
+  } | null>(null);
 
   const canSupervise = canApproveRepairMaterial();
   const canUpdate = canUpdateRepairJobStatus();
@@ -207,6 +220,7 @@ export default function RadioRepairDashboardPage() {
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
     repairJobCustomStatusApi.getAll().then((list) => setCustomStatuses(list.filter((s) => s.isActive))).catch(() => setCustomStatuses([]));
+    workshopTechnicianApi.getAllActive().then(res => setWorkshopTechs(res.data.data)).catch(() => setWorkshopTechs([]));
   }, []);
 
   const resetFilters = () => {
@@ -305,11 +319,29 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const patchStatus = async (jobId: number, status: RadioRepairJobStatus, customStatusId?: number | null) => {
+  /** Status transitions yang wajib pilih teknisi workshop */
+  const needsTechnicianPick = (targetStatus: RadioRepairJobStatus, fromStatus?: RadioRepairJobStatus) => {
+    // Saat masuk ke InProgress pertama kali (dari Received), wajib pilih teknisi
+    if (targetStatus === "InProgress" && fromStatus === "Received") return true;
+    // Saat monitoring selesai → kembali ke InProgress, wajib pilih teknisi
+    if (targetStatus === "InProgress" && fromStatus === "Monitoring") return true;
+    return false;
+  };
+
+  const patchStatus = async (jobId: number, status: RadioRepairJobStatus, customStatusId?: number | null, workshopTechnicianId?: number | null) => {
     if (patchingStatus) return;
+
+    // Cek apakah perlu pilih teknisi workshop
+    const currentJob = detail?.id === jobId ? detail : jobs.find(j => j.id === jobId);
+    if (!workshopTechnicianId && currentJob && needsTechnicianPick(status, currentJob.status)) {
+      setPendingAction({ type: "status", jobId, status, customStatusId });
+      setTechPickerOpen(true);
+      return;
+    }
+
     setPatchingStatus(true);
     try {
-      const updated = await radioRepairApi.updateStatus(jobId, status, undefined, customStatusId);
+      const updated = await radioRepairApi.updateStatus(jobId, status, undefined, customStatusId, workshopTechnicianId);
       if (detail?.id === jobId) setDetail(updated);
       toast({ title: "Status diperbarui" });
       load();
@@ -320,17 +352,37 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const approveMaterial = async (resume: "InProgress" | "Monitoring") => {
+  const approveMaterial = async (resume: "InProgress" | "Monitoring", workshopTechnicianId?: number | null) => {
     if (!detail || patchingStatus) return;
+
+    // Approve material selalu wajib pilih teknisi
+    if (!workshopTechnicianId) {
+      setPendingAction({ type: "approve", jobId: detail.id, resumeStatus: resume });
+      setTechPickerOpen(true);
+      return;
+    }
+
     setPatchingStatus(true);
     try {
-      setDetail(await radioRepairApi.approveMaterial(detail.id, resume));
+      setDetail(await radioRepairApi.approveMaterial(detail.id, resume, undefined, workshopTechnicianId));
       toast({ title: "Material disetujui" });
       load();
     } catch (err: unknown) {
       toast({ title: "Gagal approve", description: apiMessage(err), variant: "destructive" });
     } finally {
       setPatchingStatus(false);
+    }
+  };
+
+  const handleTechnicianPicked = (techId: number) => {
+    setTechPickerOpen(false);
+    if (!pendingAction) return;
+    const action = pendingAction;
+    setPendingAction(null);
+    if (action.type === "status" && action.status) {
+      patchStatus(action.jobId, action.status, action.customStatusId, techId);
+    } else if (action.type === "approve" && action.resumeStatus) {
+      approveMaterial(action.resumeStatus, techId);
     }
   };
 
@@ -392,6 +444,7 @@ export default function RadioRepairDashboardPage() {
               Reset Data Uji
             </Button>
           )}
+          {canSupervise && <WorkshopTechnicianManager />}
           {canViewArchive && (
             <Button
               variant={showArchive ? "default" : "outline"}
@@ -720,6 +773,9 @@ export default function RadioRepairDashboardPage() {
             {detail && (
               <p className="text-sm text-gray-600">
                 Teknisi: <strong>{detail.assignedTechnicianName}</strong>
+                {detail.workshopTechnicianName && (
+                  <span className="ml-2 text-violet-600">· Workshop: <strong>{detail.workshopTechnicianName}</strong></span>
+                )}
               </p>
             )}
           </DialogHeader>
@@ -749,7 +805,7 @@ export default function RadioRepairDashboardPage() {
             <DialogTitle>Edit pekerjaan</DialogTitle>
           </DialogHeader>
           {editJob && (
-            <RadioRepairJobEditForm job={editJob} technicians={technicians} saving={savingEdit} onSave={saveEdit} />
+            <RadioRepairJobEditForm job={editJob} technicians={technicians} workshopTechs={workshopTechs} saving={savingEdit} onSave={saveEdit} />
           )}
         </DialogContent>
       </Dialog>
@@ -770,6 +826,39 @@ export default function RadioRepairDashboardPage() {
               onCancel={() => setShowWh(false)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Technician Picker Dialog */}
+      <Dialog open={techPickerOpen} onOpenChange={(open) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Pilih Teknisi Workshop</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2">
+            <p className="text-sm text-gray-600">
+              Pilih teknisi workshop yang akan mengerjakan radio ini.
+            </p>
+            {workshopTechs.length === 0 ? (
+              <p className="text-sm text-amber-600 p-3 bg-amber-50 rounded-lg">
+                Belum ada data teknisi workshop. Tambahkan melalui menu pengaturan teknisi.
+              </p>
+            ) : (
+              <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
+                {workshopTechs.map((t) => (
+                  <button
+                    key={t.id}
+                    type="button"
+                    onClick={() => handleTechnicianPicked(t.id)}
+                    className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-violet-400 hover:bg-violet-50 transition-colors flex items-center justify-between group"
+                  >
+                    <span className="font-medium text-sm text-gray-900 group-hover:text-violet-700">{t.name}</span>
+                    <span className="text-xs text-gray-400 group-hover:text-violet-500">Pilih →</span>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </motion.div>

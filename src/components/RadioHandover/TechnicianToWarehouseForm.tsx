@@ -9,6 +9,7 @@ import HandoverAccessoryHistory from "./HandoverAccessoryHistory";
 import MultiPhotoUpload from "./MultiPhotoUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { buildAccessoriesPayload, toHandoverAccessoryItems } from "../../utils/handoverFormUtils";
+import { workshopTechnicianApi, WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 
 type Props = {
   job: RadioRepairJobDetail;
@@ -25,6 +26,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
   const { toast } = useToast();
   const [receivers, setReceivers] = useState<UserOption[]>([]);
   const [whId, setWhId] = useState("");
+  const [workshopTechId, setWorkshopTechId] = useState("");
+  const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [inheritedAccessories, setInheritedAccessories] = useState<HandoverAccessoryItem[]>([]);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [additionalAccessories, setAdditionalAccessories] = useState<HandoverAccessoryItem[]>([]);
@@ -40,6 +43,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
       .getWarehouseReceivers()
       .then((list) => setReceivers(list ?? []))
       .catch(() => setReceivers([]));
+    workshopTechnicianApi.getAllActive().then(res => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
   }, []);
 
   useEffect(() => {
@@ -82,8 +86,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
     const techSig = (await sigTechRef.current?.exportNow()) ?? sigTech;
     const whSig = (await sigWhRef.current?.exportNow()) ?? sigWh;
 
-    if (!whId || photos.length === 0 || !techSig || !whSig) {
-      toast({ title: "Lengkapi foto, TTD teknisi & warehouse", variant: "destructive" });
+    if (!whId || !workshopTechId || photos.length === 0 || !techSig || !whSig) {
+      toast({ title: "Lengkapi data teknisi, foto, TTD", variant: "destructive" });
       return;
     }
 
@@ -99,6 +103,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         radioSerialNumber: job.radioSerialNumber,
         batterySerialNumber: batterySerialNumber ?? job.batterySerialNumber ?? undefined,
         receivedByUserId: Number(whId),
+        handedOverByWorkshopTechnicianId: Number(workshopTechId),
         radioPhotos: photos,
         handedOverSignatureBase64: techSig,
         receiverSignatureBase64: whSig,
@@ -125,7 +130,23 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
       </p>
 
       <div className="space-y-1">
-        <label className="text-sm font-medium text-gray-700">Penerima Warehouse *</label>
+        <label className="text-sm font-medium text-gray-700">Teknisi Workshop Penyerah (Fisik) *</label>
+        <Select value={workshopTechId} onValueChange={setWorkshopTechId}>
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+            <SelectValue placeholder="Pilih teknisi" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {workshopTechnicians.map((t) => (
+              <SelectItem key={t.id} value={t.id.toString()}>
+                <span className="font-medium">{t.name}</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">Akun Sistem Penerima (Warehouse) *</label>
         <Select value={whId} onValueChange={setWhId}>
           <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
             <SelectValue placeholder="Pilih staff warehouse" />

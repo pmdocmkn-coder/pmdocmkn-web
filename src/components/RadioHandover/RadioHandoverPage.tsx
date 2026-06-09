@@ -170,12 +170,12 @@ function HandoverHistoryTable({
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1.5 text-gray-700">
-                        <span className="truncate max-w-[100px]" title={h.handedOverByName}>
-                          {h.handedOverByName}
+                        <span className="truncate max-w-[100px]" title={h.handedOverByWorkshopTechnicianName || h.handedOverByName}>
+                          {h.handedOverByWorkshopTechnicianName || h.handedOverByName}
                         </span>
                         <ArrowRight className="w-3.5 h-3.5 text-blue-500 shrink-0" />
-                        <span className="truncate max-w-[100px]" title={h.receivedByName}>
-                          {h.receivedByName}
+                        <span className="truncate max-w-[100px]" title={h.workshopTechnicianName || h.receivedByName}>
+                          {h.workshopTechnicianName || h.receivedByName}
                         </span>
                       </div>
                       <div className="mt-1">
@@ -289,9 +289,9 @@ function HandoverHistoryTable({
                 <div className="col-span-2 flex items-baseline gap-1.5 pt-1.5 border-t border-gray-200/50 mt-0.5">
                   <span className="text-gray-400 shrink-0">Alur:</span>
                   <div className="flex items-center gap-1 text-gray-700 font-medium">
-                    <span className="truncate max-w-[80px]" title={h.handedOverByName}>{h.handedOverByName}</span>
+                    <span className="truncate max-w-[80px]" title={h.handedOverByWorkshopTechnicianName || h.handedOverByName}>{h.handedOverByWorkshopTechnicianName || h.handedOverByName}</span>
                     <ArrowRight className="w-3 h-3 text-blue-500 shrink-0 mx-0.5" />
-                    <span className="truncate max-w-[80px]" title={h.receivedByName}>{h.receivedByName}</span>
+                    <span className="truncate max-w-[80px]" title={h.workshopTechnicianName || h.receivedByName}>{h.workshopTechnicianName || h.receivedByName}</span>
                   </div>
                 </div>
               </div>
@@ -647,12 +647,12 @@ export default function RadioHandoverPage() {
               <p className="text-gray-600">
                 Tiket {signRow.helpdeskTicketNumber ?? "—"} · SN {signRow.radioSerialNumber}
               </p>
-              <p className="text-amber-800 text-xs bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
-                Helpdesk sudah menyerahkan. Lengkapi tanda tangan sebagai penerima ({signRow.receivedByName}).
+              <p className="text-amber-950 text-sm bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
+                Helpdesk sudah menyerahkan. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.workshopTechnicianName || signRow.receivedByName}</span>.
               </p>
               <SignaturePadField
                 ref={sigTekRowRef}
-                label="TTD Penerima *"
+                label={`TTD Penerima (${signRow.workshopTechnicianName || signRow.receivedByName})`}
                 required
                 value={sigRowReceiver}
                 onChange={setSigRowReceiver}
@@ -727,11 +727,11 @@ export default function RadioHandoverPage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penyerah</p>
-                  <p className="mt-0.5 text-gray-900">{detail.handedOverByName}</p>
+                  <p className="mt-0.5 text-gray-900">{detail.handedOverByWorkshopTechnicianName || detail.handedOverByName}</p>
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penerima</p>
-                  <p className="mt-0.5 text-gray-900">{detail.receivedByName}</p>
+                  <p className="mt-0.5 text-gray-900">{detail.workshopTechnicianName || detail.receivedByName}</p>
                 </div>
               </div>
 
@@ -792,9 +792,9 @@ export default function RadioHandoverPage() {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
+                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByWorkshopTechnicianName || detail.handedOverByName} />
                 {detail.hasReceiverSignature ? (
-                  <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
+                  <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.workshopTechnicianName || detail.receivedByName} />
                 ) : currentUserId() === detail.receivedByUserId ? (
                   <div className="space-y-2 border border-amber-200 bg-amber-50/50 rounded-lg p-3">
                     <p className="text-amber-800 font-medium">Lengkapi TTD sebagai teknisi penerima</p>

@@ -189,10 +189,13 @@ export default function RadioRepairGroupedTable({
                     </div>
 
                     {/* Row 3: Detail Grid Box */}
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-                      <div><span className="text-gray-400">ID Radio:</span> <span className="font-mono">{j.radioMasterRadioId || "-"}</span></div>
-                      <div><span className="text-gray-400">Teknisi:</span> <span className="font-medium">{j.assignedTechnicianName || "-"}</span></div>
-                      <div className="col-span-2 flex items-baseline gap-1"><span className="text-gray-400 shrink-0">Kerusakan:</span> <span className="text-gray-800 line-clamp-1" title={j.damageDescription}>{j.damageDescription}</span></div>
+                      <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
+                        <div><span className="text-gray-400">ID Radio:</span> <span className="font-mono">{j.radioMasterRadioId || "-"}</span></div>
+                        <div><span className="text-gray-400">Teknisi:</span> <span className="font-medium">{j.assignedTechnicianName || "-"}</span></div>
+                        {j.workshopTechnicianName && (
+                          <div className="col-span-2"><span className="text-gray-400">Workshop:</span> <span className="font-medium text-violet-700">{j.workshopTechnicianName}</span></div>
+                        )}
+                        <div className="col-span-2 flex items-baseline gap-1"><span className="text-gray-400 shrink-0">Kerusakan:</span> <span className="text-gray-800 line-clamp-1" title={j.damageDescription}>{j.damageDescription}</span></div>
                       <div className="col-span-2 flex items-center gap-1.5 mt-0.5 pt-1.5 border-t border-gray-200/50">
                         <span className="text-gray-400">Durasi:</span>
                         <span className={`inline-block text-[10px] px-2 py-0.5 rounded border whitespace-nowrap font-medium ${workshopDurationBadgeClass(days)}`}>
@@ -505,7 +508,12 @@ function RadioRepairRow({
       <td className="px-3 py-2.5 max-w-[130px] truncate text-xs" title={j.damageDescription}>
         {j.damageDescription}
       </td>
-      <td className="px-3 py-2.5 text-xs">{j.assignedTechnicianName}</td>
+      <td className="px-3 py-2.5 text-xs">
+        {j.assignedTechnicianName}
+        {j.workshopTechnicianName && (
+          <div className="text-violet-700 mt-0.5">({j.workshopTechnicianName})</div>
+        )}
+      </td>
       <td className="px-3 py-2.5">
         <RadioRepairStatusBadge
           status={j.status}

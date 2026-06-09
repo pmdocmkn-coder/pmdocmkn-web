@@ -35,6 +35,10 @@ export interface RadioRepairJobList {
   status: RadioRepairJobStatus;
   assignedTechnicianUserId: number;
   assignedTechnicianName: string;
+  /** ID teknisi workshop yang sedang mengerjakan */
+  workshopTechnicianId?: number | null;
+  /** Nama teknisi workshop yang sedang mengerjakan */
+  workshopTechnicianName?: string | null;
   /** ID status custom jika job sedang di status custom */
   customStatusId?: number | null;
   /** Label status custom untuk ditampilkan di UI */

@@ -9,11 +9,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 type Props = {
   job: RadioRepairJobDetail;
   technicians: UserOption[];
+  workshopTechs: { id: number; name: string }[];
   saving: boolean;
   onSave: (payload: UpdateRadioRepairJobPayload) => void;
 };
 
-export default function RadioRepairJobEditForm({ job, technicians, saving, onSave }: Props) {
+export default function RadioRepairJobEditForm({ job, technicians, workshopTechs, saving, onSave }: Props) {
   const [serial, setSerial] = useState(job.radioSerialNumber);
   const [radioId, setRadioId] = useState<number | null>(job.radioId ?? null);
   const [lookup, setLookup] = useState<RadioLookup | null>(null);
@@ -23,6 +24,7 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
     batterySerialNumber: job.batterySerialNumber ?? "",
     damageDescription: job.damageDescription,
     assignedTechnicianUserId: job.assignedTechnicianUserId,
+    workshopTechnicianId: job.workshopTechnicianId,
     radioId: job.radioId ?? null,
     equipmentName: job.equipmentName ?? "",
     unitNumber: job.unitNumber ?? "",
@@ -40,6 +42,7 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
       batterySerialNumber: job.batterySerialNumber ?? "",
       damageDescription: job.damageDescription,
       assignedTechnicianUserId: job.assignedTechnicianUserId,
+      workshopTechnicianId: job.workshopTechnicianId,
       radioId: job.radioId ?? null,
       equipmentName: job.equipmentName ?? "",
       unitNumber: job.unitNumber ?? "",
@@ -198,6 +201,25 @@ export default function RadioRepairJobEditForm({ job, technicians, saving, onSav
               <SelectItem key={t.userId} value={t.userId.toString()}>
                 <span className="font-medium">{t.fullName}</span>{" "}
                 <span className="text-xs text-gray-500">(@{t.username})</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-1">
+        <label className="text-sm font-medium text-gray-700">Teknisi Pekerja (Workshop)</label>
+        <Select
+          value={form.workshopTechnicianId ? String(form.workshopTechnicianId) : ""}
+          onValueChange={(v) => setForm({ ...form, workshopTechnicianId: Number(v) })}
+        >
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+            <SelectValue placeholder="Pilih teknisi yang bekerja" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {workshopTechs.map((t) => (
+              <SelectItem key={t.id} value={t.id.toString()}>
+                <span className="font-medium">{t.name}</span>
               </SelectItem>
             ))}
           </SelectContent>

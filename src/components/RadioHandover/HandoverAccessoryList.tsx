@@ -8,7 +8,7 @@ const emptyRow = (): HandoverAccessoryItem => ({
   serialNumber: "",
 });
 
-const QUICK_ADD = ["Baterai", "Antenna", "Charger", "Speaker Mic", "Flexible Cable"];
+const QUICK_ADD = ["Baterai", "Antenna", "Charger", "Speaker Mic", "C/W Complete"];
 
 type Props = {
   items: HandoverAccessoryItem[];
