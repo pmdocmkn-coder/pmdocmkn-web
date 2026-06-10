@@ -40,6 +40,8 @@ type Props = {
   onPatchStatus: (status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onApproveMaterial: (resume: "InProgress" | "Monitoring") => void;
   onOpenWh: () => void;
+  onOpenApproveScrap?: () => void;
+  onCancelScrap?: () => void;
   onOpenPhotos?: (images: string[], index?: number) => void;
   onJobUpdated?: (job: RadioRepairJobDetail) => void;
 };
@@ -53,6 +55,8 @@ export default function RadioRepairJobDetailPanel({
   onPatchStatus,
   onApproveMaterial,
   onOpenWh,
+  onOpenApproveScrap,
+  onCancelScrap,
   onOpenPhotos,
   onJobUpdated,
 }: Props) {
@@ -402,6 +406,36 @@ export default function RadioRepairJobDetailPanel({
             >
               {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               Setujui → Monitoring
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canSupervise && (job.status === "ProcessScrap" || job.status === "Scrapped") && !job.isDeleted && (
+        <div className="p-3 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
+          <p className="font-medium text-orange-900">
+            {job.status === "Scrapped" ? "Radio Telah di Scrap" : "Persetujuan Radio Scrap (Supervisor)"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {job.status === "ProcessScrap" && (
+              <button
+                type="button"
+                disabled={patchingStatus}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm disabled:opacity-60 flex items-center gap-1.5"
+                onClick={onOpenApproveScrap}
+              >
+                {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Setujui Scrap
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={patchingStatus}
+              className="px-4 py-2 border border-orange-600 text-orange-800 rounded-lg text-sm hover:bg-orange-100 disabled:opacity-60 flex items-center gap-1.5"
+              onClick={onCancelScrap}
+            >
+              {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Batalkan Scrap
             </button>
           </div>
         </div>

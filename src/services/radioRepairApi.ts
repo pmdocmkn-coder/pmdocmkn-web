@@ -93,6 +93,12 @@ export const radioRepairApi = {
       .patch(`/api/radio-repair-jobs/${id}/approve-material`, { resumeStatus, note, workshopTechnicianId })
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
+  approveScrap: (id: number, payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) =>
+    api.patch(`/api/radio-repair-jobs/${id}/approve-scrap`, payload).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
+
+  cancelScrap: (id: number) =>
+    api.patch(`/api/radio-repair-jobs/${id}/cancel-scrap`).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
+
   softDelete: (id: number) => api.delete(`/api/radio-repair-jobs/${id}`),
 
   restore: (id: number) =>

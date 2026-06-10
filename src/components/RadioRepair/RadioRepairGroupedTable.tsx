@@ -1,4 +1,5 @@
 import { Fragment, useState, useRef, useEffect } from "react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse } from "lucide-react";
@@ -337,19 +338,23 @@ function MobileQuickActionDropdown({
   if (!hasActions) return null;
 
   return (
-    <div className="relative" ref={ref}>
+    <>
       <button
-        onClick={(e) => { e.stopPropagation(); setOpen(!open); }}
+        onClick={(e) => { e.stopPropagation(); setOpen(true); }}
         className="inline-flex items-center justify-center h-8 px-3 border border-violet-200 rounded-xl text-violet-700 bg-violet-50 text-xs font-semibold shrink-0"
       >
         Aksi <ChevronDown className="w-3 h-3 ml-1" />
       </button>
       
-      {open && (
-        <div className="absolute right-0 bottom-full mb-2 z-50 bg-white border border-gray-200 rounded-xl shadow-xl min-w-[180px] py-1 overflow-hidden">
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
+          <DialogHeader className="p-4 pb-2 text-left border-b border-gray-100">
+            <DialogTitle className="text-base font-bold text-gray-900">Aksi Pekerjaan</DialogTitle>
+          </DialogHeader>
+          <div className="py-2 max-h-[70vh] overflow-y-auto">
           {nextList.length > 0 && (
             <>
-              <p className="px-3 py-1.5 text-xs text-gray-400 border-b border-gray-100 bg-gray-50 font-medium">
+              <p className="px-4 py-1.5 text-xs text-gray-400 font-medium">
                 Status sistem:
               </p>
               {nextList.map((ns) => (
@@ -360,7 +365,7 @@ function MobileQuickActionDropdown({
                     setOpen(false);
                     onQuickStatus(job, ns, null);
                   }}
-                  className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+                  className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-colors"
                 >
                   {statusActionLabel(job.status, ns)}
                 </button>
@@ -375,7 +380,7 @@ function MobileQuickActionDropdown({
                 setOpen(false);
                 onQuickStatus(job, "InProgress", null);
               }}
-              className="w-full text-left px-3 py-2 text-xs font-medium text-amber-700 hover:bg-amber-50 transition-colors border-t border-gray-100"
+              className="w-full text-left px-4 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors border-t border-gray-100 mt-1"
             >
               Kembali ke Progress
             </button>
@@ -383,7 +388,7 @@ function MobileQuickActionDropdown({
 
           {canShowCustom && (
             <>
-              <p className="px-3 py-1.5 text-xs text-gray-400 border-y border-gray-100 mt-1 bg-gray-50 font-medium">
+              <p className="px-4 py-1.5 text-xs text-gray-400 border-t border-gray-100 mt-1 pt-3 font-medium">
                 Status tambahan:
               </p>
               {customStatuses
@@ -396,9 +401,9 @@ function MobileQuickActionDropdown({
                       setOpen(false);
                       onQuickStatus(job, "InProgress", cs.id);
                     }}
-                    className="w-full text-left px-3 py-2 text-xs text-gray-700 hover:bg-violet-50 transition-colors flex items-center gap-2"
+                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-violet-50 transition-colors flex items-center gap-2"
                   >
-                    <span className={`w-2 h-2 rounded-full ${cs.color}`} />
+                    <span className={`w-2.5 h-2.5 rounded-full ${cs.color}`} />
                     {cs.label}
                   </button>
                 ))}
@@ -412,9 +417,9 @@ function MobileQuickActionDropdown({
                 setOpen(false);
                 onQuickHandoverWh(job);
               }}
-              className="w-full text-left px-4 py-2 text-xs hover:bg-violet-50 text-violet-700 flex items-center font-medium border-t border-gray-100 mt-1 pt-1"
+              className="w-full text-left px-4 py-3 text-sm hover:bg-violet-50 text-violet-700 flex items-center font-medium border-t border-gray-100 mt-1"
             >
-              <Warehouse className="w-3.5 h-3.5 mr-1.5" />
+              <Warehouse className="w-4 h-4 mr-2" />
               Serah ke WH
             </button>
           )}
@@ -426,15 +431,16 @@ function MobileQuickActionDropdown({
                 setOpen(false);
                 onOpenBorrowRequest(job);
               }}
-              className="w-full text-left px-4 py-2 text-xs hover:bg-amber-50 text-amber-700 flex items-center font-medium border-t border-gray-100 mt-1 pt-1"
+              className="w-full text-left px-4 py-3 text-sm hover:bg-amber-50 text-amber-700 flex items-center font-medium border-t border-gray-100 mt-1"
             >
-              <Warehouse className="w-3.5 h-3.5 mr-1.5" />
+              <Warehouse className="w-4 h-4 mr-2" />
               Pinjam Part
             </button>
           )}
-        </div>
-      )}
-    </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
 

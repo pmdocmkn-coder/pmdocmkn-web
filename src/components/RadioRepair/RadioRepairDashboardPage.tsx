@@ -23,6 +23,7 @@ import RadioRepairJobEditForm from "./RadioRepairJobEditForm";
 import TechnicianToWarehouseForm from "../RadioHandover/TechnicianToWarehouseForm";
 import WorkshopTechnicianManager from "./WorkshopTechnicianManager";
 import ImageGalleryModal from "../common/ImageGalleryModal";
+import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -66,6 +67,7 @@ export default function RadioRepairDashboardPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [showWh, setShowWh] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [showScrapApproval, setShowScrapApproval] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
@@ -383,6 +385,39 @@ export default function RadioRepairDashboardPage() {
       patchStatus(action.jobId, action.status, action.customStatusId, techId);
     } else if (action.type === "approve" && action.resumeStatus) {
       approveMaterial(action.resumeStatus, techId);
+    }
+  };
+
+  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) => {
+    if (!detail) return;
+    setPatchingStatus(true);
+    try {
+      setDetail(await radioRepairApi.approveScrap(detail.id, payload));
+      setShowScrapApproval(false);
+      toast({ title: "Radio berhasil di-scrap" });
+      load();
+    } catch (err: unknown) {
+      toast({ title: "Gagal menyetujui scrap", description: apiMessage(err), variant: "destructive" });
+    } finally {
+      setPatchingStatus(false);
+    }
+  };
+
+  const handleCancelScrap = async () => {
+    if (!detail) return;
+    const msg = detail.status === "Scrapped" 
+      ? "Apakah Anda yakin ingin membatalkan status Scrap dan mengembalikan pekerjaan ke Progress?"
+      : "Apakah Anda yakin ingin membatalkan status Proses Scrap dan mengembalikan pekerjaan ke Progress?";
+    if (!window.confirm(msg)) return;
+    setPatchingStatus(true);
+    try {
+      setDetail(await radioRepairApi.cancelScrap(detail.id));
+      toast({ title: "Scrap dibatalkan" });
+      load();
+    } catch (err: unknown) {
+      toast({ title: "Gagal membatalkan scrap", description: apiMessage(err), variant: "destructive" });
+    } finally {
+      setPatchingStatus(false);
     }
   };
 
@@ -788,6 +823,8 @@ export default function RadioRepairDashboardPage() {
               onPatchStatus={(s, cid) => patchStatus(detail.id, s, cid)}
               onApproveMaterial={approveMaterial}
               onOpenWh={() => setShowWh(true)}
+              onOpenApproveScrap={() => setShowScrapApproval(true)}
+              onCancelScrap={handleCancelScrap}
               onOpenPhotos={openPhotos}
               onJobUpdated={(updated) => {
                 setDetail(updated);
@@ -861,6 +898,13 @@ export default function RadioRepairDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RadioScrapApprovalModal
+        open={showScrapApproval}
+        onClose={() => setShowScrapApproval(false)}
+        onApprove={handleApproveScrap}
+        loading={patchingStatus}
+      />
     </motion.div>
   );
 }

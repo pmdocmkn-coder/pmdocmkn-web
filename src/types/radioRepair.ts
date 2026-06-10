@@ -6,7 +6,9 @@ export type RadioRepairJobStatus =
   | "RepairCompleted"
   | "HandedToWarehouse"
   | "ReturnedToHelpdesk"
-  | "Cancelled";
+  | "Cancelled"
+  | "ProcessScrap"
+  | "Scrapped";
 
 export interface RadioRepairJobList {
   id: number;

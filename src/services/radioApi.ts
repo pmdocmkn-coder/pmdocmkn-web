@@ -191,6 +191,10 @@ export const radioApi = {
     return api.post<{ data: RadioDto; message: string }>(`/api/radios/${id}/scrap`, data);
   },
 
+  unscrapRadio: (id: number) => {
+    return api.post<{ data: RadioDto; message: string }>(`/api/radios/${id}/unscrap`);
+  },
+
   // Import endpoints
   importInternal: (file: File) => {
     const formData = new FormData();

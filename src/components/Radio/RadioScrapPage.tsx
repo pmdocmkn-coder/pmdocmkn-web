@@ -32,6 +32,7 @@ import {
   ChevronUp,
   RotateCcw,
   Package,
+  RefreshCcw,
 } from "lucide-react";
 import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
 import RadioHistoryModal from "./RadioHistoryModal";
@@ -197,7 +198,7 @@ export default function RadioScrapPage() {
     department: "",
     division: "",
     channel: "",
-    tanggal: "",
+    tanggal: undefined as string | undefined,
     fleet: "",
     radioId: "",
     mark: "",
@@ -255,7 +256,8 @@ export default function RadioScrapPage() {
     if (!selectedRadio) return;
     setFormError(null);
     try {
-      await radioApi.update(selectedRadio.id, formData);
+      const payload = { ...formData, tanggal: formData.tanggal || undefined };
+      await radioApi.update(selectedRadio.id, payload);
       toast({ title: "Berhasil", description: "Data scrap radio berhasil diperbarui" });
       setIsEditOpen(false);
       loadData();
@@ -273,6 +275,17 @@ export default function RadioScrapPage() {
       loadData();
     } catch {
       toast({ title: "Error", description: "Gagal menghapus data", variant: "destructive" });
+    }
+  };
+
+  const handleUnscrap = async (id: number) => {
+    if (!window.confirm("Yakin ingin membatalkan scrap radio ini? Radio akan kembali aktif ke Master Radio.")) return;
+    try {
+      await radioApi.unscrapRadio(id);
+      toast({ title: "Berhasil", description: "Radio batal scrap dan dikembalikan" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data?.message || "Gagal batal scrap", variant: "destructive" });
     }
   };
 
@@ -300,7 +313,7 @@ export default function RadioScrapPage() {
       department: radio.department || "",
       division: radio.division || "",
       channel: radio.channel || "",
-      tanggal: radio.tanggal ? radio.tanggal.split("T")[0] : "",
+      tanggal: radio.tanggal ? radio.tanggal.split("T")[0] : undefined,
       fleet: radio.fleet || "",
       radioId: radio.radioId || "",
       mark: radio.mark || "",
@@ -328,7 +341,7 @@ export default function RadioScrapPage() {
       department: "",
       division: "",
       channel: "",
-      tanggal: "",
+      tanggal: undefined,
       fleet: "",
       radioId: "",
       mark: "",
@@ -1243,6 +1256,12 @@ export default function RadioScrapPage() {
                                   Hapus
                                 </DropdownMenuItem>
                               )}
+                              {hasPermission("radio.scrap.update") && (
+                                <DropdownMenuItem onClick={() => handleUnscrap(item.id)}>
+                                  <RefreshCcw className="mr-2 h-4 w-4 text-orange-500" />
+                                  <span className="text-orange-600 font-medium">Batal Scrap</span>
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -1292,6 +1311,7 @@ export default function RadioScrapPage() {
               <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                 {hasPermission("radio.view") && <Button variant="ghost" size="sm" onClick={() => { setSelectedRadio(item); setIsHistoryOpen(true); }}><History className="h-4 w-4" /></Button>}
                 {hasPermission("radio.scrap.update") && <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}><Edit2 className="h-4 w-4" /></Button>}
+                {hasPermission("radio.scrap.update") && <Button variant="ghost" size="sm" onClick={() => handleUnscrap(item.id)} className="text-orange-600 hover:text-orange-700"><RefreshCcw className="h-4 w-4" /></Button>}
                 {hasPermission("radio.scrap.delete") && (
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
                 )}

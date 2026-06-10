@@ -13,11 +13,11 @@ export function allowedNextStatuses(from: RadioRepairJobStatus): RadioRepairJobS
     case "Received":
       return ["InProgress", "Monitoring", "WaitingMaterialApproval"];
     case "InProgress":
-      return ["Monitoring", "WaitingMaterialApproval", "RepairCompleted"];
+      return ["Monitoring", "WaitingMaterialApproval", "ProcessScrap", "RepairCompleted"];
     case "Monitoring":
       // Saat monitoring, hanya satu tombol: "Monitoring Selesai" (→ InProgress)
       // Setelah diklik dan status kembali ke InProgress, baru muncul tombol lain
-      return ["InProgress"];
+      return ["InProgress", "ProcessScrap"];
     case "WaitingMaterialApproval":
       return [];
     case "RepairCompleted":
@@ -54,6 +54,8 @@ export const STATUS_LABELS: Record<RadioRepairJobStatus, string> = {
   HandedToWarehouse: "Ke warehouse",
   ReturnedToHelpdesk: "Kembali HD",
   Cancelled: "Dibatalkan",
+  ProcessScrap: "Proses Scrap",
+  Scrapped: "Telah di-Scrap",
 };
 
 /** Gaya tombol aksi status — warna tegas agar teknisi mudah membedakan alur. */
@@ -66,6 +68,8 @@ export const STATUS_ACTION_BUTTON_CLASS: Partial<Record<RadioRepairJobStatus, st
     "bg-amber-500 text-white border-amber-500 hover:bg-amber-600 shadow-sm",
   RepairCompleted:
     "bg-emerald-600 text-white border-emerald-600 hover:bg-emerald-700 shadow-sm",
+  ProcessScrap:
+    "bg-orange-600 text-white border-orange-600 hover:bg-orange-700 shadow-sm",
 };
 
 /**
