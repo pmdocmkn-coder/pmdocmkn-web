@@ -45,6 +45,7 @@ import { DayPicker, type DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { id as localeId } from "react-day-picker/locale";
 import { Calendar } from "lucide-react";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
 const PAGE_SIZE = 15;
 
@@ -165,6 +166,8 @@ export default function RadioRepairDashboardPage() {
     return ax.response?.data?.message;
   };
 
+
+
   const load = async () => {
     setLoading(true);
     try {
@@ -208,17 +211,6 @@ export default function RadioRepairDashboardPage() {
     load();
   }, [page, search, filterStatus, filterTechnician, filterFromDate, filterToDate, showArchive]);
 
-  // Auto-refresh setiap 30 detik — sinkronisasi antar teknisi tanpa perlu reload manual
-  useEffect(() => {
-    const interval = setInterval(() => {
-      // Hanya refresh jika tidak sedang ada operasi aktif (patching/saving)
-      if (!patchingStatus && !savingEdit) {
-        load();
-      }
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [page, search, filterStatus, filterTechnician, filterFromDate, filterToDate, showArchive, patchingStatus, savingEdit]);
-
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
     repairJobCustomStatusApi.getAll().then((list) => setCustomStatuses(list.filter((s) => s.isActive))).catch(() => setCustomStatuses([]));
@@ -259,6 +251,14 @@ export default function RadioRepairDashboardPage() {
       setDetailLoading(false);
     }
   };
+
+  useLiveRefresh("RadioRepairJob", () => {
+    load();
+  });
+
+  useLiveRefresh("RadioHandover", () => {
+    load();
+  });
 
   const openEdit = async (job: RadioRepairJobList) => {
     try {
@@ -748,7 +748,7 @@ export default function RadioRepairDashboardPage() {
           onOpenPhoto={openRowPhoto}
           onOpenDetail={openDetail}
           onOpenEdit={openEdit}
-          onOpenBorrowRequest={(job) => navigate(`/warehouse-borrow/request?repairJobId=${job.id}`)}
+          onOpenBorrowRequest={(job) => navigate(`/warehouse/borrow-request?repairJobId=${job.id}`)}
           onSoftDelete={softDelete}
           onRestore={restore}
           onDeletePermanent={deletePermanent}
@@ -831,6 +831,10 @@ export default function RadioRepairDashboardPage() {
                 load();
               }}
               patchingStatus={patchingStatus}
+              onOpenBorrowRequest={() => {
+                setDetail(null);
+                navigate(`/warehouse/borrow-request?repairJobId=${detail.id}`);
+              }}
             />
           )}
         </DialogContent>

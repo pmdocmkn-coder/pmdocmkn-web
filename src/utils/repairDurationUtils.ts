@@ -1,16 +1,37 @@
-import { differenceInDays } from "date-fns";
+import { differenceInDays, differenceInHours } from "date-fns";
 
-export function getWorkshopDays(openedAt: string, closedAt?: string | null): number {
-  const start = new Date(openedAt);
-  const end = closedAt ? new Date(closedAt) : new Date();
-  return Math.max(0, differenceInDays(end, start));
+export function getWorkshopDays(openedAt: string, closedAt?: string | null, firstInProgressAt?: string | null, workshopCompletedAt?: string | null): { days: number, hours: number } {
+  // Jika radio belum pernah diprogres, hitung dari 0
+  if (!firstInProgressAt) return { days: 0, hours: 0 };
+
+  const start = new Date(firstInProgressAt.endsWith('Z') ? firstInProgressAt : firstInProgressAt + 'Z');
+  const end = workshopCompletedAt ? new Date(workshopCompletedAt.endsWith('Z') ? workshopCompletedAt : workshopCompletedAt + 'Z') : new Date();
+  
+  const totalHours = Math.max(0, differenceInHours(end, start));
+  const days = Math.floor(totalHours / 24);
+  const hours = totalHours % 24;
+
+  return { days, hours };
 }
 
-export function formatWorkshopDuration(openedAt: string, closedAt?: string | null): string {
-  const days = getWorkshopDays(openedAt, closedAt);
-  if (days === 0) return "Hari ini";
-  if (days === 1) return "1 hari";
-  return `${days} hari`;
+export function formatWorkshopDuration(openedAt: string, closedAt?: string | null, firstInProgressAt?: string | null, workshopCompletedAt?: string | null): string {
+  if (!firstInProgressAt) return "Belum diprogres";
+
+  const { days, hours } = getWorkshopDays(openedAt, closedAt, firstInProgressAt, workshopCompletedAt);
+  
+  if (days === 0) {
+    if (hours === 0) {
+      const start = new Date(firstInProgressAt.endsWith('Z') ? firstInProgressAt : firstInProgressAt + 'Z');
+      const end = workshopCompletedAt ? new Date(workshopCompletedAt.endsWith('Z') ? workshopCompletedAt : workshopCompletedAt + 'Z') : new Date();
+      const mins = Math.max(0, Math.floor((end.getTime() - start.getTime()) / 60000));
+      if (mins === 0) return "Baru mulai";
+      return `Baru mulai (${mins} menit)`;
+    }
+    return `Hari ini (${hours} jam)`;
+  }
+  
+  if (hours === 0) return `${days} hari`;
+  return `${days} hari (${hours} jam)`;
 }
 
 export function workshopDurationBadgeClass(days: number): string {

@@ -56,6 +56,7 @@ import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { id as localeId } from "react-day-picker/locale";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -113,7 +114,7 @@ function CategoryBadge({ category }: { category?: string }) {
   const cls = map[category ?? ""] ?? "bg-gray-100 text-gray-600 border-gray-200";
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold ${cls}`}>
-      {category || "-"}
+      {category === "Internal" ? "Radio KPC" : (category || "-")}
     </span>
   );
 }
@@ -125,6 +126,11 @@ export default function RadioScrapPage() {
   const { toast } = useToast();
 
   // ── Data State ──────────────────────────────────────────────────────────────
+  const [sortField, setSortField] = useState<keyof RadioDto>("id");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+
+
   const [data, setData] = useState<RadioDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
@@ -237,6 +243,10 @@ export default function RadioScrapPage() {
       setLoading(false);
     }
   };
+
+  useLiveRefresh("RadioUnit", () => {
+    loadData();
+  });
 
   // ── CRUD Handlers ───────────────────────────────────────────────────────────
   const handleCreate = async () => {
@@ -1019,7 +1029,7 @@ export default function RadioScrapPage() {
                     className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 text-gray-700"
                   >
                     <option value="">Semua Kategori</option>
-                    <option value="Internal">Internal</option>
+                    <option value="Internal">Radio KPC</option>
                     <option value="Contractor">Contractor</option>
                     <option value="Unit">Unit</option>
                     <option value="LegacyScrap">LegacyScrap</option>
@@ -1485,7 +1495,7 @@ export default function RadioScrapPage() {
             </div>
             {["Internal", "Contractor", "Unit", "LegacyScrap"].map((opt) => (
               <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterCategory === opt ? 'font-bold text-red-700 bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterCategory(opt); setPage(1); document.getElementById("mobile-dropdown-category")?.classList.add("hidden"); }}>
-                {opt} {filterCategory === opt && <Check className="w-4 h-4" />}
+                {opt === "Internal" ? "Radio KPC" : opt} {filterCategory === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
           </div>

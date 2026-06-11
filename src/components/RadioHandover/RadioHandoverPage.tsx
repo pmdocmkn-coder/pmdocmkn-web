@@ -34,6 +34,8 @@ import { canCreateHandoverHd } from "../../utils/handoverPermissions";
 import { isValidSignature } from "../../utils/signatureUtils";
 import { hasPermission } from "../../utils/permissionUtils";
 import { useToast } from "../../hooks/use-toast";
+
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { useRef } from "react";
 
 function handoverTypeLabel(t: string) {
@@ -76,6 +78,15 @@ function currentUserId(): number | null {
   }
 }
 
+function currentUserRole(): string | null {
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}");
+    return u.roleName ?? u.RoleName ?? null;
+  } catch {
+    return null;
+  }
+}
+
 type HandoverTableProps = {
   items: RadioHandoverList[];
   loading: boolean;
@@ -104,12 +115,14 @@ function HandoverHistoryTable({
   canDelete,
 }: HandoverTableProps) {
   const uid = currentUserId();
+  const role = currentUserRole();
 
-  const canTechnicianSign = (h: RadioHandoverList) =>
-    h.status === "PendingReceiverSignature" &&
-    h.handoverType === "HelpdeskToTechnician" &&
-    uid != null &&
-    h.receivedByUserId === uid;
+  const canTechnicianSign = (h: RadioHandoverList) => {
+    if (h.status !== "PendingReceiverSignature" || h.handoverType !== "HelpdeskToTechnician") return false;
+    if (uid != null && h.receivedByUserId === uid) return true;
+    if (role === "Teknisi WSK" || role === "Teknisi") return true;
+    return false;
+  };
 
   return (
     <>
@@ -391,6 +404,7 @@ export default function RadioHandoverPage() {
   const canDelete = hasPermission("radio.handover.delete");
   const isHd = canCreateHandoverHd();
 
+
   const load = useCallback(() => {
     setLoadingOutgoing(true);
 
@@ -404,6 +418,10 @@ export default function RadioHandoverPage() {
       .catch(() => setOutgoing([]))
       .finally(() => setLoadingOutgoing(false));
   }, []);
+
+  useLiveRefresh("RadioHandover", () => {
+    load();
+  });
 
   useEffect(() => {
     load();

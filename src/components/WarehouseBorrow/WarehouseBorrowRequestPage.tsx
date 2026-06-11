@@ -3,15 +3,17 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { warehousePartApi } from "../../services/warehousePartApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
+import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import type { RadioRepairJobDetail, RadioRepairJobList } from "../../types/radioRepair";
 import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
 import type { WarehouseBorrowItem } from "../../types/warehouseBorrow";
 import { useToast } from "../../hooks/use-toast";
 import { motion } from "framer-motion";
-import { PackageOpen, ArrowLeft, Wrench, AlertCircle, Search, Plus, Trash2 } from "lucide-react";
+import { PackageOpen, ArrowLeft, Wrench, AlertCircle, Search, Plus, Trash2, User } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
+import { FormMobileSelect } from "../Radio/FormMobileSelect";
 
 interface BorrowItemRow {
   key: number;
@@ -62,12 +64,27 @@ export default function WarehouseBorrowRequestPage() {
   const [jobDetail, setJobDetail] = useState<RadioRepairJobDetail | null>(null);
   const [loadingJob, setLoadingJob] = useState(!!jobId);
 
+  // Borrower name (dropdown teknisi)
+  const [borrowerName, setBorrowerName] = useState("");
+  const [technicians, setTechnicians] = useState<WorkshopTechnicianDto[]>([]);
+
+  // Load daftar teknisi workshop
+  useEffect(() => {
+    workshopTechnicianApi.getAllActive()
+      .then((res) => setTechnicians(res.data?.data ?? []))
+      .catch(() => setTechnicians([]));
+  }, []);
+
   // Load linked job detail
   useEffect(() => {
     if (jobId) {
       radioRepairApi
         .getById(Number(jobId), false)
-        .then((res) => setJobDetail(res))
+        .then((res) => {
+          setJobDetail(res);
+          setTicketSearch(res.helpdeskTicketNumber);
+          setTicketNumber(res.helpdeskTicketNumber);
+        })
         .catch(() => {
           toast({ title: "Gagal memuat data pekerjaan", variant: "destructive" });
         })
@@ -100,6 +117,10 @@ export default function WarehouseBorrowRequestPage() {
   useEffect(() => {
     if (!ticketSearch.trim()) {
       setJobSuggestions([]);
+      return;
+    }
+    // Prevent searching and popping up suggestions if it matches the already selected ticket
+    if (ticketNumber && ticketSearch === ticketNumber) {
       return;
     }
     const timer = setTimeout(async () => {
@@ -179,6 +200,7 @@ export default function WarehouseBorrowRequestPage() {
         relatedRepairJobId:
           selectedRepairJobId ?? (jobId ? Number(jobId) : undefined),
         ticketNumber: finalTicket,
+        borrowerName: borrowerName.trim() || undefined,
       });
       toast({ title: "Permintaan peminjaman berhasil dikirim" });
 
@@ -433,6 +455,25 @@ export default function WarehouseBorrowRequestPage() {
                   ))}
                 </ul>
               )}
+            </div>
+
+            {/* ── NAMA TEKNISI PEMINJAM (DROPDOWN) ── */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <User className="w-4 h-4 text-violet-500" />
+                Nama Teknisi Peminjam <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <FormMobileSelect
+                  value={borrowerName}
+                  onChange={setBorrowerName}
+                  options={technicians.map((t) => t.name)}
+                  placeholder="— Pilih teknisi —"
+                  label="Pilih Teknisi Peminjam"
+                  color="violet"
+                />
+              </div>
+              <p className="text-xs text-gray-400">Nama teknisi yang akan menggunakan part ini.</p>
             </div>
 
             {/* Purpose */}

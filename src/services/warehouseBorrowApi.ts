@@ -19,6 +19,7 @@ export const warehouseBorrowApi = {
     purpose?: string;
     relatedRepairJobId?: number;
     ticketNumber?: string;
+    borrowerName?: string;
   }) => api.post("/api/warehouse-part-borrows", body).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
   approve: (id: number, note?: string) =>

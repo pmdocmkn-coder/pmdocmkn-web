@@ -23,6 +23,7 @@ export interface WarehouseBorrowList {
   requestedAt: string;
   relatedJobNumber?: string | null;
   ticketNumber?: string | null;
+  borrowerName?: string | null;
 }
 
 export interface WarehouseBorrowDetail extends WarehouseBorrowList {

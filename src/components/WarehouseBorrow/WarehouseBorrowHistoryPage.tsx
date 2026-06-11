@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye } from "lucide-react";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
-import { userApi } from "../../services/api";
+import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import type { WarehouseBorrowList } from "../../types/warehouseBorrow";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -14,6 +14,7 @@ import { Textarea } from "../ui/textarea";
 import SignaturePadField from "../common/SignaturePadField";
 import WarehouseBorrowDetailModal from "./WarehouseBorrowDetailModal";
 import { useAuth } from "../../contexts/AuthContext";
+import { FormMobileSelect } from "../Radio/FormMobileSelect";
 
 export default function WarehouseBorrowHistoryPage() {
   const { toast } = useToast();
@@ -27,11 +28,13 @@ export default function WarehouseBorrowHistoryPage() {
   const [activeItem, setActiveItem] = useState<WarehouseBorrowList | null>(null);
   const [actionType, setActionType] = useState<"issue" | "return" | null>(null);
   
-  // Users list for dropdown
-  const [users, setUsers] = useState<{ id: number; name: string; username: string }[]>([]);
+  // Users list for dropdown (Technicians)
+  const [technicians, setTechnicians] = useState<WorkshopTechnicianDto[]>([]);
 
   useEffect(() => {
-    userApi.lookup().then(res => setUsers(res)).catch(console.error);
+    workshopTechnicianApi.getAllActive()
+      .then((res) => setTechnicians(res.data?.data ?? []))
+      .catch(console.error);
   }, []);
   
   // Return form state
@@ -75,7 +78,7 @@ export default function WarehouseBorrowHistoryPage() {
     setActionType("return");
     setReturnCondition("Good");
     setReturnNote("");
-    setReturnedByName(item.borrowedByName);
+    setReturnedByName(item.borrowerName || item.borrowedByName);
   };
 
   const closeDialog = () => {
@@ -167,6 +170,7 @@ export default function WarehouseBorrowHistoryPage() {
     return (
       b.borrowNumber.toLowerCase().includes(s) ||
       b.borrowedByName.toLowerCase().includes(s) ||
+      (b.borrowerName && b.borrowerName.toLowerCase().includes(s)) ||
       (b.relatedJobNumber && b.relatedJobNumber.toLowerCase().includes(s)) ||
       (b.ticketNumber && b.ticketNumber.toLowerCase().includes(s)) ||
       (b.items && b.items.some(
@@ -176,11 +180,6 @@ export default function WarehouseBorrowHistoryPage() {
       ))
     );
   });
-
-  const filteredUsers = users.filter((u) => 
-    u.name.toLowerCase().includes(returnedByName.toLowerCase()) || 
-    (u.username && u.username.toLowerCase().includes(returnedByName.toLowerCase()))
-  ).slice(0, 5);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -300,7 +299,7 @@ export default function WarehouseBorrowHistoryPage() {
 
             {/* Baris 3: Detail grid */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5">
-              <div><span className="text-gray-400">Teknisi:</span> {b.borrowedByName}</div>
+              <div><span className="text-gray-400">Teknisi:</span> {b.borrowerName || b.borrowedByName}</div>
               <div><span className="text-gray-400">Barang:</span> {b.items?.length ?? 0} item</div>
               {b.relatedJobNumber && (
                 <div className="col-span-2"><span className="text-gray-400">Job:</span> <span className="font-mono text-blue-700">{b.relatedJobNumber}</span></div>
@@ -407,9 +406,14 @@ export default function WarehouseBorrowHistoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
-                      <div className="flex items-center gap-2">
-                        <User className="w-3.5 h-3.5 text-gray-400" />
-                        <span className="font-medium">{b.borrowedByName}</span>
+                      <div className="flex flex-col">
+                        <div className="flex items-center gap-2">
+                          <User className="w-3.5 h-3.5 text-gray-400" />
+                          <span className="font-medium">{b.borrowerName || b.borrowedByName}</span>
+                        </div>
+                        {b.borrowerName && b.borrowerName !== b.borrowedByName && (
+                          <span className="text-[10px] text-gray-400 ml-5">via: {b.borrowedByName}</span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
@@ -502,7 +506,7 @@ export default function WarehouseBorrowHistoryPage() {
                 </div>
                 <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
                   <span className="text-gray-500">Teknisi Penerima</span>
-                  <span className="font-semibold">{activeItem.borrowedByName}</span>
+                  <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
                 </div>
                 <div className="pt-1">
                   {renderItemsList(activeItem)}
@@ -512,7 +516,7 @@ export default function WarehouseBorrowHistoryPage() {
               {/* Dual Signature */}
               <div className="space-y-4">
                 <SignaturePadField label="TTD Penyerah" required value={issuerSigned} onChange={setIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
-                <SignaturePadField label="TTD Penerima" required value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowedByName} />
+                <SignaturePadField label="TTD Penerima" required value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
               </div>
             </div>
           )}
@@ -551,8 +555,8 @@ export default function WarehouseBorrowHistoryPage() {
             <div className="space-y-5 my-2">
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
                 <div className="flex justify-between border-b border-gray-200 pb-2">
-                  <span className="text-gray-500">Dari Teknisi</span>
-                  <span className="font-semibold">{activeItem.borrowedByName}</span>
+                  <span className="text-gray-500">Peminjam Awal</span>
+                  <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
                 </div>
                 <div className="pt-1">
                   {renderItemsList(activeItem)}
@@ -563,45 +567,19 @@ export default function WarehouseBorrowHistoryPage() {
               <div className="space-y-2">
                 <label className="text-sm font-semibold text-gray-700">Dikembalikan Oleh</label>
                 <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <Input
-                    placeholder="Nama teknisi yang mengembalikan..."
+                  <FormMobileSelect
                     value={returnedByName}
-                    onChange={(e) => {
-                      setReturnedByName(e.target.value);
-                      setShowUserSuggestions(true);
-                    }}
-                    onFocus={() => setShowUserSuggestions(true)}
-                    onBlur={() => setTimeout(() => setShowUserSuggestions(false), 200)}
-                    className="pl-9 focus-visible:ring-emerald-500"
-                    autoComplete="off"
+                    onChange={setReturnedByName}
+                    options={technicians.map((t) => t.name)}
+                    placeholder="Nama teknisi yang mengembalikan..."
+                    label="Pilih Teknisi Pengembali"
+                    color="emerald"
                   />
-                  
-                  {showUserSuggestions && filteredUsers.length > 0 && (
-                    <ul className="absolute z-10 left-0 right-0 top-full mt-1 rounded-xl border border-gray-200 bg-white shadow-lg divide-y divide-gray-100 max-h-48 overflow-y-auto">
-                      {filteredUsers.map((u) => (
-                        <li key={u.id}>
-                          <button
-                            type="button"
-                            className="w-full text-left px-3 py-2 hover:bg-emerald-50 transition-colors"
-                            onMouseDown={(e) => e.preventDefault()}
-                            onClick={() => {
-                              setReturnedByName(u.name);
-                              setShowUserSuggestions(false);
-                            }}
-                          >
-                            <div className="text-sm font-semibold text-gray-800">{u.name}</div>
-                            {u.username && <div className="text-xs text-gray-500">@{u.username}</div>}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
                 </div>
                 
-                {returnedByName && returnedByName !== activeItem.borrowedByName && (
+                {returnedByName && returnedByName !== (activeItem.borrowerName || activeItem.borrowedByName) && (
                   <p className="text-xs text-amber-600 flex items-center gap-1">
-                    ⚠️ Berbeda dari peminjam asli ({activeItem.borrowedByName})
+                    ⚠️ Berbeda dari peminjam asli ({activeItem.borrowerName || activeItem.borrowedByName})
                   </p>
                 )}
               </div>
@@ -634,7 +612,7 @@ export default function WarehouseBorrowHistoryPage() {
                 {/* Return Dual Signature */}
                 <div className="space-y-4">
                   <SignaturePadField label="TTD Penyerah" required value={returnIssuerSigned} onChange={setReturnIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
-                  <SignaturePadField label="TTD Penerima" required value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={returnedByName || activeItem.borrowedByName} />
+                  <SignaturePadField label="TTD Penerima" required value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={returnedByName || activeItem.borrowerName || activeItem.borrowedByName} />
                 </div>
               </div>
             </div>
@@ -672,7 +650,7 @@ export default function WarehouseBorrowHistoryPage() {
           {deleteTarget && (
             <div className="bg-red-50 rounded-lg p-3 border border-red-100 mt-2">
               <p className="text-sm font-semibold text-gray-900">{deleteTarget.borrowNumber}</p>
-              <p className="text-xs text-gray-500">{deleteTarget.borrowedByName}</p>
+              <p className="text-xs text-gray-500">{deleteTarget.borrowerName || deleteTarget.borrowedByName}</p>
             </div>
           )}
           <DialogFooter className="mt-4 border-t border-gray-100 pt-4">

@@ -49,6 +49,8 @@ export interface RadioRepairJobList {
   customStatusColor?: string | null;
   openedAt: string;
   closedAt?: string | null;
+  firstInProgressAt?: string | null;
+  workshopCompletedAt?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
 }
