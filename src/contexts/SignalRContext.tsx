@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState, useCallback, use
 import * as signalR from '@microsoft/signalr';
 import { notificationApi } from '../services/notificationApi';
 import { NotificationItem } from '../types/notification';
+import { useAuth } from './AuthContext';
 
 interface SignalRContextValue {
   connection: signalR.HubConnection | null;
@@ -16,15 +17,20 @@ interface SignalRContextValue {
 const SignalRContext = createContext<SignalRContextValue | undefined>(undefined);
 
 export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth(); // ← listen ke perubahan user dari AuthContext
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isConnected, setIsConnected] = useState(false);
-  const connectionRef = useRef<signalR.HubConnection | null>(null);
+  const [connState, setConnState] = useState<{
+    connection: signalR.HubConnection | null;
+    isConnected: boolean;
+  }>({ connection: null, isConnected: false });
+
+  const connRef = useRef<signalR.HubConnection | null>(null);
 
   const fetchInitialData = useCallback(async () => {
     try {
       const token = localStorage.getItem('authToken');
-      if (!token) return; // Only fetch if logged in
+      if (!token) return;
       const [fetchedNotifications, count] = await Promise.all([
         notificationApi.getNotifications(),
         notificationApi.getUnreadCount()
@@ -32,63 +38,114 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setNotifications(fetchedNotifications);
       setUnreadCount(count);
     } catch (error) {
-      console.error('Failed to fetch initial notification data', error);
+      console.error('[SignalR] Failed to fetch initial data', error);
     }
   }, []);
 
   useEffect(() => {
+    // Hanya connect jika user sudah login (user object tidak null)
+    // Ini fix masalah: saat pertama login, token belum ada saat useEffect jalan
+    if (!user) {
+      // User logout — cleanup koneksi lama jika ada
+      if (connRef.current) {
+        console.log('[SignalR] User logged out, stopping connection...');
+        connRef.current.off('ReceiveNotification');
+        connRef.current.off('RefreshData');
+        connRef.current.stop();
+        connRef.current = null;
+        setConnState({ connection: null, isConnected: false });
+        setNotifications([]);
+        setUnreadCount(0);
+      }
+      return;
+    }
+
     const token = localStorage.getItem('authToken');
     if (!token) return;
 
+    // Kalau sudah ada koneksi aktif, tidak perlu buat ulang
+    if (connRef.current && connRef.current.state === signalR.HubConnectionState.Connected) {
+      console.log('[SignalR] Already connected, skipping reconnect');
+      return;
+    }
+
+    console.log('[SignalR] User logged in, starting connection for:', user.username);
     fetchInitialData();
 
     const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5116";
-    const connection = new signalR.HubConnectionBuilder()
+
+    const conn = new signalR.HubConnectionBuilder()
       .withUrl(`${baseURL}/hubs/notification`, {
-        accessTokenFactory: () => token
+        accessTokenFactory: () => {
+          const t = localStorage.getItem('authToken');
+          return t || '';
+        },
+        transport: signalR.HttpTransportType.WebSockets | signalR.HttpTransportType.LongPolling,
+        withCredentials: false,
       })
-      .withAutomaticReconnect()
+      .withAutomaticReconnect([0, 1000, 2000, 5000, 10000, 30000])
+      .configureLogging(signalR.LogLevel.Information)
       .build();
 
-    connectionRef.current = connection;
+    connRef.current = conn;
 
-    connection.on('ReceiveNotification', (notification: NotificationItem) => {
-      setNotifications(prev => [notification, ...prev]);
+    conn.on('ReceiveNotification', (notification: NotificationItem) => {
+      console.log('[SignalR] ReceiveNotification:', notification.title);
+      setNotifications(prev => {
+        if (prev.some(n => n.id === notification.id)) return prev;
+        return [notification, ...prev];
+      });
       setUnreadCount(prev => prev + 1);
+    });
+
+    conn.on('RefreshData', (entityName: string) => {
+      console.log('[SignalR] RefreshData received at context level:', entityName);
     });
 
     const startConnection = async () => {
       try {
-        await connection.start();
-        setIsConnected(true);
-        console.log('SignalR connected globally');
+        console.log('[SignalR] Attempting to connect to:', `${baseURL}/hubs/notification`);
+        await conn.start();
+        setConnState({ connection: conn, isConnected: true });
+        console.log('[SignalR] ✅ Connected! ConnectionId:', conn.connectionId);
       } catch (err) {
-        console.error('SignalR connection error: ', err);
+        console.error('[SignalR] ❌ Connection error:', err);
+        setConnState({ connection: null, isConnected: false });
+        setTimeout(() => startConnection(), 5000);
       }
     };
 
     startConnection();
 
-    connection.onreconnected(() => {
-      setIsConnected(true);
-      fetchInitialData(); 
+    conn.onreconnecting((err) => {
+      console.warn('[SignalR] Reconnecting...', err);
+      setConnState(prev => ({ ...prev, isConnected: false }));
     });
 
-    connection.onclose(() => {
-      setIsConnected(false);
+    conn.onreconnected((connId) => {
+      console.log('[SignalR] ✅ Reconnected! ConnectionId:', connId);
+      setConnState({ connection: conn, isConnected: true });
+      fetchInitialData();
+    });
+
+    conn.onclose((err) => {
+      console.warn('[SignalR] Connection closed.', err);
+      setConnState({ connection: null, isConnected: false });
     });
 
     return () => {
-      connection.off('ReceiveNotification');
-      connection.stop();
-      connectionRef.current = null;
+      conn.off('ReceiveNotification');
+      conn.off('RefreshData');
+      conn.stop();
+      connRef.current = null;
+      setConnState({ connection: null, isConnected: false });
     };
-  }, [fetchInitialData]);
+  }, [user, fetchInitialData]); // ← re-run saat user berubah (login/logout)
 
   const markAsRead = async (id: number) => {
     try {
       await notificationApi.markAsRead(id);
-      setNotifications(prev => 
+      setNotifications(prev =>
         prev.map(n => n.id === id ? { ...n, isRead: true } : n)
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
@@ -109,8 +166,8 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   return (
     <SignalRContext.Provider value={{
-      connection: connectionRef.current,
-      isConnected,
+      connection: connState.connection,
+      isConnected: connState.isConnected,
       notifications,
       unreadCount,
       markAsRead,

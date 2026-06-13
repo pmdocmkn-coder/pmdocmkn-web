@@ -83,23 +83,60 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
               {/* Header Info */}
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 bg-gray-50 rounded-xl p-4 border border-gray-100">
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><User className="w-3.5 h-3.5"/> Teknisi</span>
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><User className="w-3.5 h-3.5"/> Peminjam</span>
                   <p className="font-semibold text-gray-900">{data.borrowerName || data.borrowedByName}</p>
                   {data.borrowerName && data.borrowerName !== data.borrowedByName && (
                     <p className="text-[10px] text-gray-500">via akun: {data.borrowedByName}</p>
                   )}
                 </div>
                 <div className="space-y-1">
-                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><Calendar className="w-3.5 h-3.5"/> Tanggal</span>
+                  <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><Calendar className="w-3.5 h-3.5"/> Tanggal Diajukan</span>
                   <p className="text-sm font-semibold text-gray-800">
                     {format(new Date(data.requestedAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
                   </p>
                 </div>
                 <div className="space-y-1">
                   <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1"><FileText className="w-3.5 h-3.5"/> No. Tiket</span>
-                  <p className="text-sm font-semibold text-indigo-600">{data.ticketNumber || "—"}</p>
+                  <p className="text-sm font-semibold text-indigo-600">{data.ticketNumber || data.relatedJobNumber || "—"}</p>
                 </div>
-                <div className="flex items-center gap-3">
+
+                {/* Dipinjam sejak + durasi — hanya tampil jika sudah Issued atau Returned */}
+                {data.issuedAt && (
+                  <div className="col-span-2 md:col-span-3 border-t border-gray-200 pt-3 mt-1 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1">
+                    <span className="text-xs font-medium text-gray-400 uppercase tracking-wider flex items-center gap-1">
+                      <Calendar className="w-3.5 h-3.5"/> Dipinjam sejak
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold text-gray-800">
+                        {format(new Date(data.issuedAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
+                      </span>
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                        data.status === "Returned"
+                          ? "bg-emerald-100 text-emerald-700"
+                          : "bg-amber-100 text-amber-700"
+                      }`}>
+                        {(() => {
+                          const from = new Date(data.issuedAt);
+                          const until = data.returnedAt ? new Date(data.returnedAt) : new Date();
+                          const diffMs = until.getTime() - from.getTime();
+                          const diffH = Math.floor(diffMs / 3600000);
+                          const diffD = Math.floor(diffH / 24);
+                          const remH = diffH % 24;
+                          if (data.status === "Returned") {
+                            if (diffD > 0) return `Dipinjam ${diffD} hari${remH > 0 ? ` ${remH} jam` : ""}`;
+                            return `Dipinjam ${diffH} jam`;
+                          }
+                          if (diffD > 0) return `${diffD} hari${remH > 0 ? ` ${remH} jam` : ""} yang lalu`;
+                          if (diffH > 0) return `${diffH} jam yang lalu`;
+                          const diffMin = Math.floor(diffMs / 60000);
+                          return `${diffMin} menit yang lalu`;
+                        })()}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="col-span-2 md:col-span-3 border-t border-gray-200 pt-3 mt-1 flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-violet-50 flex items-center justify-center shrink-0">
                     <User className="w-5 h-5 text-violet-600" />
                   </div>

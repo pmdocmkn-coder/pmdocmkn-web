@@ -60,7 +60,7 @@ const Layout: React.FC<LayoutProps> = ({
 
   // Notification state
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
-  const { notifications, unreadCount, markAsRead, markAllAsRead } = useSignalR();
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isConnected } = useSignalR();
 
   // Filter items based on query
   const filteredSearch = searchableItems.filter(item =>
@@ -146,13 +146,22 @@ const Layout: React.FC<LayoutProps> = ({
               <button 
                 className="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-50"
                 onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                title={isConnected ? "Notifikasi (Live)" : "Notifikasi (Offline - tidak ada koneksi live)"}
               >
                 <Bell className="w-5 h-5" />
+                {/* Unread count badge */}
                 {unreadCount > 0 && (
                   <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b324d7] rounded-full border-2 border-white text-[9px] font-bold text-white flex items-center justify-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
+                {/* SignalR connection status dot — bottom left of bell */}
+                <span
+                  className={`absolute bottom-1 left-1.5 w-2 h-2 rounded-full border border-white ${
+                    isConnected ? 'bg-emerald-500' : 'bg-gray-400'
+                  }`}
+                  title={isConnected ? 'Live connected' : 'Offline'}
+                />
               </button>
               
               {isNotificationOpen && (

@@ -1,9 +1,10 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye } from "lucide-react";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
+import { api } from "../../services/api";
 import type { WarehouseBorrowList } from "../../types/warehouseBorrow";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
@@ -15,6 +16,14 @@ import SignaturePadField from "../common/SignaturePadField";
 import WarehouseBorrowDetailModal from "./WarehouseBorrowDetailModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { FormMobileSelect } from "../Radio/FormMobileSelect";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+
+interface UserLookupItem {
+  id: number;
+  name: string;
+  username: string;
+  roleName?: string | null;
+}
 
 export default function WarehouseBorrowHistoryPage() {
   const { toast } = useToast();
@@ -28,12 +37,31 @@ export default function WarehouseBorrowHistoryPage() {
   const [activeItem, setActiveItem] = useState<WarehouseBorrowList | null>(null);
   const [actionType, setActionType] = useState<"issue" | "return" | null>(null);
   
-  // Users list for dropdown (Technicians)
+  // Semua user terdaftar (dropdown utama)
+  const [allUsers, setAllUsers] = useState<UserLookupItem[]>([]);
+  // Teknisi workshop (dropdown ke-2 jika pilih Teknisi WSK)
   const [technicians, setTechnicians] = useState<WorkshopTechnicianDto[]>([]);
+  // Simpan object user yang dipilih agar bisa akses roleName langsung
+  const [selectedReturnerUser, setSelectedReturnerUser] = useState<UserLookupItem | null>(null);
 
+  // Load kedua data sekaligus
   useEffect(() => {
+    api.get<{ data: UserLookupItem[] }>("/api/users/lookup")
+      .then((res) => {
+        const users = res.data?.data ?? [];
+        console.log('📥 All Users loaded:', users.length, 'users');
+        console.log('👥 Users with "Teknisi" or "Workshop" in role:', 
+          users.filter(u => u.roleName?.toLowerCase().includes('teknisi') || u.roleName?.toLowerCase().includes('workshop'))
+        );
+        setAllUsers(users);
+      })
+      .catch(console.error);
     workshopTechnicianApi.getAllActive()
-      .then((res) => setTechnicians(res.data?.data ?? []))
+      .then((res) => {
+        const techs = res.data?.data ?? [];
+        console.log('🔧 Workshop Technicians loaded:', techs.length, 'technicians');
+        setTechnicians(techs);
+      })
       .catch(console.error);
   }, []);
   
@@ -41,8 +69,48 @@ export default function WarehouseBorrowHistoryPage() {
   const [returnCondition, setReturnCondition] = useState("Good");
   const [returnNote, setReturnNote] = useState("");
   const [returnedByName, setReturnedByName] = useState("");
-  const [showUserSuggestions, setShowUserSuggestions] = useState(false);
+  const [workshopTechName, setWorkshopTechName] = useState("");
   const [submitting, setSubmitting] = useState(false);
+
+  // Deteksi apakah user yang dipilih adalah Teknisi WSK — HARUS DEKLARASI SEBELUM useEffect
+  const WORKSHOP_ROLE = "teknisi wsk";
+  const selectedReturnerIsWorkshop =
+    (selectedReturnerUser?.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE;
+
+  // Auto-detect user yang dipilih dari returnedByName (fallback jika FormMobileSelect tidak trigger onChange dengan object)
+  useEffect(() => {
+    if (returnedByName && allUsers.length > 0) {
+      const found = allUsers.find(u => u.name === returnedByName);
+      if (found) {
+        console.log('🔍 Auto-detect returner:', { name: found.name, roleName: found.roleName, id: found.id });
+        // Hanya update jika berbeda (bandingkan by id untuk avoid loop)
+        if (!selectedReturnerUser || selectedReturnerUser.id !== found.id) {
+          setSelectedReturnerUser(found);
+        }
+      }
+    } else if (!returnedByName) {
+      // Reset jika returnedByName dikosongkan
+      setSelectedReturnerUser(null);
+    }
+  }, [returnedByName, allUsers]);
+
+  // Debug: log perubahan selectedReturnerUser dan status workshop
+  useEffect(() => {
+    console.log('═══════════════════════════════════════');
+    console.log('📝 returnedByName:', returnedByName);
+    console.log('👤 selectedReturnerUser:', selectedReturnerUser);
+    console.log('🏭 selectedReturnerIsWorkshop:', selectedReturnerIsWorkshop);
+    if (selectedReturnerUser) {
+      console.log('📋 Role Details:', {
+        roleName: selectedReturnerUser.roleName,
+        lowercase: (selectedReturnerUser.roleName ?? "").toLowerCase().trim(),
+        expectedRole: WORKSHOP_ROLE,
+        matches: (selectedReturnerUser.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE
+      });
+    }
+    console.log('✅ Should show Step 2?', returnedByName && selectedReturnerIsWorkshop);
+    console.log('═══════════════════════════════════════');
+  }, [selectedReturnerUser, selectedReturnerIsWorkshop, returnedByName]);
 
   // Signature state
   const [issuerSigned, setIssuerSigned] = useState<string | null>(null);
@@ -68,6 +136,11 @@ export default function WarehouseBorrowHistoryPage() {
     loadData();
   }, []);
 
+  // Live refresh saat ada perubahan data warehouse borrow dari user lain
+  useLiveRefresh("WarehouseBorrow", () => {
+    loadData();
+  });
+
   const openIssue = (item: WarehouseBorrowList) => {
     setActiveItem(item);
     setActionType("issue");
@@ -79,6 +152,8 @@ export default function WarehouseBorrowHistoryPage() {
     setReturnCondition("Good");
     setReturnNote("");
     setReturnedByName(item.borrowerName || item.borrowedByName);
+    setWorkshopTechName("");
+    setSelectedReturnerUser(null); // reset pilihan user
   };
 
   const closeDialog = () => {
@@ -88,6 +163,8 @@ export default function WarehouseBorrowHistoryPage() {
     setReceiverSigned(null);
     setReturnIssuerSigned(null);
     setReturnReceiverSigned(null);
+    setSelectedReturnerUser(null);
+    setWorkshopTechName("");
   };
 
   const handleIssue = async () => {
@@ -125,7 +202,8 @@ export default function WarehouseBorrowHistoryPage() {
         returnNote,
         returnIssuerSignatureBase64: returnIssuerSigned ?? undefined,
         returnReceiverSignatureBase64: returnReceiverSigned ?? undefined,
-        returnedByName: returnedByName.trim() || undefined,
+        // Jika pemilih adalah Teknisi WSK dan ada nama spesifik → pakai nama teknisi
+        returnedByName: (selectedReturnerIsWorkshop && workshopTechName ? workshopTechName : returnedByName.trim()) || undefined,
       });
       toast({ title: "Berhasil", description: "Pengembalian part berhasil dicatat." });
       closeDialog();
@@ -239,7 +317,7 @@ export default function WarehouseBorrowHistoryPage() {
         <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
           <Input 
-            placeholder="Cari transaksi, part, atau teknisi..." 
+            placeholder="Cari transaksi, part, atau peminjam..." 
             className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-violet-50 text-gray-900 placeholder-violet-400 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -262,7 +340,7 @@ export default function WarehouseBorrowHistoryPage() {
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <Input 
-            placeholder="Cari transaksi, part, atau teknisi..." 
+            placeholder="Cari transaksi, part, atau peminjam..." 
             className="pl-9 h-10 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -299,7 +377,7 @@ export default function WarehouseBorrowHistoryPage() {
 
             {/* Baris 3: Detail grid */}
             <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5">
-              <div><span className="text-gray-400">Teknisi:</span> {b.borrowerName || b.borrowedByName}</div>
+              <div><span className="text-gray-400">Peminjam:</span> {b.borrowerName || b.borrowedByName}</div>
               <div><span className="text-gray-400">Barang:</span> {b.items?.length ?? 0} item</div>
               {b.relatedJobNumber && (
                 <div className="col-span-2"><span className="text-gray-400">Job:</span> <span className="font-mono text-blue-700">{b.relatedJobNumber}</span></div>
@@ -359,7 +437,7 @@ export default function WarehouseBorrowHistoryPage() {
                 <th className="px-4 py-3.5 whitespace-nowrap">No Transaksi</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Barang Dipinjam</th>
                 <th className="px-4 py-3.5 text-center whitespace-nowrap">Jml</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Teknisi</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Peminjam</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Terkait Pekerjaan</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Tanggal</th>
@@ -489,7 +567,7 @@ export default function WarehouseBorrowHistoryPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <PenTool className="w-5 h-5 text-indigo-600" />
-              Penyerahan Part ke Teknisi
+              Penyerahan Part ke Penerima
             </DialogTitle>
             <DialogDescription>
               Konfirmasi penyerahan dan tanda tangan kedua belah pihak.
@@ -505,7 +583,7 @@ export default function WarehouseBorrowHistoryPage() {
                   <span className="font-mono font-semibold">{activeItem.borrowNumber}</span>
                 </div>
                 <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
-                  <span className="text-gray-500">Teknisi Penerima</span>
+                  <span className="text-gray-500">Penerima</span>
                   <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
                 </div>
                 <div className="pt-1">
@@ -547,37 +625,133 @@ export default function WarehouseBorrowHistoryPage() {
               Terima Pengembalian Part
             </DialogTitle>
             <DialogDescription>
-              Catat penerimaan pengembalian part dari teknisi kembali ke warehouse.
+              Catat penerimaan pengembalian part dari peminjam kembali ke warehouse.
             </DialogDescription>
           </DialogHeader>
           
           {activeItem && (
             <div className="space-y-5 my-2">
+              {/* ── Info Peminjaman ── */}
               <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
+                {/* No. Transaksi */}
                 <div className="flex justify-between border-b border-gray-200 pb-2">
+                  <span className="text-gray-500">No. Transaksi</span>
+                  <span className="font-mono font-semibold text-gray-700">{activeItem.borrowNumber}</span>
+                </div>
+
+                {/* Peminjam */}
+                <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
                   <span className="text-gray-500">Peminjam Awal</span>
                   <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
                 </div>
-                <div className="pt-1">
+
+                {/* No. Tiket / No. Job */}
+                {(activeItem.ticketNumber || activeItem.relatedJobNumber) && (
+                  <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
+                    <span className="text-gray-500">
+                      {activeItem.relatedJobNumber ? "No. Job Terkait" : "No. Tiket"}
+                    </span>
+                    <span className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
+                      {activeItem.relatedJobNumber || activeItem.ticketNumber}
+                    </span>
+                  </div>
+                )}
+
+                {/* Keperluan */}
+                {activeItem.purpose && (
+                  <div className="border-b border-gray-200 pb-2 pt-1">
+                    <span className="text-gray-500 block mb-0.5">Keperluan</span>
+                    <span className="text-gray-700 italic">"{activeItem.purpose}"</span>
+                  </div>
+                )}
+
+                {/* Durasi Peminjaman */}
+                <div className="flex justify-between pt-1">
+                  <span className="text-gray-500">Dipinjam sejak</span>
+                  <div className="text-right">
+                    <div className="font-medium text-gray-700">
+                      {format(new Date(activeItem.issuedAt ?? activeItem.requestedAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
+                    </div>
+                    <div className="text-xs font-bold text-amber-600 mt-0.5">
+                      {(() => {
+                        const from = new Date(activeItem.issuedAt ?? activeItem.requestedAt);
+                        const now = new Date();
+                        const diffMs = now.getTime() - from.getTime();
+                        const diffH = Math.floor(diffMs / 3600000);
+                        const diffD = Math.floor(diffH / 24);
+                        const remH = diffH % 24;
+                        if (diffD > 0) return `${diffD} hari ${remH > 0 ? `${remH} jam` : ""} yang lalu`;
+                        if (diffH > 0) return `${diffH} jam yang lalu`;
+                        const diffMin = Math.floor(diffMs / 60000);
+                        return `${diffMin} menit yang lalu`;
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Daftar Barang */}
+                <div className="border-t border-gray-200 pt-3 mt-1">
                   {renderItemsList(activeItem)}
                 </div>
               </div>
 
               {/* Nama Pengembali */}
-              <div className="space-y-2">
+              <div className="space-y-3">
                 <label className="text-sm font-semibold text-gray-700">Dikembalikan Oleh</label>
-                <div className="relative">
-                  <FormMobileSelect
-                    value={returnedByName}
-                    onChange={setReturnedByName}
-                    options={technicians.map((t) => t.name)}
-                    placeholder="Nama teknisi yang mengembalikan..."
-                    label="Pilih Teknisi Pengembali"
-                    color="emerald"
-                  />
-                </div>
-                
-                {returnedByName && returnedByName !== (activeItem.borrowerName || activeItem.borrowedByName) && (
+
+                {/* Step 1: Pilih dari semua user terdaftar */}
+                <FormMobileSelect
+                  value={returnedByName}
+                  onChange={(val) => {
+                    setReturnedByName(val);
+                    setWorkshopTechName(""); // reset step 2
+                    // Simpan object user yang dipilih agar roleName bisa diakses langsung
+                    const found = allUsers.find(u => u.name === val) ?? null;
+                    setSelectedReturnerUser(found);
+                  }}
+                  options={allUsers.map((u) => u.name)}
+                  placeholder="Pilih atau ketik nama..."
+                  label="Pilih Pengembali"
+                  color="emerald"
+                />
+
+                {/* Step 2: Jika user yang dipilih adalah Teknisi WSK → pilih nama teknisi spesifik */}
+                {returnedByName && selectedReturnerIsWorkshop && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                      <p className="text-xs font-semibold text-emerald-700">
+                        <span className="font-bold">{returnedByName}</span> adalah Teknisi Workshop.
+                        Pilih nama teknisi spesifik:
+                      </p>
+                    </div>
+                    <FormMobileSelect
+                      value={workshopTechName}
+                      onChange={setWorkshopTechName}
+                      options={
+                        // Filter: hanya teknisi yang terkait dengan user ini (jika ada)
+                        // Jika user memiliki relasi teknisi spesifik (userId match) → tampilkan hanya itu
+                        // Jika tidak ada relasi → tampilkan semua
+                        (() => {
+                          const linkedTechs = technicians.filter(t => t.userId === selectedReturnerUser?.id);
+                          return linkedTechs.length > 0 
+                            ? linkedTechs.map(t => t.name)
+                            : technicians.map(t => t.name); // fallback: tampilkan semua jika tidak ada relasi
+                        })()
+                      }
+                      placeholder="— Pilih nama teknisi —"
+                      label="Pilih Nama Teknisi"
+                      color="emerald"
+                    />
+                    {workshopTechName && (
+                      <p className="text-xs text-emerald-600 flex items-center gap-1">
+                        ✓ Dikembalikan oleh: <strong>{workshopTechName}</strong>
+                      </p>
+                    )}
+                  </div>
+                )}
+
+                {returnedByName && activeItem && returnedByName !== (activeItem.borrowerName || activeItem.borrowedByName) && (
                   <p className="text-xs text-amber-600 flex items-center gap-1">
                     ⚠️ Berbeda dari peminjam asli ({activeItem.borrowerName || activeItem.borrowedByName})
                   </p>

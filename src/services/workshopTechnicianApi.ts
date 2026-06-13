@@ -6,16 +6,19 @@ export interface WorkshopTechnicianDto {
   isActive: boolean;
   createdAt: string;
   updatedAt?: string;
+  userId?: number | null; // Relasi ke User
 }
 
 export interface CreateWorkshopTechnicianDto {
   name: string;
   isActive: boolean;
+  userId?: number | null;
 }
 
 export interface UpdateWorkshopTechnicianDto {
   name: string;
   isActive: boolean;
+  userId?: number | null;
 }
 
 export const workshopTechnicianApi = {

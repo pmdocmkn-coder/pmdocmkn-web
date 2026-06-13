@@ -1,31 +1,50 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useSignalRContext } from '../contexts/SignalRContext';
 
 /**
- * Hook to automatically listen for backend data refresh events via SignalR.
- * @param entityName The name of the entity to listen for (e.g., "RadioRepairJob", "RadioUnit"). If null, listens to all refresh events.
- * @param onRefresh Callback to execute when a refresh event is received.
+ * Hook untuk listen event RefreshData dari backend via SignalR.
+ * @param entityName Entity yang ingin didengarkan (misal "RadioRepairJob"). Null = semua entity.
+ * @param onRefresh Callback saat event diterima.
  */
 export const useLiveRefresh = (entityName: string | null, onRefresh: () => void) => {
   const { connection, isConnected } = useSignalRContext();
 
+  // Simpan callback terbaru di ref agar tidak perlu re-register listener saat callback berubah
+  const onRefreshRef = useRef(onRefresh);
+  useEffect(() => {
+    onRefreshRef.current = onRefresh;
+  });
+
+  // Buat handleRefresh yang stabil dengan useCallback + ref
+  // Penting: referensi yang SAMA dipakai untuk .on() dan .off() agar listener bisa dihapus dengan benar
+  const handleRefreshRef = useRef<(receivedEntityName: string) => void>(() => {});
+
+  const stableHandler = useCallback((receivedEntityName: string) => {
+    if (!entityName || receivedEntityName === entityName) {
+      console.log(`[LiveRefresh] Triggered for entity: ${receivedEntityName}`);
+      onRefreshRef.current();
+    }
+  }, [entityName]); // hanya re-buat jika entityName berubah
+
+  // Simpan handler stabil di ref agar bisa dipakai untuk cleanup
+  useEffect(() => {
+    handleRefreshRef.current = stableHandler;
+  }, [stableHandler]);
+
   useEffect(() => {
     if (!connection || !isConnected) return;
 
-    const handleRefresh = (receivedEntityName: string) => {
-      // If no entityName specified, trigger on any refresh.
-      // Otherwise, only trigger if it matches exactly.
-      if (!entityName || receivedEntityName === entityName) {
-        console.log(`[LiveRefresh] Triggered for entity: ${receivedEntityName}`);
-        onRefresh();
-      }
+    const handler = (receivedEntityName: string) => {
+      handleRefreshRef.current(receivedEntityName);
     };
 
-    // Listen to generic "RefreshData" event
-    connection.on('RefreshData', handleRefresh);
+    connection.on('RefreshData', handler);
+    console.log(`[LiveRefresh] Registered listener for: ${entityName ?? 'ALL'}`);
 
     return () => {
-      connection.off('RefreshData', handleRefresh);
+      connection.off('RefreshData', handler);
+      console.log(`[LiveRefresh] Unregistered listener for: ${entityName ?? 'ALL'}`);
     };
-  }, [connection, isConnected, entityName, onRefresh]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [connection, isConnected, entityName]);
 };
