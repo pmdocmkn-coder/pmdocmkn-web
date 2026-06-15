@@ -17,6 +17,7 @@ import MultiPhotoUpload from "./MultiPhotoUpload";
 import HandoverWizardTagCarousel from "./HandoverWizardTagCarousel";
 import { defaultOriginFrom, mergedLines } from "../../utils/handoverLineTagUtils";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { workshopTechnicianApi, WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 
 type Props = {
   onSuccess: () => void;
@@ -58,6 +59,8 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
   const [damage, setDamage] = useState("");
   const [greenFields, setGreenFields] = useState<GreenTagFields>({ ...EMPTY_GREEN_TAG });
   const [techId, setTechId] = useState("");
+  const [workshopTechId, setWorkshopTechId] = useState("");
+  const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
   const [remarks, setRemarks] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
@@ -71,6 +74,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
 
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
+    workshopTechnicianApi.getAllActive().then(res => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
   }, []);
 
   useEffect(() => {
@@ -94,7 +98,8 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       if (tagType === "Damaged" && !damage.trim()) missing.push("Keterangan kerusakan");
     }
     if (s === 3) {
-      if (!techId) missing.push("Teknisi penerima");
+      if (!techId) missing.push("Akun sistem penerima");
+      if (!workshopTechId) missing.push("Teknisi workshop");
       const lines = mergedLines(radioLines, sharedDefaults);
       if (lines.length <= 1) {
         if (photos.length === 0) missing.push("Foto radio");
@@ -158,6 +163,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       physicalCondition: greenFields.physicalCondition?.trim() || undefined,
       displayCondition: greenFields.displayCondition?.trim() || undefined,
       receivedByUserId: Number(techId),
+      workshopTechnicianId: Number(workshopTechId),
       radioPhotos: photos,
       handedOverSignatureBase64: hdSig!,
       receiverSignatureBase64: receiverOk ? tekSig! : undefined,
@@ -382,16 +388,31 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
         {step === 3 && (
           <>
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Teknisi penerima *</label>
+              <label className="text-sm font-medium text-gray-700">Akun Sistem Penerima *</label>
               <Select value={techId} onValueChange={setTechId}>
                 <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
-                  <SelectValue placeholder="Pilih teknisi" />
+                  <SelectValue placeholder="Pilih akun sistem" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {technicians.map((t) => (
                     <SelectItem key={t.userId} value={t.userId.toString()}>
                       <span className="font-medium">{t.fullName}</span>{" "}
                       <span className="text-xs text-gray-500">(@{t.username})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Teknisi Penerima *</label>
+              <Select value={workshopTechId} onValueChange={setWorkshopTechId}>
+                <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+                  <SelectValue placeholder="Pilih teknisi fisik" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {workshopTechnicians.map((t) => (
+                    <SelectItem key={t.id} value={t.id.toString()}>
+                      <span className="font-medium">{t.name}</span>
                     </SelectItem>
                   ))}
                 </SelectContent>

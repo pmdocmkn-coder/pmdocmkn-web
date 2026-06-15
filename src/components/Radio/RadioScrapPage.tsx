@@ -32,6 +32,7 @@ import {
   ChevronUp,
   RotateCcw,
   Package,
+  RefreshCcw,
 } from "lucide-react";
 import { radioApi, RadioDto, CreateRadioDto } from "../../services/radioApi";
 import RadioHistoryModal from "./RadioHistoryModal";
@@ -55,6 +56,7 @@ import { DayPicker, DateRange } from "react-day-picker";
 import "react-day-picker/style.css";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { id as localeId } from "react-day-picker/locale";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
 // ─── Animation Variants ──────────────────────────────────────────────────────
 
@@ -112,7 +114,7 @@ function CategoryBadge({ category }: { category?: string }) {
   const cls = map[category ?? ""] ?? "bg-gray-100 text-gray-600 border-gray-200";
   return (
     <span className={`inline-flex items-center px-2 py-0.5 rounded-full border text-xs font-semibold ${cls}`}>
-      {category || "-"}
+      {category === "Internal" ? "Radio KPC" : (category || "-")}
     </span>
   );
 }
@@ -124,6 +126,11 @@ export default function RadioScrapPage() {
   const { toast } = useToast();
 
   // ── Data State ──────────────────────────────────────────────────────────────
+  const [sortField, setSortField] = useState<keyof RadioDto>("id");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+
+
   const [data, setData] = useState<RadioDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
@@ -197,7 +204,7 @@ export default function RadioScrapPage() {
     department: "",
     division: "",
     channel: "",
-    tanggal: "",
+    tanggal: undefined as string | undefined,
     fleet: "",
     radioId: "",
     mark: "",
@@ -237,6 +244,10 @@ export default function RadioScrapPage() {
     }
   };
 
+  useLiveRefresh("RadioUnit", () => {
+    loadData();
+  });
+
   // ── CRUD Handlers ───────────────────────────────────────────────────────────
   const handleCreate = async () => {
     setFormError(null);
@@ -255,7 +266,8 @@ export default function RadioScrapPage() {
     if (!selectedRadio) return;
     setFormError(null);
     try {
-      await radioApi.update(selectedRadio.id, formData);
+      const payload = { ...formData, tanggal: formData.tanggal || undefined };
+      await radioApi.update(selectedRadio.id, payload);
       toast({ title: "Berhasil", description: "Data scrap radio berhasil diperbarui" });
       setIsEditOpen(false);
       loadData();
@@ -273,6 +285,17 @@ export default function RadioScrapPage() {
       loadData();
     } catch {
       toast({ title: "Error", description: "Gagal menghapus data", variant: "destructive" });
+    }
+  };
+
+  const handleUnscrap = async (id: number) => {
+    if (!window.confirm("Yakin ingin membatalkan scrap radio ini? Radio akan kembali aktif ke Master Radio.")) return;
+    try {
+      await radioApi.unscrapRadio(id);
+      toast({ title: "Berhasil", description: "Radio batal scrap dan dikembalikan" });
+      loadData();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data?.message || "Gagal batal scrap", variant: "destructive" });
     }
   };
 
@@ -300,7 +323,7 @@ export default function RadioScrapPage() {
       department: radio.department || "",
       division: radio.division || "",
       channel: radio.channel || "",
-      tanggal: radio.tanggal ? radio.tanggal.split("T")[0] : "",
+      tanggal: radio.tanggal ? radio.tanggal.split("T")[0] : undefined,
       fleet: radio.fleet || "",
       radioId: radio.radioId || "",
       mark: radio.mark || "",
@@ -328,7 +351,7 @@ export default function RadioScrapPage() {
       department: "",
       division: "",
       channel: "",
-      tanggal: "",
+      tanggal: undefined,
       fleet: "",
       radioId: "",
       mark: "",
@@ -1006,7 +1029,7 @@ export default function RadioScrapPage() {
                     className="h-9 rounded-md border border-gray-200 bg-white px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-red-400 focus:border-red-400 text-gray-700"
                   >
                     <option value="">Semua Kategori</option>
-                    <option value="Internal">Internal</option>
+                    <option value="Internal">Radio KPC</option>
                     <option value="Contractor">Contractor</option>
                     <option value="Unit">Unit</option>
                     <option value="LegacyScrap">LegacyScrap</option>
@@ -1243,6 +1266,12 @@ export default function RadioScrapPage() {
                                   Hapus
                                 </DropdownMenuItem>
                               )}
+                              {hasPermission("radio.scrap.update") && (
+                                <DropdownMenuItem onClick={() => handleUnscrap(item.id)}>
+                                  <RefreshCcw className="mr-2 h-4 w-4 text-orange-500" />
+                                  <span className="text-orange-600 font-medium">Batal Scrap</span>
+                                </DropdownMenuItem>
+                              )}
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </td>
@@ -1292,6 +1321,7 @@ export default function RadioScrapPage() {
               <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
                 {hasPermission("radio.view") && <Button variant="ghost" size="sm" onClick={() => { setSelectedRadio(item); setIsHistoryOpen(true); }}><History className="h-4 w-4" /></Button>}
                 {hasPermission("radio.scrap.update") && <Button variant="ghost" size="sm" onClick={() => openEditModal(item)}><Edit2 className="h-4 w-4" /></Button>}
+                {hasPermission("radio.scrap.update") && <Button variant="ghost" size="sm" onClick={() => handleUnscrap(item.id)} className="text-orange-600 hover:text-orange-700"><RefreshCcw className="h-4 w-4" /></Button>}
                 {hasPermission("radio.scrap.delete") && (
                   <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
                 )}
@@ -1465,7 +1495,7 @@ export default function RadioScrapPage() {
             </div>
             {["Internal", "Contractor", "Unit", "LegacyScrap"].map((opt) => (
               <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterCategory === opt ? 'font-bold text-red-700 bg-red-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterCategory(opt); setPage(1); document.getElementById("mobile-dropdown-category")?.classList.add("hidden"); }}>
-                {opt} {filterCategory === opt && <Check className="w-4 h-4" />}
+                {opt === "Internal" ? "Radio KPC" : opt} {filterCategory === opt && <Check className="w-4 h-4" />}
               </div>
             ))}
           </div>

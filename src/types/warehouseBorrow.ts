@@ -21,8 +21,11 @@ export interface WarehouseBorrowList {
   status: WarehouseBorrowStatus;
   borrowedByName: string;
   requestedAt: string;
+  issuedAt?: string | null;
   relatedJobNumber?: string | null;
   ticketNumber?: string | null;
+  borrowerName?: string | null;
+  purpose?: string | null;
 }
 
 export interface WarehouseBorrowDetail extends WarehouseBorrowList {

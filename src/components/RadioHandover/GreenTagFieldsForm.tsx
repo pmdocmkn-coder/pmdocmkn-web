@@ -1,15 +1,29 @@
 import { useEffect, useState } from "react";
 import type { GreenTagFields } from "../../types/equipmentTag";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
-import type { UserOption } from "../../types/radioHandover";type Props = {
+import type { UserOption } from "../../types/radioHandover";
+
+type Props = {
   value: GreenTagFields;
   onChange: (v: GreenTagFields) => void;
   /** Sudah terisi dari langkah Tiket & radio — tampilkan read-only */
   originPrefilled?: string;
+  /** Jika true, Data perbaikan menjadi wajib diisi */
+  requiredMode?: boolean;
+  /** Nama teknisi terakhir — dipakai untuk auto-fill 'Diperbaiki oleh' */
+  autoTechnicianName?: string;
 };
 
-export default function GreenTagFieldsForm({ value, onChange, originPrefilled }: Props) {
+export default function GreenTagFieldsForm({ value, onChange, originPrefilled, requiredMode, autoTechnicianName }: Props) {
   const set = (key: keyof GreenTagFields, v: string) => onChange({ ...value, [key]: v });
+
+  // Auto-fill "Diperbaiki oleh" dengan teknisi terakhir jika kosong
+  useEffect(() => {
+    if (autoTechnicianName && !value.repairedByName?.trim()) {
+      onChange({ ...value, repairedByName: autoTechnicianName });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoTechnicianName]);
 
   const [techs, setTechs] = useState<UserOption[]>([]);
   useEffect(() => {
@@ -20,8 +34,10 @@ export default function GreenTagFieldsForm({ value, onChange, originPrefilled }:
     <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/30 p-4">
       <p className="text-sm font-semibold text-emerald-900">Data tag hijau — peralatan baik</p>
       <p className="text-xs text-emerald-800/90">
-        Field di bawah opsional kecuali Anda ingin melengkapi hasil inspeksi. Data perbaikan bisa diisi nanti setelah
-        pengecekan teknisi.
+        {requiredMode
+          ? "Data perbaikan wajib diisi saat menandai peralatan sebagai Tag Hijau."
+          : "Field di bawah opsional kecuali Anda ingin melengkapi hasil inspeksi. Data perbaikan bisa diisi nanti setelah pengecekan teknisi."
+        }
       </p>
       {originPrefilled?.trim() ? (
         <div className="rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm">
@@ -40,14 +56,19 @@ export default function GreenTagFieldsForm({ value, onChange, originPrefilled }:
         </label>
       )}
       <label className="block text-sm">
-        <span className="font-medium">Data perbaikan (opsional)</span>
+        <span className="font-medium">
+          Data perbaikan{requiredMode ? <span className="text-red-500 ml-0.5">*</span> : " (opsional)"}
+        </span>
         <textarea
-          className="w-full border rounded-lg px-3 py-2 mt-1 bg-white"
+          className={`w-full border rounded-lg px-3 py-2 mt-1 bg-white ${requiredMode && !value.repairDataDescription?.trim() ? "border-red-300 focus:ring-red-400" : ""}`}
           rows={3}
           value={value.repairDataDescription ?? ""}
           onChange={(e) => set("repairDataDescription", e.target.value)}
           placeholder="Isi setelah pengecekan — cleaning, ganti board, …"
         />
+        {requiredMode && !value.repairDataDescription?.trim() && (
+          <p className="text-xs text-red-500 mt-1">Data perbaikan wajib diisi untuk Tag Hijau</p>
+        )}
       </label>
       <label className="block text-sm">
         <span className="font-medium">Diperbaiki oleh</span>

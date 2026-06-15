@@ -19,6 +19,8 @@ import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
 import type { RadioRepairJobList, RadioRepairJobDetail } from "../../types/radioRepair";
+import RadioRepairJobDetailPanel from "../RadioRepair/RadioRepairJobDetailPanel";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
@@ -303,6 +305,7 @@ export default function RadioHandoverWarehousePage() {
     h.receivedByName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+
   const load = useCallback(() => {
     setLoadingIncoming(true);
     setLoadingOutgoing(true);
@@ -324,6 +327,14 @@ export default function RadioHandoverWarehousePage() {
       .then((r) => setPendingJobs(r.data ?? []))
       .catch(() => setPendingJobs([]));
   }, []);
+
+  useLiveRefresh("RadioHandover", () => {
+    load();
+  });
+
+  useLiveRefresh("RadioRepairJob", () => {
+    load();
+  });
 
   useEffect(() => {
     load();

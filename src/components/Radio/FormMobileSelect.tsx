@@ -51,7 +51,7 @@ export function FormMobileSelect({
           className={`w-full h-10 flex items-center justify-between gap-2 px-3 rounded-lg border bg-white text-sm shadow-sm transition-all cursor-pointer select-none border-gray-200 hover:border-gray-300 hover:shadow`}
         >
           <span className={`truncate text-left ${value ? "text-gray-800 font-medium" : "text-gray-400"}`}>
-            {value || placeholder}
+            {value === "Internal" ? "Radio KPC" : (value || placeholder)}
           </span>
           <div className="flex items-center gap-0.5 shrink-0">
             {value && (
@@ -148,7 +148,7 @@ export function FormMobileSelect({
                       : "text-gray-700 hover:bg-gray-50 active:bg-gray-100"
                   }`}
                 >
-                  <span className="text-left">{opt}</span>
+                  <span className="text-left">{opt === "Internal" ? "Radio KPC" : opt}</span>
                   {value === opt && <Check className="w-4 h-4 flex-shrink-0" />}
                 </button>
               ))

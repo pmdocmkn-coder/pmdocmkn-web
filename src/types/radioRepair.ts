@@ -6,7 +6,9 @@ export type RadioRepairJobStatus =
   | "RepairCompleted"
   | "HandedToWarehouse"
   | "ReturnedToHelpdesk"
-  | "Cancelled";
+  | "Cancelled"
+  | "ProcessScrap"
+  | "Scrapped";
 
 export interface RadioRepairJobList {
   id: number;
@@ -35,6 +37,10 @@ export interface RadioRepairJobList {
   status: RadioRepairJobStatus;
   assignedTechnicianUserId: number;
   assignedTechnicianName: string;
+  /** ID teknisi workshop yang sedang mengerjakan */
+  workshopTechnicianId?: number | null;
+  /** Nama teknisi workshop yang sedang mengerjakan */
+  workshopTechnicianName?: string | null;
   /** ID status custom jika job sedang di status custom */
   customStatusId?: number | null;
   /** Label status custom untuk ditampilkan di UI */
@@ -43,6 +49,8 @@ export interface RadioRepairJobList {
   customStatusColor?: string | null;
   openedAt: string;
   closedAt?: string | null;
+  firstInProgressAt?: string | null;
+  workshopCompletedAt?: string | null;
   isDeleted?: boolean;
   deletedAt?: string | null;
 }

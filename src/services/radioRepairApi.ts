@@ -14,6 +14,7 @@ export type UpdateRadioRepairJobPayload = {
   batterySerialNumber?: string | null;
   damageDescription: string;
   assignedTechnicianUserId: number;
+  workshopTechnicianId?: number | null;
   radioId?: number | null;
   equipmentName?: string;
   unitNumber?: string;
@@ -77,19 +78,26 @@ export const radioRepairApi = {
       .patch(`/api/radio-repair-jobs/${id}/notes`, payload)
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
-  updateStatus: (id: number, status: RadioRepairJobStatus, note?: string, customStatusId?: number | null) =>
+  updateStatus: (id: number, status: RadioRepairJobStatus, note?: string, customStatusId?: number | null, workshopTechnicianId?: number | null) =>
     api
-      .patch(`/api/radio-repair-jobs/${id}/status`, { status, note, customStatusId })
+      .patch(`/api/radio-repair-jobs/${id}/status`, { status, note, customStatusId, workshopTechnicianId })
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
   approveMaterial: (
     id: number,
     resumeStatus: "InProgress" | "Monitoring",
-    note?: string
+    note?: string,
+    workshopTechnicianId?: number | null
   ) =>
     api
-      .patch(`/api/radio-repair-jobs/${id}/approve-material`, { resumeStatus, note })
+      .patch(`/api/radio-repair-jobs/${id}/approve-material`, { resumeStatus, note, workshopTechnicianId })
       .then((r) => unwrapData<RadioRepairJobDetail>(r)!),
+
+  approveScrap: (id: number, payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) =>
+    api.patch(`/api/radio-repair-jobs/${id}/approve-scrap`, payload).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
+
+  cancelScrap: (id: number) =>
+    api.patch(`/api/radio-repair-jobs/${id}/cancel-scrap`).then((r) => unwrapData<RadioRepairJobDetail>(r)!),
 
   softDelete: (id: number) => api.delete(`/api/radio-repair-jobs/${id}`),
 

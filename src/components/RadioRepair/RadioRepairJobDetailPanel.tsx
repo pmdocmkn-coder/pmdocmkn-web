@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Pencil, X, Check, Loader2 } from "lucide-react";
+import { Pencil, X, Check, Loader2, Warehouse } from "lucide-react";
 import type { RadioRepairJobDetail, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import type { RadioHandoverDetail } from "../../types/radioHandover";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -40,8 +40,11 @@ type Props = {
   onPatchStatus: (status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onApproveMaterial: (resume: "InProgress" | "Monitoring") => void;
   onOpenWh: () => void;
+  onOpenApproveScrap?: () => void;
+  onCancelScrap?: () => void;
   onOpenPhotos?: (images: string[], index?: number) => void;
   onJobUpdated?: (job: RadioRepairJobDetail) => void;
+  onOpenBorrowRequest?: () => void;
 };
 
 export default function RadioRepairJobDetailPanel({
@@ -53,8 +56,11 @@ export default function RadioRepairJobDetailPanel({
   onPatchStatus,
   onApproveMaterial,
   onOpenWh,
+  onOpenApproveScrap,
+  onCancelScrap,
   onOpenPhotos,
   onJobUpdated,
+  onOpenBorrowRequest,
 }: Props) {
   const [handoverDetail, setHandoverDetail] = useState<RadioHandoverDetail | null>(null);
   const [radioMaster, setRadioMaster] = useState<RadioDto | null>(null);
@@ -74,7 +80,7 @@ export default function RadioRepairJobDetailPanel({
   const [greenTagInput, setGreenTagInput] = useState<GreenTagFields>({
     originFrom: job.originFrom || [job.radioOwnerLabel, job.ownerDivision].filter(Boolean).join(" - ") || "",
     repairDataDescription: job.repairDataDescription ?? undefined,
-    repairedByName: job.repairedByName ?? undefined,
+    repairedByName: job.repairedByName || job.workshopTechnicianName || job.assignedTechnicianName || undefined,
     frequencyError: job.frequencyError ?? undefined,
     afReading: job.afReading ?? undefined,
     powerReading: job.powerReading ?? undefined,
@@ -92,7 +98,7 @@ export default function RadioRepairJobDetailPanel({
     setGreenTagInput({
       originFrom: job.originFrom || [job.radioOwnerLabel, job.ownerDivision].filter(Boolean).join(" - ") || "",
       repairDataDescription: job.repairDataDescription ?? undefined,
-      repairedByName: job.repairedByName ?? undefined,
+      repairedByName: job.repairedByName || job.workshopTechnicianName || job.assignedTechnicianName || undefined,
       frequencyError: job.frequencyError ?? undefined,
       afReading: job.afReading ?? undefined,
       powerReading: job.powerReading ?? undefined,
@@ -143,6 +149,10 @@ export default function RadioRepairJobDetailPanel({
   };
 
   const saveDamage = async () => {
+    // Validasi: jika Tag Hijau, Data perbaikan wajib diisi
+    if (tagTypeInput === "Good" && !greenTagInput.repairDataDescription?.trim()) {
+      return; // tombol sudah disabled, tapi guard tambahan
+    }
     setSavingDamage(true);
     try {
       const payload: Parameters<typeof radioRepairApi.technicianUpdate>[1] = {
@@ -182,7 +192,7 @@ export default function RadioRepairJobDetailPanel({
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-          Lama di workshop: <strong>{formatWorkshopDuration(job.openedAt, job.closedAt)}</strong>
+          Lama di workshop: <strong>{formatWorkshopDuration(job.openedAt, job.closedAt, job.firstInProgressAt, job.workshopCompletedAt)}</strong>
         </span>
         {job.radioId && (
           <span className="text-violet-700">Terhubung master #{job.radioId}</span>
@@ -244,6 +254,8 @@ export default function RadioRepairJobDetailPanel({
                 <GreenTagFieldsForm
                   value={greenTagInput}
                   onChange={setGreenTagInput}
+                  requiredMode
+                  autoTechnicianName={job.workshopTechnicianName || job.assignedTechnicianName}
                 />
               )}
 
@@ -259,7 +271,7 @@ export default function RadioRepairJobDetailPanel({
                 <button
                   type="button"
                   onClick={saveDamage}
-                  disabled={savingDamage}
+                  disabled={savingDamage || (tagTypeInput === "Good" && !greenTagInput.repairDataDescription?.trim())}
                   className={`flex items-center gap-1 px-3 py-1.5 text-xs text-white rounded-lg disabled:opacity-50 ${tagTypeInput === "Good" ? "bg-emerald-600 hover:bg-emerald-700" : "bg-amber-600 hover:bg-amber-700"}`}
                 >
                   <Check className="w-3 h-3" /> {savingDamage ? "Menyimpan..." : "Simpan"}
@@ -378,6 +390,21 @@ export default function RadioRepairJobDetailPanel({
               </button>
             </div>
           )}
+
+          {/* Tombol Pinjam Part */}
+          {job.status === "InProgress" && onOpenBorrowRequest && (
+            <div className="pt-3 border-t border-gray-100 mt-2">
+              <p className="text-xs text-gray-500 mb-1.5">Kebutuhan Suku Cadang:</p>
+              <button
+                type="button"
+                onClick={onOpenBorrowRequest}
+                className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 flex items-center gap-1.5 transition-colors"
+              >
+                <Warehouse className="w-4 h-4" />
+                Pinjam Part ke Warehouse
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -407,7 +434,37 @@ export default function RadioRepairJobDetailPanel({
         </div>
       )}
 
-      {canHandoverWh && job.status === "RepairCompleted" && !job.isDeleted && (
+      {canSupervise && (job.status === "ProcessScrap" || job.status === "Scrapped") && !job.isDeleted && (
+        <div className="p-3 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
+          <p className="font-medium text-orange-900">
+            {job.status === "Scrapped" ? "Radio Telah di Scrap" : "Persetujuan Radio Scrap (Supervisor)"}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {job.status === "ProcessScrap" && (
+              <button
+                type="button"
+                disabled={patchingStatus}
+                className="px-4 py-2 bg-orange-600 text-white rounded-lg text-sm disabled:opacity-60 flex items-center gap-1.5"
+                onClick={onOpenApproveScrap}
+              >
+                {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Setujui Scrap
+              </button>
+            )}
+            <button
+              type="button"
+              disabled={patchingStatus}
+              className="px-4 py-2 border border-orange-600 text-orange-800 rounded-lg text-sm hover:bg-orange-100 disabled:opacity-60 flex items-center gap-1.5"
+              onClick={onCancelScrap}
+            >
+              {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+              Batalkan Scrap
+            </button>
+          </div>
+        </div>
+      )}
+
+      {canHandoverWh && (job.status === "RepairCompleted" || job.status === "Scrapped") && !job.isDeleted && (
         <button
           type="button"
           className="px-4 py-2 bg-violet-700 text-white rounded-lg font-medium shadow-sm hover:bg-violet-800"

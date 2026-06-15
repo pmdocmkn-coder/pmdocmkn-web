@@ -4,6 +4,8 @@ import Footer from "./Footer";
 import { useAuth } from "../contexts/AuthContext";
 import { Menu, Search, Bell } from "lucide-react";
 import { useLocation, Link } from "react-router-dom";
+import { useSignalR } from "../hooks/useSignalR";
+import { NotificationPanel } from "./NotificationPanel";
 
 export const searchableItems = [
   { name: "Dashboard", path: "/dashboard", section: "Main" },
@@ -55,6 +57,10 @@ const Layout: React.FC<LayoutProps> = ({
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchFocused, setIsSearchFocused] = useState(false);
+
+  // Notification state
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const { notifications, unreadCount, markAsRead, markAllAsRead, isConnected } = useSignalR();
 
   // Filter items based on query
   const filteredSearch = searchableItems.filter(item =>
@@ -135,11 +141,39 @@ const Layout: React.FC<LayoutProps> = ({
           </div>
 
           <div className="flex items-center space-x-6 ml-4">
-            {/* Notification Bell - Temporarily Hidden */}
-            <button className="hidden relative p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-50">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-3.5 h-3.5 bg-[#b324d7] rounded-full border-2 border-white text-[8px] font-bold text-white flex items-center justify-center">0</span>
-            </button>
+            {/* Notification Bell */}
+            <div className="relative">
+              <button 
+                className="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-50"
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+                title={isConnected ? "Notifikasi (Live)" : "Notifikasi (Offline - tidak ada koneksi live)"}
+              >
+                <Bell className="w-5 h-5" />
+                {/* Unread count badge */}
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b324d7] rounded-full border-2 border-white text-[9px] font-bold text-white flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+                {/* SignalR connection status dot — bottom left of bell */}
+                <span
+                  className={`absolute bottom-1 left-1.5 w-2 h-2 rounded-full border border-white ${
+                    isConnected ? 'bg-emerald-500' : 'bg-gray-400'
+                  }`}
+                  title={isConnected ? 'Live connected' : 'Offline'}
+                />
+              </button>
+              
+              {isNotificationOpen && (
+                <NotificationPanel 
+                  notifications={notifications}
+                  unreadCount={unreadCount}
+                  onMarkAsRead={markAsRead}
+                  onMarkAllAsRead={markAllAsRead}
+                  onClose={() => setIsNotificationOpen(false)}
+                />
+              )}
+            </div>
 
             <div className="hidden w-px h-8 bg-slate-200"></div>
 
@@ -199,7 +233,33 @@ const Layout: React.FC<LayoutProps> = ({
                 <Search className="w-5 h-5" />
               </button>
             </div>
-             <Link to="/profile" className="flex items-center group hover:opacity-80 transition-opacity">
+            {/* Notification Bell Mobile */}
+            <div className="relative">
+              <button 
+                className="relative p-2 text-slate-400 hover:text-indigo-600 transition-colors rounded-full hover:bg-slate-50"
+                onClick={() => setIsNotificationOpen(!isNotificationOpen)}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute top-1.5 right-1.5 w-4 h-4 bg-[#b324d7] rounded-full border-2 border-white text-[9px] font-bold text-white flex items-center justify-center">
+                    {unreadCount > 9 ? '9+' : unreadCount}
+                  </span>
+                )}
+              </button>
+              {/* Notification Panel Mobile */}
+              {isNotificationOpen && (
+                <div className="md:hidden">
+                  <NotificationPanel 
+                    notifications={notifications}
+                    unreadCount={unreadCount}
+                    onMarkAsRead={markAsRead}
+                    onMarkAllAsRead={markAllAsRead}
+                    onClose={() => setIsNotificationOpen(false)}
+                  />
+                </div>
+              )}
+            </div>
+             <Link to="/profile" className="flex items-center group hover:opacity-80 transition-opacity ml-1">
               {user?.photoUrl ? (
                 <img src={user.photoUrl} alt="profile" className="w-8 h-8 rounded-full object-cover border border-slate-200 shadow-sm" />
               ) : (

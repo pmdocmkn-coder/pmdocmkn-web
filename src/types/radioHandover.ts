@@ -96,6 +96,8 @@ export interface CreateRadioHandoverPayload {
   radioRepairJobId?: number;
 
   receivedByUserId: number;
+  workshopTechnicianId?: number;
+  handedOverByWorkshopTechnicianId?: number;
 
   radioPhotoBase64?: string;
 
@@ -147,6 +149,12 @@ export interface RadioHandoverList {
   handedOverByName: string;
 
   receivedByName: string;
+
+  workshopTechnicianId?: number;
+  workshopTechnicianName?: string;
+
+  handedOverByWorkshopTechnicianId?: number;
+  handedOverByWorkshopTechnicianName?: string;
 
   handoverAt: string;
 

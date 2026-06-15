@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
@@ -58,6 +58,7 @@ import { parseRadioResponse, parseFleetList, isNoGrafir } from "../../utils/radi
 import { FilterSelect } from "./FilterSelect";
 import { FormMobileSelect } from "./FormMobileSelect";
 import { FormMobileDatePicker } from "./FormMobileDatePicker";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { format } from "date-fns";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
@@ -138,6 +139,10 @@ export default function RadioUnitPage() {
   const [allOptions, setAllOptions] = useState<RadioDto[]>([]);
 
   // ── Modal State ─────────────────────────────────────────────────────────────
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateSn, setDuplicateSn] = useState("");
+
+
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
@@ -212,6 +217,10 @@ export default function RadioUnitPage() {
       setLoading(false);
     }
   };
+
+  useLiveRefresh("RadioUnit", () => {
+    loadData();
+  });
 
   // ── CRUD Handlers ───────────────────────────────────────────────────────────
   const validateDuplicate = (): string | null => {
@@ -392,7 +401,7 @@ export default function RadioUnitPage() {
           const rowData: any[] = [
             i + 1,
             item.nomorAset || "-",
-            item.nomorUnit || "-",
+            item.nomorLv || item.nomorUnit || "-",
             item.serialNumber || "-"
           ];
 

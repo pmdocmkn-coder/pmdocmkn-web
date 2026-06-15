@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
-import type { HandoverAccessoryItem, RadioHandoverDetail, UserOption } from "../../types/radioHandover";
+import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
+import type { HandoverAccessoryItem, RadioHandoverDetail, UserOption, RadioLookup } from "../../types/radioHandover";
 import type { EquipmentTagType, GreenTagFields } from "../../types/equipmentTag";
 import { EMPTY_GREEN_TAG } from "../../types/equipmentTag";
 import { useToast } from "../../hooks/use-toast";
@@ -23,6 +24,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   const { toast } = useToast();
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
+  const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [ticket, setTicket] = useState(detail.helpdeskTicketNumber || "");
   const [serial, setSerial] = useState(detail.radioSerialNumber || "");
   const [radioId, setRadioId] = useState<number | null>(detail.radioId ?? null);
@@ -41,6 +43,19 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     displayCondition: detail.displayCondition || "",
   });
   const [techId, setTechId] = useState(detail.receivedByUserId?.toString() || "");
+  const [workshopTechId, setWorkshopTechId] = useState(detail.workshopTechnicianId?.toString() || "");
+  const [lookup, setLookup] = useState<RadioLookup | null>(detail.radioId ? {
+    id: detail.radioId,
+    radioId: detail.radioMasterRadioId || undefined,
+    category: "Radio",
+    serialNumber: detail.radioSerialNumber,
+    type: detail.equipmentName || undefined,
+    division: detail.ownerDivision || undefined,
+    department: detail.ownerDepartment || undefined,
+    fleet: detail.radioFleet || undefined,
+    ownerLabel: detail.radioOwnerLabel || undefined,
+    label: detail.radioSerialNumber
+  } : null);
   const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>(detail.accessories || []);
   const [remarks, setRemarks] = useState(detail.remarks || "");
   const [photos, setPhotos] = useState<string[]>(
@@ -52,6 +67,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
+    workshopTechnicianApi.getAllActive().then((res) => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
   }, []);
 
   const validate = (): string[] => {
@@ -60,7 +76,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     if (!serial.trim()) missing.push("Serial Number");
     if (tagType === "Damaged" && !damage.trim()) missing.push("Keterangan kerusakan");
     if (tagType === "Good" && !greenFields.repairDataDescription?.trim()) missing.push("Data perbaikan (Tag Hijau)");
-    if (!techId) missing.push("Teknisi penerima");
+    if (!techId) missing.push("Akun Sistem Penerima");
+    if (!workshopTechId) missing.push("Teknisi Penerima");
     if (photos.length === 0) missing.push("Foto radio");
     return missing;
   };
@@ -93,6 +110,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
       physicalCondition: greenFields.physicalCondition?.trim() || undefined,
       displayCondition: greenFields.displayCondition?.trim() || undefined,
       receivedByUserId: Number(techId),
+      workshopTechnicianId: Number(workshopTechId),
       radioPhotos: photos,
       receiverSignatureBase64: receiverOk ? tekSig! : undefined,
       accessories,
@@ -122,7 +140,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
         <DialogHeader>
           <DialogTitle>Edit Serah Terima: {detail.handoverNumber}</DialogTitle>
         </DialogHeader>
-        
+
         <div className="space-y-4">
           {/* Tiket & Serial - Responsive Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -139,13 +157,15 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
               <RadioSerialLookupField
                 serial={serial}
                 radioId={radioId}
+                lookup={lookup}
                 label="Serial Number"
                 required
-                onSelect={(s, id, lookup) => {
+                onSelect={(s, id, l) => {
                   setSerial(s);
                   setRadioId(id);
-                  if (lookup?.type && !equipmentName.trim()) {
-                    setEquipmentName(lookup.type);
+                  setLookup(l ?? null);
+                  if (l?.type && !equipmentName.trim()) {
+                    setEquipmentName(l.type);
                   }
                 }}
               />
@@ -170,11 +190,10 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
               <button
                 type="button"
                 onClick={() => setTagType("Damaged")}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  tagType === "Damaged" 
-                    ? "border-amber-500 bg-amber-50 shadow-sm ring-2 ring-amber-200" 
-                    : "border-gray-200 bg-white hover:border-amber-300"
-                }`}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${tagType === "Damaged"
+                  ? "border-amber-500 bg-amber-50 shadow-sm ring-2 ring-amber-200"
+                  : "border-gray-200 bg-white hover:border-amber-300"
+                  }`}
               >
                 <p className="font-bold text-sm text-amber-900">Tag kuning (Rusak)</p>
                 <p className="text-xs text-amber-700 mt-0.5">Peralatan masuk perbaikan</p>
@@ -182,11 +201,10 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
               <button
                 type="button"
                 onClick={() => setTagType("Good")}
-                className={`p-3 rounded-xl border-2 text-left transition-all ${
-                  tagType === "Good" 
-                    ? "border-emerald-500 bg-emerald-50 shadow-sm ring-2 ring-emerald-200" 
-                    : "border-gray-200 bg-white hover:border-emerald-300"
-                }`}
+                className={`p-3 rounded-xl border-2 text-left transition-all ${tagType === "Good"
+                  ? "border-emerald-500 bg-emerald-50 shadow-sm ring-2 ring-emerald-200"
+                  : "border-gray-200 bg-white hover:border-emerald-300"
+                  }`}
               >
                 <p className="font-bold text-sm text-emerald-900">Tag hijau (Baik)</p>
                 <p className="text-xs text-emerald-700 mt-0.5">Kondisi baik / inspeksi</p>
@@ -207,43 +225,61 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
               />
             </div>
           )}
-          
+
           {tagType === "Good" && (
             <GreenTagFieldsForm value={greenFields} onChange={setGreenFields} originPrefilled={detail.originFrom || ""} />
           )}
 
           {/* Technician Selection */}
-          <div className="space-y-1 pt-2 border-t">
-            <label className="text-sm font-medium text-gray-700">Teknisi penerima *</label>
-            <Select value={techId} onValueChange={setTechId}>
-              <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
-                <SelectValue placeholder="Pilih teknisi" />
-              </SelectTrigger>
-              <SelectContent className="max-h-[300px]">
-                {technicians.map((t) => (
-                  <SelectItem key={t.userId} value={t.userId.toString()}>
-                    <span className="font-medium">{t.fullName}</span>{" "}
-                    <span className="text-xs text-gray-500">(@{t.username})</span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Akun Sistem Penerima *</label>
+              <Select value={techId} onValueChange={setTechId}>
+                <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+                  <SelectValue placeholder="Pilih akun sistem" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {technicians.map((t) => (
+                    <SelectItem key={t.userId} value={t.userId.toString()}>
+                      <span className="font-medium">{t.fullName}</span>{" "}
+                      <span className="text-xs text-gray-500">(@{t.username})</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-sm font-medium text-gray-700">Teknisi Penerima *</label>
+              <Select value={workshopTechId} onValueChange={setWorkshopTechId}>
+                <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+                  <SelectValue placeholder="Pilih teknisi fisik" />
+                </SelectTrigger>
+                <SelectContent className="max-h-[300px]">
+                  {workshopTechnicians.map((t) => (
+                    <SelectItem key={t.id} value={t.id.toString()}>
+                      <span className="font-medium">{t.name}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Photos */}
           <MultiPhotoUpload photos={photos} onChange={setPhotos} required label="Foto Radio" />
-          
+
           {/* Accessories */}
           <HandoverAccessoryList items={accessories} onChange={setAccessories} />
-          
+
           {/* Signature */}
-          <SignaturePadField 
-            ref={sigTekRef} 
-            label="TTD Penerima (opsional)" 
-            value={sigReceiver} 
-            onChange={setSigReceiver} 
+          <SignaturePadField
+            ref={sigTekRef}
+            label="TTD Penerima (opsional)"
+            value={sigReceiver}
+            onChange={setSigReceiver}
           />
-          
+
           {/* Remarks */}
           <div className="space-y-2 pb-4">
             <label className="text-sm font-medium text-gray-900">Catatan / Remarks</label>
@@ -258,9 +294,9 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
         {/* Action Buttons */}
         <div className="flex justify-between gap-2 pt-4 border-t">
-          <button 
-            type="button" 
-            className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]" 
+          <button
+            type="button"
+            className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]"
             onClick={onClose}
           >
             Batal

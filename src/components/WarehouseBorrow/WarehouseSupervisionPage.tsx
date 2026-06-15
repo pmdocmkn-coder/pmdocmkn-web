@@ -9,6 +9,7 @@ import { id as localeId } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
 export default function WarehouseSupervisionPage() {
   const { toast } = useToast();
@@ -36,6 +37,11 @@ export default function WarehouseSupervisionPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Live refresh saat ada perubahan data warehouse borrow dari user lain
+  useLiveRefresh("WarehouseBorrow", () => {
+    load();
+  });
 
   const closeReview = () => {
     setActiveItem(null);

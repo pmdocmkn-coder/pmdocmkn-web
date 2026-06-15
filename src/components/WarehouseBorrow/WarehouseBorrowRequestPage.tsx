@@ -3,15 +3,26 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { warehousePartApi } from "../../services/warehousePartApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
+import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
+import { api } from "../../services/api";
+import { useAuth } from "../../contexts/AuthContext";
 import type { RadioRepairJobDetail, RadioRepairJobList } from "../../types/radioRepair";
 import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
 import type { WarehouseBorrowItem } from "../../types/warehouseBorrow";
 import { useToast } from "../../hooks/use-toast";
 import { motion } from "framer-motion";
-import { PackageOpen, ArrowLeft, Wrench, AlertCircle, Search, Plus, Trash2 } from "lucide-react";
+import { PackageOpen, ArrowLeft, Wrench, AlertCircle, Search, Plus, Trash2, User } from "lucide-react";
 import { Input } from "../ui/input";
 import { Textarea } from "../ui/textarea";
 import { Button } from "../ui/button";
+import { FormMobileSelect } from "../Radio/FormMobileSelect";
+
+interface UserLookupItem {
+  id: number;
+  name: string;
+  username: string;
+  roleName?: string | null;
+}
 
 interface BorrowItemRow {
   key: number;
@@ -40,6 +51,7 @@ function createEmptyRow(): BorrowItemRow {
 export default function WarehouseBorrowRequestPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [params] = useSearchParams();
   const jobId = params.get("repairJobId");
 
@@ -62,12 +74,88 @@ export default function WarehouseBorrowRequestPage() {
   const [jobDetail, setJobDetail] = useState<RadioRepairJobDetail | null>(null);
   const [loadingJob, setLoadingJob] = useState(!!jobId);
 
+  // Borrower name
+  const [borrowerName, setBorrowerName] = useState("");
+  // Step 2: nama teknisi spesifik dari workshop
+  const [workshopTechName, setWorkshopTechName] = useState("");
+  // Semua user terdaftar (dropdown utama)
+  const [allUsers, setAllUsers] = useState<UserLookupItem[]>([]);
+  // Teknisi workshop (dropdown ke-2 jika pilih Teknisi WSK)
+  const [technicians, setTechnicians] = useState<WorkshopTechnicianDto[]>([]);
+  // Simpan object user yang dipilih agar bisa akses roleName langsung
+  const [selectedBorrowerUser, setSelectedBorrowerUser] = useState<UserLookupItem | null>(null);
+
+  // Deteksi apakah user yang dipilih adalah Teknisi WSK — pakai object yang tersimpan
+  const WORKSHOP_ROLE = "teknisi wsk";
+  const selectedUserIsWorkshop =
+    (selectedBorrowerUser?.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE;
+
+  // Load kedua data sekaligus
+  useEffect(() => {
+    api.get<{ data: UserLookupItem[] }>("/api/users/lookup")
+      .then((res) => {
+        const users = res.data?.data ?? [];
+        console.log('📥 All Users loaded:', users.length, 'users');
+        console.log('👥 Users with "Teknisi" or "Workshop" in role:', 
+          users.filter(u => u.roleName?.toLowerCase().includes('teknisi') || u.roleName?.toLowerCase().includes('workshop'))
+        );
+        setAllUsers(users);
+      })
+      .catch(() => setAllUsers([]));
+    workshopTechnicianApi.getAllActive()
+      .then((res) => {
+        const techs = res.data?.data ?? [];
+        console.log('🔧 Workshop Technicians loaded:', techs.length, 'technicians');
+        setTechnicians(techs);
+      })
+      .catch(() => setTechnicians([]));
+  }, []);
+
+  // Auto-detect user yang dipilih dari borrowerName (fallback jika FormMobileSelect tidak trigger onChange dengan object)
+  useEffect(() => {
+    if (borrowerName && allUsers.length > 0) {
+      const found = allUsers.find(u => u.name === borrowerName);
+      if (found) {
+        console.log('🔍 Auto-detect borrower:', { name: found.name, roleName: found.roleName, id: found.id });
+        // Hanya update jika berbeda (bandingkan by id untuk avoid loop)
+        if (!selectedBorrowerUser || selectedBorrowerUser.id !== found.id) {
+          setSelectedBorrowerUser(found);
+        }
+      }
+    } else if (!borrowerName) {
+      // Reset jika borrowerName dikosongkan
+      setSelectedBorrowerUser(null);
+    }
+  }, [borrowerName, allUsers]);
+
+  // Debug: log perubahan selectedBorrowerUser dan status workshop
+  useEffect(() => {
+    console.log('═══════════════════════════════════════');
+    console.log('📝 borrowerName:', borrowerName);
+    console.log('👤 selectedBorrowerUser:', selectedBorrowerUser);
+    console.log('🏭 selectedUserIsWorkshop:', selectedUserIsWorkshop);
+    if (selectedBorrowerUser) {
+      console.log('📋 Role Details:', {
+        roleName: selectedBorrowerUser.roleName,
+        lowercase: (selectedBorrowerUser.roleName ?? "").toLowerCase().trim(),
+        expectedRole: WORKSHOP_ROLE,
+        matches: (selectedBorrowerUser.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE
+      });
+    }
+    console.log('✅ Should show Step 2?', borrowerName && selectedUserIsWorkshop);
+    console.log('═══════════════════════════════════════');
+  }, [selectedBorrowerUser, selectedUserIsWorkshop, borrowerName]);
+
   // Load linked job detail
   useEffect(() => {
     if (jobId) {
       radioRepairApi
         .getById(Number(jobId), false)
-        .then((res) => setJobDetail(res))
+        .then((res) => {
+          setJobDetail(res);
+          setTicketSearch(res.helpdeskTicketNumber);
+          setTicketNumber(res.helpdeskTicketNumber);
+        })
         .catch(() => {
           toast({ title: "Gagal memuat data pekerjaan", variant: "destructive" });
         })
@@ -100,6 +188,10 @@ export default function WarehouseBorrowRequestPage() {
   useEffect(() => {
     if (!ticketSearch.trim()) {
       setJobSuggestions([]);
+      return;
+    }
+    // Prevent searching and popping up suggestions if it matches the already selected ticket
+    if (ticketNumber && ticketSearch === ticketNumber) {
       return;
     }
     const timer = setTimeout(async () => {
@@ -179,6 +271,8 @@ export default function WarehouseBorrowRequestPage() {
         relatedRepairJobId:
           selectedRepairJobId ?? (jobId ? Number(jobId) : undefined),
         ticketNumber: finalTicket,
+        // Jika user yang dipilih adalah Teknisi WSK dan ada nama teknisi spesifik → pakai nama teknisi
+        borrowerName: (selectedUserIsWorkshop && workshopTechName ? workshopTechName : borrowerName.trim()) || undefined,
       });
       toast({ title: "Permintaan peminjaman berhasil dikirim" });
 
@@ -433,6 +527,68 @@ export default function WarehouseBorrowRequestPage() {
                   ))}
                 </ul>
               )}
+            </div>
+
+            {/* ── NAMA PEMINJAM ── */}
+            <div className="space-y-3">
+              <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                <User className="w-4 h-4 text-violet-500" />
+                Nama Peminjam <span className="text-red-500">*</span>
+              </label>
+
+              {/* Step 1: Pilih dari semua user terdaftar */}
+              <FormMobileSelect
+                value={borrowerName}
+                onChange={(val) => {
+                  setBorrowerName(val);
+                  setWorkshopTechName(""); // reset step 2
+                  // Simpan object user yang dipilih agar roleName bisa diakses langsung
+                  const found = allUsers.find(u => u.name === val) ?? null;
+                  setSelectedBorrowerUser(found);
+                }}
+                options={allUsers.map((u) => u.name)}
+                placeholder="— Pilih atau ketik nama —"
+                label="Pilih Peminjam"
+                color="violet"
+              />
+
+              {/* Step 2: Jika user yang dipilih adalah Teknisi WSK → pilih nama teknisi spesifik */}
+              {borrowerName && selectedUserIsWorkshop && (
+                <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
+                    <p className="text-xs font-semibold text-violet-700">
+                      <span className="font-bold">{borrowerName}</span> adalah Teknisi Workshop.
+                      Pilih nama teknisi spesifik:
+                    </p>
+                  </div>
+                  <FormMobileSelect
+                    value={workshopTechName}
+                    onChange={setWorkshopTechName}
+                    options={
+                      // Filter: hanya teknisi yang terkait dengan user ini (jika ada)
+                      // Jika user memiliki relasi teknisi spesifik (userId match) → tampilkan hanya itu
+                      // Jika tidak ada relasi → tampilkan semua
+                      (() => {
+                        const linkedTechs = technicians.filter(t => t.userId === selectedBorrowerUser?.id);
+                        return linkedTechs.length > 0 
+                          ? linkedTechs.map(t => t.name)
+                          : technicians.map(t => t.name); // fallback: tampilkan semua jika tidak ada relasi
+                      })()
+                    }
+                    placeholder="— Pilih nama teknisi —"
+                    label="Pilih Nama Teknisi"
+                    color="violet"
+                  />
+                  {workshopTechName && (
+                    <p className="text-xs text-emerald-600 flex items-center gap-1">
+                      ✓ Peminjam: <strong>{workshopTechName}</strong>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <p className="text-xs text-gray-400">Nama orang yang akan menggunakan part ini.</p>
             </div>
 
             {/* Purpose */}

@@ -712,26 +712,6 @@ export default function UsersManagementTab() {
                 </div>
               </div>
 
-              {/* Permissions */}
-              {selectedUser.permissions &&
-                selectedUser.permissions.length > 0 && (
-                  <div className="mt-6 pt-6 border-t border-gray-200">
-                    <h5 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                      <Shield className="w-4 h-4 text-blue-600" />
-                      Permissions ({selectedUser.permissions.length})
-                    </h5>
-                    <div className="flex flex-wrap gap-2">
-                      {selectedUser.permissions.map((permission, index) => (
-                        <span
-                          key={index}
-                          className="px-3 py-1.5 bg-blue-100 text-blue-800 text-xs font-medium rounded-full border border-blue-200"
-                        >
-                          {permission}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
             </div>
 
             {/* Modal Footer */}

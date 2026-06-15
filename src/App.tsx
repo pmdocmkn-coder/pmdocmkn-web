@@ -415,12 +415,15 @@ function AppRoutes() {
     </Routes>
   );
 }
+import { SignalRProvider } from "./contexts/SignalRContext";
 
 export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppRoutes />
+        <SignalRProvider>
+          <AppRoutes />
+        </SignalRProvider>
       </AuthProvider>
     </Router>
   );
