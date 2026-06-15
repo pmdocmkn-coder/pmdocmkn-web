@@ -23,7 +23,7 @@ import {
   statusActionButtonClass,
   statusActionLabel,
 } from "../../utils/radioRepairStatusUtils";
-import { formatWorkshopDuration } from "../../utils/repairDurationUtils";
+import { formatActiveWorkshopDuration } from "../../utils/repairDurationUtils";
 
 function resolveHandoverPhotosFromDetail(d: RadioHandoverDetail): string[] {
   if (d.radioPhotos && d.radioPhotos.length > 0) return d.radioPhotos;
@@ -192,7 +192,7 @@ export default function RadioRepairJobDetailPanel({
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-          Lama di workshop: <strong>{formatWorkshopDuration(job.openedAt, job.closedAt, job.firstInProgressAt, job.workshopCompletedAt)}</strong>
+          Lama di workshop: <strong>{formatActiveWorkshopDuration(job.status, job.accumulatedProgressDurationMinutes, job.currentProgressStartedAt, job.firstInProgressAt)}</strong>
         </span>
         {job.radioId && (
           <span className="text-violet-700">Terhubung master #{job.radioId}</span>

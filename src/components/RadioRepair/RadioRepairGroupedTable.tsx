@@ -12,7 +12,7 @@ import {
   isJobStatusLocked,
 } from "../../utils/radioRepairStatusUtils";
 import {
-  formatWorkshopDuration,
+  formatActiveWorkshopDuration,
   getWorkshopDays,
   workshopDurationBadgeClass,
 } from "../../utils/repairDurationUtils";
@@ -183,7 +183,26 @@ export default function RadioRepairGroupedTable({
 
                       {/* Row 2: SN + Unit/Alat */}
                       <div>
-                        <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
+                          <div className="flex flex-wrap gap-1">
+                            {j.hasBorrowRequest && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="Punya pinjaman material">
+                                <Warehouse className="w-2.5 h-2.5 mr-1" /> Pinjaman
+                              </span>
+                            )}
+                            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Good" && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                Tag Hijau
+                              </span>
+                            )}
+                            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Damaged" && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
+                                Tag Kuning
+                              </span>
+                            )}
+                          </div>
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Unit: {j.unitNumber || "-"} • Alat: {j.equipmentName || "-"}
                         </p>
@@ -200,7 +219,7 @@ export default function RadioRepairGroupedTable({
                         <div className="col-span-2 flex items-center gap-1.5 mt-0.5 pt-1.5 border-t border-gray-200/50">
                           <span className="text-gray-400">Durasi:</span>
                           <span className={`inline-block text-[10px] px-2 py-0.5 rounded border whitespace-nowrap font-medium ${workshopDurationBadgeClass(days)}`}>
-                            {formatWorkshopDuration(j.openedAt, j.closedAt, j.firstInProgressAt, j.workshopCompletedAt)}
+                            {formatActiveWorkshopDuration(j.status, j.accumulatedProgressDurationMinutes, j.currentProgressStartedAt, j.firstInProgressAt)}
                           </span>
                         </div>
                       </div>
@@ -503,7 +522,28 @@ function RadioRepairRow({
       <td className="px-3 py-2.5 w-14">
         <HandoverPhotoThumb photo={j.previewPhotoBase64} onClick={() => onOpenPhoto(j)} />
       </td>
-      <td className="px-3 py-2.5 font-mono text-xs font-medium">{j.radioSerialNumber}</td>
+      <td className="px-3 py-2.5 align-middle">
+        <div className="font-mono text-xs font-medium">{j.radioSerialNumber}</div>
+        {(j.hasBorrowRequest || ((j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType)) && (
+          <div className="flex flex-col gap-1 mt-1.5">
+            {j.hasBorrowRequest && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 w-fit" title="Punya pinjaman material">
+                <Warehouse className="w-2.5 h-2.5 mr-1" /> Pinjaman
+              </span>
+            )}
+            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Good" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
+                Tag Hijau
+              </span>
+            )}
+            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Damaged" && (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200 w-fit">
+                Tag Kuning
+              </span>
+            )}
+          </div>
+        )}
+      </td>
       <td className="px-3 py-2.5 max-w-[110px] truncate text-xs" title={j.equipmentName ?? ""}>
         {j.equipmentName ?? "—"}
       </td>
@@ -531,9 +571,9 @@ function RadioRepairRow({
         {format(new Date(j.openedAt), "dd/MM/yy HH:mm", { locale: localeId })}
       </td>
       <td className="px-3 py-2.5">
-        <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${workshopDurationBadgeClass(days)}`}>
-          {formatWorkshopDuration(j.openedAt, j.closedAt, j.firstInProgressAt, j.workshopCompletedAt)}
-        </span>
+        <div className="text-sm font-medium text-gray-900">
+          {formatActiveWorkshopDuration(j.status, j.accumulatedProgressDurationMinutes, j.currentProgressStartedAt, j.firstInProgressAt)}
+        </div>
       </td>
       <td className="px-3 py-2.5">
         <div className="flex justify-end items-center gap-1">
