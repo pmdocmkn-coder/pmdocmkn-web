@@ -168,16 +168,15 @@ export default function WarehouseBorrowHistoryPage() {
   };
 
   const handleIssue = async () => {
-    if (!activeItem) return;
-    if (!issuerSigned || !receiverSigned) {
-      toast({ title: "Tanda Tangan Belum Lengkap", description: "Kedua pihak (Admin & Teknisi) wajib menandatangani form penyerahan.", variant: "destructive" });
-      return;
+    if (!activeItem || !issuerSigned) {
+      return toast({ title: "TTD Penyerah wajib diisi", variant: "destructive" });
     }
+    
     setSubmitting(true);
     try {
       await warehouseBorrowApi.issue(activeItem.id, {
         issuerSignatureBase64: issuerSigned,
-        receiverSignatureBase64: receiverSigned,
+        receiverSignatureBase64: receiverSigned || undefined,
       });
       toast({ title: "Berhasil", description: "Status part berhasil diubah menjadi Telah Diberikan (Issued)." });
       closeDialog();
@@ -262,7 +261,7 @@ export default function WarehouseBorrowHistoryPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PendingApproval":
-        return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs font-semibold whitespace-nowrap">Menunggu Persetujuan</span>;
+        return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs font-semibold whitespace-nowrap">Waiting Approval</span>;
       case "Approved":
         return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold whitespace-nowrap">Disetujui</span>;
       case "Rejected":
@@ -594,7 +593,7 @@ export default function WarehouseBorrowHistoryPage() {
               {/* Dual Signature */}
               <div className="space-y-4">
                 <SignaturePadField label="TTD Penyerah" required value={issuerSigned} onChange={setIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
-                <SignaturePadField label="TTD Penerima" required value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
+                <SignaturePadField label="TTD Penerima (Opsional)" value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
               </div>
             </div>
           )}

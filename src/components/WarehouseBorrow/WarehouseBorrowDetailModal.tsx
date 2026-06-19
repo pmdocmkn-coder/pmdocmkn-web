@@ -6,6 +6,9 @@ import { Button } from "../ui/button";
 import { Loader2, Package, Calendar, User, FileText, CheckCircle2, RotateCcw, PenTool } from "lucide-react";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import type { WarehouseBorrowDetail } from "../../types/warehouseBorrow";
+import SignaturePadField from "../common/SignaturePadField";
+import { useToast } from "../../hooks/use-toast";
+import { useAuth } from "../../contexts/AuthContext";
 
 interface WarehouseBorrowDetailModalProps {
   borrowId: number | null;
@@ -16,10 +19,18 @@ interface WarehouseBorrowDetailModalProps {
 export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }: WarehouseBorrowDetailModalProps) {
   const [data, setData] = useState<WarehouseBorrowDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [isSigning, setIsSigning] = useState(false);
+  const [receiverSigned, setReceiverSigned] = useState("");
+  const [submittingSign, setSubmittingSign] = useState(false);
+  
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   useEffect(() => {
     if (isOpen && borrowId) {
       setLoading(true);
+      setIsSigning(false);
+      setReceiverSigned("");
       warehouseBorrowApi.getById(borrowId)
         .then(res => setData(res))
         .catch(() => setData(null))
@@ -43,13 +54,29 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case "PendingApproval": return "Menunggu Approval";
+      case "PendingApproval": return "Waiting Approval";
       case "Approved": return "Disetujui";
       case "Rejected": return "Ditolak";
       case "Issued": return "Diberikan";
       case "Returned": return "Dikembalikan";
       case "Cancelled": return "Dibatalkan";
       default: return status;
+    }
+  };
+
+  const handleSign = async () => {
+    if (!data || !receiverSigned) return toast({ title: "Tanda tangan wajib diisi", variant: "destructive" });
+    setSubmittingSign(true);
+    try {
+      await warehouseBorrowApi.signReceiver(data.id, receiverSigned);
+      toast({ title: "Berhasil", description: "Tanda tangan penerima berhasil disimpan." });
+      setIsSigning(false);
+      const res = await warehouseBorrowApi.getById(data.id);
+      setData(res);
+    } catch {
+      toast({ title: "Gagal", description: "Gagal menyimpan tanda tangan", variant: "destructive" });
+    } finally {
+      setSubmittingSign(false);
     }
   };
 
@@ -244,8 +271,40 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                       <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
                         {data.borrowerName || data.borrowedByName}
                       </p>
+                      
+                      {!data.receiverSignatureBase64 && data.status === "Issued" && !isSigning && (
+                        <div className="mt-2 pt-2 border-t border-gray-100">
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="w-full text-xs h-7 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border-indigo-200"
+                            onClick={() => setIsSigning(true)}
+                          >
+                            Tanda Tangan
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {isSigning && (
+                    <div className="mt-4 p-4 border border-indigo-200 bg-indigo-50/30 rounded-xl space-y-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                      <h5 className="text-sm font-semibold text-indigo-900">Tanda Tangan Penerima</h5>
+                      <SignaturePadField 
+                        label="TTD Anda" 
+                        required 
+                        value={receiverSigned} 
+                        onChange={setReceiverSigned} 
+                        signerName={data.borrowerName || data.borrowedByName} 
+                      />
+                      <div className="flex justify-end gap-2 pt-2">
+                        <Button variant="outline" size="sm" onClick={() => { setIsSigning(false); setReceiverSigned(""); }}>Batal</Button>
+                        <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={handleSign} disabled={submittingSign || !receiverSigned}>
+                          {submittingSign ? "Menyimpan..." : "Simpan Tanda Tangan"}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

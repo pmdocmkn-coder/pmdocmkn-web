@@ -53,5 +53,6 @@ export function toGoodTagData(d: RadioHandoverDetail): GoodEquipmentTagData {
     physicalCondition: d.physicalCondition,
     displayCondition: d.displayCondition,
     handoverType: d.handoverType,
+    accessories: d.accessories ?? [],
   };
 }

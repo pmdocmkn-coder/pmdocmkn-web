@@ -45,6 +45,8 @@ type Props = {
   onOpenPhotos?: (images: string[], index?: number) => void;
   onJobUpdated?: (job: RadioRepairJobDetail) => void;
   onOpenBorrowRequest?: () => void;
+  defaultEditingTag?: "Good" | "Damaged" | null;
+  onClearDefaultEditingTag?: () => void;
 };
 
 export default function RadioRepairJobDetailPanel({
@@ -61,6 +63,8 @@ export default function RadioRepairJobDetailPanel({
   onOpenPhotos,
   onJobUpdated,
   onOpenBorrowRequest,
+  defaultEditingTag,
+  onClearDefaultEditingTag,
 }: Props) {
   const [handoverDetail, setHandoverDetail] = useState<RadioHandoverDetail | null>(null);
   const [radioMaster, setRadioMaster] = useState<RadioDto | null>(null);
@@ -105,9 +109,16 @@ export default function RadioRepairJobDetailPanel({
       voltageOutNoLoad: job.voltageOutNoLoad ?? undefined,
       voltageOutWithLoad: job.voltageOutWithLoad ?? undefined,
       physicalCondition: job.physicalCondition ?? undefined,
-      displayCondition: job.displayCondition ?? undefined,
     });
   }, [job]);
+
+  useEffect(() => {
+    if (defaultEditingTag) {
+      setEditingDamage(true);
+      setTagTypeInput(defaultEditingTag);
+      onClearDefaultEditingTag?.();
+    }
+  }, [defaultEditingTag, onClearDefaultEditingTag]);
 
   const ph = job.primaryHandover;
   const handoverId = ph?.id ?? job.handovers?.find((h) => h.handoverType === "HelpdeskToTechnician")?.id;

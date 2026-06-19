@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Archive, ChevronDown, ChevronUp, Filter, RotateCcw, Search, Home } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import RepairDateRangeFilter from "./RepairDateRangeFilter";
 import RadioRepairStatsCards from "./RadioRepairStatsCards";
 import RadioRepairGroupedTable, { type TicketJobGroup } from "./RadioRepairGroupedTable";
@@ -24,6 +24,7 @@ import TechnicianToWarehouseForm from "../RadioHandover/TechnicianToWarehouseFor
 import WorkshopTechnicianManager from "./WorkshopTechnicianManager";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
+import RadioCompletionTagModal from "./RadioCompletionTagModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -57,6 +58,7 @@ const filterPanelVariants = {
 export default function RadioRepairDashboardPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [dash, setDash] = useState<RadioRepairDashboard | null>(null);
   const [jobs, setJobs] = useState<RadioRepairJobList[]>([]);
   const [loading, setLoading] = useState(false);
@@ -98,11 +100,12 @@ export default function RadioRepairDashboardPage() {
 
   const [customStatuses, setCustomStatuses] = useState<RepairJobCustomStatus[]>([]);
 
-  // Workshop Technician picker state
   const [workshopTechs, setWorkshopTechs] = useState<WorkshopTechnicianDto[]>([]);
   const [techPickerOpen, setTechPickerOpen] = useState(false);
+  const [tagPickerOpen, setTagPickerOpen] = useState(false);
+  const [autoOpenTag, setAutoOpenTag] = useState<"Good" | "Damaged" | null>(null);
   const [pendingAction, setPendingAction] = useState<{
-    type: "status" | "approve";
+    type: "status" | "approve" | "tag";
     jobId: number;
     status?: RadioRepairJobStatus;
     customStatusId?: number | null;
@@ -217,6 +220,22 @@ export default function RadioRepairDashboardPage() {
     workshopTechnicianApi.getAllActive().then(res => setWorkshopTechs(res.data.data)).catch(() => setWorkshopTechs([]));
   }, []);
 
+  // Auto-open modal if jobId is present in URL
+  useEffect(() => {
+    const jobIdParam = searchParams.get("jobId");
+    if (jobIdParam) {
+      const jobId = parseInt(jobIdParam, 10);
+      if (!isNaN(jobId)) {
+        openDetail(jobId);
+      }
+      // Remove jobId from URL so it doesn't reopen on reload after closing
+      setSearchParams(prev => {
+        prev.delete("jobId");
+        return prev;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
+
   const resetFilters = () => {
     setFilterStatus("");
     setFilterTechnician("");
@@ -330,7 +349,7 @@ export default function RadioRepairDashboardPage() {
     return false;
   };
 
-  const patchStatus = async (jobId: number, status: RadioRepairJobStatus, customStatusId?: number | null, workshopTechnicianId?: number | null) => {
+  const patchStatus = async (jobId: number, status: RadioRepairJobStatus, customStatusId?: number | null, workshopTechnicianId?: number | null, bypassTagCheck?: boolean) => {
     if (patchingStatus) return;
 
     // Cek apakah perlu pilih teknisi workshop
@@ -338,6 +357,13 @@ export default function RadioRepairDashboardPage() {
     if (!workshopTechnicianId && currentJob && needsTechnicianPick(status, currentJob.status)) {
       setPendingAction({ type: "status", jobId, status, customStatusId });
       setTechPickerOpen(true);
+      return;
+    }
+
+    // Cek apakah perlu pilih Tag sebelum Selesai
+    if (status === "RepairCompleted" && !bypassTagCheck && currentJob) {
+      setPendingAction({ type: "tag", jobId, status, customStatusId });
+      setTagPickerOpen(true);
       return;
     }
 
@@ -385,6 +411,35 @@ export default function RadioRepairDashboardPage() {
       patchStatus(action.jobId, action.status, action.customStatusId, techId);
     } else if (action.type === "approve" && action.resumeStatus) {
       approveMaterial(action.resumeStatus, techId);
+    }
+  };
+
+  const handleTagModalSave = async (tag: "Good" | "Damaged", payload: any) => {
+    setTagPickerOpen(false);
+    if (!pendingAction || pendingAction.type !== "tag") return;
+    
+    const jobId = pendingAction.jobId;
+    
+    setPatchingStatus(true);
+    try {
+      // Update job tag fields
+      await radioRepairApi.technicianUpdate(jobId, payload);
+      
+      // Then proceed to change status
+      await patchStatus(jobId, pendingAction.status!, pendingAction.customStatusId, null, true);
+      
+      if (detail && detail.id === jobId) {
+         // Refresh detail if opened
+         const current = await radioRepairApi.getById(jobId);
+         setDetail(current);
+      } else {
+         load();
+      }
+    } catch (err: unknown) {
+      toast({ title: "Gagal update radio", description: apiMessage(err), variant: "destructive" });
+    } finally {
+      setPatchingStatus(false);
+      setPendingAction(null);
     }
   };
 
@@ -835,6 +890,8 @@ export default function RadioRepairDashboardPage() {
                 setDetail(null);
                 navigate(`/warehouse/borrow-request?repairJobId=${detail.id}`);
               }}
+              defaultEditingTag={autoOpenTag}
+              onClearDefaultEditingTag={() => setAutoOpenTag(null)}
             />
           )}
         </DialogContent>
@@ -902,6 +959,19 @@ export default function RadioRepairDashboardPage() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <RadioCompletionTagModal
+        open={tagPickerOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setTagPickerOpen(false);
+            setPendingAction(null);
+          }
+        }}
+        job={pendingAction?.type === "tag" ? (detail?.id === pendingAction.jobId ? detail : jobs.find(j => j.id === pendingAction.jobId) || null) : null}
+        saving={patchingStatus}
+        onSave={handleTagModalSave}
+      />
 
       <RadioScrapApprovalModal
         open={showScrapApproval}

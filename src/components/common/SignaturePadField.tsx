@@ -31,24 +31,33 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
   function SignaturePadField({ label, required, value, onChange, readOnly, disabled, signerName }, ref) {
     const containerRef = useRef<HTMLDivElement>(null);
     const padRef = useRef<SignatureCanvas>(null);
-    const [canvasWidth, setCanvasWidth] = useState(400);
+    const [canvasWidth, setCanvasWidth] = useState(0);
 
     useEffect(() => {
       const el = containerRef.current;
       if (!el) return;
 
       const syncSize = () => {
-        const w = Math.max(280, Math.floor(el.clientWidth));
-        setCanvasWidth(w);
+        // Measure the actual available content width inside the border.
+        // This is used ONLY for the canvas internal resolution (HTML attribute),
+        // NOT for the CSS display width (which is always 100%).
+        const w = Math.floor(el.clientWidth);
+        if (w > 0) setCanvasWidth(w);
       };
 
+      // Initial measurement after layout
       syncSize();
+
+      // Re-measure on any resize (viewport change, dialog animation, etc.)
       const ro = new ResizeObserver(syncSize);
       ro.observe(el);
       return () => ro.disconnect();
     }, []);
 
     const exportSignature = useCallback(async (): Promise<string | null> => {
+      if (readOnly) {
+        return value || null;
+      }
       const pad = padRef.current;
       if (!pad || pad.isEmpty()) {
         onChange?.(null);
@@ -126,9 +135,9 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
     }
 
     return (
-      <div className="space-y-2">
+      <div className="space-y-2 w-full min-w-0">
         <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700">
+          <label className="text-sm font-medium text-gray-700 min-w-0 truncate">
             {label}
             {required && <span className="text-red-500 ml-1">*</span>}
           </label>
@@ -136,7 +145,7 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
             <button
               type="button"
               onClick={handleClear}
-              className="text-xs flex items-center gap-1 text-gray-500 hover:text-red-600"
+              className="text-xs flex items-center gap-1 text-gray-500 hover:text-red-600 shrink-0 ml-2"
             >
               <Eraser className="w-3 h-3" /> Ulangi
             </button>
@@ -149,21 +158,24 @@ const SignaturePadField = forwardRef<SignaturePadHandle, SignaturePadFieldProps>
           }`}
           style={{ height: PAD_HEIGHT }}
         >
-          <SignatureCanvas
-            ref={padRef}
-            penColor="#1a1a2e"
-            minWidth={0.8}
-            maxWidth={3}
-            velocityFilterWeight={0.4}
-            dotSize={1.5}
-            canvasProps={{
-              width: canvasWidth,
-              height: PAD_HEIGHT,
-              className: "block touch-none",
-              style: { width: "100%", height: PAD_HEIGHT, display: "block" },
-            }}
-            onEnd={handleEnd}
-          />
+          {canvasWidth > 0 && (
+            <SignatureCanvas
+              key={canvasWidth}
+              ref={padRef}
+              penColor="#1a1a2e"
+              minWidth={0.8}
+              maxWidth={3}
+              velocityFilterWeight={0.4}
+              dotSize={1.5}
+              canvasProps={{
+                width: canvasWidth,
+                height: PAD_HEIGHT,
+                className: "block touch-none w-full",
+                style: { width: "100%", height: PAD_HEIGHT, display: "block" },
+              }}
+              onEnd={handleEnd}
+            />
+          )}
         </div>
         <p className="text-xs text-gray-400">Gambar tanda tangan di area putih, lalu klik Simpan</p>
       </div>

@@ -195,6 +195,10 @@ export const radioApi = {
     return api.post<{ data: RadioDto; message: string }>(`/api/radios/${id}/unscrap`);
   },
 
+  transferCategory: (id: number, targetCategory: string) => {
+    return api.patch<{ data: RadioDto; message: string }>(`/api/radios/${id}/transfer-category`, { targetCategory });
+  },
+
   // Import endpoints
   importInternal: (file: File) => {
     const formData = new FormData();

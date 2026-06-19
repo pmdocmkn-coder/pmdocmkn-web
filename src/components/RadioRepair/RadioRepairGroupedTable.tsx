@@ -70,6 +70,12 @@ export default function RadioRepairGroupedTable({
   customStatuses = [],
 }: Props) {
   const colCount = 11;
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <>
@@ -183,26 +189,7 @@ export default function RadioRepairGroupedTable({
 
                       {/* Row 2: SN + Unit/Alat */}
                       <div>
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
-                          <div className="flex flex-wrap gap-1">
-                            {j.hasBorrowRequest && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200" title="Punya pinjaman material">
-                                <Warehouse className="w-2.5 h-2.5 mr-1" /> Pinjaman
-                              </span>
-                            )}
-                            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Good" && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
-                                Tag Hijau
-                              </span>
-                            )}
-                            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Damaged" && (
-                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200">
-                                Tag Kuning
-                              </span>
-                            )}
-                          </div>
-                        </div>
+                        <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Unit: {j.unitNumber || "-"} • Alat: {j.equipmentName || "-"}
                         </p>
@@ -522,28 +509,7 @@ function RadioRepairRow({
       <td className="px-3 py-2.5 w-14">
         <HandoverPhotoThumb photo={j.previewPhotoBase64} onClick={() => onOpenPhoto(j)} />
       </td>
-      <td className="px-3 py-2.5 align-middle">
-        <div className="font-mono text-xs font-medium">{j.radioSerialNumber}</div>
-        {(j.hasBorrowRequest || ((j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType)) && (
-          <div className="flex flex-col gap-1 mt-1.5">
-            {j.hasBorrowRequest && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-50 text-amber-700 border border-amber-200 w-fit" title="Punya pinjaman material">
-                <Warehouse className="w-2.5 h-2.5 mr-1" /> Pinjaman
-              </span>
-            )}
-            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Good" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 w-fit">
-                Tag Hijau
-              </span>
-            )}
-            {(j.status === "RepairCompleted" || j.status === "Scrapped") && j.equipmentTagType === "Damaged" && (
-              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-yellow-50 text-yellow-700 border border-yellow-200 w-fit">
-                Tag Kuning
-              </span>
-            )}
-          </div>
-        )}
-      </td>
+      <td className="px-3 py-2.5 font-mono text-xs font-medium">{j.radioSerialNumber}</td>
       <td className="px-3 py-2.5 max-w-[110px] truncate text-xs" title={j.equipmentName ?? ""}>
         {j.equipmentName ?? "—"}
       </td>

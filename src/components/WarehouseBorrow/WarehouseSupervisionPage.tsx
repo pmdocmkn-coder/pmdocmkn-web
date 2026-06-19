@@ -153,7 +153,10 @@ export default function WarehouseSupervisionPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs text-gray-500 font-medium">Teknisi</p>
-                        <p className="text-sm font-semibold text-gray-900 truncate">{b.borrowedByName}</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{b.borrowerName || b.borrowedByName}</p>
+                        {b.borrowerName && b.borrowerName !== b.borrowedByName && (
+                           <p className="text-[10px] text-gray-400 truncate">via: {b.borrowedByName}</p>
+                        )}
                       </div>
                     </div>
 
@@ -193,7 +196,12 @@ export default function WarehouseSupervisionPage() {
                 </div>
                 <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
                   <span className="text-gray-500">Teknisi</span>
-                  <span className="font-semibold">{activeItem.borrowedByName}</span>
+                  <div className="text-right">
+                    <div className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</div>
+                    {activeItem.borrowerName && activeItem.borrowerName !== activeItem.borrowedByName && (
+                      <div className="text-[10px] text-gray-500 -mt-0.5">via: {activeItem.borrowedByName}</div>
+                    )}
+                  </div>
                 </div>
                 <div className="pt-1">
                   <span className="text-gray-500 block mb-1">Part yang dipinjam:</span>

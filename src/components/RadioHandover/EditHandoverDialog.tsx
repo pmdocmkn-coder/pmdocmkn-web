@@ -273,12 +273,14 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           <HandoverAccessoryList items={accessories} onChange={setAccessories} />
 
           {/* Signature */}
-          <SignaturePadField
-            ref={sigTekRef}
-            label="TTD Penerima (opsional)"
-            value={sigReceiver}
-            onChange={setSigReceiver}
-          />
+          {!detail.receiverSignatureBase64 && (
+            <SignaturePadField
+              ref={sigTekRef}
+              label="TTD Penerima (opsional)"
+              value={sigReceiver}
+              onChange={setSigReceiver}
+            />
+          )}
 
           {/* Remarks */}
           <div className="space-y-2 pb-4">

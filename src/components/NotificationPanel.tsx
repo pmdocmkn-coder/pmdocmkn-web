@@ -23,16 +23,27 @@ const getCategoryIcon = (category?: string | null) => {
 };
 
 const getNavigateUrl = (n: NotificationItem): string | null => {
-  if (n.linkUrl) return n.linkUrl;
+  if (n.linkUrl) {
+    if (n.category === 'repair' && n.referenceId) {
+      return `${n.linkUrl}?jobId=${n.referenceId}`;
+    }
+    if (n.category === 'handover' && n.referenceId) {
+      return `${n.linkUrl}?handoverId=${n.referenceId}`;
+    }
+    if (n.category === 'scrap' && n.referenceId) {
+      return `${n.linkUrl}?jobId=${n.referenceId}`;
+    }
+    return n.linkUrl;
+  }
   
   if (n.category === 'repair' && n.referenceId) {
-    return `/radio-repair-dashboard`;
+    return `/radio-repair-dashboard?jobId=${n.referenceId}`;
   }
   if (n.category === 'handover' && n.referenceId) {
-    return `/radio-handover`; 
+    return `/radio-handover?handoverId=${n.referenceId}`; 
   }
   if (n.category === 'scrap' && n.referenceId) {
-    return `/radio-scrap`;
+    return `/radio-scrap?jobId=${n.referenceId}`;
   }
   return null;
 };

@@ -38,8 +38,8 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
 
   const submit = async () => {
     const acc = accessories.filter((a) => a.itemName.trim());
-    if (!hdId || photos.length === 0 || !sigWh || !sigHd) {
-      toast({ title: "Lengkapi penerima helpdesk, foto, dan kedua TTD", variant: "destructive" });
+    if (!hdId || photos.length === 0 || !sigWh) {
+      toast({ title: "Lengkapi penerima helpdesk, foto, dan TTD penyerah", variant: "destructive" });
       return;
     }
 
@@ -55,7 +55,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         receivedByUserId: Number(hdId),
         radioPhotos: photos,
         handedOverSignatureBase64: sigWh,
-        receiverSignatureBase64: sigHd,
+        receiverSignatureBase64: sigHd || undefined,
         accessories: acc,
         remarks: remarks || undefined,
       });
@@ -160,8 +160,8 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
           onChange={setSigWh} 
         />
         <SignaturePadField 
-          label="TTD Penerima" 
-          required 
+          label="TTD Penerima (opsional)" 
+          required={false}
           value={sigHd} 
           onChange={setSigHd} 
         />

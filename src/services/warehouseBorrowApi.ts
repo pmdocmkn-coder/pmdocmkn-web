@@ -28,6 +28,9 @@ export const warehouseBorrowApi = {
   reject: (id: number, reason: string) =>
     api.patch(`/api/warehouse-part-borrows/${id}/reject`, { reason }).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
+  signReceiver: (id: number, receiverSignatureBase64: string) =>
+    api.patch(`/api/warehouse-part-borrows/${id}/sign-receiver`, { receiverSignatureBase64 }).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
+
   issue: (id: number, body?: { issuerSignatureBase64?: string; receiverSignatureBase64?: string }) =>
     api.patch(`/api/warehouse-part-borrows/${id}/issue`, body ?? {}).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
