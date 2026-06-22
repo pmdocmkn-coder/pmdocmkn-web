@@ -96,7 +96,7 @@ export default function WarehouseBorrowRequestPage() {
       .then((res) => {
         const users = res.data?.data ?? [];
         console.log('📥 All Users loaded:', users.length, 'users');
-        console.log('👥 Users with "Teknisi" or "Workshop" in role:', 
+        console.log('👥 Users with "Teknisi" or "Workshop" in role:',
           users.filter(u => u.roleName?.toLowerCase().includes('teknisi') || u.roleName?.toLowerCase().includes('workshop'))
         );
         setAllUsers(users);
@@ -324,11 +324,10 @@ export default function WarehouseBorrowRequestPage() {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 tracking-tight flex items-center gap-2">
-            <PackageOpen className="w-7 h-7 text-violet-600" />
-            Peminjaman Part
+          <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            Peminjaman Tools
           </h1>
-          <p className="text-sm text-gray-500 mt-1">Ajukan peminjaman suku cadang (parts) dari Warehouse</p>
+          <p className="text-sm text-gray-500 mt-0.5">Ajukan peminjaman suku cadang (tools) dari Warehouse</p>
         </div>
       </div>
 
@@ -339,7 +338,7 @@ export default function WarehouseBorrowRequestPage() {
       >
         <div className="p-6 sm:p-8">
           <form onSubmit={submit} className="space-y-6">
-            
+
             {/* Context Info (If Linked to Job) */}
             {jobId && (
               <div className="bg-violet-50/50 border border-violet-100 rounded-xl p-4 flex gap-4 items-start">
@@ -410,7 +409,7 @@ export default function WarehouseBorrowRequestPage() {
 
                   {/* Part Name Search */}
                   <div className="space-y-1.5 relative">
-                    <label className="text-xs font-semibold text-gray-600">Nama / Deskripsi Part</label>
+                    <label className="text-sm font-semibold text-slate-700">Nama / Deskripsi Tools</label>
                     <div className="relative">
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
                       <Input
@@ -447,7 +446,7 @@ export default function WarehouseBorrowRequestPage() {
 
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1.5">
-                      <label className="text-xs font-semibold text-gray-600">Kode Part</label>
+                      <label className="text-sm font-semibold text-slate-700">Tools Code</label>
                       <Input
                         placeholder="Contoh: PMNN4409BR"
                         className="h-10 font-mono text-sm bg-white"
@@ -571,7 +570,7 @@ export default function WarehouseBorrowRequestPage() {
                       // Jika tidak ada relasi → tampilkan semua
                       (() => {
                         const linkedTechs = technicians.filter(t => t.userId === selectedBorrowerUser?.id);
-                        return linkedTechs.length > 0 
+                        return linkedTechs.length > 0
                           ? linkedTechs.map(t => t.name)
                           : technicians.map(t => t.name); // fallback: tampilkan semua jika tidak ada relasi
                       })()
@@ -588,14 +587,14 @@ export default function WarehouseBorrowRequestPage() {
                 </div>
               )}
 
-              <p className="text-xs text-gray-400">Nama orang yang akan menggunakan part ini.</p>
+              <p className="text-xs text-gray-400">Nama orang yang akan menggunakan tools ini.</p>
             </div>
 
             {/* Purpose */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Keperluan (Opsional)</label>
               <Textarea
-                placeholder={jobId ? "Deskripsikan bagian spesifik yang rusak..." : "Tujuan penggunaan part..."}
+                placeholder={jobId ? "Deskripsikan bagian spesifik yang rusak..." : "Tujuan penggunaan Tools..."}
                 rows={3}
                 className="resize-none"
                 value={purpose}

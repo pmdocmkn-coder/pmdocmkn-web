@@ -402,7 +402,7 @@ export default function RadioRepairJobDetailPanel({
             </div>
           )}
 
-          {/* Tombol Pinjam Part */}
+          {/* Tombol Pinjam Tools */}
           {job.status === "InProgress" && onOpenBorrowRequest && (
             <div className="pt-3 border-t border-gray-100 mt-2">
               <p className="text-xs text-gray-500 mb-1.5">Kebutuhan Suku Cadang:</p>
@@ -412,7 +412,7 @@ export default function RadioRepairJobDetailPanel({
                 className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 flex items-center gap-1.5 transition-colors"
               >
                 <Warehouse className="w-4 h-4" />
-                Pinjam Part ke Warehouse
+                Pinjam Tools ke Warehouse
               </button>
             </div>
           )}

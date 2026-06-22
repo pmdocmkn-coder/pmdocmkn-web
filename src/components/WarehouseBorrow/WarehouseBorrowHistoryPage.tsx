@@ -331,8 +331,8 @@ export default function WarehouseBorrowHistoryPage() {
             <History className="w-8 h-8 text-violet-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Histori Peminjaman Part</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Daftar lengkap riwayat permintaan dan transaksi parts</p>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Histori Peminjaman Tools</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Daftar lengkap riwayat permintaan dan transaksi tools</p>
           </div>
         </div>
         

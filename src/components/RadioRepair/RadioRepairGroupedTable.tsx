@@ -440,7 +440,7 @@ function MobileQuickActionDropdown({
                 className="w-full text-left px-4 py-3 text-sm hover:bg-amber-50 text-amber-700 flex items-center font-medium border-t border-gray-100 mt-1"
               >
                 <Warehouse className="w-4 h-4 mr-2" />
-                Pinjam Part
+                Pinjam Tools
               </button>
             )}
           </div>
@@ -624,7 +624,7 @@ function RadioRepairRow({
           {canUpdate && (j.status === "InProgress") && (
             <button
               type="button"
-              title="Pinjam Part"
+              title="Pinjam Tools"
               className="p-1.5 border rounded-lg hover:bg-amber-50 bg-white text-amber-600"
               onClick={() => onOpenBorrowRequest(j)}
             >

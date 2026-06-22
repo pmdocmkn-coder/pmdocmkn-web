@@ -213,7 +213,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       id: "warehouse-borrow",
       icon: Package,
       title: "Warehouse Peminjaman",
-      description: "Manajemen Peminjaman Part.",
+      description: "Manajemen Peminjaman Tools.",
       color: "from-violet-500 to-purple-500",
       tab: "warehouse/borrow-history",
       permission: "warehouse.borrow.view",
