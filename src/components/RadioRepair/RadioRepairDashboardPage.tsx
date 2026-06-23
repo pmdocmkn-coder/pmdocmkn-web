@@ -858,7 +858,7 @@ export default function RadioRepairDashboardPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 flex-wrap">
               {detail?.helpdeskTicketNumber} — SN {detail?.radioSerialNumber}
-              {detail && <RadioRepairStatusBadge status={detail.status} customStatusLabel={detail.customStatusLabel} customStatusColor={detail.customStatusColor} />}
+              {detail && <RadioRepairStatusBadge status={detail.status} customStatusLabel={detail.customStatusLabel} customStatusColor={detail.customStatusColor} pendingHandoverType={detail.pendingHandoverType} />}
             </DialogTitle>
             {detail && (
               <p className="text-sm text-gray-600">

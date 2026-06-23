@@ -678,7 +678,7 @@ export default function RadioHandoverPage() {
 
       {/* Sign Row dialog */}
       <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSigRowReceiver(null); }}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>TTD Penerima — {signRow?.handoverNumber}</DialogTitle>
           </DialogHeader>

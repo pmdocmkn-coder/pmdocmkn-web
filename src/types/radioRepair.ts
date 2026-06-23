@@ -56,6 +56,9 @@ export interface RadioRepairJobList {
   isDeleted: boolean;
   deletedAt?: string | null;
   hasBorrowRequest: boolean;
+  hasActiveBorrowedPart: boolean;
+  hasReturnedBorrowedPart: boolean;
+  pendingHandoverType?: string | null;
 }
 
 // ─── Custom Status Types ──────────────────────────────────────────────────────

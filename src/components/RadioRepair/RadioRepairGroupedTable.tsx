@@ -179,9 +179,16 @@ export default function RadioRepairGroupedTable({
                     <div key={j.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2.5 relative">
                       {/* Row 1: Category Badge + Date */}
                       <div className="flex justify-between items-start">
-                        <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                          {j.radioCategory || "Perbaikan"}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                            {j.radioOwnerLabel || "Perbaikan"}
+                          </span>
+                          {j.radioCategory && j.radioCategory !== j.radioOwnerLabel && (
+                            <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+                              {j.radioCategory}
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-gray-400 font-medium">
                           {j.openedAt ? format(new Date(j.openedAt), "dd MMM yyyy", { locale: localeId }) : "-"}
                         </span>
@@ -228,6 +235,7 @@ export default function RadioRepairGroupedTable({
                             status={j.status}
                             customStatusLabel={j.customStatusLabel}
                             customStatusColor={j.customStatusColor}
+                            pendingHandoverType={j.pendingHandoverType}
                           />
                         </div>
                         <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
@@ -239,6 +247,17 @@ export default function RadioRepairGroupedTable({
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+
+                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
+                              className="inline-flex items-center justify-center h-8 px-3 border border-violet-600 rounded-xl text-white bg-violet-600 text-xs font-semibold shrink-0 transition-colors shadow-sm"
+                            >
+                              <Warehouse className="w-3.5 h-3.5 mr-1" />
+                              Ke WH
+                            </button>
+                          )}
 
                           {!showArchive && !isJobLocked(j.status) && canUpdate && (
                             <MobileQuickActionDropdown
@@ -502,7 +521,7 @@ function RadioRepairRow({
   const nextStatuses = !locked && !showArchive
     ? allowedNextStatuses(j.status as RadioRepairJobStatus)
     : [];
-  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && !j.isDeleted && !showArchive;
+  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && !j.isDeleted && !showArchive;
 
   return (
     <tr className={`border-t border-gray-100 hover:bg-violet-50/40 ${j.isDeleted ? "opacity-60" : ""}`}>
@@ -531,6 +550,7 @@ function RadioRepairRow({
           status={j.status}
           customStatusLabel={j.customStatusLabel}
           customStatusColor={j.customStatusColor}
+          pendingHandoverType={j.pendingHandoverType}
         />
       </td>
       <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">
