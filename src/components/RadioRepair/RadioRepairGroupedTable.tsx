@@ -571,13 +571,13 @@ function RadioRepairRow({
           {formatActiveWorkshopDuration(j.status, j.accumulatedProgressDurationMinutes, j.currentProgressStartedAt, j.firstInProgressAt)}
         </div>
         {j.hasActiveBorrowedPart && (
-          <span className="mt-1 px-1.5 py-0.5 inline-flex items-center text-[9px] font-semibold rounded bg-amber-50 text-amber-700 border border-amber-200" title="Sedang meminjam parts/tools dari warehouse">
-            <Wrench className="w-2.5 h-2.5 mr-0.5" /> Pinjam Tools
+          <span className="mt-1 px-1.5 py-0.5 inline-flex w-max whitespace-nowrap items-center gap-1 text-[9px] font-semibold rounded bg-amber-50 text-amber-700 border border-amber-200" title="Sedang meminjam parts/tools dari warehouse">
+            <Wrench className="w-2.5 h-2.5" /> Pinjam Tools
           </span>
         )}
         {!j.hasActiveBorrowedPart && j.hasReturnedBorrowedPart && (
-          <span className="mt-1 px-1.5 py-0.5 inline-flex items-center text-[9px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200" title="Parts/tools yang dipinjam sudah dikembalikan">
-            <Wrench className="w-2.5 h-2.5 mr-0.5" /> Dikembalikan ✓
+          <span className="mt-1 px-1.5 py-0.5 inline-flex w-max whitespace-nowrap items-center gap-1 text-[9px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200" title="Parts/tools yang dipinjam sudah dikembalikan">
+            <Wrench className="w-2.5 h-2.5" /> Tools Dikembalikan
           </span>
         )}
       </td>
