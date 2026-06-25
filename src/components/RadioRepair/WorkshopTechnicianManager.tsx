@@ -229,8 +229,8 @@ export default function WorkshopTechnicianManager() {
                   label="Pilih Akun User"
                   color="violet"
                 />
-                <p className="text-[11px] text-gray-400">
-                  Pilih akun agar teknisi ini otomatis muncul saat akun tersebut meminjam/mengembalikan part.
+                <p className="text-[10px] text-gray-400 mt-0.5 leading-tight">
+                  Pilih akun agar teknisi ini otomatis muncul saat akun tersebut meminjam/mengembalikan tools.
                 </p>
               </div>
 

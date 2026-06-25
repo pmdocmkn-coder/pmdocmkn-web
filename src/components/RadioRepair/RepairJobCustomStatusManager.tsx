@@ -237,7 +237,7 @@ function StatusForm({
             className="w-full border rounded-lg px-3 py-1.5 text-sm mt-0.5 focus:ring-2 focus:ring-violet-300 outline-none"
             value={form.label}
             onChange={(e) => onChange({ ...form, label: e.target.value })}
-            placeholder="contoh: Menunggu Spare Part"
+            placeholder="contoh: Menunggu Spare Tools"
             maxLength={100}
           />
         </label>

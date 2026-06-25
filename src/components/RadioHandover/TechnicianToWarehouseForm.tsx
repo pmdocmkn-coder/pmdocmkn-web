@@ -86,8 +86,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
     const techSig = (await sigTechRef.current?.exportNow()) ?? sigTech;
     const whSig = (await sigWhRef.current?.exportNow()) ?? sigWh;
 
-    if (!whId || !workshopTechId || photos.length === 0 || !techSig || !whSig) {
-      toast({ title: "Lengkapi data teknisi, foto, TTD", variant: "destructive" });
+    if (!whId || !workshopTechId || photos.length === 0 || !techSig) {
+      toast({ title: "Lengkapi data teknisi, foto, TTD Penyerah", variant: "destructive" });
       return;
     }
 
@@ -106,7 +106,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         handedOverByWorkshopTechnicianId: Number(workshopTechId),
         radioPhotos: photos,
         handedOverSignatureBase64: techSig,
-        receiverSignatureBase64: whSig,
+        receiverSignatureBase64: whSig || undefined,
         accessories: acc,
       });
       toast({ title: "Serah terima ke warehouse berhasil" });
@@ -173,8 +173,8 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         label="Tambahan aksesoris"
       />
 
-      <SignaturePadField ref={sigTechRef} label="TTD Penyerah" required value={sigTech} onChange={setSigTech} />
-      <SignaturePadField ref={sigWhRef} label="TTD Penerima" required value={sigWh} onChange={setSigWh} />
+      <SignaturePadField ref={sigTechRef} label="TTD Penyerah *" required value={sigTech} onChange={setSigTech} />
+      <SignaturePadField ref={sigWhRef} label="TTD Penerima (opsional)" required={false} value={sigWh} onChange={setSigWh} />
 
       <div className="flex gap-2 justify-end pt-2">
         <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>

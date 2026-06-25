@@ -254,7 +254,7 @@ const warehouseMenu: NavItem[] = [
     permission: "warehouse.borrow.view",
   },
   {
-    name: "Ajuan Pinjam Part",
+    name: "Ajuan Pinjam Tools",
     path: "/warehouse/borrow-request",
     icon: Package,
     id: "warehouse-borrow-request",
@@ -268,7 +268,7 @@ const warehouseMenu: NavItem[] = [
     permission: "warehouse.borrow.supervise",
   },
   {
-    name: "Master Data Part",
+    name: "Master Data Tools",
     path: "/warehouse/catalog",
     icon: Database,
     id: "warehouse-catalog",

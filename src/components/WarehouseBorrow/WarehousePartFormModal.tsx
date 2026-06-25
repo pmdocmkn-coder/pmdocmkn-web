@@ -51,7 +51,7 @@ export default function WarehousePartFormModal({ isOpen, onClose, onSuccess, ini
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.partCode || !formData.partName) {
-      toast({ title: "Validasi Gagal", description: "Kode Part dan Nama Part wajib diisi.", variant: "destructive" });
+      toast({ title: "Validasi Gagal", description: "Tools Code dan Nama Tools wajib diisi.", variant: "destructive" });
       return;
     }
 
@@ -59,10 +59,10 @@ export default function WarehousePartFormModal({ isOpen, onClose, onSuccess, ini
     try {
       if (initialData) {
         await warehousePartApi.update(initialData.id, formData);
-        toast({ title: "Berhasil", description: "Data part berhasil diperbarui." });
+        toast({ title: "Berhasil", description: "Data tools berhasil diperbarui." });
       } else {
         await warehousePartApi.create(formData);
-        toast({ title: "Berhasil", description: "Data part berhasil ditambahkan." });
+        toast({ title: "Berhasil", description: "Data tools berhasil ditambahkan." });
       }
       onSuccess();
       onClose();
@@ -78,15 +78,15 @@ export default function WarehousePartFormModal({ isOpen, onClose, onSuccess, ini
       <DialogContent className="max-w-md bg-white p-6 rounded-xl shadow-2xl">
         <DialogHeader>
           <DialogTitle className="text-xl font-bold text-slate-800">
-            {initialData ? "Ubah Data Part" : "Tambah Part Baru"}
+            {initialData ? "Ubah Data Tools" : "Tambah Tools Baru"}
           </DialogTitle>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4 mt-4">
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Kode Part <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-700">Tools Code <span className="text-red-500">*</span></label>
             <Input 
-              placeholder="Masukkan kode part..." 
+              placeholder="Masukkan kode tools..." 
               value={formData.partCode} 
               onChange={e => setFormData({ ...formData, partCode: e.target.value })} 
               disabled={loading}
@@ -94,9 +94,9 @@ export default function WarehousePartFormModal({ isOpen, onClose, onSuccess, ini
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-semibold text-slate-700">Nama Part <span className="text-red-500">*</span></label>
+            <label className="text-sm font-semibold text-slate-700">Nama Tools <span className="text-red-500">*</span></label>
             <Input 
-              placeholder="Masukkan nama part..." 
+              placeholder="Masukkan nama tools..." 
               value={formData.partName} 
               onChange={e => setFormData({ ...formData, partName: e.target.value })} 
               disabled={loading}

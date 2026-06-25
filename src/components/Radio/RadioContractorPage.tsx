@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
@@ -324,40 +324,36 @@ const filterPanelVariants: Variants = {
         ws.addRow([]);
 
         // Main Table Headers (2 rows for merged Fleet)
-        const mainHeadersRow1 = [
-          "NO", "Nomor Aset", "Serial Number", "Fleet"
-        ];
-        // Add empty slots for Fleet merge
-        for(let i=1; i<distinctFleets.length; i++) {
-          mainHeadersRow1.push("");
-        }
-        mainHeadersRow1.push("ID Radio", "Scrap", "Mark", "TRUNGKING", "KONV", "Company", "Dept", "Tanggal", "Type", "Channel");
+        // Format sesuai import: NO | Nomor Aset | Nomor Unit | Serial Number | Type | TRUNGKING | KONV | Dept | Perusahaan | Tanggal | Fleet... | ID Radio | Scrap | Mark
+        const fixedBeforeFleet = ["NO", "Nomor Aset", "Nomor Unit", "Serial Number", "Type", "TRUNGKING", "KONV", "Dept", "Perusahaan", "Tanggal"];
+        const fixedAfterFleet = ["ID Radio", "Scrap", "Mark"];
+        const fleetStartCol = fixedBeforeFleet.length + 1; // 11
+        const fleetColCount = distinctFleets.length > 0 ? distinctFleets.length : 1;
+        const fleetEndCol = fleetStartCol + fleetColCount - 1;
 
-        const mainHeadersRow2 = [
-          "", "", "", ...distinctFleets, "", "", "", "", "", "", "", "", "", ""
-        ];
+        const mainHeadersRow1 = [...fixedBeforeFleet, "Fleet"];
+        for (let i = 1; i < fleetColCount; i++) mainHeadersRow1.push("");
+        mainHeadersRow1.push(...fixedAfterFleet);
+
+        const mainHeadersRow2: string[] = new Array(fixedBeforeFleet.length).fill("");
+        mainHeadersRow2.push(...(distinctFleets.length > 0 ? distinctFleets : [""]));
+        mainHeadersRow2.push(...new Array(fixedAfterFleet.length).fill(""));
 
         const r1 = ws.addRow(mainHeadersRow1);
         const r2 = ws.addRow(mainHeadersRow2);
 
-        // Styling and merging
-        const fleetStartCol = 4;
-        const fleetEndCol = 3 + (distinctFleets.length > 0 ? distinctFleets.length : 1);
-        
-        if (distinctFleets.length > 0) {
+        // Merge Fleet header horizontally
+        if (distinctFleets.length > 1) {
           ws.mergeCells(r1.number, fleetStartCol, r1.number, fleetEndCol);
         }
 
-        const standardMergeCols = [
-          1, 2, 3, 
-          fleetEndCol + 1, fleetEndCol + 2, fleetEndCol + 3, fleetEndCol + 4, 
-          fleetEndCol + 5, fleetEndCol + 6, fleetEndCol + 7, fleetEndCol + 8,
-          fleetEndCol + 9, fleetEndCol + 10
-        ];
-
-        standardMergeCols.forEach(col => {
-          ws.mergeCells(r1.number, col, r2.number, col);
-        });
+        // Merge non-fleet columns vertically (2 header rows)
+        for (let c = 1; c <= fixedBeforeFleet.length; c++) {
+          ws.mergeCells(r1.number, c, r2.number, c);
+        }
+        for (let c = fleetEndCol + 1; c <= fleetEndCol + fixedAfterFleet.length; c++) {
+          ws.mergeCells(r1.number, c, r2.number, c);
+        }
 
         [r1, r2].forEach(r => {
           r.eachCell(cell => {
@@ -371,33 +367,34 @@ const filterPanelVariants: Variants = {
         // Add Data
         data.forEach((item, i) => {
           const isItemNoGrafir = isNoGrafir(item.nomorAset);
+          const itemFleets = parseFleetList(item.fleet);
           
           const rowData: any[] = [
             i + 1,
             item.nomorAset || "-",
-            item.serialNumber || "-"
+            item.nomorUnit || "-",
+            item.serialNumber || "-",
+            item.type || "-",
+            item.isTrunking ? "V" : "",
+            item.isConventional ? "V" : "",
+            item.department || "-",
+            item.company || "-",
+            (item.tanggal && item.tanggal !== "-") ? format(new Date(item.tanggal), "dd-MMM-yyyy") : "-",
           ];
 
-          const itemFleets = parseFleetList(item.fleet);
+          // Fleet columns
           if (distinctFleets.length > 0) {
             distinctFleets.forEach(f => {
               rowData.push(itemFleets.includes(f) ? "✓" : "");
             });
           } else {
-            rowData.push(""); // empty fleet placeholder if none exist
+            rowData.push("");
           }
 
           rowData.push(
             item.radioId || "-",
             item.isScrap ? "Yes" : "-",
-            item.mark || "-",
-            item.isTrunking ? "V" : "",
-            item.isConventional ? "V" : "",
-            item.company || "-",
-            item.department || "-",
-            (item.tanggal && item.tanggal !== "-") ? format(new Date(item.tanggal), "dd-MMM-yyyy") : "-",
-            item.type || "-",
-            item.channel || "-"
+            item.mark || "-"
           );
 
           const row = ws.addRow(rowData);
@@ -411,31 +408,24 @@ const filterPanelVariants: Variants = {
         });
 
         // Adjust column widths
-        ws.getColumn(1).width = 5;  // NO
-        ws.getColumn(2).width = 15; // Aset
-        ws.getColumn(3).width = 20; // SN
+        ws.getColumn(1).width = 5;   // NO
+        ws.getColumn(2).width = 15;  // Nomor Aset
+        ws.getColumn(3).width = 15;  // Nomor Unit
+        ws.getColumn(4).width = 20;  // Serial Number
+        ws.getColumn(5).width = 15;  // Type
+        ws.getColumn(6).width = 12;  // TRUNGKING
+        ws.getColumn(7).width = 8;   // KONV
+        ws.getColumn(8).width = 15;  // Dept
+        ws.getColumn(9).width = 25;  // Perusahaan
+        ws.getColumn(10).width = 15; // Tanggal
         
-        let colIdx = 4;
-        if (distinctFleets.length > 0) {
-          distinctFleets.forEach(() => {
-            ws.getColumn(colIdx).width = 8;
-            colIdx++;
-          });
-        } else {
-          ws.getColumn(colIdx).width = 15;
-          colIdx++;
+        let colIdx = fleetStartCol;
+        for (let i = 0; i < fleetColCount; i++) {
+          ws.getColumn(colIdx++).width = 8;
         }
-        
-        ws.getColumn(colIdx++).width = 12; // ID
+        ws.getColumn(colIdx++).width = 12; // ID Radio
         ws.getColumn(colIdx++).width = 10; // Scrap
-        ws.getColumn(colIdx++).width = 12; // Mark
-        ws.getColumn(colIdx++).width = 12; // Trunking
-        ws.getColumn(colIdx++).width = 12; // Konv
-        ws.getColumn(colIdx++).width = 25; // Company
-        ws.getColumn(colIdx++).width = 15; // Dept
-        ws.getColumn(colIdx++).width = 15; // Tanggal
-        ws.getColumn(colIdx++).width = 15; // Type
-        ws.getColumn(colIdx++).width = 10; // Channel
+        ws.getColumn(colIdx++).width = 15; // Mark
       };
 
       addSheet("Data Kontraktor", filteredAllOptions);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import {
@@ -14,7 +14,7 @@ import {
   Home,
   Search,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
@@ -75,6 +75,7 @@ type HandoverTableProps = {
   emptyMessage: string;
   onOpenDetail: (id: number) => void;
   onOpenGallery: (h: RadioHandoverList) => void;
+  onSignRow?: (h: RadioHandoverList) => void;
 };
 
 function HandoverHistoryTable({
@@ -84,7 +85,12 @@ function HandoverHistoryTable({
   emptyMessage,
   onOpenDetail,
   onOpenGallery,
+  onSignRow,
 }: HandoverTableProps) {
+  const canWarehouseSign = (h: RadioHandoverList) => {
+    return h.status === "PendingReceiverSignature";
+  };
+
   return (
     <>
     {/* ====== DESKTOP TABLE ====== */}
@@ -178,15 +184,28 @@ function HandoverHistoryTable({
                   </div>
                 </td>
                 <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    type="button"
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-lg text-violet-700 text-xs font-medium hover:bg-violet-50 transition-colors"
-                    title="Lihat detail serah terima"
-                    onClick={() => onOpenDetail(h.id)}
-                  >
-                    <Eye className="w-3.5 h-3.5" />
-                    Detail
-                  </button>
+                  <div className="flex gap-2 justify-end">
+                    {canWarehouseSign(h) && onSignRow && (
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors"
+                        title="Lengkapi TTD Penerima"
+                        onClick={() => onSignRow(h)}
+                      >
+                        <span className="shrink-0 w-3.5 h-3.5 flex items-center justify-center">✍️</span>
+                        Tanda Tangan
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-lg text-violet-700 text-xs font-medium hover:bg-violet-50 transition-colors"
+                      title="Lihat detail serah terima"
+                      onClick={() => onOpenDetail(h.id)}
+                    >
+                      <Eye className="w-3.5 h-3.5" />
+                      Detail
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -239,11 +258,22 @@ function HandoverHistoryTable({
             </div>
 
             {/* Row 4: Status & Actions */}
-            <div className="flex items-center justify-between pt-2.5 mt-1 border-t border-gray-100">
-              <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-y-2.5 pt-2.5 mt-1 border-t border-gray-100">
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
                 <HandoverStatusBadge status={h.status} />
               </div>
-              <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
+              <div className="flex flex-wrap gap-1.5 ml-auto items-center justify-end" onClick={(e) => e.stopPropagation()}>
+                {canWarehouseSign(h) && onSignRow && (
+                  <button
+                    type="button"
+                    onClick={() => onSignRow(h)}
+                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors mr-1"
+                    title="Lengkapi TTD Penerima"
+                  >
+                    <span className="shrink-0 w-3 h-3 flex items-center justify-center">✍️</span>
+                    <span className="hidden xs:inline">Tanda Tangan</span>
+                  </button>
+                )}
                 {h.previewPhotoBase64 || h.photoCount > 0 ? (
                   <div className="relative mr-1" onClick={(e) => e.stopPropagation()}>
                     <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
@@ -288,8 +318,32 @@ export default function RadioHandoverWarehousePage() {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [galleryIndex, setGalleryIndex] = useState(0);
   const [galleryOpen, setGalleryOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState("incoming");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "incoming");
   const [searchQuery, setSearchQuery] = useState("");
+  const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
+  const [signRowDetail, setSignRowDetail] = useState<RadioHandoverDetail | null>(null);
+  const [sigRowReceiver, setSigRowReceiver] = useState<string>("");
+  const sigWhRowRef = useRef<any>(null);
+
+  useEffect(() => {
+    if (searchParams.get("tab")) {
+      setActiveTab(searchParams.get("tab")!);
+    }
+  }, [searchParams]);
+
+  // Fetch full detail when sign dialog opens for tag preview
+  useEffect(() => {
+    if (!signRow) { setSignRowDetail(null); return; }
+    radioHandoverApi.getById(signRow.id)
+      .then(setSignRowDetail)
+      .catch(() => setSignRowDetail(null));
+  }, [signRow]);
+
+  const handleTabChange = (val: string) => {
+    setActiveTab(val);
+    setSearchParams({ tab: val });
+  };
 
   const filteredIncoming = incoming.filter((h) => 
     h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -339,6 +393,22 @@ export default function RadioHandoverWarehousePage() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Auto-open modal if handoverId is present in URL
+  useEffect(() => {
+    const handoverIdParam = searchParams.get("handoverId");
+    if (handoverIdParam) {
+      const handoverId = parseInt(handoverIdParam, 10);
+      if (!isNaN(handoverId)) {
+        openDetail(handoverId);
+      }
+      // Remove handoverId from URL so it doesn't reopen on reload after closing
+      setSearchParams(prev => {
+        prev.delete("handoverId");
+        return prev;
+      }, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   const openDetail = async (id: number) => {
     setDetailLoading(true);
@@ -498,14 +568,20 @@ export default function RadioHandoverWarehousePage() {
                     <td className="px-4 py-3">{j.assignedTechnicianName}</td>
                     {canCreateHandoverWhHd() && (
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={() => setReturnJob(j)}
-                          className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 shadow-sm transition-colors"
-                        >
-                          <ArrowRight className="w-3.5 h-3.5" />
-                          WH → Helpdesk
-                        </button>
+                        {j.pendingHandoverType === "WarehouseToHelpdesk" ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-amber-50 text-amber-700 text-xs font-medium rounded border border-amber-200">
+                            ⏳ Menunggu TTD
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setReturnJob(j)}
+                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 shadow-sm transition-colors"
+                          >
+                            <ArrowRight className="w-3.5 h-3.5" />
+                            WH → Helpdesk
+                          </button>
+                        )}
                       </td>
                     )}
                   </tr>
@@ -532,14 +608,20 @@ export default function RadioHandoverWarehousePage() {
                 </div>
                 {canCreateHandoverWhHd() && (
                   <div className="mt-3 pt-3 border-t border-amber-100">
-                    <button
-                      type="button"
-                      onClick={() => setReturnJob(j)}
-                      className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-violet-600 text-white text-xs font-semibold rounded-xl hover:bg-violet-700 shadow-sm transition-colors"
-                    >
-                      <ArrowRight className="w-3.5 h-3.5" />
-                      Serah ke Helpdesk
-                    </button>
+                    {j.pendingHandoverType === "WarehouseToHelpdesk" ? (
+                      <div className="w-full text-center px-3 py-2.5 bg-amber-50 text-amber-700 text-xs font-semibold rounded-xl border border-amber-200">
+                        ⏳ Menunggu TTD Helpdesk
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => setReturnJob(j)}
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-violet-600 text-white text-xs font-semibold rounded-xl hover:bg-violet-700 shadow-sm transition-colors"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5" />
+                        Serah ke Helpdesk
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -563,7 +645,7 @@ export default function RadioHandoverWarehousePage() {
             />
           </div>
         </div>
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
+        <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="bg-gray-100 p-1 h-auto w-full md:w-auto">
             <TabsTrigger value="incoming" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
               <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
@@ -598,6 +680,7 @@ export default function RadioHandoverWarehousePage() {
               emptyMessage="Belum ada radio masuk dari teknisi"
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
+              onSignRow={setSignRow}
             />
           </TabsContent>
 
@@ -612,6 +695,7 @@ export default function RadioHandoverWarehousePage() {
               emptyMessage="Belum ada serah terima ke helpdesk"
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
+              onSignRow={setSignRow}
             />
           </TabsContent>
         </Tabs>
@@ -773,6 +857,80 @@ export default function RadioHandoverWarehousePage() {
                   className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
                 >
                   Tutup
+                </button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Sign Row dialog */}
+      <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSignRowDetail(null); setSigRowReceiver(""); }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>TTD Penerima — {signRow?.handoverNumber}</DialogTitle>
+          </DialogHeader>
+          {signRow && (
+            <div className="space-y-4 w-full min-w-0">
+              <div className="rounded-lg bg-gray-50 border px-3 py-2 text-sm text-gray-600 mb-2">
+                Tiket {signRow.helpdeskTicketNumber ?? "—"} · SN {signRow.radioSerialNumber}
+              </div>
+              <p className="text-sm text-amber-950 bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
+                {signRow.handoverType === "WarehouseToHelpdesk"
+                  ? <>Warehouse sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.receivedByName}</span>.</>
+                  : <>Teknisi sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.receivedByName}</span>.</>
+                }
+              </p>
+
+              {/* Tag Preview */}
+              {signRowDetail && (
+                <div className="rounded-lg border bg-white p-3">
+                  <HandoverTagPreview detail={signRowDetail} />
+                </div>
+              )}
+              {!signRowDetail && (
+                <div className="text-center py-4 text-gray-400 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin inline-block mr-1" />
+                  Memuat detail tag...
+                </div>
+              )}
+
+              <SignaturePadField
+                ref={sigWhRowRef}
+                label={`TTD Penerima (${signRow.receivedByName})`}
+                required
+                value={sigRowReceiver}
+                onChange={(val) => setSigRowReceiver(val ?? "")}
+              />
+              <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
+                <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRow(null)}>Batal</button>
+                <button
+                  type="button"
+                  className="w-full px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors flex items-center justify-center"
+                  onClick={async () => {
+                    const finalSig = (await sigWhRowRef.current?.exportNow()) ?? sigRowReceiver;
+                    if (!finalSig) {
+                      toast({ title: "Tanda tangan wajib diisi", variant: "destructive" });
+                      return;
+                    }
+                    try {
+                      await radioHandoverApi.completeReceiverSignature(signRow.id, finalSig);
+                      toast({ title: "Tanda tangan berhasil disimpan" });
+                      setSignRow(null);
+                      setSignRowDetail(null);
+                      setSigRowReceiver("");
+                      if (detail?.id === signRow.id) setDetail(null);
+                      load();
+                    } catch (err: any) {
+                      toast({
+                        title: "Gagal menyimpan TTD",
+                        description: err.response?.data?.message,
+                        variant: "destructive"
+                      });
+                    }
+                  }}
+                >
+                  Simpan TTD
                 </button>
               </div>
             </div>

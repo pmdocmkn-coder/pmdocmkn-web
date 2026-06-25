@@ -51,8 +51,14 @@ export interface RadioRepairJobList {
   closedAt?: string | null;
   firstInProgressAt?: string | null;
   workshopCompletedAt?: string | null;
-  isDeleted?: boolean;
+  accumulatedProgressDurationMinutes: number;
+  currentProgressStartedAt?: string | null;
+  isDeleted: boolean;
   deletedAt?: string | null;
+  hasBorrowRequest: boolean;
+  hasActiveBorrowedPart: boolean;
+  hasReturnedBorrowedPart: boolean;
+  pendingHandoverType?: string | null;
 }
 
 // ─── Custom Status Types ──────────────────────────────────────────────────────

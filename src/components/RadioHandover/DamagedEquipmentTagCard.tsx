@@ -21,10 +21,22 @@ export type DamagedEquipmentTagData = {
   radioMasterRadioId?: string | null;
   radioFleet?: string | null;
   radioCategory?: string | null;
+  handoverType?: string;
 };
+
+function flowLabel(type?: string) {
+  if (type === "WarehouseToHelpdesk") return "Warehouse → Helpdesk";
+  if (type === "TechnicianToWarehouse") return "Teknisi → Warehouse";
+  return "Helpdesk → Teknisi";
+}
 
 export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipmentTagData }) {
   const acc = data.accessories?.filter((a) => a.itemName?.trim()) ?? [];
+  const alurLabel = flowLabel(data.handoverType);
+  const flowNames = `${data.handedOverByName} → ${data.receivedByName}`;
+  const alurValue = alurLabel.toLowerCase() === flowNames.toLowerCase() 
+    ? alurLabel 
+    : `${alurLabel} · ${flowNames}`;
 
   return (
     <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-md text-sm">
@@ -64,7 +76,7 @@ export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipme
       <div className="bg-yellow-50 px-4 py-3 space-y-2">
         <TagField label="No. STR / Tiket" value={`${data.handoverNumber}${data.helpdeskTicketNumber ? ` · ${data.helpdeskTicketNumber}` : ""}`} />
         <TagField label="Tanggal/waktu" value={format(new Date(data.handoverAt), "dd MMMM yyyy HH:mm", { locale: localeId })} />
-        <TagField label="Helpdesk → Teknisi" value={`${data.handedOverByName} → ${data.receivedByName}`} />
+        <TagField label="Alur" value={alurValue} />
         <TagField label="Nama Alat" value={data.equipmentName ?? "—"} />
         <TagField label="Nomor Unit" value={data.unitNumber?.trim() || "—"} />
         <TagField label="S/N" value={data.radioSerialNumber} highlight />

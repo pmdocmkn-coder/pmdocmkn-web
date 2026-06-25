@@ -17,9 +17,24 @@ type Props = {
   customStatusLabel?: string | null;
   /** Warna status custom (Tailwind bg class) */
   customStatusColor?: string | null;
+  /** Jika diatur, status akan diganti menjadi Menunggu TTD sesuai tipe serah terima */
+  pendingHandoverType?: string | null;
 };
 
-export default function RadioRepairStatusBadge({ status, customStatusLabel, customStatusColor }: Props) {
+export default function RadioRepairStatusBadge({ status, customStatusLabel, customStatusColor, pendingHandoverType }: Props) {
+  if (pendingHandoverType) {
+    let label = "Menunggu TTD";
+    if (pendingHandoverType === "TechnicianToWarehouse") label = "Menunggu TTD WH";
+    else if (pendingHandoverType === "WarehouseToHelpdesk") label = "Menunggu TTD HD";
+    else if (pendingHandoverType === "HelpdeskToTechnician") label = "Menunggu TTD Teknisi";
+    
+    return (
+      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+        {label}
+      </span>
+    );
+  }
+
   // Jika ada custom status, tampilkan dengan warna custom
   if (customStatusLabel) {
     return (

@@ -24,6 +24,7 @@ export function toDamagedTagData(d: RadioHandoverDetail): DamagedEquipmentTagDat
     radioMasterId: d.radioId,
     radioMasterRadioId: d.radioMasterRadioId,
     radioFleet: d.radioFleet,
+    handoverType: d.handoverType,
   };
 }
 
@@ -53,5 +54,6 @@ export function toGoodTagData(d: RadioHandoverDetail): GoodEquipmentTagData {
     physicalCondition: d.physicalCondition,
     displayCondition: d.displayCondition,
     handoverType: d.handoverType,
+    accessories: d.accessories ?? [],
   };
 }

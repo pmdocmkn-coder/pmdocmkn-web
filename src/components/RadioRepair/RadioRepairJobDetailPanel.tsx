@@ -23,7 +23,7 @@ import {
   statusActionButtonClass,
   statusActionLabel,
 } from "../../utils/radioRepairStatusUtils";
-import { formatWorkshopDuration } from "../../utils/repairDurationUtils";
+import { formatActiveWorkshopDuration } from "../../utils/repairDurationUtils";
 
 function resolveHandoverPhotosFromDetail(d: RadioHandoverDetail): string[] {
   if (d.radioPhotos && d.radioPhotos.length > 0) return d.radioPhotos;
@@ -45,6 +45,8 @@ type Props = {
   onOpenPhotos?: (images: string[], index?: number) => void;
   onJobUpdated?: (job: RadioRepairJobDetail) => void;
   onOpenBorrowRequest?: () => void;
+  defaultEditingTag?: "Good" | "Damaged" | null;
+  onClearDefaultEditingTag?: () => void;
 };
 
 export default function RadioRepairJobDetailPanel({
@@ -61,6 +63,8 @@ export default function RadioRepairJobDetailPanel({
   onOpenPhotos,
   onJobUpdated,
   onOpenBorrowRequest,
+  defaultEditingTag,
+  onClearDefaultEditingTag,
 }: Props) {
   const [handoverDetail, setHandoverDetail] = useState<RadioHandoverDetail | null>(null);
   const [radioMaster, setRadioMaster] = useState<RadioDto | null>(null);
@@ -105,9 +109,16 @@ export default function RadioRepairJobDetailPanel({
       voltageOutNoLoad: job.voltageOutNoLoad ?? undefined,
       voltageOutWithLoad: job.voltageOutWithLoad ?? undefined,
       physicalCondition: job.physicalCondition ?? undefined,
-      displayCondition: job.displayCondition ?? undefined,
     });
   }, [job]);
+
+  useEffect(() => {
+    if (defaultEditingTag) {
+      setEditingDamage(true);
+      setTagTypeInput(defaultEditingTag);
+      onClearDefaultEditingTag?.();
+    }
+  }, [defaultEditingTag, onClearDefaultEditingTag]);
 
   const ph = job.primaryHandover;
   const handoverId = ph?.id ?? job.handovers?.find((h) => h.handoverType === "HelpdeskToTechnician")?.id;
@@ -192,7 +203,7 @@ export default function RadioRepairJobDetailPanel({
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
         <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
-          Lama di workshop: <strong>{formatWorkshopDuration(job.openedAt, job.closedAt, job.firstInProgressAt, job.workshopCompletedAt)}</strong>
+          Lama di workshop: <strong>{formatActiveWorkshopDuration(job.status, job.accumulatedProgressDurationMinutes, job.currentProgressStartedAt, job.firstInProgressAt)}</strong>
         </span>
         {job.radioId && (
           <span className="text-violet-700">Terhubung master #{job.radioId}</span>
@@ -391,7 +402,7 @@ export default function RadioRepairJobDetailPanel({
             </div>
           )}
 
-          {/* Tombol Pinjam Part */}
+          {/* Tombol Pinjam Tools */}
           {job.status === "InProgress" && onOpenBorrowRequest && (
             <div className="pt-3 border-t border-gray-100 mt-2">
               <p className="text-xs text-gray-500 mb-1.5">Kebutuhan Suku Cadang:</p>
@@ -401,7 +412,7 @@ export default function RadioRepairJobDetailPanel({
                 className="px-3 py-2 rounded-lg text-sm font-medium bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 flex items-center gap-1.5 transition-colors"
               >
                 <Warehouse className="w-4 h-4" />
-                Pinjam Part ke Warehouse
+                Pinjam Tools ke Warehouse
               </button>
             </div>
           )}

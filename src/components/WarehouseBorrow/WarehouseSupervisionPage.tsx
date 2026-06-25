@@ -91,7 +91,7 @@ export default function WarehouseSupervisionPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Supervisi Warehouse</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Persetujuan pengajuan peminjaman parts</p>
+            <p className="text-sm text-gray-500 mt-0.5">Persetujuan pengajuan peminjaman tools</p>
           </div>
         </div>
         <div className="bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 flex items-center gap-2">
@@ -153,7 +153,10 @@ export default function WarehouseSupervisionPage() {
                       </div>
                       <div className="min-w-0">
                         <p className="text-xs text-gray-500 font-medium">Teknisi</p>
-                        <p className="text-sm font-semibold text-gray-900 truncate">{b.borrowedByName}</p>
+                        <p className="text-sm font-semibold text-gray-900 truncate">{b.borrowerName || b.borrowedByName}</p>
+                        {b.borrowerName && b.borrowerName !== b.borrowedByName && (
+                           <p className="text-[10px] text-gray-400 truncate">via: {b.borrowedByName}</p>
+                        )}
                       </div>
                     </div>
 
@@ -181,7 +184,7 @@ export default function WarehouseSupervisionPage() {
       <Dialog open={!!activeItem} onOpenChange={(open) => !open && closeReview()}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Review Pengajuan Part</DialogTitle>
+            <DialogTitle>Review Pengajuan Tools</DialogTitle>
           </DialogHeader>
           
           {activeItem && (
@@ -193,10 +196,15 @@ export default function WarehouseSupervisionPage() {
                 </div>
                 <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
                   <span className="text-gray-500">Teknisi</span>
-                  <span className="font-semibold">{activeItem.borrowedByName}</span>
+                  <div className="text-right">
+                    <div className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</div>
+                    {activeItem.borrowerName && activeItem.borrowerName !== activeItem.borrowedByName && (
+                      <div className="text-[10px] text-gray-500 -mt-0.5">via: {activeItem.borrowedByName}</div>
+                    )}
+                  </div>
                 </div>
                 <div className="pt-1">
-                  <span className="text-gray-500 block mb-1">Part yang dipinjam:</span>
+                  <span className="text-gray-500 block mb-1">Tools yang dipinjam:</span>
                   {activeItem.items && activeItem.items.map((item, idx) => (
                     <div key={idx} className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-gray-100 mb-1">
                       <div>

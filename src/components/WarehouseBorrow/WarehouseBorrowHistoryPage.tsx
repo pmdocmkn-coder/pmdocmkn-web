@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye } from "lucide-react";
+import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye, ClipboardCheck } from "lucide-react";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import { api } from "../../services/api";
@@ -35,8 +35,8 @@ export default function WarehouseBorrowHistoryPage() {
 
   // Modal States
   const [activeItem, setActiveItem] = useState<WarehouseBorrowList | null>(null);
-  const [actionType, setActionType] = useState<"issue" | "return" | null>(null);
-  
+  const [actionType, setActionType] = useState<"issue" | "return" | "sign" | "return-sign" | null>(null);
+
   // Semua user terdaftar (dropdown utama)
   const [allUsers, setAllUsers] = useState<UserLookupItem[]>([]);
   // Teknisi workshop (dropdown ke-2 jika pilih Teknisi WSK)
@@ -50,7 +50,7 @@ export default function WarehouseBorrowHistoryPage() {
       .then((res) => {
         const users = res.data?.data ?? [];
         console.log('📥 All Users loaded:', users.length, 'users');
-        console.log('👥 Users with "Teknisi" or "Workshop" in role:', 
+        console.log('👥 Users with "Teknisi" or "Workshop" in role:',
           users.filter(u => u.roleName?.toLowerCase().includes('teknisi') || u.roleName?.toLowerCase().includes('workshop'))
         );
         setAllUsers(users);
@@ -64,7 +64,7 @@ export default function WarehouseBorrowHistoryPage() {
       })
       .catch(console.error);
   }, []);
-  
+
   // Return form state
   const [returnCondition, setReturnCondition] = useState("Good");
   const [returnNote, setReturnNote] = useState("");
@@ -168,16 +168,15 @@ export default function WarehouseBorrowHistoryPage() {
   };
 
   const handleIssue = async () => {
-    if (!activeItem) return;
-    if (!issuerSigned || !receiverSigned) {
-      toast({ title: "Tanda Tangan Belum Lengkap", description: "Kedua pihak (Admin & Teknisi) wajib menandatangani form penyerahan.", variant: "destructive" });
-      return;
+    if (!activeItem || !issuerSigned) {
+      return toast({ title: "TTD Penyerah wajib diisi", variant: "destructive" });
     }
+
     setSubmitting(true);
     try {
       await warehouseBorrowApi.issue(activeItem.id, {
         issuerSignatureBase64: issuerSigned,
-        receiverSignatureBase64: receiverSigned,
+        receiverSignatureBase64: receiverSigned || undefined,
       });
       toast({ title: "Berhasil", description: "Status part berhasil diubah menjadi Telah Diberikan (Issued)." });
       closeDialog();
@@ -191,8 +190,8 @@ export default function WarehouseBorrowHistoryPage() {
 
   const handleReturn = async () => {
     if (!activeItem) return;
-    if (!returnIssuerSigned || !returnReceiverSigned) {
-      toast({ title: "Tanda Tangan Belum Lengkap", description: "Kedua pihak (Admin & Teknisi) wajib menandatangani form pengembalian.", variant: "destructive" });
+    if (!returnIssuerSigned) {
+      toast({ title: "Tanda Tangan Kosong", description: "Tanda tangan Penyerah (Peminjam) wajib diisi saat pengembalian.", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -210,6 +209,46 @@ export default function WarehouseBorrowHistoryPage() {
       loadData();
     } catch (err: any) {
       toast({ title: "Gagal menyimpan data", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSign = async () => {
+    if (!activeItem || !receiverSigned) {
+      return toast({ title: "Tanda Tangan wajib diisi", variant: "destructive" });
+    }
+
+    setSubmitting(true);
+    try {
+      await warehouseBorrowApi.signReceiver(activeItem.id, receiverSigned);
+      toast({ title: "Berhasil", description: "Tanda tangan penerima berhasil disimpan." });
+      closeDialog();
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Gagal", description: err.message, variant: "destructive" });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleReturnSign = async () => {
+    if (!activeItem || !returnReceiverSigned) {
+      return toast({ title: "Tanda Tangan wajib diisi", variant: "destructive" });
+    }
+
+    setSubmitting(true);
+    try {
+      await warehouseBorrowApi.signReturnReceiver(activeItem.id, {
+        returnReceiverSignatureBase64: returnReceiverSigned,
+        returnCondition,
+        returnNote
+      });
+      toast({ title: "Berhasil", description: "Inspeksi & tanda tangan penerima berhasil disimpan." });
+      closeDialog();
+      loadData();
+    } catch (err: any) {
+      toast({ title: "Gagal", description: err.message, variant: "destructive" });
     } finally {
       setSubmitting(false);
     }
@@ -262,7 +301,9 @@ export default function WarehouseBorrowHistoryPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "PendingApproval":
-        return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs font-semibold whitespace-nowrap">Menunggu Persetujuan</span>;
+        return <span className="px-2 py-1 bg-amber-100 text-amber-700 rounded-md text-xs font-semibold whitespace-nowrap">Waiting Approval</span>;
+      case "PendingSignature":
+        return <span className="px-2 py-1 bg-orange-100 text-orange-700 rounded-md text-xs font-semibold whitespace-nowrap">Menunggu TTD</span>;
       case "Approved":
         return <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded-md text-xs font-semibold whitespace-nowrap">Disetujui</span>;
       case "Rejected":
@@ -312,12 +353,12 @@ export default function WarehouseBorrowHistoryPage() {
             <History className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
-        
+
         {/* Search inside Mobile Header */}
         <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
-          <Input 
-            placeholder="Cari transaksi, part, atau peminjam..." 
+          <Input
+            placeholder="Cari transaksi, part, atau peminjam..."
             className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-violet-50 text-gray-900 placeholder-violet-400 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -332,15 +373,15 @@ export default function WarehouseBorrowHistoryPage() {
             <History className="w-8 h-8 text-violet-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Histori Peminjaman Part</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Daftar lengkap riwayat permintaan dan transaksi parts</p>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Histori Peminjaman Tools</h1>
+            <p className="text-sm text-gray-500 mt-0.5">Daftar lengkap riwayat permintaan dan transaksi tools</p>
           </div>
         </div>
-        
+
         <div className="relative w-full md:w-72">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-          <Input 
-            placeholder="Cari transaksi, part, atau peminjam..." 
+          <Input
+            placeholder="Cari transaksi, part, atau peminjam..."
             className="pl-9 h-10 w-full"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -402,6 +443,34 @@ export default function WarehouseBorrowHistoryPage() {
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" /> Detail
                 </Button>
+                {b.status === "PendingSignature" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-orange-600 border-orange-300 hover:bg-orange-600 hover:text-white"
+                    onClick={() => {
+                      setActiveItem(b);
+                      setActionType("sign");
+                    }}
+                  >
+                    <PenTool className="w-3.5 h-3.5 mr-1" /> TTD Serah Terima
+                  </Button>
+                )}
+                {b.status === "PendingReturnSignature" && isWarehouse && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-orange-600 border-orange-300 hover:bg-orange-600 hover:text-white"
+                    onClick={() => {
+                      setActiveItem(b);
+                      setActionType("return-sign");
+                      setReturnCondition("Good");
+                      setReturnNote("");
+                    }}
+                  >
+                    <ClipboardCheck className="w-3.5 h-3.5 mr-1" /> Inspeksi & TTD
+                  </Button>
+                )}
                 {b.status === "Approved" && isWarehouse && (
                   <Button
                     variant="outline"
@@ -412,14 +481,14 @@ export default function WarehouseBorrowHistoryPage() {
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Serahkan
                   </Button>
                 )}
-                {b.status === "Issued" && isWarehouse && (
+                {b.status === "Issued" && (
                   <Button
                     variant="outline"
                     size="sm"
                     className="flex-1 text-emerald-700 border-emerald-300 hover:bg-emerald-600 hover:text-white"
                     onClick={() => openReturn(b)}
                   >
-                    <RotateCcw className="w-3.5 h-3.5 mr-1" /> Terima Pengembalian
+                    <RotateCcw className="w-3.5 h-3.5 mr-1" /> {isWarehouse ? "Terima Pengembalian" : "Kembalikan Part"}
                   </Button>
                 )}
               </div>
@@ -521,6 +590,32 @@ export default function WarehouseBorrowHistoryPage() {
                         >
                           <Eye className="w-4 h-4" />
                         </button>
+                        {b.status === "PendingSignature" && (
+                          <button
+                            title="TTD Serah Terima"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-orange-600 hover:text-white hover:bg-orange-600 border border-orange-200 transition-colors"
+                            onClick={() => {
+                              setActiveItem(b);
+                              setActionType("sign");
+                            }}
+                          >
+                            <PenTool className="w-4 h-4" />
+                          </button>
+                        )}
+                        {b.status === "PendingReturnSignature" && isWarehouse && (
+                          <button
+                            title="Inspeksi & TTD Penerima"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-orange-600 hover:text-white hover:bg-orange-600 border border-orange-200 transition-colors"
+                            onClick={() => {
+                              setActiveItem(b);
+                              setActionType("return-sign");
+                              setReturnCondition("Good");
+                              setReturnNote("");
+                            }}
+                          >
+                            <ClipboardCheck className="w-4 h-4" />
+                          </button>
+                        )}
                         {b.status === "Approved" && isWarehouse && (
                           <button
                             title="Serahkan Part"
@@ -530,13 +625,13 @@ export default function WarehouseBorrowHistoryPage() {
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         )}
-                        {b.status === "Issued" && isWarehouse && (
+                        {b.status === "Issued" && (
                           <button
                             title="Terima Pengembalian"
                             className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 transition-colors"
                             onClick={() => openReturn(b)}
                           >
-                            <RotateCcw className="w-4 h-4" />
+                            <RotateCcw className="w-4 h-4 text-emerald-600" />
                           </button>
                         )}
                         <div className="w-px h-5 bg-gray-200 mx-0.5" />
@@ -594,7 +689,7 @@ export default function WarehouseBorrowHistoryPage() {
               {/* Dual Signature */}
               <div className="space-y-4">
                 <SignaturePadField label="TTD Penyerah" required value={issuerSigned} onChange={setIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
-                <SignaturePadField label="TTD Penerima" required value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
+                <SignaturePadField label="TTD Penerima (Opsional)" value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
               </div>
             </div>
           )}
@@ -628,7 +723,7 @@ export default function WarehouseBorrowHistoryPage() {
               Catat penerimaan pengembalian part dari peminjam kembali ke warehouse.
             </DialogDescription>
           </DialogHeader>
-          
+
           {activeItem && (
             <div className="space-y-5 my-2">
               {/* ── Info Peminjaman ── */}
@@ -734,7 +829,7 @@ export default function WarehouseBorrowHistoryPage() {
                         // Jika tidak ada relasi → tampilkan semua
                         (() => {
                           const linkedTechs = technicians.filter(t => t.userId === selectedReturnerUser?.id);
-                          return linkedTechs.length > 0 
+                          return linkedTechs.length > 0
                             ? linkedTechs.map(t => t.name)
                             : technicians.map(t => t.name); // fallback: tampilkan semua jika tidak ada relasi
                         })()
@@ -775,8 +870,8 @@ export default function WarehouseBorrowHistoryPage() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-semibold text-gray-700">Catatan Pengembalian (Opsional)</label>
-                  <Textarea 
-                    placeholder="Catatan tambahan dari warehouse admin..." 
+                  <Textarea
+                    placeholder="Catatan tambahan dari warehouse admin..."
                     className="h-20 resize-none focus-visible:ring-emerald-500"
                     value={returnNote}
                     onChange={(e) => setReturnNote(e.target.value)}
@@ -785,8 +880,8 @@ export default function WarehouseBorrowHistoryPage() {
 
                 {/* Return Dual Signature */}
                 <div className="space-y-4">
-                  <SignaturePadField label="TTD Penyerah" required value={returnIssuerSigned} onChange={setReturnIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
-                  <SignaturePadField label="TTD Penerima" required value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={returnedByName || activeItem.borrowerName || activeItem.borrowedByName} />
+                  <SignaturePadField label="TTD Penyerah (Peminjam)" required value={returnIssuerSigned} onChange={setReturnIssuerSigned} signerName={returnedByName || activeItem.borrowerName || activeItem.borrowedByName} />
+                  <SignaturePadField label="TTD Penerima (Warehouse)" value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={isWarehouse ? user?.fullName || "Admin Warehouse" : "Admin Warehouse"} />
                 </div>
               </div>
             </div>
@@ -794,19 +889,127 @@ export default function WarehouseBorrowHistoryPage() {
 
           <DialogFooter>
             <Button variant="outline" onClick={closeDialog}>Batal</Button>
-            <Button 
-              className="bg-emerald-600 hover:bg-emerald-700 text-white" 
-              onClick={handleReturn} 
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white"
+              onClick={handleReturn}
               disabled={submitting}
             >
-              {submitting ? "Memproses..." : "Terima Pengembalian"}
+              {submitting ? "Memproses..." : (isWarehouse ? "Terima Pengembalian" : "Kembalikan Part")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Tanda Tangan Penerima */}
+      <Dialog open={actionType === "sign" && !!activeItem} onOpenChange={(open) => {
+        if (!open) closeDialog();
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <PenTool className="w-5 h-5 text-orange-600" />
+              Tanda Tangan Penerima
+            </DialogTitle>
+            <DialogDescription>
+              Silakan tanda tangan untuk mengonfirmasi bahwa Anda telah menerima barang ini.
+            </DialogDescription>
+          </DialogHeader>
+
+          {activeItem && (
+            <div className="space-y-4 my-2">
+              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
+                <div className="flex justify-between border-b border-gray-200 pb-2">
+                  <span className="text-gray-500">Nomor Transaksi</span>
+                  <span className="font-mono font-semibold">{activeItem.borrowNumber}</span>
+                </div>
+                <div className="pt-1">
+                  {renderItemsList(activeItem)}
+                </div>
+              </div>
+
+              <SignaturePadField
+                label="Tanda Tangan"
+                required
+                value={receiverSigned}
+                onChange={setReceiverSigned}
+                signerName={activeItem.borrowerName || activeItem.borrowedByName}
+              />
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Batal</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={handleSign}
+              disabled={submitting || !receiverSigned}
+            >
+              {submitting ? "Menyimpan..." : "Simpan Tanda Tangan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal Inspeksi & TTD Penerima (Return) */}
+      <Dialog open={actionType === "return-sign" && !!activeItem} onOpenChange={(open) => {
+        if (!open) closeDialog();
+      }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="w-5 h-5 text-orange-600" />
+              Inspeksi & Tanda Tangan Penerima
+            </DialogTitle>
+            <DialogDescription>
+              Mohon inspeksi kondisi barang dan berikan tanda tangan sebagai Admin Warehouse.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Kondisi Barang Saat Dikembalikan <span className="text-red-500">*</span></label>
+              <Select value={returnCondition} onValueChange={setReturnCondition}>
+                <SelectTrigger className="w-full h-10 border-gray-300 focus:ring-emerald-500 focus:border-emerald-500">
+                  <SelectValue placeholder="Pilih kondisi" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Good">Good (Kondisi Baik)</SelectItem>
+                  <SelectItem value="Damaged">Damaged (Rusak / Bekas Pakai)</SelectItem>
+                  <SelectItem value="Incomplete">Incomplete (Tidak Lengkap)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-gray-700">Catatan Pengembalian (Opsional)</label>
+              <Textarea
+                placeholder="Catatan tambahan..."
+                className="h-20 resize-none focus-visible:ring-emerald-500"
+                value={returnNote}
+                onChange={(e) => setReturnNote(e.target.value)}
+              />
+            </div>
+            <SignaturePadField
+              label="Tanda Tangan Penerima (Warehouse)"
+              required
+              value={returnReceiverSigned}
+              onChange={setReturnReceiverSigned}
+              signerName={user?.fullName || "Admin Warehouse"}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={closeDialog}>Batal</Button>
+            <Button
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={handleReturnSign}
+              disabled={submitting || !returnReceiverSigned}
+            >
+              {submitting ? "Menyimpan..." : "Simpan & Selesai"}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       {/* Modal Detail Peminjaman */}
-      <WarehouseBorrowDetailModal 
+      <WarehouseBorrowDetailModal
         borrowId={detailTargetId}
         isOpen={!!detailTargetId}
         onClose={() => setDetailTargetId(null)}

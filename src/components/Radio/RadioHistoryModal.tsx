@@ -10,7 +10,7 @@ import { radioApi, RadioHistoryDto, RadioDto } from "../../services/radioApi";
 import { userApi } from "../../services/api";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Clock, Radio, CheckCircle2, RefreshCw, Trash2, AlertCircle, Info, Building2, Users, Zap, Wrench } from "lucide-react";
+import { Clock, Radio, CheckCircle2, RefreshCw, Trash2, AlertCircle, Info, Building2, Users, Zap, Wrench, ArrowRightLeft } from "lucide-react";
 
 interface RadioHistoryModalProps {
     isOpen: boolean;
@@ -139,6 +139,13 @@ export default function RadioHistoryModal({
                     dot: "bg-blue-500",
                     icon: <RefreshCw className="w-3.5 h-3.5 text-blue-600" />,
                     label: "Diperbarui",
+                };
+            case "Transferred":
+                return {
+                    badge: "bg-sky-100 text-sky-700 border-sky-200",
+                    dot: "bg-sky-500",
+                    icon: <ArrowRightLeft className="w-3.5 h-3.5 text-sky-600" />,
+                    label: "Dipindahkan",
                 };
             case "Scrapped":
                 return {
@@ -405,6 +412,14 @@ export default function RadioHistoryModal({
                                                 {/* Scrap details */}
                                                 {item.action === "Scrapped" && item.changes && item.changes !== "-" && (
                                                     <div className="mt-3 px-3 py-2 bg-red-50 rounded-lg border border-red-100 text-xs text-red-700 font-mono">
+                                                        {item.changes}
+                                                    </div>
+                                                )}
+
+                                                {/* Transfer details */}
+                                                {item.action === "Transferred" && item.changes && (
+                                                    <div className="mt-3 px-3 py-2 bg-sky-50 rounded-lg border border-sky-100 text-xs text-sky-700 font-medium flex items-center gap-2">
+                                                        <ArrowRightLeft className="w-3.5 h-3.5 flex-shrink-0" />
                                                         {item.changes}
                                                     </div>
                                                 )}

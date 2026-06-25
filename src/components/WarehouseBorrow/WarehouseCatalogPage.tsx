@@ -87,10 +87,10 @@ export default function WarehouseCatalogPage() {
   };
 
   const handleDeleteAll = async () => {
-    if (!window.confirm("PERINGATAN: Yakin ingin menghapus SEMUA data Master Data Part? Tindakan ini tidak dapat dibatalkan!")) return;
+    if (!window.confirm("PERINGATAN: Yakin ingin menghapus SEMUA data Master Data Tools? Tindakan ini tidak dapat dibatalkan!")) return;
     try {
       await warehousePartApi.deleteAll();
-      toast({ title: "Berhasil", description: "Semua data Master Data Part berhasil dihapus." });
+      toast({ title: "Berhasil", description: "Semua data Master Data Tools berhasil dihapus." });
       loadData(1, "");
       setSearch("");
       setPage(1);
@@ -109,7 +109,7 @@ export default function WarehouseCatalogPage() {
               <span className="text-[10px] font-bold text-violet-600 tracking-wider uppercase">Warehouse</span>
             </div>
             <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
-              Master Data Part
+              Master Data Tools
             </h1>
           </div>
           <button
@@ -124,7 +124,7 @@ export default function WarehouseCatalogPage() {
         <div className="relative mt-2">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
           <Input
-            placeholder="Cari kode atau nama part..."
+            placeholder="Cari kode atau nama tools..."
             className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-violet-50 text-gray-900 placeholder-violet-400 w-full"
             value={search}
             onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -139,7 +139,7 @@ export default function WarehouseCatalogPage() {
             <Database className="w-8 h-8 text-violet-600" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Master Data Part</h1>
+            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Master Data Tools</h1>
             <p className="text-sm text-gray-500 mt-0.5">Kelola daftar material / suku cadang warehouse</p>
           </div>
         </div>
@@ -148,7 +148,7 @@ export default function WarehouseCatalogPage() {
           <div className="relative flex-1 md:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             <Input
-              placeholder="Cari kode atau nama part..."
+              placeholder="Cari kode atau nama tools..."
               className="pl-9 h-10 w-full"
               value={search}
               onChange={(e) => { setSearch(e.target.value); setPage(1); }}
@@ -160,7 +160,7 @@ export default function WarehouseCatalogPage() {
               onClick={handleOpenAdd}
               className="h-10 border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 font-semibold flex-shrink-0"
             >
-              + Tambah Part
+              + Tambah Tools
             </Button>
             <Button
               variant="destructive"
@@ -192,7 +192,7 @@ export default function WarehouseCatalogPage() {
         ) : items.length === 0 ? (
           <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">
             <FileSpreadsheet className="w-10 h-10 mx-auto mb-2 opacity-20" />
-            <p className="text-sm">Belum ada data master part</p>
+            <p className="text-sm">Belum ada data master tools</p>
             <p className="text-xs text-gray-400 mt-1">Gunakan tombol Import untuk menambah data</p>
           </div>
         ) : (
@@ -242,8 +242,8 @@ export default function WarehouseCatalogPage() {
             <thead className="bg-gray-50/80 text-left text-xs font-semibold text-gray-500 border-b border-gray-200">
               <tr>
                 <th className="px-4 py-3.5 w-12">No</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Kode Part</th>
-                <th className="px-4 py-3.5 whitespace-nowrap">Nama Part</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Tools Code</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">Nama Tools</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Owner ID</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">UoM</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Deskripsi</th>
@@ -265,7 +265,7 @@ export default function WarehouseCatalogPage() {
                   <td colSpan={7} className="text-center py-12 text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="w-10 h-10 opacity-20" />
-                      <span className="text-sm">Belum ada data master part</span>
+                      <span className="text-sm">Belum ada data master tools</span>
                     </div>
                   </td>
                 </tr>
@@ -355,7 +355,7 @@ export default function WarehouseCatalogPage() {
       <RadioImportModal
         isOpen={isImportModalOpen}
         onClose={() => setIsImportModalOpen(false)}
-        title="Import Master Data Part"
+        title="Import Master Data Tools"
         onImportSuccess={() => {
           loadData(1, "");
           setSearch("");
@@ -378,9 +378,9 @@ export default function WarehouseCatalogPage() {
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
-            <DialogTitle>Hapus Part</DialogTitle>
+            <DialogTitle>Hapus Tools</DialogTitle>
             <DialogDescription>
-              Apakah Anda yakin ingin menghapus part ini dari master data?
+              Apakah Anda yakin ingin menghapus tools ini dari master data?
             </DialogDescription>
           </DialogHeader>
           {deleteTarget && (

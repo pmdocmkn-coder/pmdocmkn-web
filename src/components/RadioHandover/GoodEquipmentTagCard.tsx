@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
+import type { HandoverAccessoryItem } from "../../types/radioHandover";
 import mknLogo from "../../assets/MKN.png";
 
 export type GoodEquipmentTagData = {
@@ -27,6 +28,7 @@ export type GoodEquipmentTagData = {
   physicalCondition?: string | null;
   displayCondition?: string | null;
   handoverType?: string;
+  accessories?: HandoverAccessoryItem[];
 };
 
 function flowLabel(type?: string) {
@@ -36,6 +38,13 @@ function flowLabel(type?: string) {
 }
 
 export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagData }) {
+  const acc = data.accessories?.filter((a) => a.itemName?.trim()) ?? [];
+  const alurLabel = flowLabel(data.handoverType);
+  const flowNames = `${data.handedOverByName} → ${data.receivedByName}`;
+  const alurValue = alurLabel.toLowerCase() === flowNames.toLowerCase() 
+    ? alurLabel 
+    : `${alurLabel} · ${flowNames}`;
+
   return (
     <div className="rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md text-sm max-w-md">
       <div className="bg-white px-4 pt-4 pb-2 flex flex-col items-center border-b border-emerald-200">
@@ -53,7 +62,7 @@ export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagD
           label="Tanggal / jam"
           value={format(new Date(data.handoverAt), "dd MMMM yyyy HH:mm", { locale: localeId })}
         />
-        <TagField label="Alur" value={`${flowLabel(data.handoverType)} · ${data.handedOverByName} → ${data.receivedByName}`} />
+        <TagField label="Alur" value={alurValue} />
         <TagField label="Nama alat" value={data.equipmentName ?? "—"} />
         <TagField label="Nomor unit" value={data.unitNumber?.trim() || "—"} />
         <TagField label="S/N" value={data.radioSerialNumber} highlight />
@@ -79,6 +88,21 @@ export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagD
           <TagField label="Fisik" value={data.physicalCondition?.trim() || "—"} compact />
           <TagField label="Display" value={data.displayCondition?.trim() || "—"} compact />
         </div>
+        {acc.length > 0 && (
+          <div className="pt-2 border-t border-emerald-200 mt-2">
+            <p className="text-xs font-bold text-gray-700 mb-1.5">Kelengkapan</p>
+            <ul className="space-y-1">
+              {acc.map((a, i) => (
+                <li key={i} className="flex flex-wrap gap-2 text-xs">
+                  <span className="font-semibold text-gray-800">{a.itemName}</span>
+                  <span className="text-gray-600">×{a.quantity} {a.unit ?? "EA"}</span>
+                  {a.serialNumber?.trim() && <span className="text-gray-500">SN: {a.serialNumber}</span>}
+                  {a.description?.trim() && <span className="text-gray-500">— {a.description}</span>}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </div>
       <div className="h-2 bg-emerald-600" />
     </div>

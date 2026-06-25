@@ -2,7 +2,7 @@ import { Fragment, useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse } from "lucide-react";
+import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse, Wrench } from "lucide-react";
 import type { RadioRepairJobList, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import { HandoverPhotoThumb } from "../RadioHandover/HandoverPhotoThumbnails";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
@@ -12,7 +12,7 @@ import {
   isJobStatusLocked,
 } from "../../utils/radioRepairStatusUtils";
 import {
-  formatWorkshopDuration,
+  formatActiveWorkshopDuration,
   getWorkshopDays,
   workshopDurationBadgeClass,
 } from "../../utils/repairDurationUtils";
@@ -70,6 +70,12 @@ export default function RadioRepairGroupedTable({
   customStatuses = [],
 }: Props) {
   const colCount = 11;
+  const [, setTick] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => setTick((t) => t + 1), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   return (
     <>
@@ -173,9 +179,26 @@ export default function RadioRepairGroupedTable({
                     <div key={j.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2.5 relative">
                       {/* Row 1: Category Badge + Date */}
                       <div className="flex justify-between items-start">
-                        <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">
-                          {j.radioCategory || "Perbaikan"}
-                        </span>
+                        <div className="flex flex-wrap gap-1">
+                          <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">
+                            {j.radioOwnerLabel || "Perbaikan"}
+                          </span>
+                          {j.radioCategory && j.radioCategory !== j.radioOwnerLabel && (
+                            <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-violet-50 text-violet-700 border border-violet-100">
+                              {j.radioCategory === "Internal" ? "Radio KPC" : j.radioCategory}
+                            </span>
+                          )}
+                          {j.hasActiveBorrowedPart && (
+                            <span className="px-1.5 py-0.5 inline-flex items-center gap-1 text-[10px] leading-5 font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200" title="Sedang meminjam parts/tools dari warehouse">
+                              <Wrench className="w-3 h-3" /> Pinjam Tools
+                            </span>
+                          )}
+                          {!j.hasActiveBorrowedPart && j.hasReturnedBorrowedPart && (
+                            <span className="px-1.5 py-0.5 inline-flex items-center gap-1 text-[10px] leading-5 font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title="Parts/tools yang dipinjam sudah dikembalikan">
+                              <Wrench className="w-3 h-3" /> Tools Dikembalikan
+                            </span>
+                          )}
+                        </div>
                         <span className="text-xs text-gray-400 font-medium">
                           {j.openedAt ? format(new Date(j.openedAt), "dd MMM yyyy", { locale: localeId }) : "-"}
                         </span>
@@ -200,7 +223,7 @@ export default function RadioRepairGroupedTable({
                         <div className="col-span-2 flex items-center gap-1.5 mt-0.5 pt-1.5 border-t border-gray-200/50">
                           <span className="text-gray-400">Durasi:</span>
                           <span className={`inline-block text-[10px] px-2 py-0.5 rounded border whitespace-nowrap font-medium ${workshopDurationBadgeClass(days)}`}>
-                            {formatWorkshopDuration(j.openedAt, j.closedAt, j.firstInProgressAt, j.workshopCompletedAt)}
+                            {formatActiveWorkshopDuration(j.status, j.accumulatedProgressDurationMinutes, j.currentProgressStartedAt, j.firstInProgressAt)}
                           </span>
                         </div>
                       </div>
@@ -222,6 +245,7 @@ export default function RadioRepairGroupedTable({
                             status={j.status}
                             customStatusLabel={j.customStatusLabel}
                             customStatusColor={j.customStatusColor}
+                            pendingHandoverType={j.pendingHandoverType}
                           />
                         </div>
                         <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
@@ -233,6 +257,17 @@ export default function RadioRepairGroupedTable({
                           >
                             <Eye className="w-4 h-4" />
                           </button>
+
+                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
+                              className="inline-flex items-center justify-center h-8 px-3 border border-violet-600 rounded-xl text-white bg-violet-600 text-xs font-semibold shrink-0 transition-colors shadow-sm"
+                            >
+                              <Warehouse className="w-3.5 h-3.5 mr-1" />
+                              Ke WH
+                            </button>
+                          )}
 
                           {!showArchive && !isJobLocked(j.status) && canUpdate && (
                             <MobileQuickActionDropdown
@@ -434,7 +469,7 @@ function MobileQuickActionDropdown({
                 className="w-full text-left px-4 py-3 text-sm hover:bg-amber-50 text-amber-700 flex items-center font-medium border-t border-gray-100 mt-1"
               >
                 <Warehouse className="w-4 h-4 mr-2" />
-                Pinjam Part
+                Pinjam Tools
               </button>
             )}
           </div>
@@ -496,7 +531,7 @@ function RadioRepairRow({
   const nextStatuses = !locked && !showArchive
     ? allowedNextStatuses(j.status as RadioRepairJobStatus)
     : [];
-  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && !j.isDeleted && !showArchive;
+  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && !j.isDeleted && !showArchive;
 
   return (
     <tr className={`border-t border-gray-100 hover:bg-violet-50/40 ${j.isDeleted ? "opacity-60" : ""}`}>
@@ -525,15 +560,26 @@ function RadioRepairRow({
           status={j.status}
           customStatusLabel={j.customStatusLabel}
           customStatusColor={j.customStatusColor}
+          pendingHandoverType={j.pendingHandoverType}
         />
       </td>
       <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">
         {format(new Date(j.openedAt), "dd/MM/yy HH:mm", { locale: localeId })}
       </td>
       <td className="px-3 py-2.5">
-        <span className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full border whitespace-nowrap ${workshopDurationBadgeClass(days)}`}>
-          {formatWorkshopDuration(j.openedAt, j.closedAt, j.firstInProgressAt, j.workshopCompletedAt)}
-        </span>
+        <div className="text-sm font-medium text-gray-900">
+          {formatActiveWorkshopDuration(j.status, j.accumulatedProgressDurationMinutes, j.currentProgressStartedAt, j.firstInProgressAt)}
+        </div>
+        {j.hasActiveBorrowedPart && (
+          <span className="mt-1 px-1.5 py-0.5 inline-flex items-center text-[9px] font-semibold rounded bg-amber-50 text-amber-700 border border-amber-200" title="Sedang meminjam parts/tools dari warehouse">
+            <Wrench className="w-2.5 h-2.5 mr-0.5" /> Pinjam Tools
+          </span>
+        )}
+        {!j.hasActiveBorrowedPart && j.hasReturnedBorrowedPart && (
+          <span className="mt-1 px-1.5 py-0.5 inline-flex items-center text-[9px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200" title="Parts/tools yang dipinjam sudah dikembalikan">
+            <Wrench className="w-2.5 h-2.5 mr-0.5" /> Dikembalikan ✓
+          </span>
+        )}
       </td>
       <td className="px-3 py-2.5">
         <div className="flex justify-end items-center gap-1">
@@ -618,7 +664,7 @@ function RadioRepairRow({
           {canUpdate && (j.status === "InProgress") && (
             <button
               type="button"
-              title="Pinjam Part"
+              title="Pinjam Tools"
               className="p-1.5 border rounded-lg hover:bg-amber-50 bg-white text-amber-600"
               onClick={() => onOpenBorrowRequest(j)}
             >
