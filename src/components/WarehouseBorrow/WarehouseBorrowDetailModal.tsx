@@ -294,7 +294,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                         label="TTD Anda" 
                         required 
                         value={receiverSigned} 
-                        onChange={setReceiverSigned} 
+                        onChange={(val) => setReceiverSigned(val || "")} 
                         signerName={data.borrowerName || data.borrowedByName} 
                       />
                       <div className="flex justify-end gap-2 pt-2">
