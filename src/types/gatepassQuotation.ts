@@ -91,6 +91,7 @@ export interface QuotationList {
     customerName: string;
     description: string;
     status: string;
+    nominal?: number;
     createdByName?: string;
 }
 
@@ -106,6 +107,7 @@ export interface QuotationResponse {
     description: string;
     notes?: string;
     status: string;
+    nominal?: number;
     createdAt: string;
     updatedAt?: string;
     createdByUser?: UserInfo;
@@ -117,6 +119,7 @@ export interface QuotationCreate {
     description: string;
     quotationDate: string;
     notes?: string;
+    nominal?: number;
     status: number; // 0=Draft, 1=Sent
 }
 
@@ -124,6 +127,7 @@ export interface QuotationUpdate {
     description: string;
     notes?: string;
     status: number;
+    nominal?: number;
     customerId?: number;
     quotationDate?: string;
 }
@@ -135,6 +139,8 @@ export interface QuotationQuery {
     year?: number;
     customerId?: number;
     search?: string;
+    startDate?: string;
+    endDate?: string;
 }
 
 // Shared

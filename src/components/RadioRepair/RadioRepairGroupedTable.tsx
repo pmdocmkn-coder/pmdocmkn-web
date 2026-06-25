@@ -2,7 +2,7 @@ import { Fragment, useState, useRef, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse } from "lucide-react";
+import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse, Wrench } from "lucide-react";
 import type { RadioRepairJobList, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import { HandoverPhotoThumb } from "../RadioHandover/HandoverPhotoThumbnails";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
@@ -185,7 +185,17 @@ export default function RadioRepairGroupedTable({
                           </span>
                           {j.radioCategory && j.radioCategory !== j.radioOwnerLabel && (
                             <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-violet-50 text-violet-700 border border-violet-100">
-                              {j.radioCategory}
+                              {j.radioCategory === "Internal" ? "Radio KPC" : j.radioCategory}
+                            </span>
+                          )}
+                          {j.hasActiveBorrowedPart && (
+                            <span className="px-1.5 py-0.5 inline-flex items-center gap-1 text-[10px] leading-5 font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200" title="Sedang meminjam parts/tools dari warehouse">
+                              <Wrench className="w-3 h-3" /> Pinjam Tools
+                            </span>
+                          )}
+                          {!j.hasActiveBorrowedPart && j.hasReturnedBorrowedPart && (
+                            <span className="px-1.5 py-0.5 inline-flex items-center gap-1 text-[10px] leading-5 font-semibold rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200" title="Parts/tools yang dipinjam sudah dikembalikan">
+                              <Wrench className="w-3 h-3" /> Tools Dikembalikan
                             </span>
                           )}
                         </div>
@@ -560,6 +570,16 @@ function RadioRepairRow({
         <div className="text-sm font-medium text-gray-900">
           {formatActiveWorkshopDuration(j.status, j.accumulatedProgressDurationMinutes, j.currentProgressStartedAt, j.firstInProgressAt)}
         </div>
+        {j.hasActiveBorrowedPart && (
+          <span className="mt-1 px-1.5 py-0.5 inline-flex items-center text-[9px] font-semibold rounded bg-amber-50 text-amber-700 border border-amber-200" title="Sedang meminjam parts/tools dari warehouse">
+            <Wrench className="w-2.5 h-2.5 mr-0.5" /> Pinjam Tools
+          </span>
+        )}
+        {!j.hasActiveBorrowedPart && j.hasReturnedBorrowedPart && (
+          <span className="mt-1 px-1.5 py-0.5 inline-flex items-center text-[9px] font-semibold rounded bg-emerald-50 text-emerald-700 border border-emerald-200" title="Parts/tools yang dipinjam sudah dikembalikan">
+            <Wrench className="w-2.5 h-2.5 mr-0.5" /> Dikembalikan ✓
+          </span>
+        )}
       </td>
       <td className="px-3 py-2.5">
         <div className="flex justify-end items-center gap-1">

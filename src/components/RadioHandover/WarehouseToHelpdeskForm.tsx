@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import SignaturePadField from "../common/SignaturePadField";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
+import { radioRepairApi } from "../../services/radioRepairApi";
 import type { HandoverAccessoryItem, UserOption } from "../../types/radioHandover";
-import type { RadioRepairJobList } from "../../types/radioRepair";
+import type { RadioRepairJobList, RadioRepairJobDetail } from "../../types/radioRepair";
 import { EMPTY_GREEN_TAG } from "../../types/equipmentTag";
 import type { GreenTagFields } from "../../types/equipmentTag";
 import { useToast } from "../../hooks/use-toast";
@@ -22,7 +23,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   const { toast } = useToast();
   const [receivers, setReceivers] = useState<UserOption[]>([]);
   const [hdId, setHdId] = useState("");
-  const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
+  const [jobDetail, setJobDetail] = useState<RadioRepairJobDetail | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [remarks, setRemarks] = useState("");
   const [sigWh, setSigWh] = useState<string | null>(null);
@@ -34,10 +35,14 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       .getHelpdeskReceivers()
       .then((list) => setReceivers(list ?? []))
       .catch(() => setReceivers([]));
-  }, []);
+
+    radioRepairApi
+      .getById(job.id)
+      .then(setJobDetail)
+      .catch(console.error);
+  }, [job.id]);
 
   const submit = async () => {
-    const acc = accessories.filter((a) => a.itemName.trim());
     if (!hdId || photos.length === 0 || !sigWh) {
       toast({ title: "Lengkapi penerima helpdesk, foto, dan TTD penyerah", variant: "destructive" });
       return;
@@ -56,7 +61,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         radioPhotos: photos,
         handedOverSignatureBase64: sigWh,
         receiverSignatureBase64: sigHd || undefined,
-        accessories: acc,
+        accessories: [],
         remarks: remarks || undefined,
       });
       toast({ title: "Serah terima ke Helpdesk (tag hijau) berhasil" });
@@ -95,7 +100,14 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
                 radioFleet: job.radioFleet,
                 radioCategory: job.radioCategory,
                 damageDescription: job.damageDescription,
-                accessories: [],
+                handoverType: "WarehouseToHelpdesk",
+                accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
+                  itemName: a.itemName,
+                  quantity: a.quantity,
+                  unit: a.unit ?? undefined,
+                  description: a.description ?? undefined,
+                  serialNumber: a.serialNumber ?? undefined,
+                })) ?? [],
               }}
             />
           ) : (
@@ -123,6 +135,13 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
                 physicalCondition: job.physicalCondition,
                 displayCondition: job.displayCondition,
                 handoverType: "WarehouseToHelpdesk",
+                accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
+                  itemName: a.itemName,
+                  quantity: a.quantity,
+                  unit: a.unit ?? undefined,
+                  description: a.description ?? undefined,
+                  serialNumber: a.serialNumber ?? undefined,
+                })) ?? [],
               }}
             />
           )}
@@ -149,8 +168,33 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         {/* Photos */}
         <MultiPhotoUpload photos={photos} onChange={setPhotos} required label="Foto Radio" />
         
-        {/* Accessories */}
-        <HandoverAccessoryList items={accessories} onChange={setAccessories} />
+        {/* Accessories (Read Only) */}
+        {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
+          <div>
+            <p className="text-sm font-medium text-gray-900 mb-2">Kelengkapan / Aksesoris</p>
+            <table className="w-full text-xs border rounded-lg overflow-hidden">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="text-left px-3 py-2">Barang</th>
+                  <th className="text-left px-3 py-2">Qty</th>
+                  <th className="text-left px-3 py-2">Unit</th>
+                  <th className="text-left px-3 py-2">SN</th>
+                </tr>
+              </thead>
+              <tbody>
+                {jobDetail!.primaryHandover!.accessories.map((a, i) => (
+                  <tr key={i} className="border-t">
+                    <td className="px-3 py-2 font-medium">{a.itemName}</td>
+                    <td className="px-3 py-2">{a.quantity}</td>
+                    <td className="px-3 py-2">{a.unit}</td>
+                    <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <p className="text-[10px] text-gray-500 mt-1">Aksesoris diturunkan dari serah terima sebelumnya.</p>
+          </div>
+        )}
         
         {/* Signatures */}
         <SignaturePadField 

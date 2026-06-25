@@ -68,7 +68,7 @@ export default function RadioRepairDashboardPage() {
 
   const [detail, setDetail] = useState<RadioRepairJobDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [showWh, setShowWh] = useState(false);
+  const [whJob, setWhJob] = useState<RadioRepairJobDetail | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showScrapApproval, setShowScrapApproval] = useState(false);
 
@@ -417,23 +417,23 @@ export default function RadioRepairDashboardPage() {
   const handleTagModalSave = async (tag: "Good" | "Damaged", payload: any) => {
     setTagPickerOpen(false);
     if (!pendingAction || pendingAction.type !== "tag") return;
-    
+
     const jobId = pendingAction.jobId;
-    
+
     setPatchingStatus(true);
     try {
       // Update job tag fields
       await radioRepairApi.technicianUpdate(jobId, payload);
-      
+
       // Then proceed to change status
       await patchStatus(jobId, pendingAction.status!, pendingAction.customStatusId, null, true);
-      
+
       if (detail && detail.id === jobId) {
-         // Refresh detail if opened
-         const current = await radioRepairApi.getById(jobId);
-         setDetail(current);
+        // Refresh detail if opened
+        const current = await radioRepairApi.getById(jobId);
+        setDetail(current);
       } else {
-         load();
+        load();
       }
     } catch (err: unknown) {
       toast({ title: "Gagal update radio", description: apiMessage(err), variant: "destructive" });
@@ -460,7 +460,7 @@ export default function RadioRepairDashboardPage() {
 
   const handleCancelScrap = async () => {
     if (!detail) return;
-    const msg = detail.status === "Scrapped" 
+    const msg = detail.status === "Scrapped"
       ? "Apakah Anda yakin ingin membatalkan status Scrap dan mengembalikan pekerjaan ke Progress?"
       : "Apakah Anda yakin ingin membatalkan status Proses Scrap dan mengembalikan pekerjaan ke Progress?";
     if (!window.confirm(msg)) return;
@@ -479,7 +479,7 @@ export default function RadioRepairDashboardPage() {
   const handleResetTestingData = async () => {
     if (!window.confirm("PERINGATAN: Apakah Anda yakin ingin MENGHAPUS SEMUA DATA serah terima dan perbaikan (Testing Data)? Tindakan ini tidak dapat dibatalkan!")) return;
     if (!window.confirm("Konfirmasi terakhir: Hapus semua data?")) return;
-    
+
     try {
       await radioRepairApi.resetTestingData();
       toast({ title: "Semua data berhasil direset" });
@@ -560,14 +560,14 @@ export default function RadioRepairDashboardPage() {
       <div className="md:hidden flex flex-col gap-3 bg-[#fbf8ff] p-4 rounded-xl border border-purple-100">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b5cf6]" />
-          <Input 
-            placeholder="Cari tiket, SN, ID, kerusakan..." 
-            value={search} 
+          <Input
+            placeholder="Cari tiket, SN, ID, kerusakan..."
+            value={search}
             onChange={(e) => {
               setSearch(e.target.value);
               setPage(1);
-            }} 
-            className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]" 
+            }}
+            className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]"
           />
         </div>
         <div className="flex flex-wrap gap-2 relative z-30 pb-1">
@@ -642,7 +642,7 @@ export default function RadioRepairDashboardPage() {
                           if (r?.to) setFilterToDate(format(r.to, "yyyy-MM-dd"));
                           else if (r?.from) setFilterToDate(format(r.from, "yyyy-MM-dd"));
                           else setFilterToDate("");
-                          
+
                           setPage(1);
                         }}
                         locale={localeId}
@@ -789,32 +789,37 @@ export default function RadioRepairDashboardPage() {
         </AnimatePresence>
       </div>
 
-        <RadioRepairGroupedTable
-          groups={ticketGroups}
-          loading={loading}
-          detailLoading={detailLoading}
-          showArchive={showArchive}
-          canEdit={canEdit}
-          canDelete={canDelete}
-          canUpdate={canUpdate}
-          canHandoverWh={canHandoverWh}
-          canViewArchive={canViewArchive}
-          canDeletePermanent={canDeletePermanent}
-          onOpenPhoto={openRowPhoto}
-          onOpenDetail={openDetail}
-          onOpenEdit={openEdit}
-          onOpenBorrowRequest={(job) => navigate(`/warehouse/borrow-request?repairJobId=${job.id}`)}
-          onSoftDelete={softDelete}
-          onRestore={restore}
-          onDeletePermanent={deletePermanent}
-          onQuickStatus={(j, s, cid) => patchStatus(j.id, s, cid)}
-          onQuickHandoverWh={async (job) => {
-            await openDetail(job.id);
-            setShowWh(true);
-          }}
-          isJobLocked={isJobStatusLocked}
-          customStatuses={customStatuses}
-        />
+      <RadioRepairGroupedTable
+        groups={ticketGroups}
+        loading={loading}
+        detailLoading={detailLoading}
+        showArchive={showArchive}
+        canEdit={canEdit}
+        canDelete={canDelete}
+        canUpdate={canUpdate}
+        canHandoverWh={canHandoverWh}
+        canViewArchive={canViewArchive}
+        canDeletePermanent={canDeletePermanent}
+        onOpenPhoto={openRowPhoto}
+        onOpenDetail={openDetail}
+        onOpenEdit={openEdit}
+        onOpenBorrowRequest={(job) => navigate(`/warehouse/borrow-request?repairJobId=${job.id}`)}
+        onSoftDelete={softDelete}
+        onRestore={restore}
+        onDeletePermanent={deletePermanent}
+        onQuickStatus={(j, s, cid) => patchStatus(j.id, s, cid)}
+        onQuickHandoverWh={async (job) => {
+          // Fetch detail tanpa membuka modal detail
+          try {
+            const d = await radioRepairApi.getById(job.id, showArchive);
+            setWhJob(d);
+          } catch (err: unknown) {
+            toast({ title: "Gagal memuat detail", description: apiMessage(err), variant: "destructive" });
+          }
+        }}
+        isJobLocked={isJobStatusLocked}
+        customStatuses={customStatuses}
+      />
 
       {totalPages > 1 && (
         <div className="px-5 py-3 flex flex-wrap items-center justify-between gap-2 border-t bg-gray-50 text-sm rounded-xl">
@@ -849,8 +854,8 @@ export default function RadioRepairDashboardPage() {
       />
 
       <Dialog open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
-        <DialogContent 
-          className="max-w-3xl" 
+        <DialogContent
+          className="max-w-3xl"
           onInteractOutside={(e) => {
             if (galleryOpen) e.preventDefault();
           }}
@@ -877,7 +882,7 @@ export default function RadioRepairDashboardPage() {
               canHandoverWh={canHandoverWh}
               onPatchStatus={(s, cid) => patchStatus(detail.id, s, cid)}
               onApproveMaterial={approveMaterial}
-              onOpenWh={() => setShowWh(true)}
+              onOpenWh={() => { setWhJob(detail); setDetail(null); }}
               onOpenApproveScrap={() => setShowScrapApproval(true)}
               onCancelScrap={handleCancelScrap}
               onOpenPhotos={openPhotos}
@@ -908,20 +913,19 @@ export default function RadioRepairDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={showWh && !!detail} onOpenChange={setShowWh}>
+      <Dialog open={!!whJob} onOpenChange={(open) => { if (!open) setWhJob(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Teknisi → Warehouse</DialogTitle>
           </DialogHeader>
-          {detail && (
+          {whJob && (
             <TechnicianToWarehouseForm
-              job={detail}
+              job={whJob}
               onSuccess={() => {
-                setShowWh(false);
-                setDetail(null);
+                setWhJob(null);
                 load();
               }}
-              onCancel={() => setShowWh(false)}
+              onCancel={() => setWhJob(null)}
             />
           )}
         </DialogContent>
@@ -929,7 +933,7 @@ export default function RadioRepairDashboardPage() {
 
       {/* Technician Picker Dialog */}
       <Dialog open={techPickerOpen} onOpenChange={(open) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}>
-        <DialogContent className="max-w-sm">
+        <DialogContent className="w-[95vw] sm:max-w-2xl rounded-xl">
           <DialogHeader>
             <DialogTitle>Pilih Teknisi Workshop</DialogTitle>
           </DialogHeader>

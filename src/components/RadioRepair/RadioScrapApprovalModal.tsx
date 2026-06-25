@@ -3,6 +3,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Loader2 } from "lucide-react";
+import { DatePicker } from "../ui/date-picker";
+import { format } from "date-fns";
 
 type Props = {
   open: boolean;
@@ -12,14 +14,14 @@ type Props = {
 };
 
 export default function RadioScrapApprovalModal({ open, onClose, onApprove, loading }: Props) {
-  const [dateScrapped, setDateScrapped] = useState(new Date().toISOString().substring(0, 10));
+  const [dateScrapped, setDateScrapped] = useState<Date | undefined>(new Date());
   const [scrapJobNumber, setScrapJobNumber] = useState("");
   const [remarks, setRemarks] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dateScrapped) return;
-    await onApprove({ dateScrapped, scrapJobNumber, remarks });
+    await onApprove({ dateScrapped: format(dateScrapped, "yyyy-MM-dd"), scrapJobNumber, remarks });
   };
 
   return (
@@ -31,11 +33,9 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Tanggal Scrap <span className="text-red-500">*</span></label>
-            <Input 
-              type="date" 
-              required
-              value={dateScrapped} 
-              onChange={(e) => setDateScrapped(e.target.value)} 
+            <DatePicker 
+              date={dateScrapped} 
+              onSelect={setDateScrapped} 
             />
           </div>
           <div className="space-y-1">

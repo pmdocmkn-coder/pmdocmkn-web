@@ -403,12 +403,21 @@ export default function RadioHandoverPage() {
   const [showCreate, setShowCreate] = useState(false);
 
   const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
+  const [signRowDetail, setSignRowDetail] = useState<RadioHandoverDetail | null>(null);
   const [sigRowReceiver, setSigRowReceiver] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
   const sigTekRowRef = useRef<SignaturePadHandle>(null);
 
   const canDelete = hasPermission("radio.handover.delete");
   const isHd = canCreateHandoverHd();
+
+  // Fetch full detail when sign dialog opens for tag preview
+  useEffect(() => {
+    if (!signRow) { setSignRowDetail(null); return; }
+    radioHandoverApi.getById(signRow.id)
+      .then(setSignRowDetail)
+      .catch(() => setSignRowDetail(null));
+  }, [signRow]);
 
 
   const load = useCallback(() => {
@@ -677,7 +686,7 @@ export default function RadioHandoverPage() {
       )}
 
       {/* Sign Row dialog */}
-      <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSigRowReceiver(null); }}>
+      <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSignRowDetail(null); setSigRowReceiver(null); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>TTD Penerima — {signRow?.handoverNumber}</DialogTitle>
@@ -690,6 +699,20 @@ export default function RadioHandoverPage() {
               <p className="text-amber-950 text-sm bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
                 Helpdesk sudah menyerahkan. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.workshopTechnicianName || signRow.receivedByName}</span>.
               </p>
+
+              {/* Tag Preview */}
+              {signRowDetail && (
+                <div className="rounded-lg border bg-white p-3">
+                  <HandoverTagPreview detail={signRowDetail} />
+                </div>
+              )}
+              {!signRowDetail && (
+                <div className="text-center py-4 text-gray-400 text-xs">
+                  <Loader2 className="w-4 h-4 animate-spin inline-block mr-1" />
+                  Memuat detail tag...
+                </div>
+              )}
+
               <SignaturePadField
                 ref={sigTekRowRef}
                 label={`TTD Penerima (${signRow.workshopTechnicianName || signRow.receivedByName})`}

@@ -73,6 +73,8 @@ export const quotationApi = {
         if (query.year) params.append("year", query.year.toString());
         if (query.customerId) params.append("customerId", query.customerId.toString());
         if (query.search) params.append("search", query.search);
+        if (query.startDate) params.append("startDate", query.startDate);
+        if (query.endDate) params.append("endDate", query.endDate);
 
         const response = await api.get(`/api/quotations?${params.toString()}`);
         return response.data;
@@ -95,5 +97,20 @@ export const quotationApi = {
 
     delete: async (id: number): Promise<void> => {
         await api.delete(`/api/quotations/${id}`);
+    },
+
+    export: async (query: QuotationQuery = {}): Promise<Blob> => {
+        const params = new URLSearchParams();
+        if (query.status !== undefined) params.append("status", query.status.toString());
+        if (query.year) params.append("year", query.year.toString());
+        if (query.customerId) params.append("customerId", query.customerId.toString());
+        if (query.search) params.append("search", query.search);
+        if (query.startDate) params.append("startDate", query.startDate);
+        if (query.endDate) params.append("endDate", query.endDate);
+
+        const response = await api.get(`/api/quotations/export?${params.toString()}`, {
+            responseType: 'blob'
+        });
+        return response.data;
     },
 };

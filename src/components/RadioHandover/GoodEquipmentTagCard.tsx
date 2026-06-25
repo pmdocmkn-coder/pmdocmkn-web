@@ -39,6 +39,11 @@ function flowLabel(type?: string) {
 
 export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagData }) {
   const acc = data.accessories?.filter((a) => a.itemName?.trim()) ?? [];
+  const alurLabel = flowLabel(data.handoverType);
+  const flowNames = `${data.handedOverByName} → ${data.receivedByName}`;
+  const alurValue = alurLabel.toLowerCase() === flowNames.toLowerCase() 
+    ? alurLabel 
+    : `${alurLabel} · ${flowNames}`;
 
   return (
     <div className="rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md text-sm max-w-md">
@@ -57,7 +62,7 @@ export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagD
           label="Tanggal / jam"
           value={format(new Date(data.handoverAt), "dd MMMM yyyy HH:mm", { locale: localeId })}
         />
-        <TagField label="Alur" value={`${flowLabel(data.handoverType)} · ${data.handedOverByName} → ${data.receivedByName}`} />
+        <TagField label="Alur" value={alurValue} />
         <TagField label="Nama alat" value={data.equipmentName ?? "—"} />
         <TagField label="Nomor unit" value={data.unitNumber?.trim() || "—"} />
         <TagField label="S/N" value={data.radioSerialNumber} highlight />

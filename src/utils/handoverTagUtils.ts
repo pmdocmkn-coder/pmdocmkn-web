@@ -24,6 +24,7 @@ export function toDamagedTagData(d: RadioHandoverDetail): DamagedEquipmentTagDat
     radioMasterId: d.radioId,
     radioMasterRadioId: d.radioMasterRadioId,
     radioFleet: d.radioFleet,
+    handoverType: d.handoverType,
   };
 }
 

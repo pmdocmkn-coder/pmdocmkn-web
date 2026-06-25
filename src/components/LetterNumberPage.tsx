@@ -43,11 +43,13 @@ import {
     Menu,
     Eye,
     Home,
+    Download
 } from "lucide-react";
 import { DatePicker } from "./ui/date-picker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../lib/utils";
+import RepairDateRangeFilter from "./RadioRepair/RepairDateRangeFilter";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import {
@@ -1448,19 +1450,29 @@ function QuotationTab() {
     const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
     const [selectedDetailItem, setSelectedDetailItem] = useState<QuotationList | null>(null);
 
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
+    const [isExporting, setIsExporting] = useState(false);
+
     const [formData, setFormData] = useState<QuotationCreate>({
-        customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1,
+        customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1, nominal: undefined,
     });
     const [editFormData, setEditFormData] = useState<QuotationUpdate>({
-        description: "", notes: "", status: 0, customerId: 0, quotationDate: "",
+        description: "", notes: "", status: 0, customerId: 0, quotationDate: "", nominal: undefined,
     });
 
-    useEffect(() => { loadItems(); loadCompanies(); }, [currentPage, searchTerm]);
+    useEffect(() => { loadItems(); loadCompanies(); }, [currentPage, searchTerm, startDate, endDate]);
 
     const loadItems = async () => {
         try {
             setLoading(true);
-            const result = await quotationApi.getAll({ page: currentPage, pageSize, search: searchTerm || undefined });
+            const result = await quotationApi.getAll({ 
+                page: currentPage, 
+                pageSize, 
+                search: searchTerm || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined
+            });
             setItems(result.data || []);
             setTotalCount(result.meta?.pagination?.totalCount || 0);
             setTotalPages(result.meta?.pagination?.totalPages || 0);
@@ -1512,6 +1524,75 @@ function QuotationTab() {
         }
     };
 
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            // Fetch all data for current filter
+            const result = await quotationApi.getAll({
+                page: 1,
+                pageSize: 10000,
+                search: searchTerm || undefined,
+                startDate: startDate || undefined,
+                endDate: endDate || undefined 
+            });
+            const dataToExport = result.data || [];
+            
+            if (dataToExport.length === 0) {
+                toast({ title: "Info", description: "Tidak ada data untuk diexport", variant: "default" });
+                return;
+            }
+
+            // Dynamic import for exceljs and file-saver to avoid loading on initial render
+            const ExcelJS = (await import('exceljs')).default;
+            const { saveAs } = (await import('file-saver')).default;
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet("Quotations");
+
+            // Headers
+            worksheet.columns = [
+                { header: "No", key: "no", width: 5 },
+                { header: "Nomor Quotation", key: "nomor", width: 25 },
+                { header: "Tanggal", key: "tanggal", width: 15 },
+                { header: "Customer", key: "customer", width: 30 },
+                { header: "Deskripsi", key: "deskripsi", width: 40 },
+                { header: "Value", key: "value", width: 20 },
+                { header: "Status", key: "status", width: 15 },
+                { header: "Pembuat", key: "pembuat", width: 20 },
+            ];
+
+            // Style headers
+            worksheet.getRow(1).font = { bold: true };
+            worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
+
+            // Add rows
+            dataToExport.forEach((item, index) => {
+                worksheet.addRow({
+                    no: index + 1,
+                    nomor: item.formattedNumber,
+                    tanggal: new Date(item.quotationDate).toISOString().split("T")[0],
+                    customer: item.customerName,
+                    deskripsi: item.description,
+                    value: item.nominal || 0,
+                    status: item.status,
+                    pembuat: item.createdByName || "-"
+                });
+            });
+            
+            // Format nominal column to IDR
+            worksheet.getColumn('value').numFmt = '"Rp"#,##0.00;[Red]-"Rp"#,##0.00';
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+            saveAs(blob, `Quotations_${new Date().toISOString().split('T')[0]}.xlsx`);
+
+        } catch (error: any) {
+            toast({ title: "Error", description: "Gagal mendownload Excel", variant: "destructive" });
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     const openEditDialog = async (item: QuotationList) => {
         setSelectedItem(item);
         try {
@@ -1521,6 +1602,7 @@ function QuotationTab() {
                 notes: detail.notes || "",
                 status: detail.status === "Sent" ? 1 : 0,
                 customerId: detail.customerId,
+                nominal: detail.nominal,
                 quotationDate: detail.quotationDate ? new Date(detail.quotationDate).toISOString().split("T")[0] : "",
             });
         } catch {
@@ -1528,30 +1610,51 @@ function QuotationTab() {
                 description: item.description,
                 notes: "",
                 status: item.status === "Sent" ? 1 : 0,
+                nominal: item.nominal,
             });
         }
         setIsEditDialogOpen(true);
     };
 
     const resetForm = () => {
-        setFormData({ customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1 });
+        setFormData({ customerId: 0, description: "", quotationDate: new Date().toISOString().split("T")[0], notes: "", status: 1, nominal: undefined });
         setSelectedItem(null);
+    };
+
+    const formatRupiah = (value: number | undefined) => {
+        if (value === undefined || value === null) return "-";
+        return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(value);
     };
 
     return (
         <>
             <div className="bg-white rounded-lg shadow-sm p-4 mb-6">
                 {/* Desktop Filters */}
-                <div className="hidden md:grid grid-cols-3 gap-4">
-                    <div className="md:col-span-2">
-                        <div className="relative">
+                <div className="hidden md:flex flex-wrap items-center justify-between gap-4">
+                    <div className="flex items-center gap-4 flex-1">
+                        <div className="relative w-64">
                             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
                             <Input placeholder="Cari quotation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
                         </div>
+                        <div className="w-64">
+                            <RepairDateRangeFilter
+                                dateFrom={startDate}
+                                dateTo={endDate}
+                                onChange={(from, to) => {
+                                    setStartDate(from);
+                                    setEndDate(to);
+                                }}
+                            />
+                        </div>
                     </div>
-                    {hasPermission("quotation.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-violet-600 hover:bg-violet-700">
-                        <Plus className="h-4 w-4 mr-2" />Buat Quotation
-                    </Button>}
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={handleExport} disabled={isExporting} className="border-green-600 text-green-600 hover:bg-green-50">
+                            <Download className="h-4 w-4 mr-2" /> {isExporting ? "Mengekspor..." : "Export Excel"}
+                        </Button>
+                        {hasPermission("quotation.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-violet-600 hover:bg-violet-700">
+                            <Plus className="h-4 w-4 mr-2" />Buat Quotation
+                        </Button>}
+                    </div>
                 </div>
 
                 {/* Mobile Filters */}
@@ -1560,6 +1663,19 @@ function QuotationTab() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#8b5cf6]" />
                         <Input placeholder="Search quotation..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]" />
                     </div>
+                    <div className="w-full">
+                        <RepairDateRangeFilter
+                            dateFrom={startDate}
+                            dateTo={endDate}
+                            onChange={(from, to) => {
+                                setStartDate(from);
+                                setEndDate(to);
+                            }}
+                        />
+                    </div>
+                    <Button variant="outline" onClick={handleExport} disabled={isExporting} className="w-full justify-center border-green-600 text-green-600 hover:bg-green-50 rounded-xl py-2.5 h-10">
+                        <Download className="h-4 w-4 mr-2" /> {isExporting ? "Mengekspor..." : "Export Excel"}
+                    </Button>
                 </div>
             </div>
 
@@ -1574,6 +1690,7 @@ function QuotationTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tanggal</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Customer</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Deskripsi</th>
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Value</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
                                 {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
@@ -1590,6 +1707,7 @@ function QuotationTab() {
                                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{new Date(item.quotationDate).toLocaleDateString()}</td>
                                     <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">{item.customerName}</td>
                                     <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">{item.description}</td>
+                                    <td className="px-6 py-4 text-sm font-semibold text-emerald-600 text-right whitespace-nowrap">{formatRupiah(item.nominal)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={item.status} /></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{item.createdByName || "-"}</td>
                                     {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
@@ -1627,6 +1745,11 @@ function QuotationTab() {
                                 <p className="text-sm font-bold text-gray-900">{item.formattedNumber}</p>
                                 <p className="text-sm text-gray-500 mt-1 italic line-clamp-1">{item.description}</p>
                             </div>
+                            {item.nominal !== undefined && item.nominal !== null && (
+                                <div className="text-sm font-bold text-emerald-600 mt-1">
+                                    {formatRupiah(item.nominal)}
+                                </div>
+                            )}
                             {item.customerName && (
                                 <div className="flex items-center gap-1.5 mt-1">
                                     <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
@@ -1740,6 +1863,20 @@ function QuotationTab() {
                                 <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Deskripsi quotation" />
                             </div>
                             <div className="space-y-2">
+                                <Label>Value (Rp)</Label>
+                                <Input 
+                                    type="text" 
+                                    value={formData.nominal !== undefined && formData.nominal !== null ? new Intl.NumberFormat('id-ID').format(formData.nominal) : ""} 
+                                    onChange={(e) => {
+                                        const rawValue = e.target.value.replace(/\D/g, '');
+                                        setFormData({ ...formData, nominal: rawValue ? parseFloat(rawValue) : undefined });
+                                    }} 
+                                    placeholder="Contoh: 1.500.000" 
+                                />
+                            </div>
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
                                 <Label>Status</Label>
                                 <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
                                     <SelectTrigger><SelectValue /></SelectTrigger>
@@ -1749,10 +1886,10 @@ function QuotationTab() {
                                     </SelectContent>
                                 </Select>
                             </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Catatan</Label>
-                            <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                            <div className="space-y-2">
+                                <Label>Catatan</Label>
+                                <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>
@@ -1830,23 +1967,39 @@ function QuotationTab() {
                                 </div>
                             )}
                         </div>
-                        <div className="space-y-2">
-                            <Label>Deskripsi *</Label>
-                            <Input value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Deskripsi *</Label>
+                                <Input value={editFormData.description} onChange={(e) => setEditFormData({ ...editFormData, description: e.target.value })} />
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Value (Rp)</Label>
+                                <Input 
+                                    type="text" 
+                                    value={editFormData.nominal !== undefined && editFormData.nominal !== null ? new Intl.NumberFormat('id-ID').format(editFormData.nominal) : ""} 
+                                    onChange={(e) => {
+                                        const rawValue = e.target.value.replace(/\D/g, '');
+                                        setEditFormData({ ...editFormData, nominal: rawValue ? parseFloat(rawValue) : undefined });
+                                    }} 
+                                    placeholder="Contoh: 1.500.000" 
+                                />
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Catatan</Label>
-                            <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">Draft</SelectItem>
-                                    <SelectItem value="1">Sent</SelectItem>
-                                </SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Status</Label>
+                                <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
+                                    <SelectTrigger><SelectValue /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="0">Draft</SelectItem>
+                                        <SelectItem value="1">Sent</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Catatan</Label>
+                                <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} />
+                            </div>
                         </div>
                     </div>
                     <DialogFooter>

@@ -3,6 +3,7 @@ import * as signalR from '@microsoft/signalr';
 import { notificationApi } from '../services/notificationApi';
 import { NotificationItem } from '../types/notification';
 import { useAuth } from './AuthContext';
+import { playNotificationSound } from '../utils/audioUtils';
 
 interface SignalRContextValue {
   connection: signalR.HubConnection | null;
@@ -91,6 +92,7 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     conn.on('ReceiveNotification', (notification: NotificationItem) => {
       console.log('[SignalR] ReceiveNotification:', notification.title);
+      playNotificationSound();
       setNotifications(prev => {
         if (prev.some(n => n.id === notification.id)) return prev;
         return [notification, ...prev];

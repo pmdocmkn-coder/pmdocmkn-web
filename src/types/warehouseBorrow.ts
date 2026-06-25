@@ -1,8 +1,10 @@
 export type WarehouseBorrowStatus =
   | "PendingApproval"
+  | "PendingSignature"
   | "Approved"
   | "Rejected"
   | "Issued"
+  | "PendingReturnSignature"
   | "Returned"
   | "Cancelled";
 
