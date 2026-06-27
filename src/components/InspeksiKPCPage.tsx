@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, DragEvent } from "react";
 import { useNavigate } from "react-router-dom";
 import { MobilePageHeader } from "./ui/MobilePageHeader";
+import BottomSheet from "./common/BottomSheet";
 import { useAuth } from "../contexts/AuthContext";
 import {
   inspeksiApi,
@@ -323,16 +324,17 @@ export default function InspeksiKPCPage() {
   const [dateRangeOpen, setDateRangeOpen] = useState(false);
   const [mobDateRangeOpen, setMobDateRangeOpen] = useState(false);
   
+  // Mobile BottomSheet pickers
+  const [mobRuanganOpen, setMobRuanganOpen] = useState(false);
+  const [mobStatusOpen, setMobStatusOpen] = useState(false);
+  const [mobSearchOpen, setMobSearchOpen] = useState(false);
+  
   const deskCalRef = useRef<HTMLDivElement>(null);
-  const mobCalRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (deskCalRef.current && !deskCalRef.current.contains(e.target as Node)) {
         setDateRangeOpen(false);
-      }
-      if (mobCalRef.current && !mobCalRef.current.contains(e.target as Node)) {
-        setMobDateRangeOpen(false);
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
@@ -1159,137 +1161,233 @@ export default function InspeksiKPCPage() {
       {/* ========== MOBILE HEADER (md:hidden) ========== */}
       <MobilePageHeader
         label="Inspeksi"
-        title={`KPC ${showHistory ? "- History" : ""}`}
+        title={`KPC${showHistory ? " — History" : ""}`}
+        subtitle={showHistory ? "Data temuan yang sudah dihapus" : `${totalCount} temuan ditemukan`}
+        icon={<ClipboardList className="w-5 h-5 text-[#D94F2B]" />}
+        iconBg="bg-[#FFF0EC]"
         rightAction={
           <button
-            onClick={() => {
-              const el = document.getElementById('mobile-search-input');
-              if (el) { el.classList.toggle('hidden'); el.focus(); }
-            }}
+            onClick={() => setMobSearchOpen(v => !v)}
             className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
+            aria-label="Cari"
           >
             <Search className="w-4 h-4" />
           </button>
         }
         contentAfterTitle={
-          <div id="mobile-search-input" className="hidden">
-            <div className="relative">
+          mobSearchOpen ? (
+            <div className="relative mt-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
               <input
+                autoFocus
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Cari ruang, temuan, inspector..."
                 className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-[#E2E8F0] rounded-[10px] focus:outline-none focus:border-[#2B6CB0] bg-[#F7F8FA]"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
             </div>
-          </div>
-        }
-        scrollableChips={
-          <div className="flex gap-2">
-            {/* Custom Dropdown: Ruangan */}
-            <div className="relative shrink-0">
-              <button
-                onClick={() => {
-                  const el = document.getElementById("dropdown-ruangan");
-                  if (el) el.classList.toggle("hidden");
-                  // Hide the other dropdown
-                  const other = document.getElementById("dropdown-status");
-                  if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
-                }}
-                className="flex items-center justify-between h-8 rounded-[8px] bg-[#EBF4FF] pl-3 pr-2 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold select-none min-w-[100px]"
-              >
-                <span className="truncate max-w-[120px]">{selectedRuang || "Ruangan"}</span>
-                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-              </button>
-            </div>
-
-            {/* Custom Dropdown: Status */}
-            <div className="relative shrink-0">
-              <button
-                onClick={() => {
-                  const el = document.getElementById("dropdown-status");
-                  if (el) el.classList.toggle("hidden");
-                  // Hide the other dropdown
-                  const other = document.getElementById("dropdown-ruangan");
-                  if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
-                }}
-                className="flex items-center justify-between h-8 rounded-[8px] bg-[#EBF4FF] pl-3 pr-2 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold select-none min-w-[80px]"
-              >
-                <span>{selectedStatus || "Status"}</span>
-                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-              </button>
-            </div>
-
-            <div className="relative shrink-0 flex items-center" ref={mobCalRef}>
-              <button 
-                onClick={() => setMobDateRangeOpen(prev => !prev)}
-                className="flex items-center justify-between h-8 rounded-[8px] bg-[#EBF4FF] pl-3 pr-2 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold select-none min-w-[120px]"
-              >
-                <div className="flex items-center gap-1.5 truncate">
-                  <Calendar className="w-3.5 h-3.5 opacity-70" />
-                  <span className="truncate max-w-[150px]">{formatRangeLabel()}</span>
-                </div>
-                <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-              </button>
-              
-              {mobDateRangeOpen && (
-                <div className="absolute top-full right-0 mt-2 z-[110] bg-white rounded-2xl shadow-xl border border-gray-200 p-4">
-                  <DayPicker
-                    mode="range"
-                    selected={dateRange}
-                    onSelect={(r) => setDateRange(r)}
-                    locale={id}
-                    showOutsideDays
-                    disabled={{ after: new Date() }}
-                    footer={
-                      <div className="flex justify-between items-center pt-3 border-t border-gray-100 mt-3 text-sm">
-                        <div className="flex gap-4">
-                          <button onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }} className="text-gray-400 hover:text-red-500 font-medium transition-colors">Hapus</button>
-                          <button onClick={() => setDateRange({ from: new Date(), to: new Date() })} className="text-blue-600 font-bold hover:text-blue-800 transition-colors">Hari ini</button>
-                        </div>
-                        <button 
-                          onClick={() => {
-                            if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
-                            else setStartDate("");
-                            
-                            if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
-                            else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
-                            else setEndDate("");
-                            
-                            setMobDateRangeOpen(false);
-                            setCurrentPage(1);
-                          }} 
-                          className="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
-                        >
-                          Terapkan
-                        </button>
-                      </div>
-                    }
-                  />
-                </div>
-              )}
-            </div>
-            <button
-              onClick={() => { setShowHistory(!showHistory); setCurrentPage(1); }}
-              className={`flex h-8 shrink-0 items-center gap-1 rounded-full px-3 border text-xs font-semibold ${showHistory ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-gray-50 border-gray-200 text-gray-600'}`}
-            >
-              {showHistory ? <RotateCcw className="w-3 h-3" /> : <Archive className="w-3 h-3" />}
-              {showHistory ? "Aktif" : "History"}
-            </button>
-            {canExport && (
-              <button
-                onClick={handleExportWithImages}
-                disabled={exportLoading}
-                className="flex h-9 shrink-0 items-center gap-1 rounded-[8px] bg-[#F7F8FA] px-3 border border-[#E2E8F0] text-[#718096] text-[12px] font-semibold hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
-              >
-                <Download className="w-3 h-3" />
-                Export
-              </button>
-            )}
-          </div>
+          ) : null
         }
       />
+
+      {/* ========== MOBILE FILTER BAR (md:hidden) — OUTSIDE header card, no overflow-hidden ========== */}
+      <div className="md:hidden mb-4">
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+
+          {/* Ruangan chip */}
+          <button
+            onClick={() => setMobRuanganOpen(true)}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+              selectedRuang
+                ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white'
+                : 'bg-white border-[#E2E8F0] text-[#4A5568]'
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5 opacity-80" />
+            {selectedRuang || "Ruangan"}
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </button>
+
+          {/* Status chip */}
+          <button
+            onClick={() => setMobStatusOpen(true)}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+              selectedStatus
+                ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white'
+                : 'bg-white border-[#E2E8F0] text-[#4A5568]'
+            }`}
+          >
+            <CheckCircle className="w-3.5 h-3.5 opacity-80" />
+            {selectedStatus || "Status"}
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </button>
+
+          {/* Tanggal chip */}
+          <button
+            onClick={() => setMobDateRangeOpen(true)}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+              startDate
+                ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white'
+                : 'bg-white border-[#E2E8F0] text-[#4A5568]'
+            }`}
+          >
+            <Calendar className="w-3.5 h-3.5 opacity-80" />
+            {formatRangeLabel()}
+            <ChevronDown className="w-3 h-3 opacity-60" />
+          </button>
+
+          {/* History chip */}
+          <button
+            onClick={() => { setShowHistory(!showHistory); setCurrentPage(1); }}
+            className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${
+              showHistory
+                ? 'bg-[#D94F2B] border-[#D94F2B] text-white'
+                : 'bg-white border-[#E2E8F0] text-[#4A5568]'
+            }`}
+          >
+            {showHistory ? <RotateCcw className="w-3.5 h-3.5" /> : <Archive className="w-3.5 h-3.5 opacity-80" />}
+            {showHistory ? "Lihat Aktif" : "History"}
+          </button>
+
+          {/* Export chip */}
+          {canExport && (
+            <button
+              onClick={handleExportWithImages}
+              disabled={exportLoading}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#4A5568] text-[12px] font-semibold whitespace-nowrap flex-shrink-0 disabled:opacity-50 transition-colors hover:bg-[#EBF4FF] hover:text-[#2B6CB0]"
+            >
+              {exportLoading
+                ? <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                : <Download className="w-3.5 h-3.5 opacity-80" />
+              }
+              Export
+            </button>
+          )}
+
+          {/* Clear filters chip — only when active */}
+          {(selectedRuang || selectedStatus || startDate || endDate || searchTerm) && (
+            <button
+              onClick={clearFilters}
+              className="flex items-center gap-1 h-9 px-3 rounded-[10px] border border-red-200 bg-red-50 text-red-600 text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors"
+            >
+              <X className="w-3.5 h-3.5" /> Reset
+            </button>
+          )}
+
+          {/* Spacer */}
+          <div className="w-2 flex-shrink-0" />
+        </div>
+      </div>
+
+      {/* ─── BottomSheet: Ruangan ─────────────────────────────────────── */}
+      <BottomSheet
+        open={mobRuanganOpen}
+        onClose={() => setMobRuanganOpen(false)}
+        title="Pilih Ruangan"
+      >
+        <div className="space-y-1 pb-4">
+          {["", ...ruangList].map((ruang) => (
+            <button
+              key={ruang || "__all__"}
+              onClick={() => {
+                setSelectedRuang(ruang);
+                setCurrentPage(1);
+                setMobRuanganOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium transition-colors text-left ${
+                selectedRuang === ruang
+                  ? 'bg-[#EBF4FF] text-[#1B3A6B] font-semibold'
+                  : 'text-[#1A202C] hover:bg-[#F7F8FA]'
+              }`}
+            >
+              <span>{ruang || "Semua Ruangan"}</span>
+              {selectedRuang === ruang && (
+                <Check className="w-4 h-4 text-[#2B6CB0]" />
+              )}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* ─── BottomSheet: Status ──────────────────────────────────────── */}
+      <BottomSheet
+        open={mobStatusOpen}
+        onClose={() => setMobStatusOpen(false)}
+        title="Pilih Status"
+      >
+        <div className="space-y-1 pb-4">
+          {["", "Open", "In Progress", "Closed", "Rejected"].map((status) => (
+            <button
+              key={status || "__all__"}
+              onClick={() => {
+                setSelectedStatus(status);
+                setCurrentPage(1);
+                setMobStatusOpen(false);
+              }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium transition-colors text-left ${
+                selectedStatus === status
+                  ? 'bg-[#EBF4FF] text-[#1B3A6B] font-semibold'
+                  : 'text-[#1A202C] hover:bg-[#F7F8FA]'
+              }`}
+            >
+              <span>{status || "Semua Status"}</span>
+              {selectedStatus === status && (
+                <Check className="w-4 h-4 text-[#2B6CB0]" />
+              )}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
+
+      {/* ─── BottomSheet: Rentang Tanggal ─────────────────────────────── */}
+      <BottomSheet
+        open={mobDateRangeOpen}
+        onClose={() => setMobDateRangeOpen(false)}
+        title="Rentang Tanggal"
+        size="xl"
+      >
+        <div className="flex flex-col items-center pb-4">
+          <DayPicker
+            mode="range"
+            selected={dateRange}
+            onSelect={(r) => setDateRange(r)}
+            locale={id}
+            showOutsideDays
+            disabled={{ after: new Date() }}
+          />
+          <div className="w-full flex items-center justify-between pt-3 border-t border-[#E2E8F0] mt-2 px-1">
+            <div className="flex gap-4">
+              <button
+                onClick={() => { setDateRange(undefined); setStartDate(""); setEndDate(""); }}
+                className="text-[#718096] hover:text-red-500 text-sm font-medium transition-colors"
+              >
+                Hapus
+              </button>
+              <button
+                onClick={() => setDateRange({ from: new Date(), to: new Date() })}
+                className="text-[#2B6CB0] text-sm font-bold hover:text-[#1B3A6B] transition-colors"
+              >
+                Hari ini
+              </button>
+            </div>
+            <button
+              onClick={() => {
+                if (dateRange?.from) setStartDate(format(dateRange.from, 'yyyy-MM-dd'));
+                else setStartDate("");
+                if (dateRange?.to) setEndDate(format(dateRange.to, 'yyyy-MM-dd'));
+                else if (dateRange?.from) setEndDate(format(dateRange.from, 'yyyy-MM-dd'));
+                else setEndDate("");
+                setMobDateRangeOpen(false);
+                setCurrentPage(1);
+              }}
+              className="bg-[#1B3A6B] text-white px-5 py-2.5 rounded-[10px] text-sm font-bold hover:bg-[#2B6CB0] transition-colors"
+            >
+              Terapkan
+            </button>
+          </div>
+        </div>
+      </BottomSheet>
 
       {/* ========== DESKTOP HEADER (hidden md:block) ========== */}
       <div className="hidden md:block mb-6">
@@ -1390,7 +1488,7 @@ export default function InspeksiKPCPage() {
             <div className="relative" ref={deskCalRef}>
               <button 
                 onClick={() => setDateRangeOpen(prev => !prev)}
-                className="w-full bg-white border border-gray-300 hover:border-blue-400 rounded-lg px-3 py-2 flex items-center justify-between text-sm text-gray-700 transition-all focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full bg-white border border-gray-300 hover:border-[#2B6CB0] rounded-lg px-3 py-2 flex items-center justify-between text-sm text-gray-700 transition-all focus:outline-none focus:ring-2 focus:ring-[#2B6CB0]"
               >
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4 text-gray-400" />
@@ -1425,7 +1523,7 @@ export default function InspeksiKPCPage() {
                             setDateRangeOpen(false);
                             setCurrentPage(1);
                           }} 
-                          className="bg-blue-600 text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-blue-700 transition-colors"
+                          className="bg-[#1B3A6B] text-white px-5 py-2 rounded-lg text-xs font-bold hover:bg-[#2B6CB0] transition-colors"
                         >
                           Terapkan
                         </button>
@@ -1460,8 +1558,8 @@ export default function InspeksiKPCPage() {
             onClick={handleExportWithImages}
             disabled={exportLoading}
             className={`px-4 py-2 rounded-lg flex items-center gap-2 transition-colors ${exportLoading
-              ? "bg-purple-400 cursor-not-allowed"
-              : "bg-purple-600 hover:bg-purple-700"
+              ? "bg-[#B83D20] cursor-not-allowed"
+              : "bg-[#D94F2B] hover:bg-[#B83D20]"
               } text-white`}
           >
             {exportLoading ? (
@@ -1663,7 +1761,7 @@ export default function InspeksiKPCPage() {
       {!showHistory && canCreate && (
         <button
           onClick={openCreateModal}
-          className="md:hidden fixed bottom-6 right-4 flex items-center gap-2 bg-indigo-600 text-white px-5 py-3 rounded-full shadow-lg shadow-indigo-600/40 active:scale-95 transition-transform z-30"
+          className="md:hidden fixed bottom-[100px] right-4 flex items-center gap-2 bg-[#D94F2B] hover:bg-[#B83D20] text-white px-5 py-3 rounded-full shadow-lg shadow-[#D94F2B]/40 active:scale-95 transition-transform z-30"
         >
           <Plus className="w-5 h-5" />
           <span className="font-bold text-sm">Tambah Temuan</span>

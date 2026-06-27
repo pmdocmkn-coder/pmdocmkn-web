@@ -463,14 +463,14 @@ const CallRecordsPage: React.FC = () => {
 
         {/* Date Navigation */}
         <div className="px-4 py-3 flex items-center justify-center gap-4">
-          <button onClick={() => navigateDate(-1)} className="w-9 h-9 rounded-full bg-white border border-purple-100 shadow-sm flex items-center justify-center text-purple-600 active:scale-90 transition-all">
+          <button onClick={() => navigateDate(-1)} className="w-9 h-9 rounded-[10px] bg-white border border-[#E2E8F0] shadow-sm flex items-center justify-center text-[#718096] hover:text-[#2B6CB0] hover:bg-[#EBF4FF] active:scale-95 transition-all">
             <ChevronLeft className="w-5 h-5" />
           </button>
           <div className="flex flex-col items-center min-w-[140px]">
-            <span className="text-[10px] font-bold text-purple-600 uppercase tracking-[0.15em]">{mobileMonth}</span>
-            <span className="text-lg font-black text-slate-900 tracking-tight">{mobileDay}</span>
+            <span className="text-[10px] font-bold text-[#2B6CB0] uppercase tracking-[0.15em]">{mobileMonth}</span>
+            <span className="text-[18px] font-bold text-[#1A202C] tracking-tight">{mobileDay}</span>
           </div>
-          <button onClick={() => navigateDate(1)} className="w-9 h-9 rounded-full bg-white border border-purple-100 shadow-sm flex items-center justify-center text-purple-600 active:scale-90 transition-all">
+          <button onClick={() => navigateDate(1)} className="w-9 h-9 rounded-[10px] bg-white border border-[#E2E8F0] shadow-sm flex items-center justify-center text-[#718096] hover:text-[#2B6CB0] hover:bg-[#EBF4FF] active:scale-95 transition-all">
             <ChevronRight className="w-5 h-5" />
           </button>
         </div>
@@ -478,38 +478,38 @@ const CallRecordsPage: React.FC = () => {
         {/* Date Picker */}
         <div className="px-4 mb-3">
           <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Pilih Tanggal</label>
-            <div className="bg-white rounded-xl border border-purple-100/60 shadow-[0_1px_8px_rgba(147,17,212,0.04)] overflow-hidden">
+            <label className="text-[10px] font-bold text-[#718096] ml-1 uppercase tracking-wider">Pilih Tanggal</label>
+            <div className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm overflow-hidden">
               <DatePicker
                 date={selectedDate ? new Date(selectedDate) : undefined}
                 onSelect={(d) => setSelectedDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
+                className="w-full border-none shadow-none text-[13px] font-semibold text-[#1A202C] h-10"
               />
             </div>
           </div>
         </div>
 
         {/* Shortcut Actions */}
-        <div className="px-4 mb-6 grid grid-cols-2 gap-3">
+        <div className="px-4 mb-5 grid grid-cols-2 gap-3">
           <button
             onClick={() => navigate('/upload')}
-            className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-purple-50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all group"
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm active:scale-95 transition-all group"
           >
-            <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center mb-2 group-active:bg-purple-100 transition-colors">
-              <UploadCloud className="w-5 h-5 text-purple-600" />
+            <div className="w-10 h-10 rounded-[10px] bg-[#EBF4FF] flex items-center justify-center mb-2">
+              <UploadCloud className="w-5 h-5 text-[#2B6CB0]" />
             </div>
-            <span className="text-[11px] font-black text-slate-800">Upload CSV</span>
-            <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Import Data Panggilan</p>
+            <span className="text-[12px] font-bold text-[#1A202C]">Upload CSV</span>
+            <p className="text-[10px] text-[#718096] mt-0.5">Import Data Panggilan</p>
           </button>
           <button
             onClick={() => navigate('/export')}
-            className="flex flex-col items-center justify-center p-4 bg-white rounded-2xl border border-purple-50 shadow-[0_2px_12px_rgba(0,0,0,0.03)] active:scale-95 transition-all group"
+            className="flex flex-col items-center justify-center p-4 bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm active:scale-95 transition-all group"
           >
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center mb-2 group-active:bg-indigo-100 transition-colors">
-              <FileDown className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 rounded-[10px] bg-[#F0FFF4] flex items-center justify-center mb-2">
+              <FileDown className="w-5 h-5 text-[#059669]" />
             </div>
-            <span className="text-[11px] font-black text-slate-800">Export Data</span>
-            <p className="text-[9px] text-slate-400 mt-0.5 font-bold">Download Laporan</p>
+            <span className="text-[12px] font-bold text-[#1A202C]">Export Data</span>
+            <p className="text-[10px] text-[#718096] mt-0.5">Download Laporan</p>
           </button>
         </div>
 
@@ -527,7 +527,7 @@ const CallRecordsPage: React.FC = () => {
         {/* Loading State */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-10 gap-3">
-            <div className="w-10 h-10 rounded-full border-[3px] border-purple-200 border-t-purple-600 animate-spin" />
+            <div className="w-10 h-10 rounded-full border-[3px] border-[#E2E8F0] border-t-[#2B6CB0] animate-spin" />
             <p className="text-xs font-medium text-slate-500">Memuat data call records...</p>
           </div>
         )}
@@ -535,17 +535,17 @@ const CallRecordsPage: React.FC = () => {
         {/* Daily Summary Cards */}
         {!isLoading && dailySummary && (
           <section className="px-4 mb-6">
-            <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 mb-3 flex items-center gap-1.5">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#718096] mb-3 flex items-center gap-1.5">
               <BarChart3 className="w-3 h-3" />
               Daily Summary
             </h2>
             <div className="grid grid-cols-2 gap-2.5">
               {/* Total Calls */}
-              <div className="bg-gradient-to-br from-purple-600 to-purple-800 p-4 rounded-2xl shadow-lg shadow-purple-500/15 relative overflow-hidden">
+              <div className="bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] p-4 rounded-[14px] shadow-lg relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-14 h-14 bg-white/10 rounded-full -translate-x-2 -translate-y-5" />
-                <Phone className="w-4 h-4 text-purple-200 mb-2" />
-                <p className="text-[9px] font-bold tracking-widest text-purple-200 uppercase">Total Calls</p>
-                <p className="text-[22px] leading-none font-black text-white tracking-tight mt-1">{dailySummary.totalQty.toLocaleString()}</p>
+                <Phone className="w-4 h-4 text-white/70 mb-2" />
+                <p className="text-[9px] font-bold tracking-widest text-white/70 uppercase">Total Calls</p>
+                <p className="text-[22px] leading-none font-bold text-white tracking-tight mt-1">{dailySummary.totalQty.toLocaleString()}</p>
               </div>
               {/* TE Busy */}
               <div className="bg-gradient-to-br from-rose-500 to-rose-700 p-4 rounded-2xl shadow-lg shadow-rose-500/15 relative overflow-hidden">
@@ -579,7 +579,7 @@ const CallRecordsPage: React.FC = () => {
         {!isLoading && dailySummary?.hourlyData && dailySummary.hourlyData.length > 0 && (
           <section className="px-4 mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 flex items-center gap-1.5">
+              <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#718096] flex items-center gap-1.5">
                 <BarChart3 className="w-3 h-3" />
                 Call Distribution by Hour
               </h2>
@@ -598,7 +598,7 @@ const CallRecordsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-            <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.04)] border border-purple-50/80 p-3 pt-4">
+            <div className="bg-white rounded-2xl shadow-[0_2px_16px_rgba(0,0,0,0.04)] border border-[#E2E8F0] p-3 pt-4">
               <div className="flex items-end justify-between gap-[2px] h-[180px]">
                 {dailySummary.hourlyData.map((h) => {
                   const maxQ = getMaxHourlyQty();
@@ -625,7 +625,7 @@ const CallRecordsPage: React.FC = () => {
         {/* Hourly Detailed Summary - Full Details */}
         {!isLoading && dailySummary?.hourlyData && dailySummary.hourlyData.length > 0 && (
           <section className="px-4 mb-6">
-            <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-purple-600/70 mb-3 flex items-center gap-1.5">
+            <h2 className="text-[10px] font-extrabold uppercase tracking-[0.15em] text-[#718096] mb-3 flex items-center gap-1.5">
               <Clock className="w-3 h-3" />
               Hourly Detailed Summary
             </h2>
@@ -633,10 +633,10 @@ const CallRecordsPage: React.FC = () => {
             {/* Card-based hourly data */}
             <div className="flex flex-col gap-2">
               {dailySummary.hourlyData.map((h) => (
-                <div key={h.hourGroup} className="bg-white rounded-2xl border border-purple-50/80 shadow-[0_1px_8px_rgba(0,0,0,0.03)] p-3">
+                <div key={h.hourGroup} className="bg-white rounded-2xl border border-[#E2E8F0] shadow-[0_1px_8px_rgba(0,0,0,0.03)] p-3">
                   {/* Top row: Time + Total */}
                   <div className="flex items-center justify-between mb-2">
-                    <span className="text-[12px] font-bold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-md">{h.timeRange}</span>
+                    <span className="text-[12px] font-bold text-[#2B6CB0] bg-[#EBF4FF] px-2 py-0.5 rounded-[6px]">{h.timeRange}</span>
                     <div className="text-right">
                       <span className="text-[10px] text-slate-400 font-medium mr-1">Total</span>
                       <span className="text-[14px] font-black text-slate-800">{h.qty.toLocaleString()}</span>
@@ -667,7 +667,7 @@ const CallRecordsPage: React.FC = () => {
               ))}
 
               {/* TOTAL Summary Card */}
-              <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-3 shadow-lg shadow-purple-500/10">
+              <div className="bg-gradient-to-r from-[#1B3A6B] to-[#2B6CB0] rounded-[14px] p-3 shadow-lg shadow-sm">
                 <div className="flex items-center justify-between mb-2">
                   <span className="text-[12px] font-extrabold text-white/90 uppercase tracking-wider">Total</span>
                   <span className="text-[16px] font-black text-white">{dailySummary.totalQty.toLocaleString()}</span>
@@ -697,7 +697,7 @@ const CallRecordsPage: React.FC = () => {
               {canExportCSV && (
                 <button
                   onClick={handleExportCSV}
-                  className="flex-1 py-2.5 text-[11px] font-bold text-purple-700 bg-white rounded-xl border border-purple-200 shadow-sm hover:bg-purple-50 transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
+                  className="flex-1 py-2.5 text-[12px] font-semibold text-[#2B6CB0] bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm hover:bg-[#EBF4FF] transition-colors flex items-center justify-center gap-1.5 active:scale-[0.98]"
                 >
                   <Download className="w-3.5 h-3.5" />
                   Export CSV

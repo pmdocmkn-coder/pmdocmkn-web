@@ -6,11 +6,12 @@ import {
 } from "lucide-react";
 
 /**
- * MobileBottomNav — Dark pill style (sesuai mockup)
- * - Dark background: #1A1A2E / #111827
- * - Active: orange pill background #D94F2B with white icon+text
- * - Inactive: gray icon+text
- * - Height: 72px
+ * MobileBottomNav — Floating pill style (sesuai mockup)
+ * - Floating dengan margin dari tepi layar
+ * - Rounded pill shape (rounded-[24px])
+ * - Dark background: #1A2744
+ * - Active: orange background pill per item dengan garis atas
+ * - Inactive: gray icon + label
  */
 
 interface MobileBottomNavProps {
@@ -90,13 +91,22 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
   const isMoreActive = !tabs.some(t => isActive(t)) && location.pathname !== "/dashboard";
 
   return (
+    /* Floating container — margin dari tepi, tidak full-width */
     <nav
-      className="fixed bottom-0 left-0 right-0 z-40 md:hidden pb-safe"
-      style={{ background: '#111827' }}
+      className="fixed bottom-3 left-3 right-3 z-40 md:hidden pb-safe"
       aria-label="Bottom navigation"
     >
-      <div className="flex items-center px-3 py-2 gap-1" style={{ height: 64 }}>
-        {tabs.map((tab) => {
+      {/* Pill container */}
+      <div
+        className="flex items-center px-2 py-2 gap-1"
+        style={{
+          background: '#1A2744',
+          borderRadius: 24,
+          height: 68,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.35), 0 2px 8px rgba(0,0,0,0.2)',
+        }}
+      >
+        {tabs.map(tab => {
           const active = isActive(tab);
           const Icon = tab.icon;
           return (
@@ -105,20 +115,24 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
               onClick={() => nav(tab.navigate)}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
-              className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-150 rounded-[12px] py-1.5"
-              style={{
-                backgroundColor: active ? '#D94F2B' : 'transparent',
-                minWidth: 0,
-              }}
+              className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200 pt-1"
+              style={{ minWidth: 0, height: 52 }}
             >
+              {/* Active top orange bar */}
+              {active && (
+                <span
+                  className="absolute top-0 left-1/2 -translate-x-1/2 rounded-b-full"
+                  style={{ width: 28, height: 3, backgroundColor: '#D94F2B' }}
+                />
+              )}
               <Icon
                 className="w-5 h-5 flex-shrink-0"
-                style={{ color: active ? '#FFFFFF' : '#9CA3AF' }}
+                style={{ color: active ? '#D94F2B' : '#8B9EC8' }}
                 strokeWidth={active ? 2.5 : 2}
               />
               <span
-                className="text-[10px] font-medium leading-none truncate"
-                style={{ color: active ? '#FFFFFF' : '#9CA3AF' }}
+                className="text-[10px] font-semibold leading-none truncate"
+                style={{ color: active ? '#D94F2B' : '#8B9EC8' }}
               >
                 {tab.label}
               </span>
@@ -130,20 +144,22 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
         <button
           onClick={onMoreClick}
           aria-label="Lebih banyak menu"
-          className="flex-1 flex flex-col items-center justify-center gap-1 rounded-[12px] py-1.5 transition-all duration-150"
+          className="flex-1 flex flex-col items-center justify-center gap-1 transition-all duration-200"
           style={{
-            backgroundColor: isMoreActive ? '#D94F2B' : 'transparent',
             minWidth: 0,
+            height: 52,
+            borderRadius: 16,
+            backgroundColor: isMoreActive ? '#D94F2B' : 'transparent',
           }}
         >
           <MoreHorizontal
             className="w-5 h-5 flex-shrink-0"
-            style={{ color: isMoreActive ? '#FFFFFF' : '#9CA3AF' }}
+            style={{ color: isMoreActive ? '#FFFFFF' : '#8B9EC8' }}
             strokeWidth={isMoreActive ? 2.5 : 2}
           />
           <span
-            className="text-[10px] font-medium leading-none"
-            style={{ color: isMoreActive ? '#FFFFFF' : '#9CA3AF' }}
+            className="text-[10px] font-semibold leading-none"
+            style={{ color: isMoreActive ? '#FFFFFF' : '#8B9EC8' }}
           >
             Lainnya
           </span>

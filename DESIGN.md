@@ -1,4 +1,4 @@
-# DESIGN.md — PM Dashboard KPC
+# DESIGN.md — PM Dashboard MKN
 
 Derived from the **Synergy MKN Onwards** brand identity: navy blue as the structural foundation, coral-orange as the action accent, supported by neutral surfaces for content density.
 
@@ -52,10 +52,10 @@ Derived from the **Synergy MKN Onwards** brand identity: navy blue as the struct
 
 | Role           | Name            | Hex       | Usage                                              |
 |----------------|-----------------|-----------|----------------------------------------------------|
-| Primary        | KPC Navy        | `#1B3A6B` | Sidebar, headers, primary buttons                  |
-| Primary mid    | KPC Blue        | `#2B6CB0` | Links, active states, icon fills                   |
-| Accent         | KPC Orange      | `#D94F2B` | CTAs, badges, alert indicators, hover accents      |
-| Accent light   | KPC Coral       | `#E86547` | Hover states on accent, secondary highlights       |
+| Primary        | MKN Navy        | `#1B3A6B` | Sidebar, headers, primary buttons                  |
+| Primary mid    | MKN Blue        | `#2B6CB0` | Links, active states, icon fills                   |
+| Accent         | MKN Orange      | `#D94F2B` | CTAs, badges, alert indicators, hover accents      |
+| Accent light   | MKN Coral       | `#E86547` | Hover states on accent, secondary highlights       |
 | Surface        | White           | `#FFFFFF` | Card backgrounds, main content area                |
 | Surface alt    | Cool Gray 50    | `#F7F8FA` | Page background, table row alternates              |
 | Border         | Cool Gray 200   | `#E2E8F0` | Dividers, card borders, input borders              |
@@ -111,7 +111,7 @@ Spacing scale: 4px base unit (4, 8, 12, 16, 20, 24, 32, 40, 48, 64)
 ### Navigation
 
 #### Desktop: Sidebar Navigation
-- Background: `#1B3A6B` (KPC Navy)
+- Background: `#1B3A6B` (MKN Navy)
 - Active item: `#2B6CB0` background, white text, left border `#D94F2B` 3px
 - Inactive item: white text at 70% opacity
 - Width: 220px; icons + text labels
@@ -156,9 +156,9 @@ Spacing scale: 4px base unit (4, 8, 12, 16, 20, 24, 32, 40, 48, 64)
 | Group | Menu Items |
 |-------|-----------|
 | Main | Dashboard, Docs |
-| PM Management | KPI Tracking, PM Schedule, Inspeksi KPC, NEC History, Link Internal, SWR Signal |
-| Radio & Fleet | Radio KPC, Radio Contractor, Radio Unit, Radio Scrap, Dashboard Perbaikan, Serah Terima Radio, Radio Masuk WH, Fleet Statistics |
-| Monitoring | CCTV KPC |
+| PM Management | KPI Tracking, PM Schedule, Inspeksi MKN, NEC History, Link Internal, SWR Signal |
+| Radio & Fleet | Radio MKN, Radio Contractor, Radio Unit, Radio Scrap, Dashboard Perbaikan, Serah Terima Radio, Radio Masuk WH, Fleet Statistics |
+| Monitoring | CCTV MKN |
 | Warehouse | Histori Peminjaman, Ajuan Pinjam Tools, Supervisi Warehouse, Master Data Tools |
 | Call Records | View Records, Upload CSV, Export Data, Print Report |
 | Administration | Letter Numbers, Companies, Document Types |
@@ -184,7 +184,7 @@ Spacing scale: 4px base unit (4, 8, 12, 16, 20, 24, 32, 40, 48, 64)
 #### FAB (Floating Action Button)
 - Position: fixed bottom-right, 16px from edges
 - Size: 56px circle
-- Background: `#D94F2B` (KPC Orange)
+- Background: `#D94F2B` (MKN Orange)
 - Icon: white, 24px
 - Shadow: `0 4px 12px rgba(217, 79, 43, 0.3)`
 - Tap ripple: white at 20% opacity
@@ -335,15 +335,15 @@ Our shadcn/ui theme follows the brand color system:
 theme: {
   colors: {
     primary: {
-      DEFAULT: '#1B3A6B', // KPC Navy
+      DEFAULT: '#1B3A6B', // MKN Navy
       foreground: '#FFFFFF',
     },
     secondary: {
-      DEFAULT: '#2B6CB0', // KPC Blue
+      DEFAULT: '#2B6CB0', // MKN Blue
       foreground: '#FFFFFF',
     },
     accent: {
-      DEFAULT: '#D94F2B', // KPC Orange
+      DEFAULT: '#D94F2B', // MKN Orange
       foreground: '#FFFFFF',
     },
     destructive: {

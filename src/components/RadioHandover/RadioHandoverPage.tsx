@@ -643,7 +643,7 @@ export default function RadioHandoverPage() {
       {isHd && (
         <button
           onClick={() => setShowCreate(true)}
-          className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-blue-500/40 transition-all active:scale-95 text-[15px]"
+          className="md:hidden fixed bottom-[100px] right-4 z-30 flex items-center gap-2 bg-[#D94F2B] hover:bg-[#B83D20] text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-[#D94F2B]/40 transition-all active:scale-95 text-[15px]"
         >
           <Plus className="w-5 h-5" /> HD → Tek
         </button>

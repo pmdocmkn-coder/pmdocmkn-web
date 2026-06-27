@@ -17,7 +17,7 @@ const Footer: React.FC = () => {
   ];
 
   return (
-    <footer className="mt-auto border-t border-gray-200 bg-white/50 backdrop-blur-md">
+    <footer className="mt-auto border-t border-gray-200 bg-white/50 backdrop-blur-md hidden md:block">
       <div className="max-w-7xl mx-auto px-8 py-8 flex flex-col md:flex-row items-center justify-between gap-6 text-sm text-gray-600">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -25,7 +25,7 @@ const Footer: React.FC = () => {
           className="text-center md:text-left"
         >
           <div className="flex items-center justify-center md:justify-start space-x-2 mb-1">
-            <div className="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center">
+            <div className="w-6 h-6 rounded flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #1B3A6B, #2B6CB0)' }}>
               <span className="text-white text-[10px] font-bold">PM</span>
             </div>
             <p className="font-bold text-gray-900">PM Dashboard</p>
@@ -47,7 +47,7 @@ const Footer: React.FC = () => {
             <button
               key={i}
               onClick={link.action}
-              className="flex items-center font-medium text-gray-500 hover:text-indigo-600 transition-colors"
+              className="flex items-center font-medium text-gray-500 hover:text-[#2B6CB0] transition-colors"
             >
               <link.icon className="w-4 h-4 mr-2" />
               {link.label}
