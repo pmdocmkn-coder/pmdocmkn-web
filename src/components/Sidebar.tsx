@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
-import { motion, AnimatePresence } from "framer-motion";
 import {
   LayoutDashboard,
   Phone,
@@ -11,20 +10,14 @@ import {
   TrendingUp,
   BookOpen,
   Settings,
-  User,
   LogOut,
   ChevronDown,
-  Menu,
-  X,
   ClipboardList,
-  ChevronLeft,
-  ChevronRight,
   Radio,
   FileText,
   Building2,
   FileType,
   RadioReceiver,
-  PencilRuler,
   Trash2,
   Link2,
   CalendarDays,
@@ -34,7 +27,10 @@ import {
   Warehouse,
   ClipboardCheck,
   Database,
+  X,
 } from "lucide-react";
+
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface SidebarProps {
   activeTab: string;
@@ -48,11 +44,13 @@ interface SidebarProps {
 interface NavItem {
   name: string;
   path: string;
-  icon: any;
+  icon: React.ElementType;
   id: string;
   permission?: string;
   forAll?: boolean;
 }
+
+// ─── Permission helper ────────────────────────────────────────────────────────
 
 const hasPermission = (permission: string): boolean => {
   const permissions = localStorage.getItem("permissions");
@@ -65,216 +63,117 @@ const hasPermission = (permission: string): boolean => {
   }
 };
 
-const navItems: NavItem[] = [
-  {
-    name: "Dashboard",
-    path: "/dashboard",
-    icon: LayoutDashboard,
-    id: "dashboard",
-    permission: "dashboard.view",
-  },
-  {
-    name: "Docs",
-    path: "/docs",
-    icon: BookOpen,
-    id: "docs",
-    permission: "docs.view",
-  },
-  {
-    name: "KPI Tracking",
-    path: "/kpi-tracking",
-    icon: ClipboardList,
-    id: "kpi-tracking",
-    permission: "kpi.view",
-  },
-  {
-    name: "PM Schedule",
-    path: "/pm-schedule",
-    icon: CalendarDays,
-    id: "pm-schedule",
-    permission: "pmschedule.menu",
-  },
-  {
-    name: "CCTV KPC",
-    path: "/cctv-kpc",
-    icon: Video,
-    id: "cctv-kpc",
-    permission: "cctv.kpc.menu",
-  },
-  {
-    name: "Inspeksi KPC",
-    path: "/inspeksi-kpc",
-    icon: ClipboardList,
-    id: "inspeksi-kpc",
-    permission: "inspeksi.menu",
-  },
-  {
-    name: "Fleet Statistics",
-    path: "/fleet-statistics",
-    icon: TrendingUp,
-    id: "fleet-statistics",
-    permission: "fleet.menu",
-  },
-  {
-    name: "NEC History",
-    path: "/nec-history",
-    icon: TrendingUp,
-    id: "nec-history",
-    permission: "nec.histori.menu",
-  },
-  {
-    name: "Link Internal",
-    path: "/link-internal",
-    icon: Link2,
-    id: "link-internal",
-    permission: "internal.link.menu",
-  },
-  {
-    name: "SWR Signal",
-    path: "/swr-signal",
-    icon: Radio,
-    id: "swr-signal",
-    permission: "swr.signal.menu",
-  },
+// ─── Nav data ─────────────────────────────────────────────────────────────────
+
+const mainMenu: NavItem[] = [
+  { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard, id: "dashboard", forAll: true },
+  { name: "Docs", path: "/docs", icon: BookOpen, id: "docs", forAll: true },
 ];
 
-const letterNumberMenu: NavItem[] = [
-  {
-    name: "Letter Numbers",
-    path: "/letter-numbers",
-    icon: FileText,
-    id: "letter-numbers",
-    permission: "letter.view",
-  },
-  {
-    name: "Companies",
-    path: "/companies",
-    icon: Building2,
-    id: "companies",
-    permission: "companies.view",
-  },
-  {
-    name: "Document Types",
-    path: "/document-types",
-    icon: FileType,
-    id: "document-types",
-    permission: "document.type.menu",
-  },
+const pmManagementMenu: NavItem[] = [
+  { name: "KPI Tracking", path: "/kpi-tracking", icon: ClipboardList, id: "kpi-tracking", permission: "kpi.view" },
+  { name: "PM Schedule", path: "/pm-schedule", icon: CalendarDays, id: "pm-schedule", permission: "pmschedule.menu" },
+  { name: "Inspeksi KPC", path: "/inspeksi-kpc", icon: ClipboardList, id: "inspeksi-kpc", permission: "inspeksi.menu" },
+  { name: "NEC History", path: "/nec-history", icon: TrendingUp, id: "nec-history", permission: "nec.histori.menu" },
+  { name: "Link Internal", path: "/link-internal", icon: Link2, id: "link-internal", permission: "internal.link.menu" },
+  { name: "SWR Signal", path: "/swr-signal", icon: Radio, id: "swr-signal", permission: "swr.signal.menu" },
 ];
 
-const callRecordsMenu: NavItem[] = [
-  {
-    name: "View Records",
-    path: "/callrecords",
-    icon: Phone,
-    id: "callrecords",
-    permission: "callrecord.view",
-  },
-  {
-    name: "Upload CSV",
-    path: "/upload",
-    icon: Upload,
-    id: "upload",
-    permission: "callrecord.import",
-  },
-  {
-    name: "Export Data",
-    path: "/export",
-    icon: Download,
-    id: "export",
-    permission: "callrecord.view-any",
-  },
-  {
-    name: "Print Report",
-    path: "/callrecord-print",
-    icon: Printer,
-    id: "callrecord-print",
-    permission: "callrecord.view",
-  },
+const radioFleetMenu: NavItem[] = [
+  { name: "Radio KPC", path: "/radio-internal", icon: Radio, id: "radio-internal", permission: "radio.kpc.menu" },
+  { name: "Radio Contractor", path: "/radio-contractor", icon: Building2, id: "radio-contractor", permission: "radio.view" },
+  { name: "Radio Unit", path: "/radio-unit", icon: RadioReceiver, id: "radio-unit", permission: "radio.view" },
+  { name: "Radio Scrap", path: "/radio-scrap", icon: Trash2, id: "radio-scrap", permission: "radio.scrap.view" },
+  { name: "Dashboard Perbaikan", path: "/radio-repair-dashboard", icon: Wrench, id: "radio-repair-dashboard", permission: "radio.repair.menu" },
+  { name: "Serah Terima Radio", path: "/radio-handover", icon: Package, id: "radio-handover", permission: "radio.handover.menu" },
+  { name: "Radio Masuk WH", path: "/radio-handover/warehouse", icon: Warehouse, id: "radio-handover-warehouse", permission: "radio.handover.view" },
+  { name: "Fleet Statistics", path: "/fleet-statistics", icon: TrendingUp, id: "fleet-statistics", permission: "fleet.menu" },
 ];
 
-const radioMenu: NavItem[] = [
-  {
-    name: "Radio KPC",
-    path: "/radio-internal",
-    icon: Radio,
-    id: "radio-internal",
-    permission: "radio.kpc.menu",
-  },
-  {
-    name: "Radio Contractor",
-    path: "/radio-contractor",
-    icon: Building2,
-    id: "radio-contractor",
-    permission: "radio.view",
-  },
-  {
-    name: "Radio Unit",
-    path: "/radio-unit",
-    icon: RadioReceiver,
-    id: "radio-unit",
-    permission: "radio.view",
-  },
-  {
-    name: "Radio Scrap",
-    path: "/radio-scrap",
-    icon: Trash2,
-    id: "radio-scrap",
-    permission: "radio.scrap.view",
-  },
-  {
-    name: "Dashboard Perbaikan",
-    path: "/radio-repair-dashboard",
-    icon: Wrench,
-    id: "radio-repair-dashboard",
-    permission: "radio.repair.menu",
-  },
-  {
-    name: "Serah Terima Radio",
-    path: "/radio-handover",
-    icon: Package,
-    id: "radio-handover",
-    permission: "radio.handover.menu",
-  },
-  {
-    name: "Radio Masuk WH",
-    path: "/radio-handover/warehouse",
-    icon: Warehouse,
-    id: "radio-handover-warehouse",
-    permission: "radio.handover.view",
-  },
+const monitoringMenu: NavItem[] = [
+  { name: "CCTV KPC", path: "/cctv-kpc", icon: Video, id: "cctv-kpc", permission: "cctv.kpc.menu" },
 ];
 
 const warehouseMenu: NavItem[] = [
-  {
-    name: "Histori Peminjaman",
-    path: "/warehouse/borrow-history",
-    icon: ClipboardList,
-    id: "warehouse-borrow-history",
-    permission: "warehouse.borrow.view",
-  },
-  {
-    name: "Ajuan Pinjam Tools",
-    path: "/warehouse/borrow-request",
-    icon: Package,
-    id: "warehouse-borrow-request",
-    permission: "warehouse.borrow.create",
-  },
-  {
-    name: "Supervisi Warehouse",
-    path: "/warehouse/supervision",
-    icon: ClipboardCheck,
-    id: "warehouse-supervision",
-    permission: "warehouse.borrow.supervise",
-  },
-  {
-    name: "Master Data Tools",
-    path: "/warehouse/catalog",
-    icon: Database,
-    id: "warehouse-catalog",
-    permission: "warehouse.borrow.supervise",
-  },
+  { name: "Histori Peminjaman", path: "/warehouse/borrow-history", icon: ClipboardList, id: "warehouse-borrow-history", permission: "warehouse.borrow.view" },
+  { name: "Ajuan Pinjam Tools", path: "/warehouse/borrow-request", icon: Package, id: "warehouse-borrow-request", permission: "warehouse.borrow.create" },
+  { name: "Supervisi Warehouse", path: "/warehouse/supervision", icon: ClipboardCheck, id: "warehouse-supervision", permission: "warehouse.borrow.supervise" },
+  { name: "Master Data Tools", path: "/warehouse/catalog", icon: Database, id: "warehouse-catalog", permission: "warehouse.borrow.supervise" },
 ];
+
+const callRecordsMenu: NavItem[] = [
+  { name: "View Records", path: "/callrecords", icon: Phone, id: "callrecords", permission: "callrecord.view" },
+  { name: "Upload CSV", path: "/upload", icon: Upload, id: "upload", permission: "callrecord.import" },
+  { name: "Export Data", path: "/export", icon: Download, id: "export", permission: "callrecord.view-any" },
+  { name: "Print Report", path: "/callrecord-print", icon: Printer, id: "callrecord-print", permission: "callrecord.view" },
+];
+
+const administrationMenu: NavItem[] = [
+  { name: "Letter Numbers", path: "/letter-numbers", icon: FileText, id: "letter-numbers", permission: "letter.view" },
+  { name: "Companies", path: "/companies", icon: Building2, id: "companies", permission: "companies.view" },
+  { name: "Document Types", path: "/document-types", icon: FileType, id: "document-types", permission: "document.type.menu" },
+];
+
+const hasSettingsAccess = () =>
+  hasPermission("system.permission.view") ||
+  hasPermission("system.role.view") ||
+  hasPermission("system.role.permission.view") ||
+  hasPermission("system.user.management.view") ||
+  hasPermission("system.division.view") ||
+  hasPermission("system.audit.view");
+
+// ─── NavGroup component ────────────────────────────────────────────────────────
+
+interface NavGroupProps {
+  label: string;
+  items: NavItem[];
+  isOpen: boolean;
+  onToggle: () => void;
+  location: ReturnType<typeof useLocation>;
+  setActiveTab: (tab: string) => void;
+}
+
+const NavGroup: React.FC<NavGroupProps> = ({
+  label, items, isOpen, onToggle, location, setActiveTab,
+}) => {
+  if (items.length === 0) return null;
+  return (
+    <div>
+      <p className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45 select-none">
+        {label}
+      </p>
+      {items.map((item) => {
+        const Icon = item.icon;
+        // Use exact match. For startsWith, only match if no other item in the
+        // list is a more specific match for the current pathname.
+        const exactMatch = location.pathname === item.path;
+        const prefixMatch = location.pathname.startsWith(item.path + "/");
+        const moreSpecificExists = items.some(
+          other => other.path !== item.path && location.pathname.startsWith(other.path)
+        );
+        const isActive = exactMatch || (prefixMatch && !moreSpecificExists);
+        return (
+          <Link
+            key={item.id}
+            to={item.path}
+            data-active={isActive}
+            onClick={() => setActiveTab(item.id)}
+            className={`flex items-center gap-3 h-9 px-4 text-[13px] font-medium transition-colors duration-150 relative
+              ${isActive
+                ? "bg-[#2B6CB0] text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[#D94F2B] before:rounded-r"
+                : "text-white/70 hover:text-white hover:bg-white/8"
+              }`}
+          >
+            <Icon className="w-4 h-4 flex-shrink-0" />
+            <span className="truncate">{item.name}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
+};
+
+// ─── Main Sidebar ─────────────────────────────────────────────────────────────
 
 export default function Sidebar({
   activeTab,
@@ -286,481 +185,186 @@ export default function Sidebar({
 }: SidebarProps) {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const [isCallRecordsOpen, setIsCallRecordsOpen] = useState(true);
-  const [isLetterNumberOpen, setIsLetterNumberOpen] = useState(true);
 
-  const filteredNavItems = navItems.filter(
-    (item) => item.forAll || !item.permission || hasPermission(item.permission)
+  // Group open states
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    pm: true,
+    radio: true,
+    monitoring: true,
+    warehouse: true,
+    callrecords: true,
+    administration: true,
+  });
+
+  const toggleGroup = (key: string) =>
+    setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
+
+  // ─── Auto-scroll to active nav item when route changes ────────────────────
+  const navRef = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!navRef.current) return;
+    // Small delay to allow render to complete
+    const t = setTimeout(() => {
+      const activeEl = navRef.current?.querySelector('[data-active="true"]');
+      if (activeEl) {
+        activeEl.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      }
+    }, 100);
+    return () => clearTimeout(t);
+  }, [location.pathname]);
+
+  // Filter by permission
+  const filteredMain = mainMenu.filter(
+    (i) => i.forAll || !i.permission || hasPermission(i.permission)
+  );
+  const filteredPm = pmManagementMenu.filter(
+    (i) => !i.permission || hasPermission(i.permission)
+  );
+  const filteredRadio = radioFleetMenu.filter(
+    (i) => i.forAll || !i.permission || hasPermission(i.permission)
+  );
+  const filteredMonitoring = monitoringMenu.filter(
+    (i) => !i.permission || hasPermission(i.permission)
+  );
+  const filteredWarehouse = warehouseMenu.filter(
+    (i) => !i.permission || hasPermission(i.permission)
   );
   const filteredCallRecords = callRecordsMenu.filter(
-    (item) => !item.permission || hasPermission(item.permission)
+    (i) => !i.permission || hasPermission(i.permission)
   );
-  const filteredLetterNumbers = letterNumberMenu.filter(
-    (item) => !item.permission || hasPermission(item.permission)
-  );
-  const filteredRadioMenu = radioMenu.filter(
-    (item) => item.forAll || !item.permission || hasPermission(item.permission)
-  );
-  const filteredWarehouseMenu = warehouseMenu.filter(
-    (item) => !item.permission || hasPermission(item.permission)
+  const filteredAdministration = administrationMenu.filter(
+    (i) => !i.permission || hasPermission(i.permission)
   );
 
-  const [isRadioOpen, setIsRadioOpen] = useState(true);
-  const [isWarehouseOpen, setIsWarehouseOpen] = useState(true);
-  const mobileNavRef = useRef<HTMLDivElement>(null);
+  // ─── Sidebar inner content ─────────────────────────────────────────────────
 
-  // Auto-scroll to active menu item when mobile sidebar opens
-  useEffect(() => {
-    if (isMobileMenuOpen && mobileNavRef.current) {
-      setTimeout(() => {
-        const activeEl = mobileNavRef.current?.querySelector('[data-active="true"]');
-        if (activeEl) {
-          activeEl.scrollIntoView({ block: 'center', behavior: 'smooth' });
-        }
-      }, 300);
-    }
-  }, [isMobileMenuOpen]);
+  const SidebarInner = () => (
+    <div className="flex flex-col h-full">
 
-  const isMobile = isMobileMenuOpen;
-
-  const NavLink = ({
-    item,
-    onClick,
-  }: {
-    item: NavItem;
-    onClick?: () => void;
-  }) => {
-    const Icon = item.icon;
-    const isActive = location.pathname === item.path;
-    return (
-      <Link
-        to={item.path}
-        onClick={() => {
-          setActiveTab(item.id);
-          onClick?.();
-        }}
-        title={isCollapsed ? item.name : ""}
-        className={`flex items-center rounded-xl text-sm font-medium transition-all duration-200 group relative ${isCollapsed && !isMobile ? "justify-center p-3 mx-2" : "space-x-3 px-4 py-2.5 mx-2"
-          } ${isActive
-            ? "bg-white/15 text-white shadow-sm backdrop-blur-sm"
-            : "text-white/70 hover:bg-white/10 hover:text-white"
-          }`}
-        data-active={isActive}
-      >
-        <Icon
-          className={`${isCollapsed && !isMobile ? "w-6 h-6" : "w-5 h-5"
-            } flex-shrink-0 transition-transform duration-200 group-hover:scale-110`}
-        />
-        {(!isCollapsed || isMobile) && <span className="truncate">{item.name}</span>}
-      </Link>
-    );
-  };
-
-  // Sub-menu link for mobile: text-only, indented, no icon
-  const MobileSubLink = ({
-    item,
-    onClick,
-  }: {
-    item: NavItem;
-    onClick?: () => void;
-  }) => {
-    const isActive = location.pathname === item.path;
-    return (
-      <Link
-        to={item.path}
-        onClick={() => {
-          setActiveTab(item.id);
-          onClick?.();
-        }}
-        className={`block pl-4 pr-4 py-1.5 text-[13px] font-medium transition-all duration-200 ${isActive
-          ? "text-white"
-          : "text-white/55 hover:text-white/80"
-          }`}
-        data-active={isActive}
-      >
-        {item.name}
-      </Link>
-    );
-  };
-
-  const SidebarContent = (isMobileView: boolean = false) => (
-    <div className={`flex flex-col h-full ${isMobileView ? 'py-4 pb-6' : 'py-6'}`}>
-      {/* Logo Section */}
+      {/* ── Logo strip ── */}
       <div
-        className={`flex items-center ${isMobileView ? 'mb-6 px-5' : 'mb-6 px-6'} ${isCollapsed && !isMobileView ? "justify-center" : "justify-between"
-          }`}
+        className="flex items-center px-4 h-[64px] flex-shrink-0"
+        style={{
+          background: "linear-gradient(135deg, #1B3A6B 0%, #2B6CB0 60%, #D94F2B 100%)",
+        }}
       >
-        <div className="flex items-center space-x-3 overflow-visible">
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-500 rounded-xl flex items-center justify-center shadow-lg flex-shrink-0">
-            <LayoutDashboard className="w-6 h-6 text-white" />
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
+            <span className="text-white font-bold text-xs tracking-tight">MKN</span>
           </div>
-          {(!isCollapsed || isMobileView) && (
-            <span className="text-xl font-bold text-white tracking-tight truncate">
-              PM Dashboard
-            </span>
-          )}
+          <div className="leading-none">
+            <p className="text-white font-bold text-sm tracking-tight">PM DOCS</p>
+            <p className="text-white/60 text-[10px] font-medium tracking-wide uppercase">System</p>
+          </div>
         </div>
-        {/* Close button - Mobile only */}
-        {isMobileView && (
-          <button
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="w-9 h-9 flex items-center justify-center rounded-xl text-white/70 hover:text-white hover:bg-white/10 transition-all"
-            aria-label="Close menu"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
       </div>
 
-      {/* Main Nav */}
-      <div ref={isMobileView ? mobileNavRef : undefined} className={`flex-1 ${isMobileView ? 'space-y-0.5' : 'space-y-1'} overflow-y-auto custom-scrollbar overflow-x-hidden`}>
-        {filteredNavItems.map((item) => (
-          <NavLink
-            key={item.id}
-            item={item}
-            onClick={() => isMobileView && setIsMobileMenuOpen(false)}
-          />
-        ))}
+      {/* ── Scrollable nav ── */}
+      <nav ref={navRef} className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-2">
 
-        {
-          hasPermission("call.record.menu") && filteredCallRecords.length > 0 && (
-            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
-              {!isCollapsed || isMobileView ? (
-                <>
-                  <button
-                    onClick={() => setIsCallRecordsOpen(!isCallRecordsOpen)}
-                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
-                  >
-                    <span>Call Records</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${isCallRecordsOpen ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
-                  <AnimatePresence>
-                    {isCallRecordsOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className={isMobileView ? '' : 'space-y-1 mt-1'}
-                      >
-                        {isMobileView ? (
-                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
-                            {filteredCallRecords.map((item) => (
-                              <MobileSubLink
-                                key={item.id}
-                                item={item}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          filteredCallRecords.map((item) => (
-                            <NavLink
-                              key={item.id}
-                              item={item}
-                            />
-                          ))
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              ) : (
-                // Collapsed state - show icons
-                filteredCallRecords.map((item) => (
-                  <NavLink key={item.id} item={item} />
-                ))
-              )}
-            </div>
-          )}
+        <NavGroup label="Main" items={filteredMain} isOpen={true} onToggle={() => {}}
+          location={location} setActiveTab={setActiveTab} />
 
-        {
-          filteredRadioMenu.length > 0 && (
-            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
-              {!isCollapsed || isMobileView ? (
-                <>
-                  <button
-                    onClick={() => setIsRadioOpen(!isRadioOpen)}
-                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
-                  >
-                    <span>Radio Management</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${isRadioOpen ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
-                  <AnimatePresence>
-                    {isRadioOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className={isMobileView ? '' : 'space-y-1 mt-1'}
-                      >
-                        {isMobileView ? (
-                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
-                            {filteredRadioMenu.map((item) => (
-                              <MobileSubLink
-                                key={item.id}
-                                item={item}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          filteredRadioMenu.map((item) => (
-                            <NavLink
-                              key={item.id}
-                              item={item}
-                            />
-                          ))
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              ) : (
-                // Collapsed state - show icons
-                filteredRadioMenu.map((item) => (
-                  <NavLink key={item.id} item={item} />
-                ))
-              )}
-            </div>
-          )}
-
-        {filteredWarehouseMenu.length > 0 && (
-          <div className={isMobileView ? 'mt-2' : 'mt-4'}>
-            {!isCollapsed || isMobileView ? (
-              <>
-                <button
-                  onClick={() => setIsWarehouseOpen(!isWarehouseOpen)}
-                  className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
-                >
-                  <span>Warehouse</span>
-                  <ChevronDown className={`w-4 h-4 transition-transform ${isWarehouseOpen ? "rotate-180" : ""}`} />
-                </button>
-                <AnimatePresence>
-                  {isWarehouseOpen && (
-                    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className={isMobileView ? '' : 'space-y-1 mt-1'}>
-                      {isMobileView ? (
-                        <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
-                          {filteredWarehouseMenu.map((item) => (
-                            <MobileSubLink key={item.id} item={item} onClick={() => setIsMobileMenuOpen(false)} />
-                          ))}
-                        </div>
-                      ) : (
-                        filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
-                      )}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </>
-            ) : (
-              filteredWarehouseMenu.map((item) => <NavLink key={item.id} item={item} />)
-            )}
-          </div>
+        {filteredPm.length > 0 && (
+          <NavGroup label="PM Management" items={filteredPm} isOpen={openGroups.pm}
+            onToggle={() => toggleGroup("pm")} location={location} setActiveTab={setActiveTab} />
         )}
 
-        {
-          hasPermission("letter.menu") && filteredLetterNumbers.length > 0 && (
-            <div className={isMobileView ? 'mt-2' : 'mt-4'}>
-              {!isCollapsed || isMobileView ? (
-                <>
-                  <button
-                    onClick={() => setIsLetterNumberOpen(!isLetterNumberOpen)}
-                    className={`w-full flex items-center justify-between text-xs font-semibold text-white/50 uppercase tracking-wider hover:text-white/80 transition-colors ${isMobileView ? 'px-5 py-1' : 'px-4 py-2'}`}
-                  >
-                    <span>Letter Numbering</span>
-                    <ChevronDown
-                      className={`w-4 h-4 transition-transform ${isLetterNumberOpen ? "rotate-180" : ""
-                        }`}
-                    />
-                  </button>
-                  <AnimatePresence>
-                    {isLetterNumberOpen && (
-                      <motion.div
-                        initial={{ height: 0, opacity: 0 }}
-                        animate={{ height: "auto", opacity: 1 }}
-                        exit={{ height: 0, opacity: 0 }}
-                        className={isMobileView ? '' : 'overflow-hidden space-y-1 mt-1'}
-                      >
-                        {isMobileView ? (
-                          <div className="ml-7 border-l-2 border-white/15 pl-0 py-1">
-                            {filteredLetterNumbers.map((item) => (
-                              <MobileSubLink
-                                key={item.id}
-                                item={item}
-                                onClick={() => setIsMobileMenuOpen(false)}
-                              />
-                            ))}
-                          </div>
-                        ) : (
-                          filteredLetterNumbers.map((item) => (
-                            <NavLink
-                              key={item.id}
-                              item={item}
-                            />
-                          ))
-                        )}
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                </>
-              ) : (
-                <div className="h-px bg-white/10 my-4 mx-2" />
-              )}
-            </div>
-          )
-        }
-
-        {
-          (hasPermission("system.permission.view") ||
-            hasPermission("system.role.view") ||
-            hasPermission("system.role.permission.view") ||
-            hasPermission("system.user.management.view") ||
-            hasPermission("system.division.view") ||
-            hasPermission("system.audit.view")) && (
-            <div className={isCollapsed && !isMobileView ? "mt-2" : "mt-3"}>
-              <NavLink
-                item={{
-                  name: "Settings",
-                  path: "/settings",
-                  icon: Settings,
-                  id: "settings",
-                }}
-                onClick={() => isMobileView && setIsMobileMenuOpen(false)}
-              />
-            </div>
-          )
-        }
-      </div >
-
-      {/* Footer / User */}
-      <div
-        className={`mt-auto ${isMobileView ? 'pt-3 px-4 pb-2' : 'pt-4 px-4 pb-6 border-t border-white/10'} ${isCollapsed && !isMobileView ? "items-center px-2" : ""
-          }`}
-      >
-        {isMobileView || !isCollapsed ? (
-          <div className="bg-white/5 rounded-2xl p-3 space-y-2">
-            <Link
-              to="/profile"
-              onClick={() => {
-                setActiveTab("profile");
-                if (isMobileView) setIsMobileMenuOpen(false);
-              }}
-              className="flex items-center space-x-3 hover:bg-white/5 rounded-xl px-1 py-1.5 transition-all group"
-            >
-              {user?.photoUrl ? (
-                <img
-                  src={user.photoUrl}
-                  alt={user.fullName}
-                  className="w-10 h-10 rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform flex-shrink-0">
-                  {user?.fullName?.[0] || "U"}
-                </div>
-              )}
-              <div className="flex-1 min-w-0 text-left">
-                <p className="text-sm font-semibold text-white truncate">
-                  {user?.fullName || "User"}
-                </p>
-                <p className="text-xs text-white/60 truncate">
-                  {isMobileView
-                    ? (user?.roleName || "Role")
-                    : `${user?.division || "Division"} `}
-                </p>
-              </div>
-            </Link>
-            <button
-              onClick={() => {
-                logout();
-                window.location.href = "/";
-              }}
-              className="w-full flex items-center justify-center bg-red-600/80 hover:bg-red-600 text-white rounded-xl px-4 py-2.5 gap-2 text-sm font-semibold transition-all"
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              <span>Logout</span>
-            </button>
-          </div>
-        ) : (
-          /* Desktop Collapsed state */
-          <>
-            <Link
-              to="/profile"
-              onClick={() => {
-                setActiveTab("profile");
-              }}
-              title={user?.fullName}
-              className="flex items-center justify-center rounded-xl hover:bg-white/10 transition-all group p-2 mx-auto"
-            >
-              {user?.photoUrl ? (
-                <img
-                  src={user.photoUrl}
-                  alt={user.fullName}
-                  className="w-10 h-10 min-w-[40px] rounded-full object-cover border border-white/30 group-hover:scale-110 transition-transform shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 min-w-[40px] rounded-full bg-white/20 flex items-center justify-center text-white font-bold border border-white/30 group-hover:scale-110 transition-transform shrink-0">
-                  {user?.fullName?.[0] || "U"}
-                </div>
-              )}
-            </Link>
-            <button
-              onClick={() => {
-                logout();
-                window.location.href = "/";
-              }}
-              title="Logout"
-              className="w-full flex items-center justify-center mt-2 rounded-xl text-sm font-medium text-red-300 hover:bg-red-500/20 hover:text-red-200 transition-all p-3"
-            >
-              <LogOut className="w-6 h-6 flex-shrink-0" />
-            </button>
-          </>
+        {filteredRadio.length > 0 && (
+          <NavGroup label="Radio & Fleet" items={filteredRadio} isOpen={openGroups.radio}
+            onToggle={() => toggleGroup("radio")} location={location} setActiveTab={setActiveTab} />
         )}
-      </div >
-    </div >
+
+        {filteredMonitoring.length > 0 && (
+          <NavGroup label="Monitoring" items={filteredMonitoring} isOpen={openGroups.monitoring}
+            onToggle={() => toggleGroup("monitoring")} location={location} setActiveTab={setActiveTab} />
+        )}
+
+        {filteredWarehouse.length > 0 && (
+          <NavGroup label="Warehouse" items={filteredWarehouse} isOpen={openGroups.warehouse}
+            onToggle={() => toggleGroup("warehouse")} location={location} setActiveTab={setActiveTab} />
+        )}
+
+        {filteredCallRecords.length > 0 && (
+          <NavGroup label="Call Records" items={filteredCallRecords} isOpen={openGroups.callrecords}
+            onToggle={() => toggleGroup("callrecords")} location={location} setActiveTab={setActiveTab} />
+        )}
+
+        {filteredAdministration.length > 0 && (
+          <NavGroup label="Administration" items={filteredAdministration} isOpen={openGroups.administration}
+            onToggle={() => toggleGroup("administration")} location={location} setActiveTab={setActiveTab} />
+        )}
+      </nav>
+
+      {/* ── Settings — pinned, standalone ── */}
+      {hasSettingsAccess() && (
+        <div className="flex-shrink-0">
+          <div className="mx-4 h-px bg-white/12" />
+          <Link
+            to="/settings"
+            data-active={location.pathname === "/settings"}
+            onClick={() => setActiveTab("settings")}
+            className={`flex items-center gap-3 h-9 px-4 text-[13px] font-medium transition-colors duration-150 relative mt-1
+              ${location.pathname === "/settings"
+                ? "bg-[#2B6CB0] text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[#D94F2B] before:rounded-r"
+                : "text-white/70 hover:text-white hover:bg-white/8"
+              }`}
+          >
+            <Settings className="w-4 h-4 flex-shrink-0" />
+            <span>Settings</span>
+          </Link>
+        </div>
+      )}
+
+      {/* ── User profile card ── */}
+      <div className="flex-shrink-0 p-3" style={{ backgroundColor: "#243F73" }}>
+        <Link
+          to="/profile"
+          onClick={() => setActiveTab("profile")}
+          className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/8 transition-colors group"
+        >
+          {user?.photoUrl ? (
+            <img src={user.photoUrl} alt={user.fullName}
+              className="w-8 h-8 rounded-full object-cover border border-white/20 flex-shrink-0" />
+          ) : (
+            <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-sm border border-white/20 flex-shrink-0">
+              {user?.fullName?.[0]?.toUpperCase() || "U"}
+            </div>
+          )}
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-[13px] font-semibold truncate leading-none">
+              {user?.fullName || "User"}
+            </p>
+            <p className="text-white/50 text-[11px] truncate mt-0.5 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+              {user?.roleName || "Online"}
+            </p>
+          </div>
+          <ChevronDown className="w-3.5 h-3.5 text-white/40 flex-shrink-0 group-hover:text-white/60 transition-colors" />
+        </Link>
+        <button
+          onClick={() => { logout(); window.location.href = "/"; }}
+          className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-[13px] font-semibold transition-colors"
+        >
+          <LogOut className="w-4 h-4" />
+          Logout
+        </button>
+      </div>
+    </div>
   );
+
+  // ─── Render ────────────────────────────────────────────────────────────────
 
   return (
     <>
-      {/* Desktop Sidebar */}
+      {/* Desktop Sidebar only — mobile uses BottomNav + MoreSheet */}
       <aside
-        className={`hidden md:flex flex-col h-screen sticky top-0 bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl border-r border-white/10 transition-all duration-300 ${isCollapsed ? "w-20" : "w-72"
-          }`}
+        className="hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 border-r border-white/5 shadow-xl transition-all duration-300"
+        style={{ width: "220px", backgroundColor: "#1B3A6B" }}
       >
-        {SidebarContent(false)}
+        <SidebarInner />
       </aside>
-
-      {/* Mobile Menu Overlay */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setIsMobileMenuOpen(false)}
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
-          />
-        )}
-      </AnimatePresence>
-
-      {/* Mobile Sidebar */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.aside
-            initial={{ x: "-100%" }}
-            animate={{ x: 0 }}
-            exit={{ x: "-100%" }}
-            transition={{ type: "spring", damping: 25, stiffness: 200 }}
-            className="fixed top-0 left-0 bottom-0 z-50 w-[280px] bg-gradient-to-b from-indigo-900 via-purple-900 to-blue-900 shadow-2xl md:hidden rounded-r-3xl overflow-hidden"
-          >
-            {SidebarContent(true)}
-          </motion.aside>
-        )}
-      </AnimatePresence>
     </>
   );
 }

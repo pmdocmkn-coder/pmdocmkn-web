@@ -102,33 +102,34 @@ export default function WarehouseCatalogPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
-      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
-        <div className="flex items-start justify-between pb-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1 opacity-80">
-              <span className="text-[10px] font-bold text-violet-600 tracking-wider uppercase">Warehouse</span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
-              Master Data Tools
-            </h1>
+      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
+        <div className="flex items-start gap-4 p-4">
+          <div className="w-12 h-12 rounded-[12px] bg-[#F0FFF4] flex items-center justify-center flex-shrink-0">
+            <Database className="w-5 h-5 text-[#059669]" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-[#059669] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
+            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Master Data Tools</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Kelola material dan suku cadang</p>
           </div>
           <button
             onClick={() => window.history.back()}
-            className="w-10 h-10 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center hover:bg-violet-100 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
             <Home className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
-
-        {/* Search inside Mobile Header */}
-        <div className="relative mt-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
-          <Input
-            placeholder="Cari kode atau nama tools..."
-            className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-violet-50 text-gray-900 placeholder-violet-400 w-full"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+        {/* Search */}
+        <div className="px-4 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
+            <Input
+              placeholder="Cari kode atau nama tools..."
+              className="pl-10 pr-4 h-10 border-[#E2E8F0] rounded-[10px] text-sm bg-[#F7F8FA] text-[#1A202C] placeholder:text-[#718096] w-full focus:border-[#2B6CB0]"
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
+            />
+          </div>
         </div>
       </div>
 

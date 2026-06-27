@@ -175,7 +175,7 @@ const DocsPage: React.FC<DocsProps> = ({ setActiveTab }) => {
         {/* Top Header */}
         <div className="bg-[#fdfafb] px-4 pt-5 pb-3 sticky top-0 z-30 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <button onClick={handleBack} className="w-10 h-10 flex items-center justify-center rounded-full bg-purple-50 text-purple-600 shrink-0">
+            <button onClick={handleBack} className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0">
               <ArrowLeft className="w-5 h-5" />
             </button>
             <h1 className="text-[17px] font-bold text-gray-900 truncate">Pusat Bantuan</h1>

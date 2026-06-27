@@ -1,495 +1,537 @@
-import React from "react";
-import { motion, cubicBezier } from "framer-motion";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import {
-  TrendingUp,
-  FileText,
-  HelpCircle,
-  ArrowRight,
-  Shield,
-  Cpu,
-  Wifi,
-  Sparkles,
-  Layers,
-  Radio,
-  ClipboardList,
-  Phone,
-  Link2,
-  Settings,
-  BookOpen,
-  CalendarDays,
-  Video,
-  Package
+  ClipboardList, CalendarDays, Radio, Package, Wrench, Video,
+  Link2, TrendingUp, BookOpen, Phone, ArrowRight, MapPin,
+  Clock, CheckCircle2, AlertTriangle, Info, ChevronRight,
+  Warehouse, Database, Upload, FileText,
 } from "lucide-react";
-import { Variants } from "framer-motion";
+import { radioApi } from "../services/radioApi";
+import { radioRepairApi } from "../services/radioRepairApi";
+import { warehouseBorrowApi } from "../services/warehouseBorrowApi";
+import { internalLinkApi } from "../services/internalLinkService";
+
+// ─── Permission helper ────────────────────────────────────────────────────────
+
+const hasPerm = (p: string): boolean => {
+  try {
+    return (JSON.parse(localStorage.getItem("permissions") ?? "[]") as string[]).includes(p);
+  } catch { return false; }
+};
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+interface Stats {
+  radioTotal: number | null;
+  radioRepairOpen: number | null;
+  networkLinks: number | null;
+  warehousePending: number | null;
+}
 
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
 }
 
-const hasPermission = (permission: string): boolean => {
-  const permissions = localStorage.getItem("permissions");
-  if (!permissions) return false;
-  try {
-    const permList: string[] = JSON.parse(permissions);
-    return permList.includes(permission);
-  } catch {
-    return false;
-  }
+// ─── Stat Card ────────────────────────────────────────────────────────────────
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  label: string;
+  value: number | null;
+  sub: string;
+  ring?: string;
+  ringValue?: number;
+  onClick?: () => void;
+}
+
+const StatCard: React.FC<StatCardProps> = ({
+  icon, iconBg, label, value, sub, ring, ringValue, onClick,
+}) => (
+  <button
+    onClick={onClick}
+    className="bg-white border border-[#E2E8F0] rounded-[10px] p-4 flex items-center gap-4 hover:shadow-md transition-shadow text-left w-full group"
+  >
+    <div className={`w-12 h-12 rounded-[10px] flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+      {icon}
+    </div>
+    <div className="flex-1 min-w-0">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#718096]">{label}</p>
+      <p className="text-2xl font-bold text-[#1A202C] leading-tight">
+        {value === null ? <span className="text-base text-[#718096]">—</span> : value.toLocaleString("id-ID")}
+      </p>
+      <p className="text-[12px] text-[#718096] truncate">{sub}</p>
+    </div>
+    {ringValue !== undefined && (
+      <div className="flex-shrink-0 text-right">
+        <p className={`text-sm font-bold ${ring}`}>{ringValue}%</p>
+      </div>
+    )}
+    <ChevronRight className="w-4 h-4 text-[#E2E8F0] group-hover:text-[#2B6CB0] transition-colors flex-shrink-0" />
+  </button>
+);
+
+// ─── Module Card ──────────────────────────────────────────────────────────────
+
+interface ModuleCardProps {
+  icon: React.ReactNode;
+  iconBg: string;
+  title: string;
+  description: string;
+  statLabel?: string;
+  onClick: () => void;
+}
+
+const ModuleCard: React.FC<ModuleCardProps> = ({
+  icon, iconBg, title, description, statLabel, onClick,
+}) => (
+  <button
+    onClick={onClick}
+    className="bg-white border border-[#E2E8F0] rounded-[10px] p-4 text-left hover:shadow-md transition-all group flex flex-col h-full"
+  >
+    <div className={`w-10 h-10 rounded-[8px] flex items-center justify-center flex-shrink-0 mb-3 ${iconBg}`}>
+      {icon}
+    </div>
+    <p className="text-[14px] font-semibold text-[#1A202C] leading-snug">{title}</p>
+    <p className="text-[12px] text-[#718096] mt-1 flex-1 leading-relaxed">{description}</p>
+    {statLabel && (
+      <p className="text-[11px] text-[#718096] mt-2 flex items-center gap-1">
+        <span className="w-1.5 h-1.5 rounded-full bg-[#059669] inline-block" />
+        {statLabel}
+      </p>
+    )}
+    <div className="mt-3 flex items-center gap-1 text-[#2B6CB0] text-[13px] font-medium">
+      Lihat
+      <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+    </div>
+  </button>
+);
+
+// ─── Recent Activity Item ─────────────────────────────────────────────────────
+
+interface ActivityItem {
+  type: "success" | "warning" | "info" | "error";
+  message: string;
+  time: string;
+}
+
+const ActivityRow: React.FC<{ item: ActivityItem }> = ({ item }) => {
+  const iconMap = {
+    success: <CheckCircle2 className="w-4 h-4 text-[#059669]" />,
+    warning: <AlertTriangle className="w-4 h-4 text-[#F59E0B]" />,
+    info: <Info className="w-4 h-4 text-[#2B6CB0]" />,
+    error: <AlertTriangle className="w-4 h-4 text-[#DC2626]" />,
+  };
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-[#E2E8F0] last:border-0">
+      <div className="mt-0.5 flex-shrink-0">{iconMap[item.type]}</div>
+      <p className="flex-1 text-[13px] text-[#1A202C] leading-snug">{item.message}</p>
+      <span className="text-[11px] text-[#718096] flex-shrink-0 font-mono">{item.time}</span>
+    </div>
+  );
 };
+
+// ─── Placeholder Donut (for charts not yet connected to API) ──────────────────
+
+interface PlaceholderChartProps {
+  title: string;
+  subtitle?: string;
+}
+
+const PlaceholderChart: React.FC<PlaceholderChartProps> = ({ title, subtitle }) => (
+  <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col items-center justify-center min-h-[200px] gap-2">
+    <div className="w-16 h-16 rounded-full border-4 border-[#E2E8F0] border-t-[#2B6CB0] opacity-30" />
+    <p className="text-[13px] font-semibold text-[#718096]">{title}</p>
+    {subtitle && <p className="text-[11px] text-[#718096]">{subtitle}</p>}
+  </div>
+);
+
+// ─── Main Component ───────────────────────────────────────────────────────────
 
 const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const isAdmin = user?.roleId === 1 || user?.roleId === 2;
+  const firstName = user?.fullName?.split(" ")[0] || "User";
 
-  // 🎬 Framer Motion Variants
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: { staggerChildren: 0.1 },
-    },
-  };
+  // date/time
+  const now = new Date();
+  const dateStr = now.toLocaleDateString("id-ID", { weekday: "long", day: "2-digit", month: "long", year: "numeric" });
+  const timeStr = now.toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", hour12: false }) + " WIB";
 
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: cubicBezier(0.25, 0.46, 0.45, 0.94),
-      },
-    },
-  };
-
-  const cardHoverVariants: Variants = {
-    rest: {
-      scale: 1,
-      y: 0,
-    },
-    hover: {
-      scale: 1.02,
-      y: -5,
-      transition: {
-        type: "spring",
-        stiffness: 400,
-        damping: 10,
-      },
-    },
-  };
-
-  const floatingVariants: Variants = {
-    float: {
-      y: [0, -10, 0],
-      transition: {
-        duration: 3,
-        repeat: Infinity,
-        ease: "easeInOut",
-      },
-    },
-  };
-
-  const handleActionClick = (tab: string) => {
-    setActiveTab(tab);
-    navigate(`/${tab}`);
-  };
-
-  // 📊 Mappings between modules, icons, roles and permissions
-  const allModules = [
-    {
-      id: "callrecords",
-      icon: Phone,
-      title: "Call Records",
-      description: "Analisis dan riwayat panggilan.",
-      color: "from-blue-500 to-cyan-500",
-      tab: "callrecords",
-      permission: "callrecord.view",
-    },
-    {
-      id: "radio-management",
-      icon: Radio,
-      title: "Radio Management",
-      description: "Manajemen Radio Internal, Unit, dll.",
-      color: "from-purple-500 to-pink-500",
-      tab: "radio-unit",
-      permission: "radio.view",
-      forAll: true,
-    },
-    {
-      id: "kpi-tracking",
-      icon: ClipboardList,
-      title: "KPI Tracking",
-      description: "Lacak performa dan pencapaian KPI.",
-      color: "from-teal-500 to-emerald-500",
-      tab: "kpi-tracking",
-      permission: "kpi.view",
-    },
-    {
-      id: "pm-schedule",
-      icon: CalendarDays,
-      title: "PM Schedule",
-      description: "Jadwal Preventive Maintenance.",
-      color: "from-orange-500 to-red-500",
-      tab: "pm-schedule",
-      permission: "pmschedule.menu",
-    },
-    {
-      id: "cctv-kpc",
-      icon: Video,
-      title: "CCTV KPC",
-      description: "Manajemen dan monitoring CCTV KPC.",
-      color: "from-blue-600 to-indigo-600",
-      tab: "cctv-kpc",
-      permission: "cctv.kpc.menu",
-    },
-    {
-      id: "letter-numbers",
-      icon: FileText,
-      title: "Letter Management",
-      description: "Penomoran persuratan dan dokumen.",
-      color: "from-amber-500 to-orange-500",
-      tab: "letter-numbers",
-      permission: "letter.view", // Requires Letter Menu Permission
-    },
-    {
-      id: "inspeksi-kpc",
-      icon: ClipboardList,
-      title: "Inspeksi KPC",
-      description: "Laporan data Inspeksi KPC.",
-      color: "from-green-500 to-emerald-500",
-      tab: "inspeksi-kpc",
-      permission: "inspeksi.menu",
-    },
-    {
-      id: "fleet-statistics",
-      icon: TrendingUp,
-      title: "Fleet Statistics",
-      description: "Pemantauan performa Fleet.",
-      color: "from-indigo-500 to-blue-500",
-      tab: "fleet-statistics",
-      permission: "fleet.menu",
-    },
-    {
-      id: "nec-history",
-      icon: TrendingUp, // Keeping consistent with sidebar
-      title: "NEC History",
-      description: "Histori dari data NEC.",
-      color: "from-rose-500 to-red-500",
-      tab: "nec-history",
-      permission: "nec.histori.menu",
-    },
-    {
-      id: "link-internal",
-      icon: Link2,
-      title: "Link Internal",
-      description: "Tautan Link Internal jaringan.",
-      color: "from-lime-500 to-green-500",
-      tab: "link-internal",
-      permission: "internal.link.menu",
-    },
-    {
-      id: "swr-signal",
-      icon: Radio,
-      title: "SWR Signal",
-      description: "Monitoring performa SWR.",
-      color: "from-sky-500 to-cyan-500",
-      tab: "swr-signal",
-      permission: "swr.signal.menu",
-    },
-    {
-      id: "docs",
-      icon: BookOpen,
-      title: "Dokumentasi",
-      description: "Panduan cara penggunaan.",
-      color: "from-slate-500 to-gray-500",
-      tab: "docs",
-      permission: "docs.view",
-    },
-    {
-      id: "warehouse-borrow",
-      icon: Package,
-      title: "Warehouse Peminjaman",
-      description: "Manajemen Peminjaman Tools.",
-      color: "from-violet-500 to-purple-500",
-      tab: "warehouse/borrow-history",
-      permission: "warehouse.borrow.view",
-    },
-    {
-      id: "settings",
-      icon: Settings,
-      title: "Pengaturan",
-      description: "Pengaturan sistem dan akun.",
-      color: "from-fuchsia-500 to-pink-500",
-      tab: "settings",
-      checkCustomPermission: () => {
-        return hasPermission("system.permission.view") ||
-          hasPermission("system.role.view") ||
-          hasPermission("system.role.permission.view") ||
-          hasPermission("system.user.management.view") ||
-          hasPermission("system.division.view") ||
-          hasPermission("system.audit.view");
-      }
-    }
-  ];
-
-  // Logic to determine available menus based on User Permissions
-  const currentActions = allModules.filter((item) => {
-    if ((item as any).forAll) return true;
-    if (item.checkCustomPermission) return item.checkCustomPermission();
-    if (!item.permission) return true;
-    return hasPermission(item.permission);
+  // Stats state
+  const [stats, setStats] = useState<Stats>({
+    radioTotal: null,
+    radioRepairOpen: null,
+    networkLinks: null,
+    warehousePending: null,
   });
 
-  const platformOverview = [
+  // Recent activity — placeholder (will be replaced with activityLogApi later)
+  const recentActivity: ActivityItem[] = [
+    { type: "success", message: "PM Schedule Site A selesai dikerjakan", time: "08:25" },
+    { type: "info",    message: "Radio HT-102 masuk ke warehouse perbaikan", time: "07:45" },
+    { type: "warning", message: "PM Site B overdue — belum dikerjakan", time: "07:30" },
+    { type: "success", message: "Data aset warehouse diperbarui", time: "06:15" },
+    { type: "info",    message: "Radio baru terdaftar (R-356)", time: "05:20" },
+  ];
+
+  const go = (tab: string, path: string) => {
+    setActiveTab(tab);
+    navigate(path);
+  };
+
+  // Load stats from available APIs
+  useEffect(() => {
+    const load = async () => {
+      // Radio total
+      if (hasPerm("radio.view") || hasPerm("radio.kpc.menu")) {
+        try {
+          const res = await radioApi.getAll({ page: 1, pageSize: 1, isScrap: false });
+          const total = res.data?.meta?.pagination?.totalCount ?? null;
+          setStats(s => ({ ...s, radioTotal: total }));
+        } catch { /* silent */ }
+      }
+
+      // Radio repair open
+      if (hasPerm("radio.repair.menu")) {
+        try {
+          const dash = await radioRepairApi.getDashboard();
+          const open = (dash.received ?? 0) + (dash.inProgress ?? 0) + (dash.monitoring ?? 0);
+          setStats(s => ({ ...s, radioRepairOpen: open }));
+        } catch { /* silent */ }
+      }
+
+      // Network links
+      if (hasPerm("internal.link.menu")) {
+        try {
+          const links = await internalLinkApi.getLinks();
+          setStats(s => ({ ...s, networkLinks: links.length }));
+        } catch { /* silent */ }
+      }
+
+      // Warehouse pending borrows
+      if (hasPerm("warehouse.borrow.view")) {
+        try {
+          const pending = await warehouseBorrowApi.getPending();
+          setStats(s => ({ ...s, warehousePending: pending.length }));
+        } catch { /* silent */ }
+      }
+    };
+    load();
+  }, []);
+
+  // Module list — permission filtered
+  const allModules = [
     {
-      icon: Layers,
-      title: "Modul Tersedia",
-      desc: `${currentActions.length} Modul Aktif`,
-      color: "bg-indigo-100 text-indigo-700",
+      id: "kpi-tracking", title: "KPI Tracking", description: "Pantau performa KPI operasional secara real-time.",
+      icon: <ClipboardList className="w-5 h-5 text-white" />, iconBg: "bg-[#2B6CB0]",
+      path: "/kpi-tracking", tab: "kpi-tracking", permission: "kpi.view",
     },
     {
-      icon: Wifi,
-      title: "Koneksi Stabil",
-      desc: "Terhubung ke server utama",
-      color: "bg-green-100 text-green-700",
+      id: "pm-schedule", title: "PM Schedule", description: "Jadwal preventive maintenance seluruh unit dan sistem.",
+      icon: <CalendarDays className="w-5 h-5 text-white" />, iconBg: "bg-[#1B3A6B]",
+      path: "/pm-schedule", tab: "pm-schedule", permission: "pmschedule.menu",
     },
     {
-      icon: Cpu,
-      title: "Kinerja Optimal",
-      desc: "Sistem berjalan tanpa hambatan",
-      color: "bg-blue-100 text-blue-700",
+      id: "radio-internal", title: "Radio KPC", description: "Kelola data, status, dan monitoring radio KPC.",
+      icon: <Radio className="w-5 h-5 text-white" />, iconBg: "bg-[#D94F2B]",
+      path: "/radio-internal", tab: "radio-internal", permission: "radio.kpc.menu",
+    },
+    {
+      id: "warehouse-borrow", title: "Warehouse", description: "Kelola inventori, peminjaman, dan master data tools.",
+      icon: <Warehouse className="w-5 h-5 text-white" />, iconBg: "bg-[#059669]",
+      path: "/warehouse/borrow-history", tab: "warehouse-borrow-history", permission: "warehouse.borrow.view",
+    },
+    {
+      id: "radio-repair-dashboard", title: "Dashboard Perbaikan", description: "Monitoring status perbaikan radio dan riwayat servis.",
+      icon: <Wrench className="w-5 h-5 text-white" />, iconBg: "bg-[#2B6CB0]",
+      path: "/radio-repair-dashboard", tab: "radio-repair-dashboard", permission: "radio.repair.menu",
+    },
+    {
+      id: "cctv-kpc", title: "CCTV KPC", description: "Pantau monitoring CCTV untuk area operasional.",
+      icon: <Video className="w-5 h-5 text-white" />, iconBg: "bg-[#1B3A6B]",
+      path: "/cctv-kpc", tab: "cctv-kpc", permission: "cctv.kpc.menu",
+    },
+    {
+      id: "inspeksi-kpc", title: "Inspeksi KPC", description: "Laporan dan data inspeksi area KPC.",
+      icon: <ClipboardList className="w-5 h-5 text-white" />, iconBg: "bg-[#D94F2B]",
+      path: "/inspeksi-kpc", tab: "inspeksi-kpc", permission: "inspeksi.menu",
+    },
+    {
+      id: "fleet-statistics", title: "Fleet Statistics", description: "Pemantauan performa dan statistik armada.",
+      icon: <TrendingUp className="w-5 h-5 text-white" />, iconBg: "bg-[#059669]",
+      path: "/fleet-statistics", tab: "fleet-statistics", permission: "fleet.menu",
+    },
+    {
+      id: "callrecords", title: "Call Records", description: "Analisis dan riwayat panggilan radio.",
+      icon: <Phone className="w-5 h-5 text-white" />, iconBg: "bg-[#2B6CB0]",
+      path: "/callrecords", tab: "callrecords", permission: "callrecord.view",
+    },
+    {
+      id: "letter-numbers", title: "Letter Numbers", description: "Penomoran persuratan dan dokumen resmi.",
+      icon: <FileText className="w-5 h-5 text-white" />, iconBg: "bg-[#1B3A6B]",
+      path: "/letter-numbers", tab: "letter-numbers", permission: "letter.view",
+    },
+    {
+      id: "link-internal", title: "Link Internal", description: "Tautan dan monitoring jaringan link internal.",
+      icon: <Link2 className="w-5 h-5 text-white" />, iconBg: "bg-[#D94F2B]",
+      path: "/link-internal", tab: "link-internal", permission: "internal.link.menu",
+    },
+    {
+      id: "docs", title: "Dokumentasi", description: "Panduan penggunaan dan referensi sistem.",
+      icon: <BookOpen className="w-5 h-5 text-white" />, iconBg: "bg-[#718096]",
+      path: "/docs", tab: "docs", permission: "docs.view",
     },
   ];
 
-  const features = [
-    {
-      icon: TrendingUp,
-      title: "Analisis Trend",
-      description: "Temukan pola dan insight data.",
-    },
-    {
-      icon: FileText,
-      title: "Export Laporan",
-      description: "Download laporan Excel/CSV.",
-    },
-    {
-      icon: Shield,
-      title: "Keamanan Data",
-      description: "Data tersimpan dengan aman.",
-    },
-  ];
+  const visibleModules = allModules.filter(
+    (m) => !m.permission || hasPerm(m.permission)
+  );
+
+  // Quick actions in banner (permission-based)
+  const quickActions = [
+    { label: "PM Schedule", icon: <CalendarDays className="w-4 h-4" />, path: "/pm-schedule", tab: "pm-schedule", permission: "pmschedule.menu" },
+    { label: "Radio KPC", icon: <Radio className="w-4 h-4" />, path: "/radio-internal", tab: "radio-internal", permission: "radio.kpc.menu" },
+    { label: "Ajuan Pinjam", icon: <Package className="w-4 h-4" />, path: "/warehouse/borrow-request", tab: "warehouse-borrow-request", permission: "warehouse.borrow.create" },
+    { label: "Upload CSV", icon: <Upload className="w-4 h-4" />, path: "/upload", tab: "upload", permission: "callrecord.import" },
+  ].filter((a) => !a.permission || hasPerm(a.permission));
 
   return (
-    <motion.div
-      initial="hidden"
-      animate="visible"
-      variants={containerVariants}
-      className="space-y-6 md:space-y-8"
-    >
-      {/* 🏁 Banner */}
-      <motion.div
-        variants={itemVariants}
-        className="relative overflow-hidden rounded-3xl shadow-2xl bg-gradient-to-r from-indigo-600 via-blue-600 to-purple-600 text-white"
+    <div className="space-y-5">
+
+      {/* ── ZONE 1: Welcome Banner ─────────────────────────────────────── */}
+      <div
+        className="relative overflow-hidden rounded-[14px] text-white"
+        style={{ background: "linear-gradient(135deg, #1B3A6B 0%, #2B6CB0 70%, #D94F2B 100%)", minHeight: 140 }}
       >
-        <div className="absolute inset-0 opacity-10 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]" />
-        <div className="relative z-10 p-6 md:p-12 flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="text-center md:text-left">
-            <motion.h1
-              variants={itemVariants}
-              className="text-2xl md:text-5xl font-extrabold mb-3 md:mb-4 flex items-center justify-center md:justify-start gap-2 md:gap-3"
-            >
-              <motion.div variants={floatingVariants} animate="float" className="flex-shrink-0">
-                <Sparkles className="w-8 h-8 md:w-10 md:h-10 text-yellow-300" />
-              </motion.div>
-              Selamat Datang, {user?.fullName?.split(" ")[0] || "User"}!
-            </motion.h1>
-            <motion.p
-              variants={itemVariants}
-              className="text-blue-100 text-sm md:text-lg max-w-2xl"
-            >
-              Akses cepat segala kebutuhan operasional Anda. Sistem secara otomatis menampilkan modul yang sesuai dengan perizinan akun Anda.
-            </motion.p>
-          </div>
+        {/* Decorative tower silhouette */}
+        <div className="absolute right-0 top-0 bottom-0 w-48 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] bg-cover" />
 
-          <motion.div
-            variants={itemVariants}
-            whileHover={{ scale: 1.05, rotate: 2 }}
-            className="hidden md:block bg-white/10 backdrop-blur-md rounded-2xl p-6 border border-white/20 shadow-xl min-w-[200px] text-center"
-          >
-            <p className="text-xs uppercase tracking-widest text-white/70 mb-2">
-              Role Anda
-            </p>
-            <div className="text-xl font-bold bg-white/20 rounded-xl py-2 px-4 inline-block">
-              {user?.roleName || (isAdmin ? "Administrator" : "User")}
-            </div>
-          </motion.div>
-        </div>
-      </motion.div>
-
-      {/* 🔧 Content Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
-        {/* Left Column (Actions & Features) */}
-        <div className="lg:col-span-2 space-y-6 md:space-y-8">
-
-          {/* Menu Sections container */}
-          <motion.div
-            variants={itemVariants}
-            className="md:bg-white md:rounded-3xl md:p-8 md:shadow-sm md:border md:border-gray-100"
-          >
-            <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-4 md:mb-6 pl-2 md:pl-0">
-              Menu Tersedia
-            </h3>
-
-            {/* Desktop Card View Map */}
-            <div className="hidden md:grid grid-cols-1 xl:grid-cols-2 gap-6">
-              {currentActions.map((action, i) => (
-                <motion.button
-                  key={action.id}
-                  variants={cardHoverVariants}
-                  initial="rest"
-                  whileHover="hover"
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => handleActionClick(action.tab)}
-                  className="p-6 rounded-2xl bg-gray-50 hover:bg-white shadow-sm hover:shadow-xl border border-transparent hover:border-blue-100 text-left transition-all group relative overflow-hidden flex flex-col h-full"
-                >
-                  <div
-                    className={`absolute top-0 right-0 w-24 h-24 bg-gradient-to-br ${action.color} opacity-5 -mr-8 -mt-8 rounded-full`}
-                  />
-                  <div
-                    className={`p-4 rounded-xl inline-flex bg-gradient-to-r ${action.color} shadow-lg mb-4 self-start`}
-                  >
-                    <action.icon className="w-6 h-6 text-white" />
-                  </div>
-                  <h4 className="font-bold text-xl text-gray-900 mb-2">
-                    {action.title}
-                  </h4>
-                  <p className="text-sm text-gray-600 mb-4 flex-grow">
-                    {action.description}
-                  </p>
-                  <div className="flex items-center text-blue-600 font-bold text-sm mt-auto">
-                    Mulai Sekarang
-                    <ArrowRight className="w-4 h-4 ml-2 group-hover:translate-x-2 transition-transform" />
-                  </div>
-                </motion.button>
-              ))}
-            </div>
-
-            {/* Mobile App-Drawer View Map */}
-            <div className="grid md:hidden grid-cols-2 sm:grid-cols-3 gap-4">
-              {currentActions.map((action, i) => (
-                <motion.button
-                  key={action.id}
-                  variants={cardHoverVariants}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => handleActionClick(action.tab)}
-                  className="p-5 rounded-3xl bg-white shadow-sm hover:shadow-md border border-gray-100/50 flex flex-col items-center justify-center text-center gap-3 transition-all relative overflow-hidden"
-                >
-                  {/* subtle backdrop color */}
-                  <div className={`absolute top-0 right-0 w-20 h-20 bg-gradient-to-br ${action.color} opacity-5 -mr-10 -mt-10 rounded-full pointer-events-none`} />
-
-                  <div className={`p-4 rounded-2xl bg-gradient-to-br ${action.color} shadow-md`}>
-                    <action.icon className="w-7 h-7 text-white" />
-                  </div>
-                  <span className="font-bold text-sm text-gray-800 leading-tight line-clamp-2">
-                    {action.title}
-                  </span>
-                </motion.button>
-              ))}
-            </div>
-
-          </motion.div>
-
-          {/* Features - Hide on mobile if preferred, or keep it cleaner */}
-          <motion.div
-            variants={itemVariants}
-            className="hidden md:block bg-white rounded-3xl p-8 shadow-sm border border-gray-100"
-          >
-            <h3 className="text-xl font-bold text-gray-900 mb-6">
-              Fitur Utama
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {features.map((f, i) => (
-                <motion.div
-                  key={i}
-                  whileHover={{ y: -5 }}
-                  className="p-5 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-50 transition-all"
-                >
-                  <div className="p-3 bg-blue-100 rounded-xl w-fit mb-4">
-                    <f.icon className="w-5 h-5 text-blue-600" />
-                  </div>
-                  <h4 className="font-bold text-gray-900 mb-2">{f.title}</h4>
-                  <p className="text-sm text-gray-600 leading-relaxed">
-                    {f.description}
-                  </p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-        </div>
-
-        {/* Right Sidebar */}
-        <div className="space-y-6 md:space-y-8">
-          {/* Platform Overview */}
-          <motion.div
-            variants={itemVariants}
-            className="bg-white rounded-3xl p-6 md:p-8 shadow-sm border border-gray-100"
-          >
-            <h3 className="text-lg md:text-xl font-bold text-gray-900 mb-4 md:mb-6">
-              Status Sistem
-            </h3>
-            <div className="space-y-4">
-              {platformOverview.map((item, i) => (
-                <motion.div
-                  key={i}
-                  whileHover={{ x: 5 }}
-                  className="flex items-center space-x-4 p-3 md:p-4 bg-gray-50 rounded-2xl border border-transparent hover:border-blue-50 transition-all"
-                >
-                  <div className={`p-3 rounded-xl ${item.color} shadow-sm`}>
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-gray-900 truncate">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-gray-500 truncate">
-                      {item.desc}
-                    </p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* Help Section */}
-          <motion.div
-            variants={itemVariants}
-            whileHover={{ y: -5 }}
-            className="bg-gradient-to-br from-indigo-600 to-blue-700 rounded-3xl p-6 md:p-8 text-white shadow-lg relative overflow-hidden"
-          >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 -mr-16 -mt-16 rounded-full" />
-            <div className="relative z-10">
-              <div className="bg-white/20 p-3 rounded-xl w-fit mb-4 md:mb-6 backdrop-blur-sm">
-                <HelpCircle className="w-6 h-6 text-white" />
-              </div>
-              <h4 className="text-lg md:text-xl font-bold mb-2">Butuh Bantuan?</h4>
-              <p className="text-blue-100 text-xs md:text-sm mb-6 leading-relaxed">
-                Pelajari panduan lengkap untuk manajemen data dan menggunakan fitur-fitur dengan maksimal.
+        <div className="relative z-10 p-5 md:p-6">
+          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+            {/* Left */}
+            <div>
+              <h1 className="text-xl md:text-2xl font-bold leading-tight">
+                Selamat datang, {firstName}!
+              </h1>
+              <p className="text-white/70 text-[13px] mt-0.5">
+                Monitoring Preventive Maintenance, Asset &amp; Radio Communication
               </p>
-              <button
-                onClick={() => handleActionClick("docs")}
-                className="w-full bg-white text-indigo-600 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition-colors shadow-lg"
-              >
-                Buka Dokumentasi
-              </button>
+              {/* Date + time + location strip */}
+              <div className="flex flex-wrap items-center gap-3 mt-3 text-[12px] text-white/80">
+                <span className="flex items-center gap-1.5">
+                  <CalendarDays className="w-3.5 h-3.5" />
+                  {dateStr}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5" />
+                  {timeStr}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <MapPin className="w-3.5 h-3.5" />
+                  Semua Lokasi
+                </span>
+              </div>
+              {/* Quick action buttons — pill style sesuai mockup */}
+              {quickActions.length > 0 && (
+                <div className="flex flex-wrap gap-2 mt-4">
+                  {quickActions.map((a) => (
+                    <button
+                      key={a.tab}
+                      onClick={() => go(a.tab, a.path)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-white/25 border border-white/30 rounded-full text-[13px] font-semibold text-white transition-colors backdrop-blur-sm"
+                    >
+                      {a.icon}
+                      {a.label}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-          </motion.div>
+            {/* Role badge — orange pill, standalone */}
+            <div className="flex-shrink-0 self-start">
+              <span className="flex items-center gap-2 px-5 py-2.5 bg-[#D94F2B] hover:bg-[#B83D20] rounded-full text-[14px] font-bold text-white shadow-lg transition-colors cursor-default">
+                {user?.roleName || "Administrator"}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
-    </motion.div>
+
+      {/* ── ZONE 2: Stats Strip ────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <StatCard
+          icon={<Radio className="w-6 h-6 text-white" />}
+          iconBg="bg-[#2B6CB0]"
+          label="Radio"
+          value={stats.radioTotal}
+          sub="Registered Unit"
+          onClick={() => go("radio-internal", "/radio-internal")}
+        />
+        <StatCard
+          icon={<Link2 className="w-6 h-6 text-white" />}
+          iconBg="bg-[#1B3A6B]"
+          label="Network"
+          value={stats.networkLinks}
+          sub="Link Internal"
+          onClick={() => go("link-internal", "/link-internal")}
+        />
+        <StatCard
+          icon={<Package className="w-6 h-6 text-white" />}
+          iconBg="bg-[#059669]"
+          label="Warehouse"
+          value={stats.warehousePending}
+          sub="Peminjaman Pending"
+          onClick={() => go("warehouse-borrow-history", "/warehouse/borrow-history")}
+        />
+        <StatCard
+          icon={<Wrench className="w-6 h-6 text-white" />}
+          iconBg="bg-[#D94F2B]"
+          label="Radio Repair"
+          value={stats.radioRepairOpen}
+          sub="Open Case"
+          onClick={() => go("radio-repair-dashboard", "/radio-repair-dashboard")}
+        />
+      </div>
+
+      {/* ── ZONE 3: Modules + Sidebar ──────────────────────────────────── */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+
+        {/* Left: Modul Utama (2/3 width) */}
+        <div className="xl:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-[15px] font-semibold text-[#1A202C]">Modul Utama</h2>
+            <button
+              onClick={() => {}}
+              className="text-[13px] text-[#2B6CB0] font-medium hover:underline flex items-center gap-1"
+            >
+              Lihat Semua Modul <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {visibleModules.slice(0, 6).map((m) => (
+              <ModuleCard
+                key={m.id}
+                icon={m.icon}
+                iconBg={m.iconBg}
+                title={m.title}
+                description={m.description}
+                onClick={() => go(m.tab, m.path)}
+              />
+            ))}
+          </div>
+
+          {/* Charts row */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+            <PlaceholderChart
+              title="PM Compliance"
+              subtitle="Data belum tersedia"
+            />
+            <PlaceholderChart
+              title="PM Trend (6 Bulan)"
+              subtitle="Data belum tersedia"
+            />
+            <PlaceholderChart
+              title="Aset Condition"
+              subtitle="Data belum tersedia"
+            />
+          </div>
+        </div>
+
+        {/* Right: Info widgets (1/3 width) */}
+        <div className="space-y-4">
+
+          {/* PM Bulanan widget — ready for future API */}
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-semibold text-[#1A202C]">PM Bulan Ini</h3>
+              <span className="text-[11px] text-[#718096]">
+                {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
+              </span>
+            </div>
+            {/* Progress bar placeholder */}
+            <div className="mb-3">
+              <div className="flex justify-between text-[12px] text-[#718096] mb-1">
+                <span>Progress</span>
+                <span className="font-semibold text-[#1A202C]">— %</span>
+              </div>
+              <div className="h-2 bg-[#F7F8FA] rounded-full overflow-hidden border border-[#E2E8F0]">
+                <div className="h-full bg-[#2B6CB0] rounded-full" style={{ width: "0%" }} />
+              </div>
+            </div>
+            <div className="space-y-1.5">
+              <div className="flex justify-between text-[12px]">
+                <span className="flex items-center gap-1.5 text-[#718096]">
+                  <span className="w-2 h-2 rounded-full bg-[#059669]" />Selesai
+                </span>
+                <span className="font-semibold text-[#1A202C]">—</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="flex items-center gap-1.5 text-[#718096]">
+                  <span className="w-2 h-2 rounded-full bg-[#2B6CB0]" />Terjadwal
+                </span>
+                <span className="font-semibold text-[#1A202C]">—</span>
+              </div>
+              <div className="flex justify-between text-[12px]">
+                <span className="flex items-center gap-1.5 text-[#718096]">
+                  <span className="w-2 h-2 rounded-full bg-[#DC2626]" />Overdue
+                </span>
+                <span className="font-semibold text-[#1A202C]">—</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-[#718096] mt-3 italic">
+              Data PM Bulanan akan tersedia setelah modul terhubung
+            </p>
+            {hasPerm("pmschedule.menu") && (
+              <button
+                onClick={() => go("pm-schedule", "/pm-schedule")}
+                className="mt-3 w-full text-center text-[13px] text-[#2B6CB0] font-medium hover:underline flex items-center justify-center gap-1"
+              >
+                Lihat Detail <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {/* Recent Activity */}
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-[14px] font-semibold text-[#1A202C]">Recent Activity</h3>
+            </div>
+            <div>
+              {recentActivity.map((item, i) => (
+                <ActivityRow key={i} item={item} />
+              ))}
+            </div>
+            <button className="mt-3 w-full text-center text-[13px] text-[#2B6CB0] font-medium hover:underline flex items-center justify-center gap-1">
+              Lihat Semua Aktivitas <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          </div>
+
+          {/* Status Sistem */}
+          <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
+            <h3 className="text-[14px] font-semibold text-[#1A202C] mb-3">Status Sistem</h3>
+            <div className="space-y-2">
+              {[
+                { label: "Koneksi Server", status: true },
+                { label: "Database", status: true },
+                { label: "SignalR Live", status: true },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center justify-between text-[13px]">
+                  <span className="text-[#718096]">{s.label}</span>
+                  <span className={`flex items-center gap-1.5 font-medium ${s.status ? "text-[#059669]" : "text-[#DC2626]"}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${s.status ? "bg-[#059669]" : "bg-[#DC2626]"}`} />
+                    {s.status ? "Online" : "Offline"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

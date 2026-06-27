@@ -268,49 +268,39 @@ export default function SwrSignalPage() {
     <div className="w-full p-4 md:p-6 pb-20">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
       <MobilePageHeader
-        label="Monitoring"
+        label="PM Management"
         title="SWR Signal"
-        className="-mx-4 -mt-4 mb-6"
+        className="mb-4"
         scrollableChips={
           <div className="flex gap-2">
-            <button
-              onClick={() => setShowImportInstructions(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold whitespace-nowrap hover:bg-gray-100 transition-colors shadow-sm"
-            >
+            <button onClick={() => setShowImportInstructions(true)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] text-[12px] font-semibold whitespace-nowrap hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
               <AlertCircle className="w-3.5 h-3.5" />
               Guide
             </button>
             {hasPermission("swr.import") && (
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors shadow-sm"
-              >
+              <button onClick={() => setShowImportModal(true)}
+                className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#F0FFF4] border border-emerald-200 text-[#059669] text-[12px] font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors">
                 <Upload className="w-3.5 h-3.5" />
                 Import
               </button>
             )}
             {hasPermission("swr.create") && (
               <>
-                <button
-                  onClick={() => { setEditingSite(null); setShowSiteDialog(true); }}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
-                >
+                <button onClick={() => { setEditingSite(null); setShowSiteDialog(true); }}
+                  className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#EBF4FF] border border-blue-200 text-[#2B6CB0] text-[12px] font-semibold whitespace-nowrap hover:bg-[#DBEAFE] transition-colors">
                   <Plus className="w-3.5 h-3.5" />
                   Site
                 </button>
-                <button
-                  onClick={() => { setEditingChannel(null); setShowChannelDialog(true); }}
-                  className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-purple-50 border border-purple-200 text-purple-700 text-xs font-semibold whitespace-nowrap hover:bg-purple-100 transition-colors shadow-sm"
-                >
+                <button onClick={() => { setEditingChannel(null); setShowChannelDialog(true); }}
+                  className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#EBF4FF] border border-blue-200 text-[#2B6CB0] text-[12px] font-semibold whitespace-nowrap hover:bg-[#DBEAFE] transition-colors">
                   <Plus className="w-3.5 h-3.5" />
                   Channel
                 </button>
               </>
             )}
-            <button
-              onClick={downloadTemplate}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-amber-50 border border-amber-200 text-amber-700 text-xs font-semibold whitespace-nowrap hover:bg-amber-100 transition-colors shadow-sm"
-            >
+            <button onClick={downloadTemplate}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#FFFBEB] border border-amber-200 text-[#F59E0B] text-[12px] font-semibold whitespace-nowrap hover:bg-amber-100 transition-colors">
               <Download className="w-3.5 h-3.5" />
               Template
             </button>

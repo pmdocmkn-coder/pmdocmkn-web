@@ -318,12 +318,13 @@ const FleetStatisticsPage: React.FC = () => {
   return (
     <div className="w-full">
       {/* ==================== MOBILE VIEW ==================== */}
-      <div className="md:hidden bg-[#f8f5fc] min-h-screen pb-24 text-slate-900 font-sans">
+      <div className="md:hidden bg-[#F7F8FA] min-h-screen pb-24 text-[#1A202C]">
         <MobilePageHeader
           label="Analytics"
           title="Fleet Statistics"
           rightAction={
-            <button onClick={loadFleetStatistics} disabled={isLoading} className="flex items-center justify-center rounded-xl h-9 w-9 bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg shadow-purple-500/25 active:scale-90 transition-all">
+            <button onClick={loadFleetStatistics} disabled={isLoading}
+              className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0">
               <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
             </button>
           }

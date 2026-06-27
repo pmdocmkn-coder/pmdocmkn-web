@@ -55,6 +55,7 @@ import {
   Loader2,
   Home,
   Calendar,
+  TrendingUp,
 } from "lucide-react";
 import { format } from "date-fns";
 import {
@@ -1276,28 +1277,28 @@ const NecHistoryPage: React.FC = () => {
   return (
     <div className="w-full p-4 md:p-6 pb-20">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
-      <div className="md:hidden pt-4 pb-4 mb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl -mx-4 -mt-4 sticky top-0 z-30">
-        <div className="flex items-start justify-between pb-4 px-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1 opacity-80">
-              <span className="text-[10px] font-bold text-indigo-600 tracking-wider uppercase">Monitoring</span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
-              Jaringan NEC
-            </h1>
+      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
+        <div className="flex items-start gap-4 p-4">
+          <div className="w-12 h-12 rounded-[12px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+            <TrendingUp className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-[#2B6CB0] tracking-[0.1em] uppercase mb-0.5">PM Management</p>
+            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">NEC History</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Histori data jaringan NEC</p>
           </div>
           <button
             onClick={() => navigate("/dashboard")}
-            className="w-10 h-10 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center hover:bg-indigo-100 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
             <Home className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
         {/* Action chips row */}
-        <div className="flex gap-2 px-4 pb-1 overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 px-4 pb-4 overflow-x-auto no-scrollbar">
           <button
             onClick={() => navigate("/nec-management")}
-            className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-semibold whitespace-nowrap hover:bg-indigo-100 transition-colors shadow-sm"
+            className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#EBF4FF] border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold whitespace-nowrap hover:bg-[#DBEAFE] transition-colors"
           >
             <Settings className="w-3.5 h-3.5" />
             Kelola
@@ -1305,7 +1306,7 @@ const NecHistoryPage: React.FC = () => {
           {hasPermission("nec.import") && (
             <button
               onClick={() => setIsImportModalOpen(true)}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#F0FFF4] border border-emerald-200 text-[#059669] text-[12px] font-semibold whitespace-nowrap hover:bg-emerald-100 transition-colors"
             >
               <Upload className="w-3.5 h-3.5" />
               Impor
@@ -1314,7 +1315,7 @@ const NecHistoryPage: React.FC = () => {
           {hasPermission("nec.export") && (
             <button
               onClick={handleExport}
-              className="flex items-center gap-1.5 h-8 px-3 rounded-full bg-sky-50 border border-sky-200 text-sky-700 text-xs font-semibold whitespace-nowrap hover:bg-sky-100 transition-colors shadow-sm"
+              className="flex items-center gap-1.5 h-9 px-3 rounded-[8px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] text-[12px] font-semibold whitespace-nowrap hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
             >
               <Download className="w-3.5 h-3.5" />
               Ekspor

@@ -1166,22 +1166,22 @@ export default function InspeksiKPCPage() {
               const el = document.getElementById('mobile-search-input');
               if (el) { el.classList.toggle('hidden'); el.focus(); }
             }}
-            className="w-10 h-10 rounded-full border border-slate-200 text-slate-500 bg-white shadow-sm flex items-center justify-center hover:bg-slate-50 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
             <Search className="w-4 h-4" />
           </button>
         }
         contentAfterTitle={
-          <div id="mobile-search-input" className="hidden px-4 pb-3">
+          <div id="mobile-search-input" className="hidden">
             <div className="relative">
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Cari ruang, temuan, inspector..."
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500 text-sm bg-gray-50"
+                className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-[#E2E8F0] rounded-[10px] focus:outline-none focus:border-[#2B6CB0] bg-[#F7F8FA]"
               />
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
             </div>
           </div>
         }
@@ -1197,7 +1197,7 @@ export default function InspeksiKPCPage() {
                   const other = document.getElementById("dropdown-status");
                   if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
                 }}
-                className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[100px]"
+                className="flex items-center justify-between h-8 rounded-[8px] bg-[#EBF4FF] pl-3 pr-2 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold select-none min-w-[100px]"
               >
                 <span className="truncate max-w-[120px]">{selectedRuang || "Ruangan"}</span>
                 <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
@@ -1214,7 +1214,7 @@ export default function InspeksiKPCPage() {
                   const other = document.getElementById("dropdown-ruangan");
                   if (other && !other.classList.contains("hidden")) other.classList.add("hidden");
                 }}
-                className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[80px]"
+                className="flex items-center justify-between h-8 rounded-[8px] bg-[#EBF4FF] pl-3 pr-2 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold select-none min-w-[80px]"
               >
                 <span>{selectedStatus || "Status"}</span>
                 <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
@@ -1224,7 +1224,7 @@ export default function InspeksiKPCPage() {
             <div className="relative shrink-0 flex items-center" ref={mobCalRef}>
               <button 
                 onClick={() => setMobDateRangeOpen(prev => !prev)}
-                className="flex items-center justify-between h-8 rounded-full bg-indigo-50 pl-3 pr-2 border border-indigo-200 text-indigo-700 text-xs font-semibold select-none min-w-[120px]"
+                className="flex items-center justify-between h-8 rounded-[8px] bg-[#EBF4FF] pl-3 pr-2 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold select-none min-w-[120px]"
               >
                 <div className="flex items-center gap-1.5 truncate">
                   <Calendar className="w-3.5 h-3.5 opacity-70" />
@@ -1281,7 +1281,7 @@ export default function InspeksiKPCPage() {
               <button
                 onClick={handleExportWithImages}
                 disabled={exportLoading}
-                className="flex h-8 shrink-0 items-center gap-1 rounded-full bg-purple-50 px-3 border border-purple-200 text-purple-700 text-xs font-semibold"
+                className="flex h-9 shrink-0 items-center gap-1 rounded-[8px] bg-[#F7F8FA] px-3 border border-[#E2E8F0] text-[#718096] text-[12px] font-semibold hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
               >
                 <Download className="w-3 h-3" />
                 Export

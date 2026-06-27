@@ -336,53 +336,54 @@ export default function WarehouseBorrowHistoryPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
-      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
-        <div className="flex items-start justify-between pb-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1 opacity-80">
-              <span className="text-[10px] font-bold text-violet-600 tracking-wider uppercase">Warehouse</span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
-              Histori Peminjaman
-            </h1>
+      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
+        <div className="flex items-start gap-4 p-4">
+          <div className="w-12 h-12 rounded-[12px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+            <History className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-[#2B6CB0] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
+            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Histori Peminjaman</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Riwayat permintaan dan transaksi tools</p>
           </div>
           <button
             onClick={() => window.history.back()}
-            className="w-10 h-10 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center hover:bg-violet-100 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
             <History className="h-4 w-4" strokeWidth={2.5} />
           </button>
         </div>
-
-        {/* Search inside Mobile Header */}
-        <div className="relative mt-2">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-violet-600" />
-          <Input
-            placeholder="Cari transaksi, part, atau peminjam..."
-            className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-violet-500 text-sm bg-violet-50 text-gray-900 placeholder-violet-400 w-full"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        {/* Search */}
+        <div className="px-4 pb-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
+            <Input
+              placeholder="Cari transaksi, part, atau peminjam..."
+              className="pl-10 pr-4 h-10 border-[#E2E8F0] rounded-[10px] text-sm bg-[#F7F8FA] text-[#1A202C] placeholder:text-[#718096] w-full focus:border-[#2B6CB0]"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
       </div>
 
       {/* ── Page Header (Desktop) ── */}
-      <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 sm:p-6 rounded-[10px] border border-[#E2E8F0] shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-violet-100 rounded-xl">
-            <History className="w-8 h-8 text-violet-600" />
+          <div className="p-3 bg-[#EBF4FF] rounded-[10px]">
+            <History className="w-6 h-6 text-[#2B6CB0]" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Histori Peminjaman Tools</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Daftar lengkap riwayat permintaan dan transaksi tools</p>
+            <h1 className="text-xl font-bold text-[#1A202C] tracking-tight">Histori Peminjaman Tools</h1>
+            <p className="text-sm text-[#718096] mt-0.5">Daftar lengkap riwayat permintaan dan transaksi tools</p>
           </div>
         </div>
 
         <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
           <Input
             placeholder="Cari transaksi, part, atau peminjam..."
-            className="pl-9 h-10 w-full"
+            className="pl-9 h-10 w-full border-[#E2E8F0] focus:border-[#2B6CB0]"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -390,55 +391,50 @@ export default function WarehouseBorrowHistoryPage() {
       </div>
 
       {/* ── Mobile Card View ── */}
-      <div className="md:hidden flex flex-col gap-3 mt-4">
+      <div className="md:hidden flex flex-col gap-3 mt-2">
         {loading ? (
-          <div className="flex justify-center py-12"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div>
+          <div className="flex justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2B6CB0]" />
+          </div>
         ) : filteredItems.length === 0 ? (
-          <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">
+          <div className="text-center py-12 text-[#718096] bg-white rounded-[10px] border border-[#E2E8F0]">
             <Package className="w-10 h-10 mx-auto mb-2 opacity-20" />
             Tidak ada data peminjaman
           </div>
         ) : filteredItems.map((b) => (
-          <div key={b.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2">
+          <div key={b.id} className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm p-4 flex flex-col gap-2">
             {/* Baris 1: Status badge + Tanggal */}
             <div className="flex justify-between items-start">
               {getStatusBadge(b.status)}
-              <span className="text-xs text-gray-400 font-medium">
+              <span className="text-[11px] text-[#718096] font-medium">
                 {format(new Date(b.requestedAt), "dd MMM yyyy", { locale: localeId })}
               </span>
             </div>
 
             {/* Baris 2: Items summary */}
             <div>
-              <p className="text-sm font-bold text-gray-900">{getItemsSummary(b)}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
+              <p className="text-[14px] font-semibold text-[#1A202C]">{getItemsSummary(b)}</p>
+              <p className="text-[12px] text-[#718096] mt-0.5">
                 {b.borrowNumber} • {b.items?.length ?? 0} barang • Total Qty: x{getTotalQty(b)}
               </p>
             </div>
 
             {/* Baris 3: Detail grid */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-gray-600 bg-gray-50 rounded-lg p-2.5">
-              <div><span className="text-gray-400">Peminjam:</span> {b.borrowerName || b.borrowedByName}</div>
-              <div><span className="text-gray-400">Barang:</span> {b.items?.length ?? 0} item</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-[12px] text-[#718096] bg-[#F7F8FA] rounded-[8px] p-2.5 border border-[#E2E8F0]">
+              <div><span className="text-[#718096]">Peminjam:</span> <span className="text-[#1A202C] font-medium">{b.borrowerName || b.borrowedByName}</span></div>
+              <div><span className="text-[#718096]">Barang:</span> <span className="text-[#1A202C] font-medium">{b.items?.length ?? 0} item</span></div>
               {b.relatedJobNumber && (
-                <div className="col-span-2"><span className="text-gray-400">Job:</span> <span className="font-mono text-blue-700">{b.relatedJobNumber}</span></div>
+                <div className="col-span-2"><span className="text-[#718096]">Job:</span> <span className="font-mono text-[#2B6CB0] font-medium">{b.relatedJobNumber}</span></div>
               )}
             </div>
 
             {/* Baris 4: Footer aksi */}
-            <div className="pt-3 mt-1 border-t border-gray-100">
-              <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 mb-2">
-                {b.relatedJobNumber && (
-                  <span className="px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold border border-blue-200">
-                    {b.relatedJobNumber}
-                  </span>
-                )}
-              </div>
+            <div className="pt-2 mt-1 border-t border-[#E2E8F0]">
               <div className="flex gap-2 w-full">
                 <Button
                   variant="outline"
                   size="sm"
-                  className="flex-1 text-indigo-600 border-indigo-200 hover:bg-indigo-50"
+                  className="flex-1 text-[#2B6CB0] border-[#E2E8F0] hover:bg-[#EBF4FF] hover:border-[#2B6CB0]"
                   onClick={() => setDetailTargetId(b.id)}
                 >
                   <Eye className="w-3.5 h-3.5 mr-1" /> Detail

@@ -53,36 +53,34 @@ function SortableSiteCard({ site, onEdit, onDelete }: { site: PmSiteDto, onEdit:
     <div 
       ref={setNodeRef} 
       style={style} 
-      className={`flex flex-col gap-3 rounded-2xl border bg-white p-5 shadow-sm group ${
-        isDragging ? 'shadow-lg border-indigo-500/40 ring-2 ring-indigo-500/20 opacity-90' : 'border-indigo-500/10 hover:shadow-md transition-shadow'
+      className={`flex flex-col gap-3 rounded-[10px] border bg-white p-4 group ${
+        isDragging ? 'shadow-lg border-[#2B6CB0]/40 ring-2 ring-[#2B6CB0]/20 opacity-90' : 'border-[#E2E8F0] hover:shadow-md transition-shadow'
       }`}
     >
-      <div className="flex justify-between items-start">
-        <div className="flex gap-3">
+      <div className="flex justify-between items-center">
+        <div className="flex gap-3 items-center">
           <div 
             {...attributes} 
             {...listeners}
-            className="w-8 flex items-center justify-center text-slate-300 hover:text-indigo-500 cursor-grab active:cursor-grabbing outline-none"
+            className="flex items-center justify-center text-[#E2E8F0] hover:text-[#2B6CB0] cursor-grab active:cursor-grabbing outline-none"
           >
             <GripVertical className="w-5 h-5" />
           </div>
-          <div className="w-12 h-12 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-            <Server className="w-6 h-6" />
+          <div className="w-10 h-10 rounded-[10px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+            <Server className="w-5 h-5 text-[#2B6CB0]" />
           </div>
-          <div className="flex flex-col justify-center">
-            <h3 className="text-slate-900 font-bold text-base leading-tight">{site.name}</h3>
-          </div>
+          <h3 className="text-[#1A202C] font-semibold text-[14px]">{site.name}</h3>
         </div>
         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
           <button
             onClick={() => onEdit(site)}
-            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:text-[#2B6CB0] hover:bg-[#EBF4FF] transition-colors"
           >
             <Edit className="w-4 h-4" />
           </button>
           <button
             onClick={() => onDelete(site.id)}
-            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:text-[#DC2626] hover:bg-red-50 transition-colors"
           >
             <Trash2 className="w-4 h-4" />
           </button>
@@ -274,28 +272,24 @@ export default function PmSiteManagement() {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Search Bar Section */}
-      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
-        <label className="flex flex-col min-w-40 h-12 w-full sm:max-w-md">
-          <div className="flex w-full flex-1 items-stretch rounded-xl h-full shadow-sm border border-indigo-500/20 overflow-hidden bg-white focus-within:ring-2 focus-within:ring-indigo-500/50 transition-all">
-            <div className="text-indigo-500 flex bg-white items-center justify-center pl-4 pr-2">
-              <Search className="w-5 h-5" />
-            </div>
-            <input
-              className="form-input flex w-full min-w-0 flex-1 resize-none overflow-hidden text-slate-900 focus:outline-0 focus:ring-0 border-none bg-transparent h-full placeholder:text-slate-400 px-2 text-sm font-medium"
-              placeholder="Search site by name..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-        </label>
-        
+      {/* Search + Add button */}
+      <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
+          <input
+            className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-[#E2E8F0] rounded-[10px] bg-[#F7F8FA] focus:outline-none focus:border-[#2B6CB0] focus:bg-white transition-colors"
+            placeholder="Cari site berdasarkan nama..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
         <button
           onClick={() => setIsCreateDialogOpen(true)}
-          className="flex h-12 px-6 w-full sm:w-auto items-center justify-center overflow-hidden rounded-xl bg-gradient-to-r from-indigo-600 to-blue-600 text-white gap-2 font-bold shadow-lg shadow-indigo-600/20 hover:shadow-indigo-600/40 hover:opacity-90 transition-all active:scale-[0.98]"
+          className="flex items-center gap-2 px-4 py-2.5 w-full sm:w-auto justify-center bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white text-[13px] font-semibold rounded-[10px] transition-colors"
         >
-          <Plus className="w-5 h-5 tracking-wide" />
-          <span className="truncate">Add PM Site</span>
+          <Plus className="w-4 h-4" />
+          Add PM Site
         </button>
       </div>
 
@@ -308,11 +302,11 @@ export default function PmSiteManagement() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
           {loading ? (
             <div className="col-span-full flex justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2B6CB0]"></div>
             </div>
           ) : filteredSites.length === 0 ? (
-            <div className="col-span-full text-center py-12 text-gray-500 bg-white rounded-xl border border-indigo-500/10 shadow-sm font-medium">
-              No PM Sites found.
+            <div className="col-span-full text-center py-12 text-[#718096] bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm font-medium">
+              Belum ada site PM.
             </div>
           ) : (
             <SortableContext 
@@ -334,30 +328,32 @@ export default function PmSiteManagement() {
 
       {/* Create Dialog */}
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle className="text-indigo-600 text-xl font-bold">Add PM Site</DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Create a new site/location for Preventive Maintenance.
+            <DialogTitle className="text-[#1B3A6B] text-lg font-bold">Tambah PM Site</DialogTitle>
+            <DialogDescription className="text-[#718096]">
+              Tambahkan site/lokasi baru untuk Preventive Maintenance.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="font-bold text-slate-700">Site Name *</Label>
+              <Label htmlFor="name" className="font-bold text-[#1A202C]">Nama Site *</Label>
               <Input
                 id="name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="e.g., Sangatta Hub"
-                className="h-11 rounded-xl border-slate-200 focus-visible:ring-indigo-500"
+                className="h-10 rounded-[10px] border-[#E2E8F0] focus-visible:ring-[#2B6CB0]"
               />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
-              Cancel
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}
+              className="rounded-[10px] h-10 font-semibold text-[#718096] border-[#E2E8F0]">
+              Batal
             </Button>
-            <Button onClick={handleCreate} className="rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6">
+            <Button onClick={handleCreate}
+              className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-semibold px-6">
               Create Site
             </Button>
           </DialogFooter>
@@ -366,30 +362,32 @@ export default function PmSiteManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle className="text-indigo-600 text-xl font-bold">Edit PM Site</DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Update existing PM Site information.
+            <DialogTitle className="text-[#1B3A6B] text-lg font-bold">Edit PM Site</DialogTitle>
+            <DialogDescription className="text-[#718096]">
+              Perbarui informasi site PM yang ada.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-name" className="font-bold text-slate-700">Site Name *</Label>
+              <Label htmlFor="edit-name" className="font-bold text-[#1A202C]">Nama Site *</Label>
               <Input
                 id="edit-name"
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="h-11 rounded-xl border-slate-200 focus-visible:ring-indigo-500"
+                className="h-10 rounded-[10px] border-[#E2E8F0] focus-visible:ring-[#2B6CB0]"
               />
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
-              Cancel
+            <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}
+              className="rounded-[10px] h-10 font-semibold text-[#718096] border-[#E2E8F0]">
+              Batal
             </Button>
-            <Button onClick={handleUpdate} className="rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6">
-              Save Changes
+            <Button onClick={handleUpdate}
+              className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-semibold px-6">
+              Simpan
             </Button>
           </DialogFooter>
         </DialogContent>

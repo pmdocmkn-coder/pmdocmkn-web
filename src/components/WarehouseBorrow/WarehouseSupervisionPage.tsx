@@ -84,38 +84,39 @@ export default function WarehouseSupervisionPage() {
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 sm:p-6 rounded-2xl border border-gray-200 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-[14px] border border-[#E2E8F0] shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="p-3 bg-violet-100 rounded-xl">
-            <ClipboardCheck className="w-8 h-8 text-violet-600" />
+          <div className="w-12 h-12 rounded-[12px] bg-[#F0FFF4] flex items-center justify-center flex-shrink-0">
+            <ClipboardCheck className="w-5 h-5 text-[#059669]" strokeWidth={2} />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">Supervisi Warehouse</h1>
-            <p className="text-sm text-gray-500 mt-0.5">Persetujuan pengajuan peminjaman tools</p>
+            <h1 className="text-[18px] font-bold text-[#1A202C] tracking-tight">Supervisi Warehouse</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Persetujuan pengajuan peminjaman tools</p>
           </div>
         </div>
-        <div className="bg-amber-50 px-4 py-2 rounded-lg border border-amber-200 flex items-center gap-2">
+        <div className="bg-[#FFFBEB] px-4 py-2 rounded-[10px] border border-amber-200 flex items-center gap-2">
           <span className="relative flex h-3 w-3">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
             <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
           </span>
-          <span className="text-amber-800 font-bold text-sm">{pending.length} Menunggu Approval</span>
+          <span className="text-amber-800 font-bold text-[13px]">{pending.length} Menunggu Approval</span>
         </div>
       </div>
 
       {/* List Content */}
       {loading ? (
-        <div className="text-center py-12 text-gray-400 bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="text-center py-12 text-[#718096] bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2B6CB0] mx-auto mb-3" />
           Memuat data...
         </div>
       ) : pending.length === 0 ? (
-        <div className="text-center py-16 bg-white rounded-2xl border border-gray-100 shadow-sm">
-          <PackageSearch className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-semibold text-gray-900">Tidak ada pengajuan pending</h3>
-          <p className="text-gray-500 text-sm mt-1">Semua permintaan peminjaman sudah diproses.</p>
+        <div className="text-center py-16 bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm">
+          <PackageSearch className="w-14 h-14 text-[#E2E8F0] mx-auto mb-4" />
+          <h3 className="text-[16px] font-semibold text-[#1A202C]">Tidak ada pengajuan pending</h3>
+          <p className="text-[#718096] text-[13px] mt-1">Semua permintaan peminjaman sudah diproses.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           <AnimatePresence>
             {pending.map((b) => (
               <motion.div
@@ -123,13 +124,13 @@ export default function WarehouseSupervisionPage() {
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
+                className="bg-white border border-[#E2E8F0] rounded-[10px] overflow-hidden shadow-sm hover:shadow-md transition-shadow flex flex-col"
               >
-                <div className="p-4 border-b border-gray-100 bg-gray-50/50 flex justify-between items-center">
-                  <span className="font-mono text-xs font-semibold text-gray-600 bg-gray-200/60 px-2 py-1 rounded-md">
+                <div className="p-4 border-b border-[#E2E8F0] bg-[#F7F8FA] flex justify-between items-center">
+                  <span className="font-mono text-[11px] font-semibold text-[#718096] bg-white border border-[#E2E8F0] px-2 py-1 rounded-[6px]">
                     {b.borrowNumber}
                   </span>
-                  <span className="text-xs text-gray-500 font-medium">
+                  <span className="text-[11px] text-[#718096] font-medium">
                     {format(new Date(b.requestedAt), "dd MMM yyyy", { locale: localeId })}
                   </span>
                 </div>
