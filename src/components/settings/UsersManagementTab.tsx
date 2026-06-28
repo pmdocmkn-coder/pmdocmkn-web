@@ -35,7 +35,7 @@ function Avatar({ user }: { user: User }) {
   );
 }
 
-function StatusBadge({ isActive }: { isActive: boolean }) {
+function StatusBadge({ isActive }: { isActive?: boolean }) {
   return isActive ? (
     <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold bg-[#F0FFF4] text-[#059669] border border-emerald-200">
       <CheckCircle className="w-3 h-3" /> Aktif
@@ -288,7 +288,7 @@ export default function UsersManagementTab() {
               <div className="grid grid-cols-2 gap-2">
                 <button
                   onClick={() => !disabled && hasPermission('user.update') && setRolePickerUser(u)}
-                  disabled={disabled || !hasPermission('user.update')}
+                  disabled={!!(disabled || !hasPermission('user.update'))}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-[8px] border text-left transition-colors ${
                     disabled || !hasPermission('user.update')
                       ? 'bg-[#F7F8FA] border-[#E2E8F0] cursor-not-allowed'
@@ -304,7 +304,7 @@ export default function UsersManagementTab() {
                 </button>
                 <button
                   onClick={() => !disabled && hasPermission('division.update') && setDivPickerUser(u)}
-                  disabled={disabled || !hasPermission('division.update')}
+                  disabled={!!(disabled || !hasPermission('division.update'))}
                   className={`flex items-center justify-between px-3 py-2.5 rounded-[8px] border text-left transition-colors ${
                     disabled || !hasPermission('division.update')
                       ? 'bg-[#F7F8FA] border-[#E2E8F0] cursor-not-allowed'
@@ -392,7 +392,7 @@ export default function UsersManagementTab() {
                     <td className="px-4 py-3">
                       <select value={u.roleId}
                         onChange={e => handleChangeRole(u.userId, parseInt(e.target.value))}
-                        disabled={!hasPermission('user.update') || disabled}
+                        disabled={!!(!hasPermission('user.update') || disabled)}
                         className="text-[13px] px-2 py-1.5 border border-[#E2E8F0] rounded-[6px] focus:outline-none focus:border-[#2B6CB0] bg-white disabled:bg-[#F7F8FA] disabled:text-[#718096] disabled:cursor-not-allowed">
                         {filteredRoles.map(r => <option key={r.roleId} value={r.roleId}>{r.roleName}</option>)}
                       </select>
@@ -400,7 +400,7 @@ export default function UsersManagementTab() {
                     <td className="px-4 py-3">
                       <select value={u.division || ''}
                         onChange={e => handleChangeDivision(u.userId, e.target.value)}
-                        disabled={!hasPermission('division.update') || disabled}
+                        disabled={!!(!hasPermission('division.update') || disabled)}
                         className="text-[13px] px-2 py-1.5 border border-[#E2E8F0] rounded-[6px] focus:outline-none focus:border-[#2B6CB0] bg-white disabled:bg-[#F7F8FA] disabled:text-[#718096] disabled:cursor-not-allowed">
                         <option value="">— Belum ada —</option>
                         {divisions.filter(d => d.isActive).map(d => (

@@ -124,7 +124,7 @@ const ActivityLogTab: React.FC = () => {
   // Close calendar on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
-      if (calRef.current && !calRef.current.contains(e.target as Node)) setCalOpen(false);
+      if (calRef.current && !calRef.current.contains(e.target as Node)) setDatePickerOpen(false);
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
