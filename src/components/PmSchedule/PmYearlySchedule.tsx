@@ -45,21 +45,21 @@ const MONTHS_SHORT = [
 
 const getWeekColor = (week: number) => {
   switch (week) {
-    case 1: return "bg-sky-500";
-    case 2: return "bg-emerald-500";
-    case 3: return "bg-amber-500";
-    case 4: return "bg-rose-500";
-    default: return "bg-slate-500";
+    case 1: return "bg-[#2B6CB0]";
+    case 2: return "bg-[#059669]";
+    case 3: return "bg-[#F59E0B]";
+    case 4: return "bg-[#D94F2B]";
+    default: return "bg-[#718096]";
   }
 };
 
 const getWeekDetailClass = (week: number) => {
   switch (week) {
-    case 1: return "bg-sky-500 shadow-md shadow-sky-500/30 hover:bg-sky-600 hover:scale-110 active:scale-95";
-    case 2: return "bg-emerald-500 shadow-md shadow-emerald-500/30 hover:bg-emerald-600 hover:scale-110 active:scale-95";
-    case 3: return "bg-amber-500 shadow-md shadow-amber-500/30 hover:bg-amber-600 hover:scale-110 active:scale-95";
-    case 4: return "bg-rose-500 shadow-md shadow-rose-500/30 hover:bg-rose-600 hover:scale-110 active:scale-95";
-    default: return "bg-slate-500 shadow-md shadow-slate-500/30 hover:bg-slate-600 hover:scale-110 active:scale-95";
+    case 1: return "bg-[#2B6CB0] hover:bg-[#1B3A6B] hover:scale-110 active:scale-95";
+    case 2: return "bg-[#059669] hover:bg-emerald-600 hover:scale-110 active:scale-95";
+    case 3: return "bg-[#F59E0B] hover:bg-amber-600 hover:scale-110 active:scale-95";
+    case 4: return "bg-[#D94F2B] hover:bg-[#B83D20] hover:scale-110 active:scale-95";
+    default: return "bg-[#718096] hover:bg-slate-600 hover:scale-110 active:scale-95";
   }
 };
 
@@ -393,72 +393,68 @@ export default function PmYearlySchedule() {
     return (
       <div className="flex flex-col gap-5">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-black text-slate-900 tracking-tight">Yearly Overview</h2>
-          {!canUpdate && <span className="text-[10px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-bold">View Only</span>}
+          <h2 className="text-[14px] font-bold text-[#1A202C]">Yearly Overview</h2>
+          {!canUpdate && <span className="text-[10px] text-[#F59E0B] bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-bold">View Only</span>}
         </div>
 
-        {/* Semester 1: Jan - Jun */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-600 mb-2 px-1">Semester 1 — Januari - Juni {year}</h3>
-          {renderHalfYear(halfYear1, 0)}
+        {/* Desktop tables (hidden on mobile — mobile uses month grid above) */}
+        <div className="hidden md:flex flex-col gap-5">
+          <div>
+            <h3 className="text-[13px] font-bold text-[#718096] mb-2 px-1">Semester 1 — Januari - Juni {year}</h3>
+            {renderHalfYear(halfYear1, 0)}
+          </div>
+          <div>
+            <h3 className="text-[13px] font-bold text-[#718096] mb-2 px-1">Semester 2 — Juli - Desember {year}</h3>
+            {renderHalfYear(halfYear2, 6)}
+          </div>
         </div>
 
-        {/* Semester 2: Jul - Dec */}
-        <div>
-          <h3 className="text-sm font-bold text-slate-600 mb-2 px-1">Semester 2 — Juli - Desember {year}</h3>
-          {renderHalfYear(halfYear2, 6)}
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap items-center gap-4 px-1 mt-2">
-          <span className="text-[10px] text-slate-400 font-medium">Keterangan Terjadwal:</span>
+        {/* Legend — desktop only */}
+        <div className="hidden md:flex flex-wrap items-center gap-4 px-1">
+          <span className="text-[11px] text-[#718096] font-medium">Keterangan Terjadwal:</span>
           {[1, 2, 3, 4].map((w) => (
             <div key={w} className="flex items-center gap-1.5">
               <div className={`w-3 h-4 rounded-sm ${getWeekColor(w)}`}></div>
-              <span className="text-[10px] text-slate-500 font-medium">Week {w}</span>
+              <span className="text-[11px] text-[#718096] font-medium">Week {w}</span>
             </div>
           ))}
           <div className="flex items-center gap-1.5 ml-2">
-            <div className="w-3 h-4 rounded-sm bg-slate-200/70"></div>
-            <span className="text-[10px] text-slate-500 font-medium">Kosong</span>
+            <div className="w-3 h-4 rounded-sm bg-[#E2E8F0]"></div>
+            <span className="text-[11px] text-[#718096] font-medium">Kosong</span>
           </div>
         </div>
       </div>
     );
   };
 
-  // =============================================
-  // RENDER: MONTHLY DETAIL (when month is clicked)
-  // =============================================
   const renderMonthlyDetail = () => {
     if (selectedMonth === null) return null;
     const monthNum = selectedMonth + 1;
 
     return (
-      <div className="flex flex-col gap-5">
+      <div className="flex flex-col gap-4">
         {/* Back + Month Header */}
-        <div className="flex items-center justify-between bg-white rounded-2xl border border-indigo-500/10 shadow-sm px-5 py-4">
-          <div className="flex items-center gap-4">
+        <div className="flex items-center justify-between bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm px-4 py-3">
+          <div className="flex items-center gap-3">
             <button
               onClick={() => setSelectedMonth(null)}
-              className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-indigo-50 hover:text-indigo-600 transition-colors"
-              title="Kembali ke Yearly Overview"
+              className="w-9 h-9 rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] flex items-center justify-center hover:text-[#1B3A6B] transition-colors"
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="w-4 h-4" />
             </button>
             <div>
-              <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-wider">Detail Bulan</p>
-              <div className="flex items-center gap-2">
+              <p className="text-[10px] font-bold text-[#2B6CB0] uppercase tracking-wider">Detail Bulan</p>
+              <div className="flex items-center gap-1">
                 <button
                   onClick={() => {
                     if (selectedMonth === 0) { setYear(y => y - 1); setSelectedMonth(11); }
                     else setSelectedMonth(selectedMonth - 1);
                   }}
-                  className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                  className="p-1 rounded text-[#718096] hover:text-[#2B6CB0] transition-all"
                 >
-                  <ChevronLeft className="w-5 h-5" />
+                  <ChevronLeft className="w-4 h-4" />
                 </button>
-                <h2 className="text-xl font-black text-slate-900 tracking-tight min-w-[140px] text-center">
+                <h2 className="text-[15px] font-bold text-[#1A202C] min-w-[130px] text-center tabular-nums">
                   {MONTHS_FULL[selectedMonth]} {year}
                 </h2>
                 <button
@@ -466,9 +462,9 @@ export default function PmYearlySchedule() {
                     if (selectedMonth === 11) { setYear(y => y + 1); setSelectedMonth(0); }
                     else setSelectedMonth(selectedMonth + 1);
                   }}
-                  className="p-1 rounded-md text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                  className="p-1 rounded text-[#718096] hover:text-[#2B6CB0] transition-all"
                 >
-                  <ChevronRight className="w-5 h-5" />
+                  <ChevronRight className="w-4 h-4" />
                 </button>
               </div>
             </div>
@@ -477,40 +473,40 @@ export default function PmYearlySchedule() {
             <button
               onClick={handleCloneFromPreviousMonth}
               disabled={loading}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-600 hover:bg-emerald-100 font-bold text-xs transition-colors border border-emerald-200"
-              title={`Salin jadwal dari ${MONTHS_FULL[selectedMonth - 1]}`}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#F0FDF4] text-[#059669] hover:bg-emerald-100 font-bold text-[12px] transition-colors border border-emerald-200"
             >
               {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Copy className="w-3.5 h-3.5" />}
               <span className="hidden sm:inline">Clone dari {MONTHS_SHORT[selectedMonth - 1]}</span>
+              <span className="sm:hidden">Clone</span>
             </button>
           )}
         </div>
 
-        {/* Matrix per Site */}
-        <div className="space-y-4">
+        {/* Site Cards */}
+        <div className="space-y-3">
           {sites.length === 0 ? (
-            <div className="bg-white rounded-2xl border border-indigo-500/10 shadow-sm flex flex-col items-center justify-center py-20 gap-3">
-              <MapPin className="w-10 h-10 text-slate-300" />
-              <p className="text-sm text-slate-400 font-medium">Belum ada site. Tambahkan di tab Master Site.</p>
+            <div className="bg-white rounded-[10px] border border-[#E2E8F0] flex flex-col items-center justify-center py-16 gap-3">
+              <MapPin className="w-8 h-8 text-[#E2E8F0]" />
+              <p className="text-sm text-[#718096]">Belum ada site.</p>
             </div>
           ) : (
             sites.map((site) => (
-              <div key={site.siteId} className="bg-white rounded-2xl border border-indigo-500/10 shadow-sm overflow-hidden">
+              <div key={site.siteId} className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm overflow-hidden">
                 {/* Site Header */}
-                <div className="flex items-center justify-between px-5 py-3 bg-slate-50/80 border-b border-slate-200">
+                <div className="flex items-center justify-between px-4 py-3 bg-[#F7F8FA] border-b border-[#E2E8F0]">
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-100 to-blue-100 flex items-center justify-center text-indigo-600 shrink-0">
-                      <MapPin className="w-4 h-4" />
+                    <div className="w-8 h-8 rounded-[8px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+                      <MapPin className="w-4 h-4 text-[#2B6CB0]" />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900 text-sm">{site.siteName}</p>
-                      <p className="text-[11px] text-slate-400">{site.devices.length} PM</p>
+                      <p className="font-semibold text-[#1A202C] text-[13px]">{site.siteName}</p>
+                      <p className="text-[11px] text-[#718096]">{site.devices.length} PM item</p>
                     </div>
                   </div>
                   {canUpdate && (
                     <button
                       onClick={() => openAddDeviceDialog(site.siteId, site.siteName)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 text-indigo-600 text-xs font-bold hover:bg-indigo-100 transition-colors"
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#EBF4FF] text-[#2B6CB0] text-[12px] font-bold hover:bg-[#DBEAFE] transition-colors"
                     >
                       <Plus className="w-3.5 h-3.5" />
                       Tambah PM
@@ -518,95 +514,81 @@ export default function PmYearlySchedule() {
                   )}
                 </div>
 
-                {/* Device Rows */}
+                {/* Device list — mobile-friendly */}
                 {site.devices.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-slate-400">
-                    Belum ada PM. Klik "Tambah PM" untuk menambahkan.
+                  <div className="text-center py-6 text-[12px] text-[#718096]">
+                    Belum ada PM.
                   </div>
                 ) : (
-                  <table className="w-full text-sm border-collapse">
-                    <thead>
-                      <tr>
-                        <th className="text-left px-5 py-2.5 font-semibold text-slate-500 text-xs border-b border-slate-100 w-[40%]">
-                          PM
-                        </th>
-                        {[1, 2, 3, 4].map((week) => (
-                          <th key={week} className="text-center px-2 py-2.5 font-bold text-xs border-b border-slate-100 w-[15%]">
-                            <span className="text-slate-400 text-[10px] block">Week</span>
-                            <span className="text-indigo-600 text-sm font-black">{week}</span>
-                          </th>
-                        ))}
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50">
-                      {site.devices.map((device) => (
-                        <tr 
-                          id={`row-${site.siteId}-${device.deviceName.replace(/\s+/g, '-')}`} 
-                          key={device.deviceName} 
-                          className="group hover:bg-indigo-50/30 transition-colors"
-                        >
-                          <td className="px-5 py-3">
-                            <div className="flex items-center justify-between">
-                              <span className="text-sm font-medium text-slate-800">{device.deviceName}</span>
-                              {canUpdate && (
-                                <button
-                                  onClick={() => handleDeleteDevice(site.siteId, device.deviceName)}
-                                  className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all"
-                                  title="Hapus PM"
-                                >
-                                  <Trash2 className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-                            </div>
-                          </td>
+                  <div className="divide-y divide-[#E2E8F0]">
+                    {site.devices.map((device) => (
+                      <div key={device.deviceName}
+                        className="px-4 py-3 flex items-center gap-3"
+                      >
+                        {/* Device name */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="text-[13px] font-medium text-[#1A202C] truncate">{device.deviceName}</p>
+                            {canUpdate && (
+                              <button
+                                onClick={() => handleDeleteDevice(site.siteId, device.deviceName)}
+                                className="p-1 rounded text-[#E2E8F0] hover:text-[#DC2626] hover:bg-red-50 transition-all flex-shrink-0"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {/* 4 week toggle buttons */}
+                        <div className="flex gap-2 flex-shrink-0">
                           {[1, 2, 3, 4].map((week) => {
-                            const isScheduled = device.tasks.some((t) => t.month === monthNum && t.week === week);
+                            const isScheduled = device.tasks.some(t => t.month === monthNum && t.week === week);
                             const cellKey = `${site.siteId}-${device.deviceName}-${monthNum}-${week}`;
                             const isUpdating = updatingCells[cellKey];
                             return (
-                              <td key={week} className="text-center px-2 py-3">
-                                {canUpdate ? (
-                                  <button
-                                    onClick={() => handleToggleSchedule(site.siteId, device, monthNum, week)}
-                                    disabled={isUpdating}
-                                    className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center transition-all duration-200 ${
-                                      isUpdating
-                                        ? "bg-slate-100 cursor-wait"
-                                        : isScheduled
-                                          ? getWeekDetailClass(week)
-                                          : "bg-white border-2 border-slate-200 hover:border-indigo-400 hover:bg-indigo-50 hover:scale-110 active:scale-95"
-                                    }`}
-                                  >
-                                    {isUpdating ? (
-                                      <Loader2 className="w-4 h-4 animate-spin text-slate-400" />
-                                    ) : isScheduled ? (
-                                      <Check className="w-5 h-5 text-white stroke-[3]" />
-                                    ) : null}
-                                  </button>
+                              <button
+                                key={week}
+                                onClick={() => canUpdate && handleToggleSchedule(site.siteId, device, monthNum, week)}
+                                disabled={isUpdating || !canUpdate}
+                                className={`w-10 h-10 rounded-[8px] flex items-center justify-center transition-all duration-150 flex-shrink-0
+                                  ${isUpdating
+                                    ? "bg-[#F7F8FA] cursor-wait"
+                                    : isScheduled
+                                      ? getWeekDetailClass(week)
+                                      : canUpdate
+                                        ? "bg-white border-2 border-[#E2E8F0] hover:border-[#2B6CB0] active:scale-95"
+                                        : "bg-white border-2 border-[#E2E8F0]"
+                                  }`}
+                              >
+                                {isUpdating ? (
+                                  <Loader2 className="w-3.5 h-3.5 animate-spin text-[#718096]" />
+                                ) : isScheduled ? (
+                                  <Check className="w-4 h-4 text-white stroke-[3]" />
                                 ) : (
-                                  <div
-                                    className={`w-10 h-10 mx-auto rounded-lg flex items-center justify-center ${
-                                      isScheduled
-                                        ? getWeekColor(week)
-                                        : "bg-white border-2 border-slate-200"
-                                    }`}
-                                  >
-                                    {isScheduled ? (
-                                      <Check className="w-5 h-5 text-white stroke-[3]" />
-                                    ) : null}
-                                  </div>
+                                  <span className="text-[9px] font-bold text-[#718096]">W{week}</span>
                                 )}
-                              </td>
+                              </button>
                             );
                           })}
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 )}
               </div>
             ))
           )}
+        </div>
+
+        {/* Legend */}
+        <div className="flex flex-wrap items-center gap-3 px-1">
+          <span className="text-[11px] text-[#718096] font-medium">Week:</span>
+          {[1, 2, 3, 4].map((w) => (
+            <div key={w} className="flex items-center gap-1.5">
+              <div className={`w-4 h-4 rounded-[4px] ${getWeekColor(w)}`} />
+              <span className="text-[11px] text-[#718096]">W{w}</span>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -618,50 +600,51 @@ export default function PmYearlySchedule() {
   return (
     <div className="flex flex-col gap-6">
       {/* ====== GLOBAL HEADER & YEAR SELECTOR ====== */}
-      <div className="flex items-center justify-between bg-white rounded-2xl border border-indigo-500/10 shadow-sm px-5 py-4">
+      <div className="flex items-center justify-between bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm px-4 py-3">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-blue-600 flex items-center justify-center shadow-md">
+          <div className="w-9 h-9 rounded-[10px] bg-[#1B3A6B] flex items-center justify-center">
             <CalendarDays className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">PM Schedule</h2>
-            <p className="text-xs text-slate-500">Pilih bulan untuk melihat detail & edit jadwal</p>
+            <h2 className="text-[14px] font-bold text-[#1A202C]">PM Schedule</h2>
+            <p className="text-[11px] text-[#718096] hidden sm:block">Pilih bulan untuk melihat detail & edit jadwal</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
-            <button onClick={() => setYear((y) => y - 1)} className="p-2 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all">
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 bg-[#F7F8FA] p-1 rounded-[10px] border border-[#E2E8F0]">
+            <button onClick={() => setYear((y) => y - 1)}
+              className="p-1.5 rounded-[8px] hover:bg-white hover:shadow-sm text-[#718096] transition-all">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <span className="font-black text-indigo-600 text-base px-3 tabular-nums">{year}</span>
-            <button onClick={() => setYear((y) => y + 1)} className="p-2 rounded-lg hover:bg-white hover:shadow-sm text-slate-500 transition-all">
+            <span className="font-bold text-[#1B3A6B] text-[14px] px-2 tabular-nums">{year}</span>
+            <button onClick={() => setYear((y) => y + 1)}
+              className="p-1.5 rounded-[8px] hover:bg-white hover:shadow-sm text-[#718096] transition-all">
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
           <button
             onClick={() => exportPmScheduleToExcel(year, sites)}
-            className="flex items-center gap-2 px-4 h-10 rounded-xl bg-emerald-500 hover:bg-emerald-600 hover:shadow-lg hover:shadow-emerald-500/20 text-white font-bold transition-all active:scale-95"
-            title="Export ke Excel"
+            className="flex items-center gap-2 px-3 h-9 rounded-[10px] bg-[#059669] hover:bg-emerald-600 text-white font-bold text-[13px] transition-all active:scale-95"
           >
             <Download className="w-4 h-4" />
-            <span className="hidden sm:inline">Export Excel</span>
+            <span className="hidden sm:inline">Export</span>
           </button>
         </div>
       </div>
 
       {/* ====== MONTH PILLS (Only for Detail View) ====== */}
       {selectedMonth !== null && (
-        <div className="bg-white rounded-2xl border border-indigo-500/10 shadow-sm p-3 flex flex-wrap gap-2 items-center">
+        <div className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm p-3 flex flex-wrap gap-2 items-center">
           {MONTHS_SHORT.map((m, idx) => {
             const isSelected = selectedMonth === idx;
             return (
               <button
                 key={m}
                 onClick={() => setSelectedMonth(isSelected ? null : idx)}
-                className={`px-4 py-2 text-xs font-bold rounded-xl transition-all ${
+                className={`px-3 py-1.5 text-xs font-bold rounded-[8px] transition-all ${
                   isSelected
-                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/30"
-                    : "bg-slate-50 text-slate-600 hover:bg-indigo-50 hover:text-indigo-600"
+                    ? "bg-[#1B3A6B] text-white"
+                    : "bg-[#F7F8FA] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] border border-[#E2E8F0]"
                 }`}
               >
                 {m}
@@ -671,41 +654,106 @@ export default function PmYearlySchedule() {
         </div>
       )}
 
+      {/* ====== MOBILE: Month Grid (when no month selected) ====== */}
+      {selectedMonth === null && (
+        <div className="md:hidden">
+          <div className="bg-white rounded-[10px] border border-[#E2E8F0] p-4">
+            <p className="text-[12px] text-[#718096] mb-3 font-medium">
+              {canUpdate ? "Tap bulan untuk lihat & edit jadwal" : "Tap bulan untuk lihat jadwal"}
+            </p>
+            <div className="grid grid-cols-3 gap-2">
+              {MONTHS_FULL.map((month, idx) => {
+                // Count total scheduled tasks this month across all sites
+                const count = sites.reduce((acc, site) =>
+                  acc + site.devices.reduce((a, dev) =>
+                    a + dev.tasks.filter(t => t.month === idx + 1).length, 0), 0);
+                return (
+                  <button
+                    key={month}
+                    onClick={() => setSelectedMonth(idx)}
+                    className="flex flex-col items-center p-3 rounded-[10px] border border-[#E2E8F0] bg-[#F7F8FA] hover:border-[#2B6CB0] hover:bg-[#EBF4FF] transition-colors active:scale-95"
+                  >
+                    <span className="text-[13px] font-semibold text-[#1A202C]">{MONTHS_SHORT[idx]}</span>
+                    {count > 0 ? (
+                      <span className="mt-1 text-[10px] font-bold text-[#2B6CB0] bg-[#EBF4FF] px-1.5 py-0.5 rounded-full">
+                        {count} jadwal
+                      </span>
+                    ) : (
+                      <span className="mt-1 text-[10px] text-[#718096]">Kosong</span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mobile site summary list */}
+          {sites.length > 0 && (
+            <div className="mt-3 space-y-2">
+              <p className="text-[12px] font-semibold text-[#718096] px-1">Ringkasan Site</p>
+              {sites.map((site) => {
+                const totalScheduled = site.devices.reduce(
+                  (acc, dev) => acc + dev.tasks.length, 0
+                );
+                return (
+                  <div key={site.siteId}
+                    className="bg-white rounded-[10px] border border-[#E2E8F0] px-4 py-3 flex items-center justify-between">
+                    <div>
+                      <p className="text-[13px] font-semibold text-[#1A202C]">{site.siteName}</p>
+                      <p className="text-[11px] text-[#718096]">{site.devices.length} PM item</p>
+                    </div>
+                    <span className={`text-[12px] font-bold px-2.5 py-1 rounded-full ${
+                      totalScheduled > 0
+                        ? "bg-[#EBF4FF] text-[#2B6CB0]"
+                        : "bg-[#F7F8FA] text-[#718096]"
+                    }`}>
+                      {totalScheduled} jadwal
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ====== CONDITIONAL CONTENT ====== */}
       {selectedMonth === null ? renderYearlyOverview() : renderMonthlyDetail()}
 
       {/* ====== ADD PM DIALOG ====== */}
       <Dialog open={isAddDeviceOpen} onOpenChange={setIsAddDeviceOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-2xl">
+        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
           <DialogHeader>
-            <DialogTitle className="text-indigo-600 text-xl font-bold">Tambah PM</DialogTitle>
-            <DialogDescription className="text-slate-500">
-              Tambahkan item PM baru ke site <span className="font-semibold text-slate-700">{addDeviceSiteName}</span>
+            <DialogTitle className="text-[#1B3A6B] text-lg font-bold">Tambah PM</DialogTitle>
+            <DialogDescription className="text-[#718096]">
+              Tambahkan item PM baru ke site <span className="font-semibold text-[#1A202C]">{addDeviceSiteName}</span>
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="deviceName" className="font-bold text-slate-700">Nama PM *</Label>
+              <Label htmlFor="deviceName" className="font-bold text-[#1A202C]">Nama PM *</Label>
               <Input
                 id="deviceName"
                 value={newDeviceName}
                 onChange={(e) => setNewDeviceName(e.target.value)}
                 placeholder="e.g., Commroom, Link Microwave, Trunking TAIT"
-                className="h-11 rounded-xl border-slate-200 focus-visible:ring-indigo-500"
+                className="h-11 rounded-[10px] border-[#E2E8F0] focus-visible:ring-[#2B6CB0]"
                 onKeyDown={(e) => e.key === "Enter" && handleAddDevice()}
               />
             </div>
-            <div className="bg-blue-50 rounded-xl p-3 border border-blue-100">
-              <p className="text-xs text-blue-700 font-medium">
+            <div className="bg-[#EBF4FF] rounded-[10px] p-3 border border-blue-100">
+              <p className="text-[12px] text-[#2B6CB0] font-medium">
                 💡 Contoh: Commroom, Link Microwave, Trunking TAIT, PABX, CATV, Repeater, CPP
               </p>
             </div>
           </div>
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button variant="outline" onClick={() => setIsAddDeviceOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
-              Cancel
+            <Button variant="outline" onClick={() => setIsAddDeviceOpen(false)}
+              className="rounded-[10px] h-10 font-bold text-[#718096] border-[#E2E8F0]">
+              Batal
             </Button>
-            <Button onClick={handleAddDevice} disabled={addingDevice} className="rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6">
+            <Button onClick={handleAddDevice} disabled={addingDevice}
+              className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-bold px-6">
               {addingDevice ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
               Tambah PM
             </Button>

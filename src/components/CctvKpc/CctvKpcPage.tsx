@@ -472,20 +472,19 @@ export default function CctvKpcPage() {
     <motion.div initial="hidden" animate="visible" variants={containerVariants} className="p-4 md:p-6 space-y-6">
 
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
-      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
-        <div className="flex items-start justify-between pb-4">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1 opacity-80">
-              <span className="text-[10px] font-bold text-slate-600 tracking-wider uppercase">CCTV</span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight flex items-center gap-2">
-              <Video className="w-6 h-6 text-slate-600" />
-              CCTV KPC
-            </h1>
+      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
+        <div className="flex items-start gap-4 p-4">
+          <div className="w-12 h-12 rounded-[12px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+            <Video className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-[#2B6CB0] tracking-[0.1em] uppercase mb-0.5">Monitoring</p>
+            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">CCTV KPC</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Manajemen aset CCTV KPC</p>
           </div>
           <button
             onClick={() => navigate("/dashboard")}
-            className="w-10 h-10 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center hover:bg-slate-200 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
             <Home className="h-4 w-4" strokeWidth={2.5} />
           </button>
@@ -914,7 +913,7 @@ export default function CctvKpcPage() {
       {hasPermission("cctv.kpc.create") && (
         <button
           onClick={() => { setFormData(defaultForm()); setIsCreateOpen(true); }}
-          className="md:hidden fixed bottom-24 right-4 z-30 flex items-center gap-2 bg-slate-700 hover:bg-slate-800 text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-slate-500/40 transition-all active:scale-95 text-[15px]"
+          className="md:hidden fixed bottom-[100px] right-4 z-30 flex items-center gap-2 bg-[#D94F2B] hover:bg-[#B83D20] text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-[#D94F2B]/40 transition-all active:scale-95 text-[15px]"
         >
           <Plus className="w-5 h-5" /> Tambah
         </button>

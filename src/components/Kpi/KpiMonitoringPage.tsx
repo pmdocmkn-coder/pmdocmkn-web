@@ -5,8 +5,10 @@ import {
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Badge } from "../ui/badge";
+import { MobilePageHeader } from "../ui/MobilePageHeader";
+import BottomSheet from "../common/BottomSheet";
 import { 
-    Search, Plus, Calendar, Edit2, Clock, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Upload, Link2, FileText, AlertCircle
+    Search, Plus, Calendar, Edit2, Clock, Trash2, CheckCircle2, ChevronLeft, ChevronRight, Copy, Download, Upload, Link2, FileText, AlertCircle, MoreVertical, TrendingUp, Check, ChevronDown
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { kpiApi } from "../../services/kpiApi";
@@ -34,6 +36,9 @@ export default function KpiMonitoringPage() {
     const [isDatesOpen, setIsDatesOpen] = useState(false);
     const [selectedDoc, setSelectedDoc] = useState<KpiDocument | null>(null);
     const [selectedGroupDocs, setSelectedGroupDocs] = useState<KpiDocument[]>([]);
+    const [mobActionsOpen, setMobActionsOpen] = useState(false);
+    const [mobMonthOpen, setMobMonthOpen] = useState(false);
+    const [mobSearchOpen, setMobSearchOpen] = useState(false);
 
     const [queryParams, setQueryParams] = useState<KpiDocumentQuery>({
         page: 1,
@@ -330,214 +335,306 @@ export default function KpiMonitoringPage() {
     const pendingReviewDocs = data.filter(d => d.status.includes("Menunggu Sign User")).length;
     const waitingDataDocs = data.filter(d => d.status.includes("Menunggu Data") || d.status.includes("Data Diterima") || (!d.status.includes("Selesai") && !d.status.includes("Menunggu Sign") && d.status !== "Approved")).length;
 
+    // Month label for display
+    const monthLabel = (() => {
+        try { return format(parseISO(currentMonth), "MMMM yyyy"); } catch { return currentMonth; }
+    })();
+
     return (
-        <div className="p-6 space-y-6">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="space-y-4 md:space-y-6">
+
+            {/* ── MOBILE HEADER ─────────────────────────────────────────── */}
+            <MobilePageHeader
+                label="PM Management"
+                title="KPI Tracking"
+                subtitle={`${totalDocs} dokumen · ${monthLabel}`}
+                icon={<TrendingUp className="w-5 h-5 text-[#2B6CB0]" />}
+                iconBg="bg-[#EBF4FF]"
+                rightAction={
+                    <button
+                        onClick={() => setMobActionsOpen(true)}
+                        className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+                        aria-label="Aksi"
+                    >
+                        <MoreVertical className="w-4 h-4" />
+                    </button>
+                }
+            />
+
+            {/* ── MOBILE TOOLBAR CHIPS ──────────────────────────────────── */}
+            <div className="md:hidden flex gap-2 overflow-x-auto no-scrollbar pb-1 px-0">
+                {/* Month picker chip */}
+                <button
+                    onClick={() => setMobMonthOpen(true)}
+                    className="flex items-center gap-1.5 h-9 px-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[#1B3A6B] text-[12px] font-semibold whitespace-nowrap flex-shrink-0"
+                >
+                    <Calendar className="w-3.5 h-3.5 text-[#2B6CB0]" />
+                    {monthLabel}
+                    <ChevronDown className="w-3 h-3 opacity-60" />
+                </button>
+                {/* Search chip */}
+                <button
+                    onClick={() => setMobSearchOpen(v => !v)}
+                    className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${mobSearchOpen ? 'bg-[#1B3A6B] border-[#1B3A6B] text-white' : 'bg-white border-[#E2E8F0] text-[#4A5568]'}`}
+                >
+                    <Search className="w-3.5 h-3.5" />
+                    Cari
+                </button>
+                {/* Add chip */}
+                {hasPermission("kpi.create") && (
+                    <button
+                        onClick={() => { setSelectedDoc(null); setIsFormOpen(true); }}
+                        className="flex items-center gap-1.5 h-9 px-3 rounded-[10px] bg-[#D94F2B] text-white text-[12px] font-semibold whitespace-nowrap flex-shrink-0"
+                    >
+                        <Plus className="w-3.5 h-3.5" />
+                        Tambah
+                    </button>
+                )}
+                <div className="w-2 flex-shrink-0" />
+            </div>
+
+            {/* Mobile search bar */}
+            {mobSearchOpen && (
+                <div className="md:hidden relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
+                    <input
+                        autoFocus
+                        type="text"
+                        onChange={handleSearch}
+                        placeholder="Cari nama dokumen atau asal data..."
+                        className="w-full pl-9 pr-4 py-2.5 text-[13px] border border-[#E2E8F0] rounded-[10px] focus:outline-none focus:border-[#2B6CB0] bg-[#F7F8FA]"
+                    />
+                </div>
+            )}
+
+            {/* ── MOBILE ACTIONS BOTTOM SHEET ───────────────────────────── */}
+            <BottomSheet open={mobActionsOpen} onClose={() => setMobActionsOpen(false)} title="Aksi Bulan Ini">
+                <div className="space-y-2 pb-4">
+                    <p className="text-[11px] font-semibold text-[#718096] uppercase tracking-wider px-1 mb-3">{monthLabel}</p>
+                    {hasPermission("kpi.view") && (
+                        <button onClick={() => { handleExportExcel(); setMobActionsOpen(false); }} disabled={exporting}
+                            className="w-full flex items-center gap-3 px-4 py-3 rounded-[10px] text-[14px] font-medium text-[#1A202C] hover:bg-[#F7F8FA] transition-colors text-left">
+                            <div className="w-9 h-9 rounded-[8px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+                                <Download className="w-4 h-4 text-[#2B6CB0]" />
+                            </div>
+                            {exporting ? "Mengekspor..." : "Export ke Excel"}
+                        </button>
+                    )}
+                    {hasPermission("kpi.create") && (
+                        <>
+                            <input type="file" accept=".xlsx,.xls" hidden ref={fileInputRef} onChange={handleFileChange} />
+                            <button onClick={() => { handleImportClick(); setMobActionsOpen(false); }} disabled={importing}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-[10px] text-[14px] font-medium text-[#1A202C] hover:bg-[#F7F8FA] transition-colors text-left">
+                                <div className="w-9 h-9 rounded-[8px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+                                    <Upload className="w-4 h-4 text-[#2B6CB0]" />
+                                </div>
+                                {importing ? "Mengimpor..." : "Import dari Excel"}
+                            </button>
+                            <button onClick={() => { handleCloneMonth(); setMobActionsOpen(false); }}
+                                className="w-full flex items-center gap-3 px-4 py-3 rounded-[10px] text-[14px] font-medium text-[#1A202C] hover:bg-[#F7F8FA] transition-colors text-left">
+                                <div className="w-9 h-9 rounded-[8px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+                                    <Copy className="w-4 h-4 text-[#2B6CB0]" />
+                                </div>
+                                Clone dari Bulan Lalu
+                            </button>
+                            {data.length > 0 && (
+                                <button onClick={() => { handleDeleteMonth(); setMobActionsOpen(false); }}
+                                    className="w-full flex items-center gap-3 px-4 py-3 rounded-[10px] text-[14px] font-medium text-red-600 hover:bg-red-50 transition-colors text-left">
+                                    <div className="w-9 h-9 rounded-[8px] bg-red-50 flex items-center justify-center flex-shrink-0">
+                                        <Trash2 className="w-4 h-4 text-red-500" />
+                                    </div>
+                                    Hapus Data Bulan Ini
+                                </button>
+                            )}
+                        </>
+                    )}
+                </div>
+            </BottomSheet>
+
+            {/* ── MOBILE MONTH PICKER BOTTOM SHEET ─────────────────────── */}
+            <BottomSheet open={mobMonthOpen} onClose={() => setMobMonthOpen(false)} title="Pilih Bulan">
+                <div className="pb-4 flex flex-col items-center gap-4">
+                    <div className="flex items-center gap-3 bg-[#F7F8FA] border border-[#E2E8F0] rounded-[12px] px-4 py-3 w-full">
+                        <Calendar className="w-5 h-5 text-[#2B6CB0] flex-shrink-0" />
+                        <input
+                            type="month"
+                            className="bg-transparent border-none focus:ring-0 text-sm font-semibold text-[#1A202C] flex-1 outline-none"
+                            value={currentMonth.substring(0, 7)}
+                            onChange={(e) => { handleMonthChange(e); setMobMonthOpen(false); }}
+                        />
+                    </div>
+                    {/* Quick month shortcuts */}
+                    <div className="w-full space-y-1">
+                        {[0, 1, 2, 3].map(offset => {
+                            const d = subMonths(new Date(), offset);
+                            const val = format(d, "yyyy-MM");
+                            const label = format(d, "MMMM yyyy");
+                            const isSelected = currentMonth.startsWith(val);
+                            return (
+                                <button key={val} onClick={() => { setCurrentMonth(val + "-01"); setMobMonthOpen(false); }}
+                                    className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium transition-colors ${isSelected ? 'bg-[#EBF4FF] text-[#1B3A6B] font-semibold' : 'text-[#1A202C] hover:bg-[#F7F8FA]'}`}>
+                                    <span>{label}</span>
+                                    {isSelected && <Check className="w-4 h-4 text-[#2B6CB0]" />}
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+            </BottomSheet>
+
+            {/* ── DESKTOP HEADER ────────────────────────────────────────── */}
+            <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold tracking-tight text-gray-900">KPI Document Monitoring</h2>
                     <p className="text-sm text-gray-500">Track and manage monthly KPI document flows.</p>
                 </div>
-                
                 <div className="flex flex-wrap items-center gap-3">
                     <div className="flex items-center gap-2 bg-white px-3 py-2 rounded-lg border shadow-sm">
                         <Calendar className="w-5 h-5 text-gray-500" />
-                        <input 
-                            type="month" 
-                            className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 w-32"
-                            value={currentMonth.substring(0, 7)}
-                            onChange={handleMonthChange}
-                        />
+                        <input type="month" className="bg-transparent border-none focus:ring-0 text-sm font-medium text-gray-700 w-32"
+                            value={currentMonth.substring(0, 7)} onChange={handleMonthChange} />
                     </div>
                     {hasPermission("kpi.view") && (
                         <Button variant="outline" onClick={handleExportExcel} disabled={exporting} className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
-                            <Download className="w-4 h-4 mr-2" />
-                            {exporting ? "Mengekspor..." : "Export"}
+                            <Download className="w-4 h-4 mr-2" />{exporting ? "Mengekspor..." : "Export"}
                         </Button>
                     )}
                     {hasPermission("kpi.create") && (
                         <>
-                            <input 
-                                type="file" 
-                                accept=".xlsx, .xls" 
-                                hidden 
-                                ref={fileInputRef} 
-                                onChange={handleFileChange} 
-                            />
+                            <input type="file" accept=".xlsx, .xls" hidden ref={fileInputRef} onChange={handleFileChange} />
                             <Button variant="outline" onClick={handleImportClick} disabled={importing} className="bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100">
-                                <Upload className="w-4 h-4 mr-2" />
-                                {importing ? "Mengimpor..." : "Import"}
+                                <Upload className="w-4 h-4 mr-2" />{importing ? "Mengimpor..." : "Import"}
                             </Button>
-                            <Button variant="outline" onClick={handleCloneMonth} className="bg-purple-50 text-purple-700 border-purple-200 hover:bg-purple-100">
-                                <Copy className="w-4 h-4 mr-2" />
-                                Clone Bulan Lalu
+                            <Button variant="outline" onClick={handleCloneMonth} className="bg-[#EBF4FF] text-[#2B6CB0] border-[#2B6CB0]/20 hover:bg-[#D6EAF8]">
+                                <Copy className="w-4 h-4 mr-2" />Clone Bulan Lalu
                             </Button>
                             {data.length > 0 && (
-                                <Button variant="outline" onClick={handleDeleteMonth} className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100" title="Hapus seluruh data pada bulan ini (Batal Clone)">
-                                    <Trash2 className="w-4 h-4 mr-2" />
-                                    Hapus Bulan Ini
+                                <Button variant="outline" onClick={handleDeleteMonth} className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100">
+                                    <Trash2 className="w-4 h-4 mr-2" />Hapus Bulan Ini
                                 </Button>
                             )}
-                            <Button onClick={() => { setSelectedDoc(null); setIsFormOpen(true); }} className="bg-indigo-600 hover:bg-indigo-700">
-                                <Plus className="w-4 h-4 mr-2" />
-                                Tambah Baru
+                            <Button onClick={() => { setSelectedDoc(null); setIsFormOpen(true); }} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">
+                                <Plus className="w-4 h-4 mr-2" />Tambah Baru
                             </Button>
                         </>
                     )}
                 </div>
             </div>
 
-            {/* Summary Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-6">
-                {/* Total Documents */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} 
-                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-colors duration-300 shadow-sm">
-                            <FileText className="w-6 h-6" strokeWidth={2.5} />
+            {/* Summary Cards — 2-col on mobile, 4-col on desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
+                {[
+                    { label: "Total Dokumen", value: totalDocs, icon: FileText, color: "blue", tag: "ALL" },
+                    { label: "Selesai", value: completedDocs, icon: CheckCircle2, color: "emerald", tag: "DONE" },
+                    { label: "Pending TTD", value: pendingReviewDocs, icon: Clock, color: "amber", tag: "HOLD" },
+                    { label: "Menunggu Data", value: waitingDataDocs, icon: AlertCircle, color: "rose", tag: "WAIT" },
+                ].map(({ label, value, icon: Icon, color, tag }, i) => (
+                    <motion.div key={label}
+                        initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, delay: i * 0.07 }}
+                        className="relative overflow-hidden bg-white rounded-[14px] p-4 md:p-6 shadow-sm border border-[#E2E8F0]"
+                    >
+                        <div className={`w-10 h-10 md:w-14 md:h-14 rounded-[10px] md:rounded-2xl bg-${color}-50 text-${color}-600 flex items-center justify-center mb-3`}>
+                            <Icon className="w-5 h-5 md:w-6 md:h-6" strokeWidth={2.5} />
                         </div>
-                        <span className="bg-blue-50 text-blue-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-blue-100">ALL DATA</span>
-                    </div>
-                    <div className="relative z-10">
-                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{totalDocs}</h3>
-                        <p className="text-sm font-semibold text-slate-500">Total Documents</p>
-                    </div>
-                </motion.div>
-
-                {/* Completed */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.1 }} 
-                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 group-hover:bg-emerald-600 group-hover:text-white transition-colors duration-300 shadow-sm">
-                            <CheckCircle2 className="w-6 h-6" strokeWidth={2.5} />
-                        </div>
-                        <span className="bg-emerald-50 text-emerald-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-emerald-100">FINISHED</span>
-                    </div>
-                    <div className="relative z-10">
-                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{completedDocs}</h3>
-                        <p className="text-sm font-semibold text-slate-500">Completed</p>
-                    </div>
-                </motion.div>
-
-                {/* Pending Signature */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.2 }} 
-                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center border border-amber-100 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300 shadow-sm">
-                            <Clock className="w-6 h-6" strokeWidth={2.5} />
-                        </div>
-                        <span className="bg-amber-50 text-amber-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-amber-100">ON HOLD</span>
-                    </div>
-                    <div className="relative z-10">
-                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{pendingReviewDocs}</h3>
-                        <p className="text-sm font-semibold text-slate-500">Pending Signature</p>
-                    </div>
-                </motion.div>
-
-                {/* Waiting Data */}
-                <motion.div 
-                    initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, delay: 0.3 }} 
-                    className="relative overflow-hidden bg-white rounded-2xl p-6 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 group"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-400/20 rounded-full blur-2xl -mr-10 -mt-10 transition-transform duration-500 group-hover:scale-150"></div>
-                    <div className="flex justify-between items-start mb-4 relative z-10">
-                        <div className="w-14 h-14 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center border border-rose-100 group-hover:bg-rose-600 group-hover:text-white transition-colors duration-300 shadow-sm">
-                            <AlertCircle className="w-6 h-6" strokeWidth={2.5} />
-                        </div>
-                        <span className="bg-rose-50 text-rose-600 text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-wider border border-rose-100">OVERDUE</span>
-                    </div>
-                    <div className="relative z-10">
-                        <h3 className="text-4xl font-black text-slate-800 tracking-tight mb-1">{waitingDataDocs}</h3>
-                        <p className="text-sm font-semibold text-slate-500">Waiting Data</p>
-                    </div>
-                </motion.div>
+                        <p className="text-[22px] md:text-4xl font-black text-[#1A202C] leading-none mb-1">{value}</p>
+                        <p className="text-[11px] md:text-sm font-semibold text-[#718096]">{label}</p>
+                    </motion.div>
+                ))}
             </div>
 
-            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100">
-                <div className="flex items-center gap-3 mb-4 max-w-md">
-                    <Search className="w-5 h-5 text-gray-400" />
-                    <Input 
-                        placeholder="Cari nama dokumen atau sumber asalnya..." 
-                        onChange={handleSearch}
-                        className="bg-gray-50 border-gray-200"
-                    />
+            <div className="bg-white rounded-[14px] md:rounded-xl shadow-sm border border-[#E2E8F0] overflow-hidden">
+                {/* Desktop search */}
+                <div className="hidden md:flex items-center gap-3 p-4 border-b border-[#E2E8F0]">
+                    <Search className="w-4 h-4 text-[#718096] flex-shrink-0" />
+                    <Input placeholder="Cari nama dokumen atau sumber asalnya..."
+                        onChange={handleSearch} className="bg-[#F7F8FA] border-[#E2E8F0] focus:border-[#2B6CB0]" />
                 </div>
 
-                {/* Mobile View */}
-                <div className="md:hidden space-y-5">
+                {/* ── MOBILE CARD VIEW ───────────────────────────────────── */}
+                <div className="md:hidden">
                     {loading && data.length === 0 ? (
-                        <div className="text-center py-10 text-gray-500 text-sm">Loading data...</div>
+                        <div className="flex justify-center py-12">
+                            <div className="w-8 h-8 border-2 border-[#2B6CB0] border-t-transparent rounded-full animate-spin" />
+                        </div>
                     ) : data.length === 0 ? (
-                        <div className="text-center py-10 text-gray-500 text-sm border border-dashed rounded-xl">
-                            Tidak ada data. Klik 'Clone Bulan Lalu' untuk membuat template bulan ini.
+                        <div className="text-center py-12 px-6">
+                            <div className="w-12 h-12 rounded-[14px] bg-[#EBF4FF] flex items-center justify-center mx-auto mb-3">
+                                <FileText className="w-6 h-6 text-[#2B6CB0]" />
+                            </div>
+                            <p className="text-[14px] font-semibold text-[#1A202C] mb-1">Belum ada data</p>
+                            <p className="text-[12px] text-[#718096]">Gunakan "Aksi" → Clone Bulan Lalu untuk membuat template.</p>
                         </div>
                     ) : (
-                        Object.entries(groupedData).map(([group, items]) => (
-                            <div key={group} className="space-y-3">
-                                <div className="bg-indigo-50/70 border border-indigo-100 py-2 px-3 rounded-xl flex items-center justify-center shadow-sm">
-                                    <span className="font-bold text-indigo-900 text-xs tracking-widest">{group.toUpperCase()}</span>
-                                </div>
-                                {items.map((item) => (
-                                    <div key={item.id} className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4 space-y-4">
-                                        <div className="flex justify-between items-start gap-3">
-                                            <div className="flex-1 min-w-0">
-                                                <h3 className="font-bold text-gray-900 leading-tight text-sm truncate">{item.documentName}</h3>
-                                                <p className="text-xs text-gray-500 mt-1 truncate"><span className="font-semibold">Asal:</span> {item.dataSource}</p>
-                                            </div>
-                                            <div className="flex-shrink-0">
-                                                {getStatusBadge(item.status)}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-x-2 gap-y-3 text-xs border-y border-gray-100 py-3 bg-gray-50/50 -mx-4 px-4">
-                                            <div className="space-y-1">
-                                                <p className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">1. Received</p>
-                                                <p className="font-medium text-gray-900">{formatDateStr(item.dateReceived)}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">2. Subm. User</p>
-                                                <p className="font-medium text-gray-900">{formatDateStr(item.dateSubmittedToReviewer)}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-gray-400 font-bold uppercase text-[9px] tracking-wider">3. Approved</p>
-                                                <p className="font-medium text-gray-900">{formatDateStr(item.dateApproved)}</p>
-                                            </div>
-                                            <div className="space-y-1">
-                                                <p className="text-indigo-400 font-bold uppercase text-[9px] tracking-wider">4. Subm. RQM</p>
-                                                <p className="font-bold text-indigo-700">{formatDateStr(item.dateSubmittedToRqm)}</p>
-                                                {item.remarks && <p className="text-[10px] text-red-500 font-bold leading-tight mt-0.5">{item.remarks}</p>}
-                                            </div>
-                                        </div>
-                                        
-                                        <div className="flex justify-end gap-2 pt-1">
-                                            {hasPermission("kpi.update") && (
-                                                <>
-                                                    <Button variant="outline" size="sm" onClick={() => { setSelectedDoc(item); setIsDatesOpen(true); }} className="text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100 h-8 text-xs font-semibold">
-                                                        <Clock className="w-3.5 h-3.5 mr-1.5" /> Progress
-                                                    </Button>
-                                                    <Button variant="outline" size="icon" onClick={() => { setSelectedDoc(item); setIsFormOpen(true); }} className="text-gray-600 h-8 w-8 hover:bg-gray-100">
-                                                        <Edit2 className="w-3.5 h-3.5" />
-                                                    </Button>
-                                                </>
-                                            )}
-                                            {hasPermission("kpi.delete") && (
-                                                <Button variant="outline" size="icon" onClick={() => handleDelete(item.id)} className="text-red-500 border-red-100 bg-red-50 hover:bg-red-100 h-8 w-8">
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </Button>
-                                            )}
-                                        </div>
+                        <div className="divide-y divide-[#F0F0F0]">
+                            {Object.entries(groupedData).map(([group, items]) => (
+                                <div key={group}>
+                                    {/* Group header */}
+                                    <div className="px-4 py-2 bg-[#EBF4FF] flex items-center gap-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-[#2B6CB0]" />
+                                        <span className="text-[11px] font-bold text-[#1B3A6B] uppercase tracking-[0.08em]">{group}</span>
+                                        <span className="ml-auto text-[11px] text-[#718096] font-medium">{items.length} dokumen</span>
                                     </div>
-                                ))}
-                            </div>
-                        ))
+                                    {/* Cards */}
+                                    <div className="p-3 space-y-3">
+                                        {items.map((item) => (
+                                            <div key={item.id} className="bg-[#F7F8FA] rounded-[12px] p-3 border border-[#E2E8F0]">
+                                                {/* Header row */}
+                                                <div className="flex items-start justify-between gap-2 mb-2">
+                                                    <div className="flex-1 min-w-0">
+                                                        <p className="text-[13px] font-bold text-[#1A202C] leading-snug line-clamp-2">{item.documentName}</p>
+                                                        <p className="text-[11px] text-[#718096] mt-0.5 truncate">
+                                                            <span className="font-medium">Asal:</span> {item.dataSource}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex-shrink-0">{getStatusBadge(item.status)}</div>
+                                                </div>
+                                                {/* Date progress row — 4 steps */}
+                                                <div className="grid grid-cols-4 gap-1 bg-white rounded-[8px] p-2 border border-[#E2E8F0] mb-2">
+                                                    {[
+                                                        { label: "Terima", date: item.dateReceived },
+                                                        { label: "Subm.", date: item.dateSubmittedToReviewer },
+                                                        { label: "Apprvd", date: item.dateApproved },
+                                                        { label: "RQM", date: item.dateSubmittedToRqm, highlight: true },
+                                                    ].map(({ label, date, highlight }) => (
+                                                        <div key={label} className="flex flex-col items-center gap-0.5">
+                                                            <span className={`text-[9px] font-bold uppercase tracking-wider ${highlight ? 'text-[#2B6CB0]' : 'text-[#A0AEC0]'}`}>{label}</span>
+                                                            <span className={`text-[10px] font-semibold text-center ${date ? (highlight ? 'text-[#1B3A6B]' : 'text-[#1A202C]') : 'text-[#CBD5E0]'}`}>
+                                                                {date ? format(parseISO(date), "dd/MM") : "—"}
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                                {/* Remarks */}
+                                                {item.remarks && (
+                                                    <p className="text-[10px] text-red-500 font-bold mb-2 leading-tight">{item.remarks}</p>
+                                                )}
+                                                {/* Action buttons */}
+                                                <div className="flex gap-2 justify-end">
+                                                    {hasPermission("kpi.update") && (
+                                                        <>
+                                                            <button onClick={() => { setSelectedGroupDocs([item]); setIsDatesOpen(true); }}
+                                                                className="flex items-center gap-1.5 h-8 px-3 rounded-[8px] bg-[#EBF4FF] text-[#2B6CB0] text-[11px] font-semibold border border-[#2B6CB0]/20">
+                                                                <Clock className="w-3 h-3" /> Progress
+                                                            </button>
+                                                            <button onClick={() => { setSelectedDoc(item); setIsFormOpen(true); }}
+                                                                className="w-8 h-8 rounded-[8px] bg-white border border-[#E2E8F0] flex items-center justify-center text-[#718096]">
+                                                                <Edit2 className="w-3.5 h-3.5" />
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    {hasPermission("kpi.delete") && (
+                                                        <button onClick={() => handleDelete(item.id)}
+                                                            className="w-8 h-8 rounded-[8px] bg-red-50 border border-red-100 flex items-center justify-center text-red-500">
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </div>
 

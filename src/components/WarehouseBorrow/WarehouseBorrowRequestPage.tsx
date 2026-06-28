@@ -295,19 +295,19 @@ export default function WarehouseBorrowRequestPage() {
   return (
     <div className="max-w-2xl mx-auto p-4 sm:p-6 space-y-6">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
-      <div className="md:hidden -mx-4 -mt-4 mb-4 px-4 pt-4 pb-4 bg-white shadow-[0_4px_20px_-10px_rgba(0,0,0,0.05)] rounded-b-3xl">
-        <div className="flex items-start justify-between">
-          <div>
-            <div className="flex items-center gap-1.5 mb-1 opacity-80">
-              <span className="text-[10px] font-bold text-violet-600 tracking-wider uppercase">Warehouse</span>
-            </div>
-            <h1 className="text-2xl font-black text-slate-900 leading-tight tracking-tight">
-              Peminjaman Part
-            </h1>
+      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
+        <div className="flex items-start gap-4 p-4">
+          <div className="w-12 h-12 rounded-[12px] bg-[#F0FFF4] flex items-center justify-center flex-shrink-0">
+            <PackageOpen className="w-5 h-5 text-[#059669]" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-[#059669] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
+            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Ajuan Pinjam Tools</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Ajukan peminjaman tools dari warehouse</p>
           </div>
           <button
             onClick={() => navigate(-1)}
-            className="w-10 h-10 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center hover:bg-violet-100 transition-colors shrink-0"
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
             <ArrowLeft className="h-4 w-4" strokeWidth={2.5} />
           </button>

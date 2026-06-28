@@ -71,15 +71,13 @@ const UploadPage: React.FC<UploadPageProps> = ({ onBack, setActiveTab }) => {
   return (
     <div className="w-full">
       {/* ==================== MOBILE VIEW (md:hidden) ==================== */}
-      <div className="md:hidden bg-[#f8f5fc] min-h-screen pb-24 text-slate-900 font-sans -mt-8 -mx-6">
+      <div className="md:hidden bg-[#F7F8FA] min-h-screen pb-24 text-[#1A202C] -mt-8 -mx-6">
         <MobilePageHeader
           label="Call Records"
           title="Upload CSV"
           rightAction={
-            <button
-              onClick={handleBack}
-              className="flex items-center justify-center rounded-xl h-9 w-9 bg-gradient-to-br from-purple-500 to-purple-700 text-white shadow-lg active:scale-90 transition-all"
-            >
+            <button onClick={handleBack}
+              className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0">
               <ArrowLeft className="w-4 h-4" />
             </button>
           }
