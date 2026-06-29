@@ -83,7 +83,7 @@ const moreNavGroups: MoreNavGroup[] = [
     label: "Lainnya",
     items: [
       { name: "Docs", path: "/docs", icon: BookOpen, permission: "docs.view" },
-      { name: "Settings", path: "/settings", icon: Settings },
+      { name: "Settings", path: "/settings", icon: Settings, permission:"setting.menu" },
     ],
   },
 ];
@@ -214,7 +214,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
           {/* Left: hamburger + page title */}
           <div className="flex items-center gap-4">
             <button
-              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              onClick={() => setIsCollapsed(!isCollapsed)}
               className="p-2 text-[#718096] hover:text-[#1B3A6B] hover:bg-[#F7F8FA] rounded-lg transition-colors"
               aria-label="Toggle menu"
             >
@@ -335,10 +335,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
                   {user?.fullName?.[0]?.toUpperCase() || "U"}
                 </div>
               )}
-              {/* Chevron down - like mockup */}
-              <svg className="w-4 h-4 text-[#718096]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
+
             </Link>
           </div>
         </header>

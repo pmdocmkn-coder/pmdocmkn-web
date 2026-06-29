@@ -39,7 +39,6 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setNotifications(fetchedNotifications);
       setUnreadCount(count);
     } catch (error) {
-      console.error('[SignalR] Failed to fetch initial data', error);
     }
   }, []);
 
@@ -49,7 +48,6 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user) {
       // User logout — cleanup koneksi lama jika ada
       if (connRef.current) {
-        console.log('[SignalR] User logged out, stopping connection...');
         connRef.current.off('ReceiveNotification');
         connRef.current.off('RefreshData');
         connRef.current.stop();
@@ -66,14 +64,11 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Kalau sudah ada koneksi aktif, tidak perlu buat ulang
     if (connRef.current && connRef.current.state === signalR.HubConnectionState.Connected) {
-      console.log('[SignalR] Already connected, skipping reconnect');
       return;
     }
-
-    console.log('[SignalR] User logged in, starting connection for:', user.username);
     fetchInitialData();
 
-    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5116";
+    const baseURL = import.meta.env.VITE_API_URL || "http://localhost:5116" || "https://api.mknops.web.id/swagger/index.html";
 
     const conn = new signalR.HubConnectionBuilder()
       .withUrl(`${baseURL}/hubs/notification`, {
@@ -91,7 +86,6 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     connRef.current = conn;
 
     conn.on('ReceiveNotification', (notification: NotificationItem) => {
-      console.log('[SignalR] ReceiveNotification:', notification.title);
       playNotificationSound();
       setNotifications(prev => {
         if (prev.some(n => n.id === notification.id)) return prev;
@@ -100,18 +94,15 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setUnreadCount(prev => prev + 1);
     });
 
-    conn.on('RefreshData', (entityName: string) => {
-      console.log('[SignalR] RefreshData received at context level:', entityName);
+    conn.on('RefreshData', (_entityName: string) => {
+      // Handled by useLiveRefresh hooks in individual pages
     });
 
     const startConnection = async () => {
       try {
-        console.log('[SignalR] Attempting to connect to:', `${baseURL}/hubs/notification`);
         await conn.start();
         setConnState({ connection: conn, isConnected: true });
-        console.log('[SignalR] ✅ Connected! ConnectionId:', conn.connectionId);
       } catch (err) {
-        console.error('[SignalR] ❌ Connection error:', err);
         setConnState({ connection: null, isConnected: false });
         setTimeout(() => startConnection(), 5000);
       }
@@ -120,18 +111,15 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     startConnection();
 
     conn.onreconnecting((err) => {
-      console.warn('[SignalR] Reconnecting...', err);
       setConnState(prev => ({ ...prev, isConnected: false }));
     });
 
     conn.onreconnected((connId) => {
-      console.log('[SignalR] ✅ Reconnected! ConnectionId:', connId);
       setConnState({ connection: conn, isConnected: true });
       fetchInitialData();
     });
 
     conn.onclose((err) => {
-      console.warn('[SignalR] Connection closed.', err);
       setConnState({ connection: null, isConnected: false });
     });
 
@@ -152,7 +140,6 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       );
       setUnreadCount(prev => Math.max(0, prev - 1));
     } catch (error) {
-      console.error('Failed to mark notification as read', error);
     }
   };
 
@@ -162,7 +149,6 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
       setUnreadCount(0);
     } catch (error) {
-      console.error('Failed to mark all notifications as read', error);
     }
   };
 

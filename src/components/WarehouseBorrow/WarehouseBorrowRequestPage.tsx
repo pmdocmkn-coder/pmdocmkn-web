@@ -85,27 +85,33 @@ export default function WarehouseBorrowRequestPage() {
   // Simpan object user yang dipilih agar bisa akses roleName langsung
   const [selectedBorrowerUser, setSelectedBorrowerUser] = useState<UserLookupItem | null>(null);
 
-  // Deteksi apakah user yang dipilih adalah Teknisi WSK — pakai object yang tersimpan
+  // Deteksi apakah user yang dipilih punya teknisi terkait — tampilkan step 2 jika ada linked technicians
+  // ATAU jika role adalah Teknisi WSK (bisa jadi teknisi mandiri)
   const WORKSHOP_ROLE = "teknisi wsk";
   const selectedUserIsWorkshop =
     (selectedBorrowerUser?.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE;
+
+  // Teknisi yang terkait dengan user yang dipilih
+  const linkedTechniciansForUser = selectedBorrowerUser
+    ? technicians.filter(t => t.userId === selectedBorrowerUser.id)
+    : [];
+
+  // Tampilkan step 2 jika: user adalah Teknisi WSK, ATAU user punya teknisi linked
+  const shouldShowTechPicker = borrowerName && (
+    selectedUserIsWorkshop || linkedTechniciansForUser.length > 0
+  );
 
   // Load kedua data sekaligus
   useEffect(() => {
     api.get<{ data: UserLookupItem[] }>("/api/users/lookup")
       .then((res) => {
         const users = res.data?.data ?? [];
-        console.log('📥 All Users loaded:', users.length, 'users');
-        console.log('👥 Users with "Teknisi" or "Workshop" in role:',
-          users.filter(u => u.roleName?.toLowerCase().includes('teknisi') || u.roleName?.toLowerCase().includes('workshop'))
-        );
         setAllUsers(users);
       })
       .catch(() => setAllUsers([]));
     workshopTechnicianApi.getAllActive()
       .then((res) => {
         const techs = res.data?.data ?? [];
-        console.log('🔧 Workshop Technicians loaded:', techs.length, 'technicians');
         setTechnicians(techs);
       })
       .catch(() => setTechnicians([]));
@@ -116,7 +122,6 @@ export default function WarehouseBorrowRequestPage() {
     if (borrowerName && allUsers.length > 0) {
       const found = allUsers.find(u => u.name === borrowerName);
       if (found) {
-        console.log('🔍 Auto-detect borrower:', { name: found.name, roleName: found.roleName, id: found.id });
         // Hanya update jika berbeda (bandingkan by id untuk avoid loop)
         if (!selectedBorrowerUser || selectedBorrowerUser.id !== found.id) {
           setSelectedBorrowerUser(found);
@@ -128,23 +133,6 @@ export default function WarehouseBorrowRequestPage() {
     }
   }, [borrowerName, allUsers]);
 
-  // Debug: log perubahan selectedBorrowerUser dan status workshop
-  useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('📝 borrowerName:', borrowerName);
-    console.log('👤 selectedBorrowerUser:', selectedBorrowerUser);
-    console.log('🏭 selectedUserIsWorkshop:', selectedUserIsWorkshop);
-    if (selectedBorrowerUser) {
-      console.log('📋 Role Details:', {
-        roleName: selectedBorrowerUser.roleName,
-        lowercase: (selectedBorrowerUser.roleName ?? "").toLowerCase().trim(),
-        expectedRole: WORKSHOP_ROLE,
-        matches: (selectedBorrowerUser.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE
-      });
-    }
-    console.log('✅ Should show Step 2?', borrowerName && selectedUserIsWorkshop);
-    console.log('═══════════════════════════════════════');
-  }, [selectedBorrowerUser, selectedUserIsWorkshop, borrowerName]);
 
   // Load linked job detail
   useEffect(() => {
@@ -271,8 +259,9 @@ export default function WarehouseBorrowRequestPage() {
         relatedRepairJobId:
           selectedRepairJobId ?? (jobId ? Number(jobId) : undefined),
         ticketNumber: finalTicket,
-        // Jika user yang dipilih adalah Teknisi WSK dan ada nama teknisi spesifik → pakai nama teknisi
-        borrowerName: (selectedUserIsWorkshop && workshopTechName ? workshopTechName : borrowerName.trim()) || undefined,
+        // Jika user yang dipilih punya linked teknisi dan ada nama spesifik → pakai nama teknisi
+        // Jika tidak → pakai nama akun/borrowerName yang diinput
+        borrowerName: (shouldShowTechPicker && workshopTechName ? workshopTechName : borrowerName.trim()) || undefined,
       });
       toast({ title: "Permintaan peminjaman berhasil dikirim" });
 
@@ -551,13 +540,13 @@ export default function WarehouseBorrowRequestPage() {
                 color="violet"
               />
 
-              {/* Step 2: Jika user yang dipilih adalah Teknisi WSK → pilih nama teknisi spesifik */}
-              {borrowerName && selectedUserIsWorkshop && (
+              {/* Step 2: Jika user punya teknisi terkait atau adalah Teknisi WSK */}
+              {shouldShowTechPicker && (
                 <div className="bg-violet-50 border border-violet-200 rounded-xl p-3 space-y-2">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />
                     <p className="text-xs font-semibold text-violet-700">
-                      <span className="font-bold">{borrowerName}</span> adalah Teknisi Workshop.
+                      <span className="font-bold">{borrowerName}</span> punya beberapa teknisi.
                       Pilih nama teknisi spesifik:
                     </p>
                   </div>
@@ -565,15 +554,9 @@ export default function WarehouseBorrowRequestPage() {
                     value={workshopTechName}
                     onChange={setWorkshopTechName}
                     options={
-                      // Filter: hanya teknisi yang terkait dengan user ini (jika ada)
-                      // Jika user memiliki relasi teknisi spesifik (userId match) → tampilkan hanya itu
-                      // Jika tidak ada relasi → tampilkan semua
-                      (() => {
-                        const linkedTechs = technicians.filter(t => t.userId === selectedBorrowerUser?.id);
-                        return linkedTechs.length > 0
-                          ? linkedTechs.map(t => t.name)
-                          : technicians.map(t => t.name); // fallback: tampilkan semua jika tidak ada relasi
-                      })()
+                      linkedTechniciansForUser.length > 0
+                        ? linkedTechniciansForUser.map(t => t.name)
+                        : technicians.map(t => t.name) // fallback: semua jika Teknisi WSK tanpa relasi
                     }
                     placeholder="— Pilih nama teknisi —"
                     label="Pilih Nama Teknisi"

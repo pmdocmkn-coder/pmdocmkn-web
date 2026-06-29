@@ -11,6 +11,9 @@ import { formatDateTimeIndonesian } from '../../utils/dateUtils';
 import { hasPermission } from '../../utils/permissionUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import BottomSheet from '../common/BottomSheet';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '../ui/select';
 
 interface DivisionItem { id: number; code: string; name: string; isActive: boolean; }
 
@@ -253,12 +256,16 @@ export default function UsersManagementTab() {
             placeholder="Cari nama, email, atau username..."
             className="w-full pl-9 pr-3 py-2.5 text-[13px] border border-[#E2E8F0] rounded-[8px] bg-[#F7F8FA] focus:outline-none focus:border-[#2B6CB0] min-h-[40px]" />
         </div>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value as 'all' | 'active' | 'inactive')}
-          className="px-3 py-2 text-[13px] border border-[#E2E8F0] rounded-[8px] bg-[#F7F8FA] focus:outline-none focus:border-[#2B6CB0] min-h-[40px] sm:w-44">
-          <option value="all">Semua Status</option>
-          <option value="active">Aktif Saja</option>
-          <option value="inactive">Nonaktif Saja</option>
-        </select>
+        <Select value={filterStatus} onValueChange={v => setFilterStatus(v as 'all' | 'active' | 'inactive')}>
+          <SelectTrigger className="sm:w-44 h-10 border-[#E2E8F0] bg-[#F7F8FA] text-[13px] focus:ring-[#2B6CB0] focus:border-[#2B6CB0] rounded-[8px]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Status</SelectItem>
+            <SelectItem value="active">Aktif Saja</SelectItem>
+            <SelectItem value="inactive">Nonaktif Saja</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       {/* ── MOBILE: card per user ── */}

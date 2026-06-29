@@ -6,6 +6,7 @@ import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import { api } from "../../services/api";
 import type { WarehouseBorrowList } from "../../types/warehouseBorrow";
+import { hasPermission } from "../../utils/permissionUtils";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
@@ -49,17 +50,13 @@ export default function WarehouseBorrowHistoryPage() {
     api.get<{ data: UserLookupItem[] }>("/api/users/lookup")
       .then((res) => {
         const users = res.data?.data ?? [];
-        console.log('📥 All Users loaded:', users.length, 'users');
-        console.log('👥 Users with "Teknisi" or "Workshop" in role:',
-          users.filter(u => u.roleName?.toLowerCase().includes('teknisi') || u.roleName?.toLowerCase().includes('workshop'))
-        );
+
         setAllUsers(users);
       })
       .catch(console.error);
     workshopTechnicianApi.getAllActive()
       .then((res) => {
         const techs = res.data?.data ?? [];
-        console.log('🔧 Workshop Technicians loaded:', techs.length, 'technicians');
         setTechnicians(techs);
       })
       .catch(console.error);
@@ -72,17 +69,26 @@ export default function WarehouseBorrowHistoryPage() {
   const [workshopTechName, setWorkshopTechName] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // Deteksi apakah user yang dipilih adalah Teknisi WSK — HARUS DEKLARASI SEBELUM useEffect
+  // Deteksi apakah user yang dipilih adalah Teknisi WSK atau punya linked teknisi
   const WORKSHOP_ROLE = "teknisi wsk";
   const selectedReturnerIsWorkshop =
     (selectedReturnerUser?.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE;
+
+  // Teknisi linked ke returner yang dipilih
+  const linkedTechniciansForReturner = selectedReturnerUser
+    ? technicians.filter(t => t.userId === selectedReturnerUser.id)
+    : [];
+
+  // Tampilkan tech picker jika role Teknisi WSK ATAU user punya linked teknisi
+  const shouldShowReturnTechPicker = returnedByName && (
+    selectedReturnerIsWorkshop || linkedTechniciansForReturner.length > 0
+  );
 
   // Auto-detect user yang dipilih dari returnedByName (fallback jika FormMobileSelect tidak trigger onChange dengan object)
   useEffect(() => {
     if (returnedByName && allUsers.length > 0) {
       const found = allUsers.find(u => u.name === returnedByName);
       if (found) {
-        console.log('🔍 Auto-detect returner:', { name: found.name, roleName: found.roleName, id: found.id });
         // Hanya update jika berbeda (bandingkan by id untuk avoid loop)
         if (!selectedReturnerUser || selectedReturnerUser.id !== found.id) {
           setSelectedReturnerUser(found);
@@ -96,20 +102,12 @@ export default function WarehouseBorrowHistoryPage() {
 
   // Debug: log perubahan selectedReturnerUser dan status workshop
   useEffect(() => {
-    console.log('═══════════════════════════════════════');
-    console.log('📝 returnedByName:', returnedByName);
-    console.log('👤 selectedReturnerUser:', selectedReturnerUser);
-    console.log('🏭 selectedReturnerIsWorkshop:', selectedReturnerIsWorkshop);
+
+
+
     if (selectedReturnerUser) {
-      console.log('📋 Role Details:', {
-        roleName: selectedReturnerUser.roleName,
-        lowercase: (selectedReturnerUser.roleName ?? "").toLowerCase().trim(),
-        expectedRole: WORKSHOP_ROLE,
-        matches: (selectedReturnerUser.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE
-      });
     }
-    console.log('✅ Should show Step 2?', returnedByName && selectedReturnerIsWorkshop);
-    console.log('═══════════════════════════════════════');
+
   }, [selectedReturnerUser, selectedReturnerIsWorkshop, returnedByName]);
 
   // Signature state
@@ -138,7 +136,8 @@ export default function WarehouseBorrowHistoryPage() {
 
   // Live refresh saat ada perubahan data warehouse borrow dari user lain
   useLiveRefresh("WarehouseBorrow", () => {
-    loadData();
+    // Small delay to ensure backend DB transaction is committed before re-fetching
+    setTimeout(() => loadData(), 500);
   });
 
   const openIssue = (item: WarehouseBorrowList) => {
@@ -201,8 +200,8 @@ export default function WarehouseBorrowHistoryPage() {
         returnNote,
         returnIssuerSignatureBase64: returnIssuerSigned ?? undefined,
         returnReceiverSignatureBase64: returnReceiverSigned ?? undefined,
-        // Jika pemilih adalah Teknisi WSK dan ada nama spesifik → pakai nama teknisi
-        returnedByName: (selectedReturnerIsWorkshop && workshopTechName ? workshopTechName : returnedByName.trim()) || undefined,
+        // Jika user punya linked teknisi dan ada nama spesifik → pakai nama teknisi, bukan nama akun
+        returnedByName: (shouldShowReturnTechPicker && workshopTechName ? workshopTechName : returnedByName.trim()) || undefined,
       });
       toast({ title: "Berhasil", description: "Pengembalian part berhasil dicatat." });
       closeDialog();
@@ -631,13 +630,15 @@ export default function WarehouseBorrowHistoryPage() {
                           </button>
                         )}
                         <div className="w-px h-5 bg-gray-200 mx-0.5" />
-                        <button
-                          title="Hapus"
-                          className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                          onClick={() => setDeleteTarget(b)}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {hasPermission("warehouse.borrow.delete") && (
+                          <button
+                            title="Hapus"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                            onClick={() => setDeleteTarget(b)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -806,13 +807,13 @@ export default function WarehouseBorrowHistoryPage() {
                   color="emerald"
                 />
 
-                {/* Step 2: Jika user yang dipilih adalah Teknisi WSK → pilih nama teknisi spesifik */}
-                {returnedByName && selectedReturnerIsWorkshop && (
+                {/* Step 2: Jika user punya linked teknisi atau adalah Teknisi WSK */}
+                {shouldShowReturnTechPicker && (
                   <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 space-y-2">
                     <div className="flex items-center gap-2">
                       <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
                       <p className="text-xs font-semibold text-emerald-700">
-                        <span className="font-bold">{returnedByName}</span> adalah Teknisi Workshop.
+                        <span className="font-bold">{returnedByName}</span> punya beberapa teknisi.
                         Pilih nama teknisi spesifik:
                       </p>
                     </div>
@@ -820,15 +821,9 @@ export default function WarehouseBorrowHistoryPage() {
                       value={workshopTechName}
                       onChange={setWorkshopTechName}
                       options={
-                        // Filter: hanya teknisi yang terkait dengan user ini (jika ada)
-                        // Jika user memiliki relasi teknisi spesifik (userId match) → tampilkan hanya itu
-                        // Jika tidak ada relasi → tampilkan semua
-                        (() => {
-                          const linkedTechs = technicians.filter(t => t.userId === selectedReturnerUser?.id);
-                          return linkedTechs.length > 0
-                            ? linkedTechs.map(t => t.name)
-                            : technicians.map(t => t.name); // fallback: tampilkan semua jika tidak ada relasi
-                        })()
+                        linkedTechniciansForReturner.length > 0
+                          ? linkedTechniciansForReturner.map(t => t.name)
+                          : technicians.map(t => t.name)
                       }
                       placeholder="— Pilih nama teknisi —"
                       label="Pilih Nama Teknisi"

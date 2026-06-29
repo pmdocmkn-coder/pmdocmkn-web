@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
   Shield, Users, Key, UserCog, Building2, ScrollText,
-  ChevronRight, ArrowLeft, Settings,
+  ChevronRight, ArrowLeft, Settings, Wrench,
 } from 'lucide-react';
 import PermissionsTab from './settings/PermissionsTab';
 import RolesTab from './settings/RolesTab';
@@ -10,13 +10,14 @@ import RolePermissionsTab from './settings/RolePermissionsTab';
 import UsersManagementTab from './settings/UsersManagementTab';
 import DivisionsTab from './settings/DivisionsTab';
 import ActivityLogTab from './settings/ActivityLogTab';
+import TechniciansTab from './settings/TechniciansTab';
 import { hasPermission } from '../utils/permissionUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 type TabId =
   | 'permissions' | 'roles' | 'role-permissions'
-  | 'users' | 'divisions' | 'activity-logs';
+  | 'users' | 'divisions' | 'activity-logs' | 'technicians';
 
 interface TabDef {
   id: TabId;
@@ -85,6 +86,15 @@ const TABS: TabDef[] = [
     iconBg: 'bg-[#FFFBEB]',
     iconColor: 'text-[#F59E0B]',
   },
+  {
+    id: 'technicians',
+    name: 'Master Teknisi',
+    icon: Wrench,
+    description: 'Kelola daftar teknisi workshop radio',
+    permission: 'workshop.technician.manage',
+    iconBg: 'bg-[#FFF0EC]',
+    iconColor: 'text-[#D94F2B]',
+  },
 ];
 
 // ─── Tab content renderer ─────────────────────────────────────────────────────
@@ -97,6 +107,7 @@ function TabContent({ id }: { id: TabId }) {
     case 'users':            return <UsersManagementTab />;
     case 'divisions':        return <DivisionsTab />;
     case 'activity-logs':    return <ActivityLogTab />;
+    case 'technicians':      return <TechniciansTab />;
     default:                 return null;
   }
 }

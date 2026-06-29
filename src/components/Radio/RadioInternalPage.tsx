@@ -3,6 +3,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import {
   Table,
   TableBody,
@@ -197,9 +198,8 @@ export default function RadioInternalPage() {
         isNoGrafir: filterNoGrafir || undefined,
       });
 
-      console.log("🔍 API Response:", response.data);
       const { items, totalCount: tc, totalPages: tp } = parseRadioResponse(response.data);
-      console.log("📊 Parsed:", { items: items.length, totalCount: tc, totalPages: tp });      setData(items);
+      setData(items);
       setTotalCount(tc);
       setTotalPages(tp);
     } catch (error) {
@@ -212,6 +212,9 @@ export default function RadioInternalPage() {
       setLoading(false);
     }
   };
+
+  // Live refresh when radio data changes from another user
+  useLiveRefresh("Radio", () => { loadData(); });
 
   // ── Form Error State ────────────────────────────────────────────────────────
   const [formError, setFormError] = useState<string | null>(null);

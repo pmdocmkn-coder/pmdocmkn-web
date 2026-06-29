@@ -4,6 +4,7 @@ import { warehousePartApi } from "../../services/warehousePartApi";
 import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { useToast } from "../../hooks/use-toast";
 import { motion } from "framer-motion";
@@ -68,6 +69,9 @@ export default function WarehouseCatalogPage() {
     loadData(page, search);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page]);
+
+  // Live refresh when warehouse part catalog changes
+  useLiveRefresh("WarehousePart", () => { loadData(page, search); });
 
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
