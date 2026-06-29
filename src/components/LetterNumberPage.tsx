@@ -408,7 +408,7 @@ function LetterTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Tipe</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
-                                {(hasPermission("letter.update") || hasPermission("letter.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
@@ -426,16 +426,17 @@ function LetterTab() {
                                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{letter.documentTypeCode}</td>
                                     <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={letter.status} /></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{letter.createdByName || "-"}</td>
-                                    {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>}
-                                                {hasPermission("letter.delete") && (
-                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    )}
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-1">
+                                            <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailLetter(letter); setIsDetailDialogOpen(true); }} className="h-8 px-2.5 text-[#2B6CB0] hover:bg-[#EBF4FF] flex items-center gap-1 text-[12px] font-semibold">
+                                                <Eye className="h-3.5 w-3.5" /> Detail
+                                            </Button>
+                                            {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)} className="w-8 h-8 p-0 text-[#718096] hover:bg-[#F7F8FA]"><Edit className="h-4 w-4" /></Button>}
+                                            {hasPermission("letter.delete") && (
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="w-8 h-8 p-0 text-[#DC2626] hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                                            )}
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -472,14 +473,14 @@ function LetterTab() {
                                 <span className="truncate">{letter.createdByName || "-"}</span>
                             </div>
                             <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
-                                <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailLetter(letter); setIsDetailDialogOpen(true); }} className="text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50">
-                                    <Eye className="h-4 w-4" />
+                                <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailLetter(letter); setIsDetailDialogOpen(true); }} className="flex items-center gap-1 h-8 px-2.5 rounded-[8px] bg-[#EBF4FF] text-[#2B6CB0] hover:bg-[#2B6CB0] hover:text-white text-[11px] font-semibold">
+                                    <Eye className="h-3.5 w-3.5" /> Detail
                                 </Button>
                                 {(hasPermission("letter.update") || hasPermission("letter.delete")) && (
                                     <>
-                                        {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)}><Edit className="h-4 w-4" /></Button>}
+                                        {hasPermission("letter.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(letter)} className="w-8 h-8 p-0 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#F7F8FA]"><Edit className="h-4 w-4" /></Button>}
                                         {hasPermission("letter.delete") && (
-                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                            <Button variant="ghost" size="sm" onClick={() => handleDelete(letter.id, letter.status)} className="w-8 h-8 p-0 flex items-center justify-center rounded-[8px] text-[#DC2626] hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                                         )}
                                     </>
                                 )}
@@ -519,16 +520,18 @@ function LetterTab() {
                                             aria-expanded={openCompanyBox}
                                             className="w-full justify-between font-normal"
                                         >
-                                            {formData.companyId
-                                                ? companies.find((c) => c.id === formData.companyId)?.name
-                                                : "Pilih company"}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <span className="truncate text-left flex-1 min-w-0">
+                                                {formData.companyId
+                                                    ? companies.find((c) => c.id === formData.companyId)?.name
+                                                    : "Pilih company"}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0 pointer-events-auto" align="start">
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
                                         <Command>
                                             <CommandInput placeholder="Cari company..." />
-                                            <CommandList>
+                                            <CommandList className="max-h-[180px]">
                                                 <CommandEmpty>Company tidak ditemukan.</CommandEmpty>
                                                 <CommandGroup>
                                                     {companies.map((c) => (
@@ -953,14 +956,14 @@ function GatepassTab() {
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Items</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
-                                {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) ? 8 : 7} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div></td></tr>
+                                <tr><td colSpan={8} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div></div></td></tr>
                             ) : items.length === 0 ? (
-                                <tr><td colSpan={(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) ? 8 : 7} className="px-6 py-12 text-center text-gray-500">Tidak ada data gatepass</td></tr>
+                                <tr><td colSpan={8} className="px-6 py-12 text-center text-gray-500">Tidak ada data gatepass</td></tr>
                             ) : items.map((item) => (
                                 <React.Fragment key={item.id}>
                                     <tr className="hover:bg-gray-50 cursor-pointer" onClick={() => toggleExpandRow(item.id)}>
@@ -980,18 +983,19 @@ function GatepassTab() {
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{item.createdByName || "-"}</td>
-                                        {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
-                                            <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                                                <div className="flex justify-end gap-1">
-                                                    {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
-                                                    {hasPermission("gatepass.delete") && <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>}
-                                                </div>
-                                            </td>
-                                        )}
+                                        <td className="px-6 py-4 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                                            <div className="flex justify-end gap-1">
+                                                <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="h-8 px-2.5 text-[#2B6CB0] hover:bg-[#EBF4FF] flex items-center gap-1 text-[12px] font-semibold">
+                                                    <Eye className="h-3.5 w-3.5" /> Detail
+                                                </Button>
+                                                {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)} className="w-8 h-8 p-0 text-[#718096] hover:bg-[#F7F8FA]"><Edit className="h-4 w-4" /></Button>}
+                                                {hasPermission("gatepass.delete") && <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="w-8 h-8 p-0 text-[#DC2626] hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>}
+                                            </div>
+                                        </td>
                                     </tr>
                                     {expandedRows.has(item.id) && (
                                         <tr className="bg-emerald-50">
-                                            <td colSpan={(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) ? 8 : 7} className="px-6 py-3">
+                                            <td colSpan={8} className="px-6 py-3">
                                                 {expandedItemDetails[item.id] ? (
                                                     <div className="space-y-4 pt-2">
                                                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm bg-white p-3 rounded border border-emerald-100 shadow-sm">
@@ -1074,14 +1078,14 @@ function GatepassTab() {
                                     <span className="truncate">{item.createdByName || "-"}</span>
                                 </div>
                                 <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                        <Eye className="h-4 w-4" />
+                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="flex items-center gap-1 h-8 px-2.5 rounded-[8px] bg-[#EBF4FF] text-[#2B6CB0] hover:bg-[#2B6CB0] hover:text-white text-[11px] font-semibold">
+                                        <Eye className="h-3.5 w-3.5" /> Detail
                                     </Button>
                                     {(hasPermission("gatepass.update") || hasPermission("gatepass.delete")) && (
                                         <>
-                                            {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                            {hasPermission("gatepass.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)} className="w-8 h-8 p-0 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#F7F8FA]"><Edit className="h-4 w-4" /></Button>}
                                             {hasPermission("gatepass.delete") && (
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="w-8 h-8 p-0 flex items-center justify-center rounded-[8px] text-[#DC2626] hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                                             )}
                                         </>
                                     )}
@@ -1165,7 +1169,7 @@ function GatepassTab() {
                     </datalist>
 
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Tujuan *</Label>
                                 <Input
@@ -1280,7 +1284,7 @@ function GatepassTab() {
                     </datalist>
 
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                             <div className="space-y-2">
                                 <Label>Tujuan *</Label>
                                 <Input
@@ -1651,7 +1655,7 @@ function QuotationTab() {
                         <Button variant="outline" onClick={handleExport} disabled={isExporting} className="border-green-600 text-green-600 hover:bg-green-50">
                             <Download className="h-4 w-4 mr-2" /> {isExporting ? "Mengekspor..." : "Export Excel"}
                         </Button>
-                        {hasPermission("quotation.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-violet-600 hover:bg-violet-700">
+                        {hasPermission("quotation.create") && <Button onClick={() => setIsCreateDialogOpen(true)} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">
                             <Plus className="h-4 w-4 mr-2" />Buat Quotation
                         </Button>}
                     </div>
@@ -1693,12 +1697,12 @@ function QuotationTab() {
                                 <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Value</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Status</th>
                                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Pembuat</th>
-                                {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>}
+                                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase whitespace-nowrap">Aksi</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-200">
                             {loading ? (
-                                <tr><td colSpan={7} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div></td></tr>
+                                <tr><td colSpan={7} className="px-6 py-12 text-center"><div className="flex justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2B6CB0]"></div></div></td></tr>
                             ) : items.length === 0 ? (
                                 <tr><td colSpan={7} className="px-6 py-12 text-center text-gray-500">Tidak ada data quotation</td></tr>
                             ) : items.map((item) => (
@@ -1710,16 +1714,17 @@ function QuotationTab() {
                                     <td className="px-6 py-4 text-sm font-semibold text-emerald-600 text-right whitespace-nowrap">{formatRupiah(item.nominal)}</td>
                                     <td className="px-6 py-4 whitespace-nowrap"><StatusBadge status={item.status} /></td>
                                     <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">{item.createdByName || "-"}</td>
-                                    {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
-                                        <td className="px-6 py-4 text-right">
-                                            <div className="flex justify-end gap-2">
-                                                {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
-                                                {hasPermission("quotation.delete") && (
-                                                    <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
-                                                )}
-                                            </div>
-                                        </td>
-                                    )}
+                                    <td className="px-6 py-4 text-right">
+                                        <div className="flex justify-end gap-1">
+                                            <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="h-8 px-2.5 text-[#2B6CB0] hover:bg-[#EBF4FF] flex items-center gap-1 text-[12px] font-semibold">
+                                                <Eye className="h-3.5 w-3.5" /> Detail
+                                            </Button>
+                                            {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)} className="w-8 h-8 p-0 text-[#718096] hover:bg-[#F7F8FA]"><Edit className="h-4 w-4" /></Button>}
+                                            {hasPermission("quotation.delete") && (
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="w-8 h-8 p-0 text-[#DC2626] hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
+                                            )}
+                                        </div>
+                                    </td>
                                 </tr>
                             ))}
                         </tbody>
@@ -1732,7 +1737,7 @@ function QuotationTab() {
             < div className="md:hidden flex flex-col gap-3" >
                 {
                     loading ? (
-                        <div className="flex justify-center py-12" > <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600"></div></div>
+                        <div className="flex justify-center py-12" > <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#2B6CB0]"></div></div>
                     ) : items.length === 0 ? (
                         <div className="text-center py-12 text-gray-500 bg-white rounded-xl shadow-sm">Tidak ada data quotation</div>
                     ) : items.map((item) => (
@@ -1753,7 +1758,7 @@ function QuotationTab() {
                             {item.customerName && (
                                 <div className="flex items-center gap-1.5 mt-1">
                                     <div className="w-5 h-5 rounded-full bg-violet-100 flex items-center justify-center">
-                                        <Receipt className="h-2.5 w-2.5 text-violet-600" />
+                                        <Receipt className="h-2.5 w-2.5 text-[#2B6CB0]" />
                                     </div>
                                     <p className="text-xs text-gray-800 font-medium">{item.customerName}</p>
                                 </div>
@@ -1765,14 +1770,14 @@ function QuotationTab() {
                                     <span>{item.createdByName || "-"}</span>
                                 </div>
                                 <div className="flex gap-1 shrink-0 ml-auto" onClick={(e) => e.stopPropagation()}>
-                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="text-blue-600 hover:text-blue-700 hover:bg-blue-50">
-                                        <Eye className="h-4 w-4" />
+                                    <Button variant="ghost" size="sm" onClick={() => { setSelectedDetailItem(item); setIsDetailDialogOpen(true); }} className="flex items-center gap-1 h-8 px-2.5 rounded-[8px] bg-[#EBF4FF] text-[#2B6CB0] hover:bg-[#2B6CB0] hover:text-white text-[11px] font-semibold">
+                                        <Eye className="h-3.5 w-3.5" /> Detail
                                     </Button>
                                     {(hasPermission("quotation.update") || hasPermission("quotation.delete")) && (
                                         <>
-                                            {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)}><Edit className="h-4 w-4" /></Button>}
+                                            {hasPermission("quotation.update") && <Button variant="ghost" size="sm" onClick={() => openEditDialog(item)} className="w-8 h-8 p-0 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#F7F8FA]"><Edit className="h-4 w-4" /></Button>}
                                             {hasPermission("quotation.delete") && (
-                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="text-red-600 hover:text-red-700"><Trash2 className="h-4 w-4" /></Button>
+                                                <Button variant="ghost" size="sm" onClick={() => handleDelete(item.id, item.status)} className="w-8 h-8 p-0 flex items-center justify-center rounded-[8px] text-[#DC2626] hover:bg-red-50"><Trash2 className="h-4 w-4" /></Button>
                                             )}
                                         </>
                                     )}
@@ -1801,7 +1806,7 @@ function QuotationTab() {
                         <DialogDescription>Isi data untuk membuat quotation baru.</DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer *</Label>
                                 <Popover open={openCreateCompanyBox} onOpenChange={setOpenCreateCompanyBox} modal={true}>
@@ -1810,18 +1815,20 @@ function QuotationTab() {
                                             variant="outline"
                                             role="combobox"
                                             aria-expanded={openCreateCompanyBox}
-                                            className="w-full justify-between font-normal"
+                                            className="w-full justify-between font-normal truncate"
                                         >
-                                            {formData.customerId
-                                                ? companies.find((c) => c.id === formData.customerId)?.name
-                                                : "Pilih customer"}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <span className="truncate text-left flex-1 min-w-0">
+                                                {formData.customerId
+                                                    ? companies.find((c) => c.id === formData.customerId)?.name
+                                                    : "Pilih customer"}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0 pointer-events-auto" align="start">
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
                                         <Command>
                                             <CommandInput placeholder="Cari customer..." />
-                                            <CommandList>
+                                            <CommandList className="max-h-[180px]">
                                                 <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
                                                 <CommandGroup>
                                                     {companies.map((c) => (
@@ -1835,11 +1842,11 @@ function QuotationTab() {
                                                         >
                                                             <Check
                                                                 className={cn(
-                                                                    "mr-2 h-4 w-4",
+                                                                    "mr-2 h-4 w-4 flex-shrink-0",
                                                                     formData.customerId === c.id ? "opacity-100" : "opacity-0"
                                                                 )}
                                                             />
-                                                            {c.name}
+                                                            <span className="truncate">{c.name}</span>
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>
@@ -1894,7 +1901,7 @@ function QuotationTab() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleCreate} className="bg-violet-600 hover:bg-violet-700" disabled={isCreating}>
+                        <Button onClick={handleCreate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]" disabled={isCreating}>
                             {isCreating ? "Membuat..." : "Buat Quotation"}
                         </Button>
                     </DialogFooter>
@@ -1920,16 +1927,18 @@ function QuotationTab() {
                                             aria-expanded={openEditCompanyBox}
                                             className="w-full justify-between font-normal"
                                         >
-                                            {editFormData.customerId
-                                                ? companies.find((c) => c.id === editFormData.customerId)?.name
-                                                : "Pilih customer"}
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                            <span className="truncate text-left flex-1 min-w-0">
+                                                {editFormData.customerId
+                                                    ? companies.find((c) => c.id === editFormData.customerId)?.name
+                                                    : "Pilih customer"}
+                                            </span>
+                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                                         </Button>
                                     </PopoverTrigger>
-                                    <PopoverContent className="w-[400px] p-0 pointer-events-auto" align="start">
+                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
                                         <Command>
                                             <CommandInput placeholder="Cari customer..." />
-                                            <CommandList>
+                                            <CommandList className="max-h-[180px]">
                                                 <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
                                                 <CommandGroup>
                                                     {companies.map((c) => (
@@ -1943,11 +1952,11 @@ function QuotationTab() {
                                                         >
                                                             <Check
                                                                 className={cn(
-                                                                    "mr-2 h-4 w-4",
+                                                                    "mr-2 h-4 w-4 flex-shrink-0",
                                                                     editFormData.customerId === c.id ? "opacity-100" : "opacity-0"
                                                                 )}
                                                             />
-                                                            {c.name}
+                                                            <span className="truncate">{c.name}</span>
                                                         </CommandItem>
                                                     ))}
                                                 </CommandGroup>
@@ -2004,7 +2013,7 @@ function QuotationTab() {
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleUpdate} className="bg-violet-600 hover:bg-violet-700">Update</Button>
+                        <Button onClick={handleUpdate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">Update</Button>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
@@ -2031,16 +2040,30 @@ function QuotationTab() {
                             </div>
                             <div className="flex justify-between border-b pb-2">
                                 <span className="text-gray-500">Customer</span>
-                                <span className="text-gray-900">{selectedDetailItem.customerName}</span>
+                                <span className="text-gray-900 text-right">{selectedDetailItem.customerName}</span>
+                            </div>
+                            <div className="flex justify-between border-b pb-2">
+                                <span className="text-gray-500">Nilai</span>
+                                <span className="font-semibold text-[#1B3A6B]">
+                                    {selectedDetailItem.nominal != null
+                                        ? `Rp ${new Intl.NumberFormat('id-ID').format(selectedDetailItem.nominal)}`
+                                        : "-"}
+                                </span>
                             </div>
                             <div className="flex justify-between border-b pb-2">
                                 <span className="text-gray-500">Pembuat</span>
                                 <span className="text-gray-900">{selectedDetailItem.createdByName || "-"}</span>
                             </div>
-                            <div className="flex flex-col gap-1 pb-2">
+                            <div className="flex flex-col gap-1 border-b pb-2">
                                 <span className="text-gray-500">Deskripsi</span>
                                 <span className="text-gray-900">{selectedDetailItem.description}</span>
                             </div>
+                            {selectedDetailItem.notes && (
+                                <div className="flex flex-col gap-1 pb-2">
+                                    <span className="text-gray-500">Catatan</span>
+                                    <span className="text-gray-900">{selectedDetailItem.notes}</span>
+                                </div>
+                            )}
                         </div>
                     )}
                     <DialogFooter>

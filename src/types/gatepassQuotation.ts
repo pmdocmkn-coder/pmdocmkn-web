@@ -92,6 +92,7 @@ export interface QuotationList {
     description: string;
     status: string;
     nominal?: number;
+    notes?: string;
     createdByName?: string;
 }
 

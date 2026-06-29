@@ -5,7 +5,7 @@ import {
   ClipboardList, CalendarDays, Radio, Package, Wrench, Video,
   Link2, TrendingUp, BookOpen, Phone, ArrowRight, MapPin,
   Clock, CheckCircle2, AlertTriangle, Info, ChevronRight,
-  Warehouse, Database, Upload, FileText,
+  Warehouse, Database, Upload, FileText, Shield,
 } from "lucide-react";
 import { radioApi } from "../services/radioApi";
 import { radioRepairApi } from "../services/radioRepairApi";
@@ -303,12 +303,25 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     <div className="space-y-5">
 
       {/* ── ZONE 1: Welcome Banner ─────────────────────────────────────── */}
+
+      {/* ─── DESKTOP Banner ─────────────────────────────────────────────── */}
       <div
-        className="relative overflow-hidden rounded-[14px] text-white"
-        style={{ background: "linear-gradient(135deg, #1B3A6B 0%, #2B6CB0 70%, #D94F2B 100%)", minHeight: 140 }}
+        className="hidden md:block relative overflow-hidden rounded-[14px] text-white"
+        style={{ background: "#1B3A6B", minHeight: 140 }}
       >
-        {/* Decorative tower silhouette */}
-        <div className="absolute right-0 top-0 bottom-0 w-48 opacity-10 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0id2hpdGUiIG9wYWNpdHk9IjAuMSIvPjwvc3ZnPg==')] bg-cover" />
+        {/* Background photo — telecom tower + building */}
+        <div className="absolute inset-0 select-none pointer-events-none">
+          <img
+            src="/bg.png"
+            alt=""
+            className="w-full h-full object-cover object-right"
+            style={{ opacity: 0.55 }}
+          />
+          {/* Gradient mask — left side very dark for text, fades to transparent right */}
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(to right, rgba(27,58,107,0.97) 0%, rgba(27,58,107,0.88) 30%, rgba(27,58,107,0.5) 55%, rgba(0,0,0,0.05) 100%)'
+          }} />
+        </div>
 
         <div className="relative z-10 p-5 md:p-6">
           <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
@@ -320,43 +333,98 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               <p className="text-white/70 text-[13px] mt-0.5">
                 Monitoring Preventive Maintenance, Asset &amp; Radio Communication
               </p>
-              {/* Date + time + location strip */}
               <div className="flex flex-wrap items-center gap-3 mt-3 text-[12px] text-white/80">
                 <span className="flex items-center gap-1.5">
-                  <CalendarDays className="w-3.5 h-3.5" />
-                  {dateStr}
+                  <CalendarDays className="w-3.5 h-3.5" />{dateStr}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-3.5 h-3.5" />
-                  {timeStr}
+                  <Clock className="w-3.5 h-3.5" />{timeStr}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" />
-                  Semua Lokasi
+                  <MapPin className="w-3.5 h-3.5" />Semua Lokasi
                 </span>
               </div>
-              {/* Quick action buttons — pill style sesuai mockup */}
               {quickActions.length > 0 && (
                 <div className="flex flex-wrap gap-2 mt-4">
                   {quickActions.map((a) => (
-                    <button
-                      key={a.tab}
-                      onClick={() => go(a.tab, a.path)}
-                      className="flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-white/25 border border-white/30 rounded-full text-[13px] font-semibold text-white transition-colors backdrop-blur-sm"
-                    >
-                      {a.icon}
-                      {a.label}
+                    <button key={a.tab} onClick={() => go(a.tab, a.path)}
+                      className="flex items-center gap-1.5 px-4 py-2 bg-white/15 hover:bg-white/25 border border-white/30 rounded-full text-[13px] font-semibold text-white transition-colors backdrop-blur-sm">
+                      {a.icon}{a.label}
                     </button>
                   ))}
                 </div>
               )}
             </div>
-            {/* Role badge — orange pill, standalone */}
+            {/* Role badge */}
             <div className="flex-shrink-0 self-start">
-              <span className="flex items-center gap-2 px-5 py-2.5 bg-[#D94F2B] hover:bg-[#B83D20] rounded-full text-[14px] font-bold text-white shadow-lg transition-colors cursor-default">
+              <span className="flex items-center gap-2 px-5 py-2.5 bg-[#D94F2B] rounded-full text-[14px] font-bold text-white shadow-lg cursor-default">
                 {user?.roleName || "Administrator"}
               </span>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ─── MOBILE Banner ─────────────────────────────────────────────── */}
+      <div
+        className="md:hidden relative overflow-hidden rounded-[18px] text-white"
+        style={{ background: "#1B3A6B" }}
+      >
+        {/* Background photo — same image, portrait crop */}
+        <div className="absolute inset-0 select-none pointer-events-none">
+          <img
+            src="/bg.png"
+            alt=""
+            className="w-full h-full object-cover object-right"
+            style={{ opacity: 0.5 }}
+          />
+          {/* Gradient overlay — left very dark for text readability */}
+          <div className="absolute inset-0" style={{
+            background: 'linear-gradient(to right, rgba(27,58,107,0.97) 0%, rgba(27,58,107,0.88) 25%, rgba(27,58,107,0.55) 55%, rgba(0,0,0,0.05) 100%)'
+          }} />
+        </div>
+
+        <div className="relative z-10 p-5 pb-4">
+          {/* Greeting */}
+          <h1 className="text-[22px] font-bold leading-tight">
+            Selamat datang, {firstName}!
+          </h1>
+          <p className="text-white/70 text-[13px] mt-1 leading-snug">
+            Monitoring Preventive Maintenance,{"\n"}Asset &amp; Radio Communication
+          </p>
+
+          {/* Date / time / location strip */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-3 text-[12px] text-white/80">
+            <span className="flex items-center gap-1.5">
+              <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />{dateStr}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 flex-shrink-0" />{timeStr}
+            </span>
+            <span className="flex items-center gap-1.5">
+              <MapPin className="w-3.5 h-3.5 flex-shrink-0" />Semua Lokasi
+            </span>
+          </div>
+
+          {/* Quick action grid — 3 per row */}
+          {quickActions.length > 0 && (
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              {quickActions.map((a) => (
+                <button key={a.tab} onClick={() => go(a.tab, a.path)}
+                  className="flex flex-col items-center justify-center gap-1.5 py-3 bg-white/12 hover:bg-white/20 border border-white/25 rounded-[12px] text-[12px] font-semibold text-white transition-colors active:scale-95 backdrop-blur-sm">
+                  <span className="opacity-90">{a.icon}</span>
+                  <span className="leading-tight text-center">{a.label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Role badge — orange pill at bottom */}
+          <div className="mt-4">
+            <span className="inline-flex items-center gap-2 px-4 py-2 bg-[#D94F2B] rounded-full text-[13px] font-bold text-white shadow">
+              <CheckCircle2 className="w-4 h-4 flex-shrink-0" />
+              {user?.roleName || "Administrator"}
+            </span>
           </div>
         </div>
       </div>

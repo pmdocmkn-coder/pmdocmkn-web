@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import type { HandoverAccessoryItem } from "../../types/radioHandover";
-import mknLogo from "../../assets/MKN.png";
+import React from "react";
 
 export type DamagedEquipmentTagData = {
   handoverNumber: string;
@@ -51,7 +51,7 @@ export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipme
 
       {/* ── Logo + AWAS banner ── */}
       <div className="bg-yellow-400 px-4 pt-3 pb-2 flex flex-col items-center">
-        <img src={mknLogo} alt="MKN Logo" className="h-14 object-contain" />
+        <img src="/MKN.png" alt="MKN Logo" className="h-14 object-contain" />
       </div>
 
       <div className="bg-gray-900 py-2 text-center">

@@ -1,7 +1,6 @@
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import type { HandoverAccessoryItem } from "../../types/radioHandover";
-import mknLogo from "../../assets/MKN.png";
 
 export type GoodEquipmentTagData = {
   handoverNumber: string;
@@ -48,7 +47,7 @@ export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagD
   return (
     <div className="rounded-xl overflow-hidden border-2 border-emerald-500 shadow-md text-sm max-w-md">
       <div className="bg-white px-4 pt-4 pb-2 flex flex-col items-center border-b border-emerald-200">
-        <img src={mknLogo} alt="MKN Logo" className="h-12 object-contain" />
+        <img src="/MKN.png" alt="MKN Logo" className="h-12 object-contain" />
       </div>
       <div className="bg-emerald-600 py-3 px-4 text-center">
         <p className="text-white font-black text-lg tracking-wide leading-tight">PERALATAN BAIK</p>
