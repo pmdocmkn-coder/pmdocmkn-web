@@ -38,10 +38,10 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Mobile: bottom sheet with safe area and proper spacing
+        // Mobile: bottom sheet — proper height respecting browser UI chrome
         "fixed bottom-0 left-0 right-0 z-50 w-full mx-auto bg-background rounded-t-3xl shadow-2xl overflow-hidden",
-        "max-h-[94vh] flex flex-col",
-        "pb-safe", // Safe area for iOS
+        "max-h-[82vh] flex flex-col",
+        "pb-safe",
         // Desktop: centered modal
         "sm:inset-auto sm:left-[50%] sm:top-[50%] sm:bottom-auto sm:right-auto",
         "sm:translate-x-[-50%] sm:translate-y-[-50%]",
