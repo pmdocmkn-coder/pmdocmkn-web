@@ -40,7 +40,7 @@ export default function WarehouseSupervisionPage() {
 
   // Live refresh saat ada perubahan data warehouse borrow dari user lain
   useLiveRefresh("WarehouseBorrow", () => {
-    load();
+    setTimeout(() => load(), 500);
   });
 
   const closeReview = () => {
@@ -220,6 +220,12 @@ export default function WarehouseSupervisionPage() {
                   <div className="pt-2 border-t border-gray-200 mt-2">
                     <span className="text-gray-500 block">Terkait Pekerjaan:</span>
                     <span className="font-mono font-semibold text-blue-700">{activeItem.relatedJobNumber}</span>
+                  </div>
+                )}
+                {activeItem.purpose && (
+                  <div className="pt-2 border-t border-gray-200 mt-2">
+                    <span className="text-gray-500 block mb-1">Keperluan:</span>
+                    <p className="text-sm text-gray-800 italic bg-white rounded-lg px-3 py-2 border border-gray-100">"{activeItem.purpose}"</p>
                   </div>
                 )}
               </div>

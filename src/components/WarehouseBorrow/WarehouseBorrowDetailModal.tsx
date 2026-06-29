@@ -260,6 +260,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                       <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
                         {data.statusLogs.find(l => l.toStatus === "Issued")?.userName || "—"}
                       </p>
+                      <p className="text-[10px] text-gray-400">Warehouse</p>
                     </div>
                     <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
                       <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penerima</p>
@@ -271,6 +272,10 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                       <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
                         {data.borrowerName || data.borrowedByName}
                       </p>
+                      {/* Jika borrowerName (nama teknisi) berbeda dengan borrowedByName (nama akun), tampilkan akun */}
+                      {data.borrowerName && data.borrowerName !== data.borrowedByName && (
+                        <p className="text-[10px] text-gray-400">via {data.borrowedByName}</p>
+                      )}
                       
                       {!data.receiverSignatureBase64 && data.status === "Issued" && !isSigning && (
                         <div className="mt-2 pt-2 border-t border-gray-100">
@@ -318,25 +323,27 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                   <div className="grid grid-cols-2 gap-4">
                     <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
                       <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penyerah</p>
-                      {data.returnReceiverSignatureBase64 ? (
-                        <img src={data.returnReceiverSignatureBase64} alt="TTD Teknisi Return" className="h-16 mx-auto object-contain mix-blend-multiply" />
+                      {data.returnIssuerSignatureBase64 ? (
+                        <img src={data.returnIssuerSignatureBase64} alt="TTD Teknisi Return" className="h-16 mx-auto object-contain mix-blend-multiply" />
                       ) : (
                         <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
                       )}
                       <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
                         {data.returnedByName || data.borrowerName || data.borrowedByName}
                       </p>
+                      <p className="text-[10px] text-gray-400">Peminjam / Teknisi</p>
                     </div>
                     <div className="border border-gray-200 rounded-xl p-3 bg-white text-center">
                       <p className="text-xs font-semibold text-gray-500 mb-2">TTD Penerima</p>
-                      {data.returnIssuerSignatureBase64 ? (
-                        <img src={data.returnIssuerSignatureBase64} alt="TTD Admin Return" className="h-16 mx-auto object-contain mix-blend-multiply" />
+                      {data.returnReceiverSignatureBase64 ? (
+                        <img src={data.returnReceiverSignatureBase64} alt="TTD Admin Return" className="h-16 mx-auto object-contain mix-blend-multiply" />
                       ) : (
                         <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
                       )}
                       <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
                         {data.statusLogs.find(l => l.toStatus === "Returned")?.userName || "—"}
                       </p>
+                      <p className="text-[10px] text-gray-400">Warehouse</p>
                     </div>
                   </div>
                 </div>

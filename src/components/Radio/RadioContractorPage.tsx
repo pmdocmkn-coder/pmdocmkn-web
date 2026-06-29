@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
+import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import {
@@ -137,6 +138,9 @@ const filterPanelVariants: Variants = {
 
   // ── Form Error ──────────────────────────────────────────────────────────────
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Live refresh when radio data changes from another user
+  useLiveRefresh("Radio", () => { loadData(); });
 
   // ── Form State ──────────────────────────────────────────────────────────────
   const [formData, setFormData] = useState<CreateRadioDto>({

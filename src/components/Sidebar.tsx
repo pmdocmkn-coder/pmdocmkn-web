@@ -115,12 +115,7 @@ const administrationMenu: NavItem[] = [
 ];
 
 const hasSettingsAccess = () =>
-  hasPermission("system.permission.view") ||
-  hasPermission("system.role.view") ||
-  hasPermission("system.role.permission.view") ||
-  hasPermission("system.user.management.view") ||
-  hasPermission("system.division.view") ||
-  hasPermission("system.audit.view");
+  hasPermission("setting.menu");
 
 // ─── NavGroup component ────────────────────────────────────────────────────────
 
@@ -131,18 +126,29 @@ interface NavGroupProps {
   onToggle: () => void;
   location: ReturnType<typeof useLocation>;
   setActiveTab: (tab: string) => void;
+  isCollapsed?: boolean;
 }
 
 const NavGroup: React.FC<NavGroupProps> = ({
-  label, items, isOpen, onToggle, location, setActiveTab,
+  label, items, isOpen, onToggle, location, setActiveTab, isCollapsed
 }) => {
   if (items.length === 0) return null;
+  // If collapsed, we don't show the group header and we always show the items
+  const showItems = isCollapsed || isOpen;
+  
   return (
     <div>
-      <p className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45 select-none">
-        {label}
-      </p>
-      {items.map((item) => {
+      {!isCollapsed && (
+        <p 
+          onClick={onToggle}
+          className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45 select-none cursor-pointer hover:text-white/60 transition-colors flex items-center justify-between group"
+        >
+          {label}
+          <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "" : "-rotate-90"} opacity-0 group-hover:opacity-100`} />
+        </p>
+      )}
+      
+      {showItems && items.map((item) => {
         const Icon = item.icon;
         // Use exact match. For startsWith, only match if no other item in the
         // list is a more specific match for the current pathname.
@@ -157,15 +163,17 @@ const NavGroup: React.FC<NavGroupProps> = ({
             key={item.id}
             to={item.path}
             data-active={isActive}
+            title={isCollapsed ? item.name : undefined}
             onClick={() => setActiveTab(item.id)}
-            className={`flex items-center gap-3 h-9 px-4 text-[13px] font-medium transition-colors duration-150 relative
+            className={`flex items-center h-9 text-[13px] font-medium transition-colors duration-150 relative overflow-hidden
+              ${isCollapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4 gap-3"}
               ${isActive
-                ? "bg-[#2B6CB0] text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[#D94F2B] before:rounded-r"
+                ? (isCollapsed ? "bg-[#2B6CB0] text-white" : "bg-[#2B6CB0] text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[#D94F2B] before:rounded-r")
                 : "text-white/70 hover:text-white hover:bg-white/8"
               }`}
           >
             <Icon className="w-4 h-4 flex-shrink-0" />
-            <span className="truncate">{item.name}</span>
+            {!isCollapsed && <span className="truncate whitespace-nowrap">{item.name}</span>}
           </Link>
         );
       })}
@@ -244,19 +252,21 @@ export default function Sidebar({
 
       {/* ── Logo strip ── */}
       <div
-        className="flex items-center px-4 h-[64px] flex-shrink-0"
+        className="flex items-center justify-center h-[64px] flex-shrink-0"
         style={{
           background: "linear-gradient(135deg, #1B3A6B 0%, #2B6CB0 60%, #D94F2B 100%)",
         }}
       >
-        <div className="flex items-center gap-3">
+        <div className={`flex items-center ${isCollapsed ? 'justify-center w-full px-0' : 'gap-3 px-4 w-full'}`}>
           <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
             <span className="text-white font-bold text-xs tracking-tight">MKN</span>
           </div>
-          <div className="leading-none">
-            <p className="text-white font-bold text-sm tracking-tight">PM DOCS</p>
-            <p className="text-white/60 text-[10px] font-medium tracking-wide uppercase">System</p>
-          </div>
+          {!isCollapsed && (
+            <div className="leading-none transition-opacity duration-300">
+              <p className="text-white font-bold text-sm tracking-tight">PM DOCS</p>
+              <p className="text-white/60 text-[10px] font-medium tracking-wide uppercase">System</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -264,36 +274,36 @@ export default function Sidebar({
       <nav ref={navRef} className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-2">
 
         <NavGroup label="Main" items={filteredMain} isOpen={true} onToggle={() => {}}
-          location={location} setActiveTab={setActiveTab} />
+          location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
 
         {filteredPm.length > 0 && (
           <NavGroup label="PM Management" items={filteredPm} isOpen={openGroups.pm}
-            onToggle={() => toggleGroup("pm")} location={location} setActiveTab={setActiveTab} />
+            onToggle={() => toggleGroup("pm")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
 
         {filteredRadio.length > 0 && (
           <NavGroup label="Radio & Fleet" items={filteredRadio} isOpen={openGroups.radio}
-            onToggle={() => toggleGroup("radio")} location={location} setActiveTab={setActiveTab} />
+            onToggle={() => toggleGroup("radio")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
 
         {filteredMonitoring.length > 0 && (
           <NavGroup label="Monitoring" items={filteredMonitoring} isOpen={openGroups.monitoring}
-            onToggle={() => toggleGroup("monitoring")} location={location} setActiveTab={setActiveTab} />
+            onToggle={() => toggleGroup("monitoring")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
 
         {filteredWarehouse.length > 0 && (
           <NavGroup label="Warehouse" items={filteredWarehouse} isOpen={openGroups.warehouse}
-            onToggle={() => toggleGroup("warehouse")} location={location} setActiveTab={setActiveTab} />
+            onToggle={() => toggleGroup("warehouse")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
 
         {filteredCallRecords.length > 0 && (
           <NavGroup label="Call Records" items={filteredCallRecords} isOpen={openGroups.callrecords}
-            onToggle={() => toggleGroup("callrecords")} location={location} setActiveTab={setActiveTab} />
+            onToggle={() => toggleGroup("callrecords")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
 
         {filteredAdministration.length > 0 && (
           <NavGroup label="Administration" items={filteredAdministration} isOpen={openGroups.administration}
-            onToggle={() => toggleGroup("administration")} location={location} setActiveTab={setActiveTab} />
+            onToggle={() => toggleGroup("administration")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
       </nav>
 
@@ -304,25 +314,27 @@ export default function Sidebar({
           <Link
             to="/settings"
             data-active={location.pathname === "/settings"}
+            title={isCollapsed ? "Settings" : undefined}
             onClick={() => setActiveTab("settings")}
-            className={`flex items-center gap-3 h-9 px-4 text-[13px] font-medium transition-colors duration-150 relative mt-1
+            className={`flex items-center h-9 text-[13px] font-medium transition-colors duration-150 relative mt-1 overflow-hidden
+              ${isCollapsed ? "justify-center px-0 mx-2 rounded-lg" : "px-4 gap-3"}
               ${location.pathname === "/settings"
-                ? "bg-[#2B6CB0] text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[#D94F2B] before:rounded-r"
+                ? (isCollapsed ? "bg-[#2B6CB0] text-white" : "bg-[#2B6CB0] text-white before:absolute before:left-0 before:top-0 before:bottom-0 before:w-[3px] before:bg-[#D94F2B] before:rounded-r")
                 : "text-white/70 hover:text-white hover:bg-white/8"
               }`}
           >
             <Settings className="w-4 h-4 flex-shrink-0" />
-            <span>Settings</span>
+            {!isCollapsed && <span className="whitespace-nowrap">Settings</span>}
           </Link>
         </div>
       )}
 
       {/* ── User profile card ── */}
-      <div className="flex-shrink-0 p-3" style={{ backgroundColor: "#243F73" }}>
+      <div className={`flex-shrink-0 ${isCollapsed ? 'p-2' : 'p-3'}`} style={{ backgroundColor: "#243F73" }}>
         <Link
           to="/profile"
           onClick={() => setActiveTab("profile")}
-          className="flex items-center gap-3 p-2 rounded-lg hover:bg-white/8 transition-colors group"
+          className={`flex items-center p-2 rounded-lg hover:bg-white/8 transition-colors group ${isCollapsed ? 'justify-center' : 'gap-3'}`}
         >
           {user?.photoUrl ? (
             <img src={user.photoUrl} alt={user.fullName}
@@ -332,23 +344,25 @@ export default function Sidebar({
               {user?.fullName?.[0]?.toUpperCase() || "U"}
             </div>
           )}
-          <div className="flex-1 min-w-0">
-            <p className="text-white text-[13px] font-semibold truncate leading-none">
-              {user?.fullName || "User"}
-            </p>
-            <p className="text-white/50 text-[11px] truncate mt-0.5 flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
-              {user?.roleName || "Online"}
-            </p>
-          </div>
-          <ChevronDown className="w-3.5 h-3.5 text-white/40 flex-shrink-0 group-hover:text-white/60 transition-colors" />
+          {!isCollapsed && (
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-[13px] font-semibold truncate leading-none">
+                {user?.fullName || "User"}
+              </p>
+              <p className="text-white/50 text-[11px] truncate mt-0.5 flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 flex-shrink-0" />
+                {user?.roleName || "Online"}
+              </p>
+            </div>
+          )}
         </Link>
         <button
           onClick={() => { logout(); window.location.href = "/"; }}
-          className="mt-2 w-full flex items-center justify-center gap-2 py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-[13px] font-semibold transition-colors"
+          title={isCollapsed ? "Logout" : undefined}
+          className={`mt-2 w-full flex items-center justify-center py-2 rounded-lg bg-red-600/80 hover:bg-red-600 text-white text-[13px] font-semibold transition-colors ${isCollapsed ? 'px-0' : 'gap-2'}`}
         >
-          <LogOut className="w-4 h-4" />
-          Logout
+          <LogOut className="w-4 h-4 flex-shrink-0" />
+          {!isCollapsed && <span className="whitespace-nowrap">Logout</span>}
         </button>
       </div>
     </div>
@@ -360,10 +374,12 @@ export default function Sidebar({
     <>
       {/* Desktop Sidebar only — mobile uses BottomNav + MoreSheet */}
       <aside
-        className="hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 border-r border-white/5 shadow-xl transition-all duration-300"
-        style={{ width: "220px", backgroundColor: "#1B3A6B" }}
+        className={`hidden md:flex flex-col h-screen sticky top-0 flex-shrink-0 shadow-xl transition-all duration-300 border-r border-white/5 ${isCollapsed ? "w-[72px]" : "w-[220px]"}`}
+        style={{ backgroundColor: "#1B3A6B" }}
       >
-        <SidebarInner />
+        <div className="w-full h-full flex flex-col overflow-hidden">
+          <SidebarInner />
+        </div>
       </aside>
     </>
   );
