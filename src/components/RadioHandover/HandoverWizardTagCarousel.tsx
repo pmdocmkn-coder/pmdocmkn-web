@@ -47,24 +47,24 @@ export default function HandoverWizardTagCarousel({
   return (
     <div className="space-y-3">
       {lines.length > 1 && (
-        <div className="flex items-center justify-between gap-2 rounded-lg border bg-gray-50 px-3 py-2">
+        <div className="flex items-center justify-between gap-2 rounded-[10px] border border-[#E2E8F0] bg-[#F7F8FA] px-3 py-2">
           <button
             type="button"
             onClick={prev}
             disabled={safeIndex === 0}
-            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border bg-white disabled:opacity-40"
+            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-[6px] border border-[#E2E8F0] bg-white disabled:opacity-40 text-[#4A5568]"
           >
             <ChevronLeft className="w-4 h-4" /> Tag sebelumnya
           </button>
-          <span className="text-xs font-semibold text-violet-800 text-center">
+          <span className="text-xs font-semibold text-[#1B3A6B] text-center">
             Tag {safeIndex + 1} / {lines.length}
-            <span className="block font-mono text-gray-600 font-normal mt-0.5">SN {line.serial}</span>
+            <span className="block font-mono text-[#718096] font-normal mt-0.5">SN {line.serial}</span>
           </span>
           <button
             type="button"
             onClick={next}
             disabled={safeIndex >= lines.length - 1}
-            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded border bg-white disabled:opacity-40"
+            className="flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-[6px] border border-[#E2E8F0] bg-white disabled:opacity-40 text-[#4A5568]"
           >
             Tag berikutnya <ChevronRight className="w-4 h-4" />
           </button>
@@ -78,10 +78,10 @@ export default function HandoverWizardTagCarousel({
               key={l.id}
               type="button"
               onClick={() => setIndex(i)}
-              className={`text-[10px] font-mono px-2 py-1 rounded-full border ${
+              className={`text-[10px] font-mono px-3 py-1.5 rounded-full border transition-colors ${
                 i === safeIndex
-                  ? "bg-violet-600 text-white border-violet-600"
-                  : "bg-white text-gray-600 border-gray-200 hover:border-violet-300"
+                  ? "bg-[#1B3A6B] text-white border-[#1B3A6B]"
+                  : "bg-white text-[#718096] border-[#E2E8F0] hover:border-[#2B6CB0]"
               }`}
             >
               {l.serial}
