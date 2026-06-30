@@ -43,7 +43,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
       .getWarehouseReceivers()
       .then((list) => setReceivers(list ?? []))
       .catch(() => setReceivers([]));
-    workshopTechnicianApi.getAllActive().then(res => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
+    workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
   }, []);
 
   useEffect(() => {

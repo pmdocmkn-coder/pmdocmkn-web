@@ -217,7 +217,7 @@ export default function RadioRepairDashboardPage() {
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
     repairJobCustomStatusApi.getAll().then((list) => setCustomStatuses(list.filter((s) => s.isActive))).catch(() => setCustomStatuses([]));
-    workshopTechnicianApi.getAllActive().then(res => setWorkshopTechs(res.data.data)).catch(() => setWorkshopTechs([]));
+    workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setWorkshopTechs(res.data.data)).catch(() => setWorkshopTechs([]));
   }, []);
 
   // Auto-open modal if jobId is present in URL

@@ -196,7 +196,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
   return (
     <>
-    <div className="flex min-h-screen bg-[#F7F8FA]">
+    <div className="flex min-h-[100dvh] bg-[#F7F8FA]">
       {/* Sidebar */}
       <Sidebar
         activeTab={activeTab}
@@ -207,7 +207,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         setIsCollapsed={setIsCollapsed}
       />
 
-      <div className="flex-1 flex flex-col min-h-screen overflow-x-hidden">
+      <div className="flex-1 flex flex-col h-[100dvh] overflow-x-hidden">
 
         {/* ── Desktop Top Bar ─────────────────────────────────────────────── */}
         <header className="hidden md:flex items-center justify-between px-6 h-16 bg-white sticky top-0 z-30 border-b border-[#E2E8F0] flex-shrink-0">

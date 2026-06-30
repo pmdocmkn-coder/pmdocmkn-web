@@ -48,11 +48,19 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       return;
     }
 
+    const accPayload = jobDetail?.primaryHandover?.accessories?.map(a => ({
+      itemName: a.itemName,
+      quantity: a.quantity,
+      unit: a.unit || undefined,
+      description: a.description || undefined,
+      serialNumber: a.serialNumber || undefined,
+    })) || [];
+
     setSubmitting(true);
     try {
       await radioHandoverApi.create({
         handoverType: "WarehouseToHelpdesk",
-        equipmentTagType: "Good",
+        equipmentTagType: (job.equipmentTagType as "Good" | "Damaged" | undefined) || "Good", // Fallback to Good if null
         radioRepairJobId: job.id,
         radioId: job.radioId ?? undefined,
         radioSerialNumber: job.radioSerialNumber,
@@ -61,10 +69,10 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         radioPhotos: photos,
         handedOverSignatureBase64: sigWh,
         receiverSignatureBase64: sigHd || undefined,
-        accessories: [],
+        accessories: accPayload, // Use the accessories from the previous handover
         remarks: remarks || undefined,
       });
-      toast({ title: "Serah terima ke Helpdesk (tag hijau) berhasil" });
+      toast({ title: "Serah terima ke Helpdesk berhasil" });
       onSuccess();
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string } } };
@@ -80,151 +88,151 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
 
   return (
     <div className="space-y-4">
-        {/* Tag Preview Card */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-gray-600">Pratinjau Tag Hijau</p>
-          {job.equipmentTagType === "Damaged" ? (
-            <DamagedEquipmentTagCard
-              data={{
-                handoverNumber: "STR-…",
-                helpdeskTicketNumber: job.helpdeskTicketNumber,
-                handoverAt: new Date().toISOString(),
-                handedOverByName: "Warehouse",
-                receivedByName: "Helpdesk",
-                equipmentName: job.equipmentName,
-                unitNumber: job.unitNumber,
-                radioSerialNumber: job.radioSerialNumber,
-                radioOwnerLabel: job.radioOwnerLabel,
-                radioMasterId: job.radioId,
-                radioMasterRadioId: job.radioMasterRadioId,
-                radioFleet: job.radioFleet,
-                radioCategory: job.radioCategory,
-                damageDescription: job.damageDescription,
-                handoverType: "WarehouseToHelpdesk",
-                accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
-                  itemName: a.itemName,
-                  quantity: a.quantity,
-                  unit: a.unit ?? undefined,
-                  description: a.description ?? undefined,
-                  serialNumber: a.serialNumber ?? undefined,
-                })) ?? [],
-              }}
-            />
-          ) : (
-            <GoodEquipmentTagCard
-              data={{
-                handoverNumber: "STR-…",
-                helpdeskTicketNumber: job.helpdeskTicketNumber,
-                handoverAt: new Date().toISOString(),
-                handedOverByName: "Warehouse",
-                receivedByName: "Helpdesk",
-                equipmentName: job.equipmentName,
-                unitNumber: job.unitNumber,
-                radioSerialNumber: job.radioSerialNumber,
-                radioOwnerLabel: job.radioOwnerLabel,
-                radioMasterRadioId: job.radioMasterRadioId,
-                radioFleet: job.radioFleet,
-                originFrom: job.originFrom || job.radioOwnerLabel,
-                repairDataDescription: job.repairDataDescription,
-                repairedByName: job.repairedByName || job.assignedTechnicianName,
-                frequencyError: job.frequencyError,
-                afReading: job.afReading,
-                powerReading: job.powerReading,
-                voltageOutNoLoad: job.voltageOutNoLoad,
-                voltageOutWithLoad: job.voltageOutWithLoad,
-                physicalCondition: job.physicalCondition,
-                displayCondition: job.displayCondition,
-                handoverType: "WarehouseToHelpdesk",
-                accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
-                  itemName: a.itemName,
-                  quantity: a.quantity,
-                  unit: a.unit ?? undefined,
-                  description: a.description ?? undefined,
-                  serialNumber: a.serialNumber ?? undefined,
-                })) ?? [],
-              }}
-            />
-          )}
-        </div>
-
-        {/* Helpdesk Receiver Selection */}
-        <div className="space-y-2">
-          <label className="text-sm font-medium text-gray-900">Penerima Helpdesk *</label>
-          <Select value={hdId} onValueChange={setHdId}>
-            <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
-              <SelectValue placeholder="Pilih staff helpdesk" />
-            </SelectTrigger>
-            <SelectContent className="max-h-[300px]">
-              {(receivers ?? []).map((r) => (
-                <SelectItem key={r.userId} value={r.userId.toString()}>
-                  <span className="font-medium">{r.fullName}</span>{" "}
-                  <span className="text-xs text-gray-500">(@{r.username})</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {/* Photos */}
-        <MultiPhotoUpload photos={photos} onChange={setPhotos} required label="Foto Radio" />
-        
-        {/* Accessories (Read Only) */}
-        {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
-          <div>
-            <p className="text-sm font-medium text-gray-900 mb-2">Kelengkapan / Aksesoris</p>
-            <table className="w-full text-xs border rounded-lg overflow-hidden">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="text-left px-3 py-2">Barang</th>
-                  <th className="text-left px-3 py-2">Qty</th>
-                  <th className="text-left px-3 py-2">Unit</th>
-                  <th className="text-left px-3 py-2">SN</th>
-                </tr>
-              </thead>
-              <tbody>
-                {jobDetail!.primaryHandover!.accessories.map((a, i) => (
-                  <tr key={i} className="border-t">
-                    <td className="px-3 py-2 font-medium">{a.itemName}</td>
-                    <td className="px-3 py-2">{a.quantity}</td>
-                    <td className="px-3 py-2">{a.unit}</td>
-                    <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <p className="text-[10px] text-gray-500 mt-1">Aksesoris diturunkan dari serah terima sebelumnya.</p>
-          </div>
-        )}
-        
-        {/* Signatures */}
-        <SignaturePadField 
-          label="TTD Penyerah" 
-          required 
-          value={sigWh} 
-          onChange={setSigWh} 
-        />
-        <SignaturePadField 
-          label="TTD Penerima (opsional)" 
-          required={false}
-          value={sigHd} 
-          onChange={setSigHd} 
-        />
-        
-        {/* Remarks */}
-        <div className="space-y-2 pb-4">
-          <label className="text-sm font-medium text-gray-900">Catatan</label>
-          <input 
-            className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors" 
-            value={remarks} 
-            onChange={(e) => setRemarks(e.target.value)}
-            placeholder="Catatan tambahan (opsional)"
+      {/* Tag Preview Card */}
+      <div className="space-y-2">
+        <p className="text-xs font-medium text-gray-600">Pratinjau Tag Hijau</p>
+        {job.equipmentTagType === "Damaged" ? (
+          <DamagedEquipmentTagCard
+            data={{
+              handoverNumber: "STR-…",
+              helpdeskTicketNumber: job.helpdeskTicketNumber,
+              handoverAt: new Date().toISOString(),
+              handedOverByName: "Warehouse",
+              receivedByName: "Helpdesk",
+              equipmentName: job.equipmentName,
+              unitNumber: job.unitNumber,
+              radioSerialNumber: job.radioSerialNumber,
+              radioOwnerLabel: job.radioOwnerLabel,
+              radioMasterId: job.radioId,
+              radioMasterRadioId: job.radioMasterRadioId,
+              radioFleet: job.radioFleet,
+              radioCategory: job.radioCategory,
+              damageDescription: job.damageDescription,
+              handoverType: "WarehouseToHelpdesk",
+              accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
+                itemName: a.itemName,
+                quantity: a.quantity,
+                unit: a.unit ?? undefined,
+                description: a.description ?? undefined,
+                serialNumber: a.serialNumber ?? undefined,
+              })) ?? [],
+            }}
           />
+        ) : (
+          <GoodEquipmentTagCard
+            data={{
+              handoverNumber: "STR-…",
+              helpdeskTicketNumber: job.helpdeskTicketNumber,
+              handoverAt: new Date().toISOString(),
+              handedOverByName: "Warehouse",
+              receivedByName: "Helpdesk",
+              equipmentName: job.equipmentName,
+              unitNumber: job.unitNumber,
+              radioSerialNumber: job.radioSerialNumber,
+              radioOwnerLabel: job.radioOwnerLabel,
+              radioMasterRadioId: job.radioMasterRadioId,
+              radioFleet: job.radioFleet,
+              originFrom: job.originFrom || job.radioOwnerLabel,
+              repairDataDescription: job.repairDataDescription,
+              repairedByName: job.repairedByName || job.assignedTechnicianName,
+              frequencyError: job.frequencyError,
+              afReading: job.afReading,
+              powerReading: job.powerReading,
+              voltageOutNoLoad: job.voltageOutNoLoad,
+              voltageOutWithLoad: job.voltageOutWithLoad,
+              physicalCondition: job.physicalCondition,
+              displayCondition: job.displayCondition,
+              handoverType: "WarehouseToHelpdesk",
+              accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
+                itemName: a.itemName,
+                quantity: a.quantity,
+                unit: a.unit ?? undefined,
+                description: a.description ?? undefined,
+                serialNumber: a.serialNumber ?? undefined,
+              })) ?? [],
+            }}
+          />
+        )}
+      </div>
+
+      {/* Helpdesk Receiver Selection */}
+      <div className="space-y-2">
+        <label className="text-sm font-medium text-gray-900">Penerima Helpdesk *</label>
+        <Select value={hdId} onValueChange={setHdId}>
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+            <SelectValue placeholder="Pilih staff helpdesk" />
+          </SelectTrigger>
+          <SelectContent className="max-h-[300px]">
+            {(receivers ?? []).map((r) => (
+              <SelectItem key={r.userId} value={r.userId.toString()}>
+                <span className="font-medium">{r.fullName}</span>{" "}
+                <span className="text-xs text-gray-500">(@{r.username})</span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Photos */}
+      <MultiPhotoUpload photos={photos} onChange={setPhotos} required label="Foto Radio" />
+
+      {/* Accessories (Read Only) */}
+      {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
+        <div>
+          <p className="text-sm font-medium text-gray-900 mb-2">Kelengkapan / Aksesoris</p>
+          <table className="w-full text-xs border rounded-lg overflow-hidden">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="text-left px-3 py-2">Barang</th>
+                <th className="text-left px-3 py-2">Qty</th>
+                <th className="text-left px-3 py-2">Unit</th>
+                <th className="text-left px-3 py-2">SN</th>
+              </tr>
+            </thead>
+            <tbody>
+              {jobDetail!.primaryHandover!.accessories.map((a, i) => (
+                <tr key={i} className="border-t">
+                  <td className="px-3 py-2 font-medium">{a.itemName}</td>
+                  <td className="px-3 py-2">{a.quantity}</td>
+                  <td className="px-3 py-2">{a.unit}</td>
+                  <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          <p className="text-[10px] text-gray-500 mt-1">Aksesoris diturunkan dari serah terima sebelumnya.</p>
         </div>
+      )}
+
+      {/* Signatures */}
+      <SignaturePadField
+        label="TTD Penyerah"
+        required
+        value={sigWh}
+        onChange={setSigWh}
+      />
+      <SignaturePadField
+        label="TTD Penerima (opsional)"
+        required={false}
+        value={sigHd}
+        onChange={setSigHd}
+      />
+
+      {/* Remarks */}
+      <div className="space-y-2 pb-4">
+        <label className="text-sm font-medium text-gray-900">Catatan</label>
+        <input
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+          value={remarks}
+          onChange={(e) => setRemarks(e.target.value)}
+          placeholder="Catatan tambahan (opsional)"
+        />
+      </div>
       {/* Action Buttons */}
       <div className="flex justify-between gap-2 pt-4 border-t">
-        <button 
-          type="button" 
-          className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]" 
+        <button
+          type="button"
+          className="px-4 py-2.5 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors min-w-[90px]"
           onClick={onCancel}
         >
           Batal

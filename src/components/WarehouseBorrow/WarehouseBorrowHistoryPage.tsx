@@ -56,12 +56,7 @@ export default function WarehouseBorrowHistoryPage() {
         setAllUsers(users);
       })
       .catch(console.error);
-    workshopTechnicianApi.getAllActive()
-      .then((res) => {
-        const techs = res.data?.data ?? [];
-        setTechnicians(techs);
-      })
-      .catch(console.error);
+    workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setTechnicians(res.data.data)).catch(() => setTechnicians([]));
   }, []);
 
   // Return form state

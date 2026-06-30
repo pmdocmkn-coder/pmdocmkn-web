@@ -57,11 +57,15 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
   const [entryMode, setEntryMode] = useState<EntryMode>("single");
   const [radioLines, setRadioLines] = useState<RadioSerialLine[]>([initialLine()]);
   const [damage, setDamage] = useState("");
+  const [damageByLineId, setDamageByLineId] = useState<Record<string, string>>({});
+  const [useSharedDamage, setUseSharedDamage] = useState(true);
   const [greenFields, setGreenFields] = useState<GreenTagFields>({ ...EMPTY_GREEN_TAG });
   const [techId, setTechId] = useState("");
   const [workshopTechId, setWorkshopTechId] = useState("");
   const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [accessories, setAccessories] = useState<HandoverAccessoryItem[]>([]);
+  const [accessoriesByLineId, setAccessoriesByLineId] = useState<Record<string, HandoverAccessoryItem[]>>({});
+  const [useSharedAccessories, setUseSharedAccessories] = useState(true);
   const [remarks, setRemarks] = useState("");
   const [photos, setPhotos] = useState<string[]>([]);
   const [photosByLineId, setPhotosByLineId] = useState<Record<string, string[]>>({});
@@ -92,7 +96,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
 
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
-    workshopTechnicianApi.getAllActive().then(res => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
+    workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
   }, []);
 
   useEffect(() => {
@@ -113,7 +117,18 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       if (filled.length === 0) missing.push("Minimal satu SN");
     }
     if (s === 2) {
-      if (tagType === "Damaged" && !damage.trim()) missing.push("Keterangan kerusakan");
+      if (tagType === "Damaged") {
+        const lines = mergedLines(radioLines, sharedDefaults);
+        if (lines.length <= 1 || useSharedDamage) {
+          if (!damage.trim()) missing.push("Keterangan kerusakan (bersama)");
+        } else {
+          for (const line of lines) {
+            if (!(damageByLineId[line.id] ?? "").trim()) {
+              missing.push(`Kerusakan SN ${line.serial}`);
+            }
+          }
+        }
+      }
     }
     if (s === 3) {
       if (!techId) missing.push("Akun sistem penerima");
@@ -161,15 +176,12 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       return;
     }
 
-    const { accessories: acc, batterySerialNumber } = buildAccessoriesPayload(accessories);
     const receiverOk = isValidSignature(tekSig);
     const base = {
       handoverType: "HelpdeskToTechnician" as const,
       helpdeskTicketNumber: ticket.trim(),
       noJobErp: noJobErp.trim() || undefined,
       equipmentTagType: tagType,
-      batterySerialNumber,
-      damageDescription: tagType === "Damaged" ? damage.trim() : damage.trim() || undefined,
       originFrom: greenFields.originFrom?.trim() || sharedDefaults.radioOwnerLabel || undefined,
       repairDataDescription: greenFields.repairDataDescription?.trim() || undefined,
       repairedByName: greenFields.repairedByName?.trim() || undefined,
@@ -185,7 +197,6 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       radioPhotos: photos,
       handedOverSignatureBase64: hdSig!,
       receiverSignatureBase64: receiverOk ? tekSig! : undefined,
-      accessories: acc,
       remarks: remarks.trim() || undefined,
     };
 
@@ -197,6 +208,12 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       for (const line of lines) {
         const linePhotos =
           multi && !useSharedPhotos ? (photosByLineId[line.id] ?? []) : photos;
+        const lineAccessories =
+          multi && !useSharedAccessories ? (accessoriesByLineId[line.id] ?? []) : accessories;
+        const { accessories: acc, batterySerialNumber } = buildAccessoriesPayload(lineAccessories);
+
+        const lineDamage = multi && !useSharedDamage ? (damageByLineId[line.id] ?? "") : damage;
+
         try {
           await radioHandoverApi.create({
             ...base,
@@ -207,7 +224,10 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
             radioOwnerLabel: line.radioOwnerLabel.trim() || sharedDefaults.radioOwnerLabel || undefined,
             ownerDivision: line.ownerDivision.trim() || sharedDefaults.ownerDivision || undefined,
             ownerDepartment: line.ownerDepartment.trim() || sharedDefaults.ownerDepartment || undefined,
+            damageDescription: tagType === "Damaged" ? lineDamage.trim() : lineDamage.trim() || undefined,
             radioPhotos: linePhotos,
+            accessories: acc,
+            batterySerialNumber,
           });
           ok += 1;
         } catch (err: unknown) {
@@ -379,14 +399,60 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
           <>
             {tagType === "Damaged" && (
               <div className="space-y-2">
-                <label className="text-sm font-medium text-gray-900">Keterangan kerusakan *</label>
-                <textarea
-                  className="w-full border border-[#E2E8F0] rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
-                  rows={3}
-                  value={damage}
-                  onChange={(e) => setDamage(e.target.value)}
-                  placeholder="Contoh: tidak ada suara, LCD mati, …"
-                />
+                {mergedLines(radioLines, sharedDefaults).length > 1 ? (
+                  <div className="space-y-3 rounded-[10px] border border-[#2B6CB0]/20 bg-[#EBF4FF]/40 p-4">
+                    <p className="text-sm font-semibold text-[#1B3A6B]">Keterangan kerusakan (beberapa SN)</p>
+                    <label className="flex items-start gap-3 text-sm cursor-pointer p-2 hover:bg-white/50 rounded-lg transition-colors">
+                      <input
+                        type="checkbox"
+                        className="mt-1 w-4 h-4 text-[#2B6CB0] border-[#E2E8F0] rounded focus:ring-[#2B6CB0]"
+                        checked={useSharedDamage}
+                        onChange={(e) => setUseSharedDamage(e.target.checked)}
+                      />
+                      <span>
+                        <span className="font-semibold text-gray-900">Satu keterangan untuk semua SN</span>
+                        <span className="block text-xs text-[#718096] mt-1 leading-relaxed">
+                          Keterangan kerusakan yang sama akan berlaku untuk setiap radio dalam tiket ini.
+                        </span>
+                      </span>
+                    </label>
+                    {useSharedDamage ? (
+                      <textarea
+                        className="w-full border border-[#E2E8F0] rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
+                        rows={3}
+                        value={damage}
+                        onChange={(e) => setDamage(e.target.value)}
+                        placeholder="Contoh: tidak ada suara, LCD mati, …"
+                      />
+                    ) : (
+                      <div className="space-y-4">
+                        {mergedLines(radioLines, sharedDefaults).map((line) => (
+                          <div key={line.id}>
+                            <label className="text-sm font-medium text-gray-900 mb-1 block">Kerusakan — SN {line.serial} *</label>
+                            <textarea
+                              className="w-full border border-[#E2E8F0] rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
+                              rows={2}
+                              value={damageByLineId[line.id] ?? ""}
+                              onChange={(e) => setDamageByLineId((prev) => ({ ...prev, [line.id]: e.target.value }))}
+                              placeholder="Contoh: tidak ada suara, LCD mati, …"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <>
+                    <label className="text-sm font-medium text-gray-900">Keterangan kerusakan *</label>
+                    <textarea
+                      className="w-full border border-[#E2E8F0] rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
+                      rows={3}
+                      value={damage}
+                      onChange={(e) => setDamage(e.target.value)}
+                      placeholder="Contoh: tidak ada suara, LCD mati, …"
+                    />
+                  </>
+                )}
               </div>
             )}
             {tagType === "Good" && (
@@ -408,6 +474,10 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                 damage={damage}
                 greenFields={greenFields}
                 accessories={accessories}
+                damageByLineId={damageByLineId}
+                useSharedDamage={useSharedDamage}
+                accessoriesByLineId={accessoriesByLineId}
+                useSharedAccessories={useSharedAccessories}
               />
             </div>
           </>
@@ -489,7 +559,44 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
             ) : (
               <MultiPhotoUpload photos={photos} onChange={setPhotos} required />
             )}
-            <HandoverAccessoryList items={accessories} onChange={setAccessories} />
+
+            {mergedLines(radioLines, sharedDefaults).length > 1 ? (
+              <div className="space-y-3 rounded-[10px] border border-[#2B6CB0]/20 bg-[#EBF4FF]/40 p-4">
+                <p className="text-sm font-semibold text-[#1B3A6B]">Aksesoris radio (beberapa SN)</p>
+                <label className="flex items-start gap-3 text-sm cursor-pointer p-2 hover:bg-white/50 rounded-lg transition-colors">
+                  <input
+                    type="checkbox"
+                    className="mt-1 w-4 h-4 text-[#2B6CB0] border-[#E2E8F0] rounded focus:ring-[#2B6CB0]"
+                    checked={useSharedAccessories}
+                    onChange={(e) => setUseSharedAccessories(e.target.checked)}
+                  />
+                  <span>
+                    <span className="font-semibold text-gray-900">Satu set aksesoris untuk semua SN</span>
+                    <span className="block text-xs text-[#718096] mt-1 leading-relaxed">
+                      Aksesoris yang sama akan dilampirkan ke setiap radio dalam tiket ini.
+                    </span>
+                  </span>
+                </label>
+                {useSharedAccessories ? (
+                  <HandoverAccessoryList items={accessories} onChange={setAccessories} />
+                ) : (
+                  <div className="space-y-4">
+                    {mergedLines(radioLines, sharedDefaults).map((line) => (
+                      <div key={line.id} className="pt-2">
+                        <p className="text-sm font-medium text-gray-900 mb-2">Aksesoris — SN {line.serial}</p>
+                        <HandoverAccessoryList
+                          items={accessoriesByLineId[line.id] ?? []}
+                          onChange={(a) => setAccessoriesByLineId((prev) => ({ ...prev, [line.id]: a }))}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : (
+              <HandoverAccessoryList items={accessories} onChange={setAccessories} />
+            )}
+
             <SignaturePadField ref={sigHdRef} label="TTD Penyerah" required value={sigHandover} onChange={setSigHandover} />
             <SignaturePadField ref={sigTekRef} label="TTD Penerima (opsional)" value={sigReceiver} onChange={setSigReceiver} />
             <input

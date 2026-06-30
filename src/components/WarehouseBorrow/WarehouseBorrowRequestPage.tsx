@@ -109,12 +109,7 @@ export default function WarehouseBorrowRequestPage() {
         setAllUsers(users);
       })
       .catch(() => setAllUsers([]));
-    workshopTechnicianApi.getAllActive()
-      .then((res) => {
-        const techs = res.data?.data ?? [];
-        setTechnicians(techs);
-      })
-      .catch(() => setTechnicians([]));
+    workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setTechnicians(res.data.data)).catch(() => setTechnicians([]));
   }, []);
 
   // Auto-detect user yang dipilih dari borrowerName (fallback jika FormMobileSelect tidak trigger onChange dengan object)
