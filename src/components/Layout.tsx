@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 import { useAuth } from "../contexts/AuthContext";
-import { Menu, Search, Bell, Calendar, Clock, LayoutDashboard, CalendarDays, Radio, Warehouse, Wrench, Video, Phone, Link2, TrendingUp, BookOpen, FileText, Package, ClipboardList, Building2, FileType, Settings, ChevronRight } from "lucide-react";
+import { Menu, Search, Bell, Calendar, Clock, LayoutDashboard, CalendarDays, Radio, Warehouse, Wrench, Video, Phone, Link2, TrendingUp, BookOpen, FileText, Package, ClipboardList, Building2, FileType, Settings, ChevronRight, LogOut } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useSignalR } from "../hooks/useSignalR";
 import { NotificationPanel } from "./NotificationPanel";
@@ -19,7 +19,7 @@ const hasPerm = (p: string): boolean => {
 
 // ─── "More" menu groups for mobile bottom sheet ───────────────────────────────
 
-interface MoreNavItem { name: string; path: string; icon: React.ElementType; permission?: string; }
+interface MoreNavItem { name: string; path: string; icon: React.ElementType; permission?: string; anyOf?: string[]; }
 interface MoreNavGroup { label: string; items: MoreNavItem[]; }
 
 const moreNavGroups: MoreNavGroup[] = [
@@ -59,7 +59,7 @@ const moreNavGroups: MoreNavGroup[] = [
       { name: "Histori Peminjaman", path: "/warehouse/borrow-history", icon: ClipboardList, permission: "warehouse.borrow.view" },
       { name: "Ajuan Pinjam Tools", path: "/warehouse/borrow-request", icon: Package, permission: "warehouse.borrow.create" },
       { name: "Supervisi Warehouse", path: "/warehouse/supervision", icon: ClipboardList, permission: "warehouse.borrow.supervise" },
-      { name: "Master Data Tools", path: "/warehouse/catalog", icon: FileText, permission: "warehouse.borrow.supervise" },
+      { name: "Master Data Tools", path: "/warehouse/catalog", icon: FileText, anyOf: ["warehouse.borrow.supervise", "warehouse.menu.tools"] },
     ],
   },
   {
@@ -156,7 +156,7 @@ interface LayoutProps {
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const { dateStr, timeStr } = useDatetime();
@@ -466,7 +466,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
       <div ref={moreSheetRef} className="space-y-5 pb-4">
         {moreNavGroups.map((group) => {
           const visibleItems = group.items.filter(
-            (item) => !item.permission || hasPerm(item.permission)
+            (item) => !item.permission && !item.anyOf || (item.permission && hasPerm(item.permission)) || (item.anyOf && item.anyOf.some(p => hasPerm(p)))
           );
           if (visibleItems.length === 0) return null;
           return (
@@ -515,6 +515,22 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             </div>
           );
         })}
+
+        {/* ── Logout Button ── */}
+        <div className="pt-2 border-t border-[#E2E8F0]">
+          <button
+            onClick={() => {
+              logout();
+              setIsMoreSheetOpen(false);
+            }}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[14px] font-medium transition-colors text-left text-[#D94F2B] hover:bg-[#FFF5F5]"
+          >
+            <div className="w-8 h-8 rounded-[6px] flex items-center justify-center flex-shrink-0 bg-[#FFF5F5]">
+              <LogOut className="w-4 h-4 text-[#D94F2B]" />
+            </div>
+            Keluar
+          </button>
+        </div>
       </div>
     </BottomSheet>
     </>

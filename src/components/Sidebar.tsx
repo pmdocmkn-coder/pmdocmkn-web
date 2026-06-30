@@ -47,6 +47,7 @@ interface NavItem {
   icon: React.ElementType;
   id: string;
   permission?: string;
+  anyOf?: string[];
   forAll?: boolean;
 }
 
@@ -98,7 +99,7 @@ const warehouseMenu: NavItem[] = [
   { name: "Histori Peminjaman", path: "/warehouse/borrow-history", icon: ClipboardList, id: "warehouse-borrow-history", permission: "warehouse.borrow.view" },
   { name: "Ajuan Pinjam Tools", path: "/warehouse/borrow-request", icon: Package, id: "warehouse-borrow-request", permission: "warehouse.borrow.create" },
   { name: "Supervisi Warehouse", path: "/warehouse/supervision", icon: ClipboardCheck, id: "warehouse-supervision", permission: "warehouse.borrow.supervise" },
-  { name: "Master Data Tools", path: "/warehouse/catalog", icon: Database, id: "warehouse-catalog", permission: "warehouse.borrow.supervise" },
+  { name: "Master Data Tools", path: "/warehouse/catalog", icon: Database, id: "warehouse-catalog", anyOf: ["warehouse.borrow.supervise", "warehouse.menu.tools"] },
 ];
 
 const callRecordsMenu: NavItem[] = [
@@ -222,28 +223,17 @@ export default function Sidebar({
     return () => clearTimeout(t);
   }, [location.pathname]);
 
-  // Filter by permission
-  const filteredMain = mainMenu.filter(
-    (i) => i.forAll || !i.permission || hasPermission(i.permission)
-  );
-  const filteredPm = pmManagementMenu.filter(
-    (i) => !i.permission || hasPermission(i.permission)
-  );
-  const filteredRadio = radioFleetMenu.filter(
-    (i) => i.forAll || !i.permission || hasPermission(i.permission)
-  );
-  const filteredMonitoring = monitoringMenu.filter(
-    (i) => !i.permission || hasPermission(i.permission)
-  );
-  const filteredWarehouse = warehouseMenu.filter(
-    (i) => !i.permission || hasPermission(i.permission)
-  );
-  const filteredCallRecords = callRecordsMenu.filter(
-    (i) => !i.permission || hasPermission(i.permission)
-  );
-  const filteredAdministration = administrationMenu.filter(
-    (i) => !i.permission || hasPermission(i.permission)
-  );
+  // Filter by permission (supports single permission or anyOf array)
+  const hasAccess = (i: NavItem) =>
+    i.forAll || (!i.permission && !i.anyOf) || (i.permission && hasPermission(i.permission)) || (i.anyOf && i.anyOf.some(p => hasPermission(p)));
+
+  const filteredMain = mainMenu.filter(hasAccess);
+  const filteredPm = pmManagementMenu.filter(hasAccess);
+  const filteredRadio = radioFleetMenu.filter(hasAccess);
+  const filteredMonitoring = monitoringMenu.filter(hasAccess);
+  const filteredWarehouse = warehouseMenu.filter(hasAccess);
+  const filteredCallRecords = callRecordsMenu.filter(hasAccess);
+  const filteredAdministration = administrationMenu.filter(hasAccess);
 
   // ─── Sidebar inner content ─────────────────────────────────────────────────
 
