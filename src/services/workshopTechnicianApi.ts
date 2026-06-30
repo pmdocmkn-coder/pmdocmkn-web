@@ -23,12 +23,12 @@ export interface UpdateWorkshopTechnicianDto {
 
 export const workshopTechnicianApi = {
   // Paged — dipakai tabel utama jika ada pagination (saat ini pakai list biasa jika datanya tidak banyak)
-  getAll: () => {
-    return api.get<{ data: WorkshopTechnicianDto[]; message: string }>("/api/workshop-technicians");
+  getAll: (role?: string) => {
+    return api.get<{ data: WorkshopTechnicianDto[]; message: string }>(`/api/workshop-technicians${role ? `?role=${encodeURIComponent(role)}` : ""}`);
   },
 
-  getAllActive: () => {
-    return api.get<{ data: WorkshopTechnicianDto[]; message: string }>("/api/workshop-technicians?includeInactive=false");
+  getAllActive: (role?: string) => {
+    return api.get<{ data: WorkshopTechnicianDto[]; message: string }>(`/api/workshop-technicians?includeInactive=false${role ? `&role=${encodeURIComponent(role)}` : ""}`);
   },
 
   getById: (id: number) => {

@@ -17,6 +17,10 @@ type Props = {
   damage: string;
   greenFields: GreenTagFields;
   accessories: HandoverAccessoryItem[];
+  damageByLineId?: Record<string, string>;
+  useSharedDamage?: boolean;
+  accessoriesByLineId?: Record<string, HandoverAccessoryItem[]>;
+  useSharedAccessories?: boolean;
 };
 
 export default function HandoverWizardTagCarousel({
@@ -27,6 +31,10 @@ export default function HandoverWizardTagCarousel({
   damage,
   greenFields,
   accessories,
+  damageByLineId,
+  useSharedDamage = true,
+  accessoriesByLineId,
+  useSharedAccessories = true,
 }: Props) {
   const lines = mergedLines(radioLines, sharedDefaults);
   const [index, setIndex] = useState(0);
@@ -92,7 +100,11 @@ export default function HandoverWizardTagCarousel({
 
       {tagType === "Damaged" ? (
         <DamagedEquipmentTagCard
-          data={toDamagedPreview(line, { ticket, damage, accessories })}
+          data={toDamagedPreview(line, { 
+            ticket, 
+            damage: (!useSharedDamage && damageByLineId) ? (damageByLineId[line.id] ?? "") : damage, 
+            accessories: (!useSharedAccessories && accessoriesByLineId) ? (accessoriesByLineId[line.id] ?? []) : accessories 
+          })}
         />
       ) : (
         <GoodEquipmentTagCard data={toGoodPreview(line, greenFields, { ticket })} />

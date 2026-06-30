@@ -67,7 +67,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
   useEffect(() => {
     radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
-    workshopTechnicianApi.getAllActive().then((res) => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
+    workshopTechnicianApi.getAllActive("Teknisi WKS").then((res) => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
   }, []);
 
   const validate = (): string[] => {

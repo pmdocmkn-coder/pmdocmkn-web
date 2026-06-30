@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import {
@@ -69,6 +69,15 @@ function EmptyState({ message }: { message: string }) {
   );
 }
 
+function currentUserId(): number | null {
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}");
+    return u.userId ?? u.UserId ?? null;
+  } catch {
+    return null;
+  }
+}
+
 type HandoverTableProps = {
   items: RadioHandoverList[];
   loading: boolean;
@@ -88,218 +97,295 @@ function HandoverHistoryTable({
   onOpenGallery,
   onSignRow,
 }: HandoverTableProps) {
+  const myId = currentUserId();
   const canWarehouseSign = (h: RadioHandoverList) => {
-    return h.status === "PendingReceiverSignature";
+    // Only the designated receiver can sign
+    return h.status === "PendingReceiverSignature" && h.receivedByUserId === myId;
   };
+
+  const groupedItems = useMemo(() => {
+    const map = new Map<string, RadioHandoverList[]>();
+    items.forEach((h) => {
+      const key = h.helpdeskTicketNumber || h.radioRepairJobId?.toString() || h.id.toString();
+      if (!map.has(key)) {
+        map.set(key, []);
+      }
+      map.get(key)!.push(h);
+    });
+    return Array.from(map.entries()).map(([key, group]) => {
+      const hasPendingSignature = group.some((h) => canWarehouseSign(h));
+      const first = group[0];
+      return {
+        key,
+        ticketNumber: first.helpdeskTicketNumber,
+        flowLabel: first.handoverType,
+        handoverAt: first.handoverAt,
+        handedOverByName: first.handedOverByWorkshopTechnicianName || first.handedOverByName,
+        receivedByName: first.workshopTechnicianName || first.receivedByName,
+        hasPendingSignature,
+        firstItem: first,
+        items: group,
+      };
+    });
+  }, [items]);
 
   return (
     <>
-    {/* ====== DESKTOP TABLE ====== */}
-    <div className="bg-white rounded-xl border overflow-hidden shadow-sm hidden md:block">
-      <table className="w-full text-sm">
-        <thead className="bg-gray-50/80 text-left border-b">
-          <tr>
-            <th className="px-4 py-3 font-semibold text-gray-600">STR</th>
-            <th className="px-4 py-3 font-semibold text-gray-600">Tiket Helpdesk</th>
-            <th className="px-4 py-3 font-semibold text-gray-600">SN Radio</th>
-            <th className="px-4 py-3 font-semibold text-gray-600">{flowLabel}</th>
-            <th className="px-4 py-3 font-semibold text-gray-600">Foto</th>
-            <th className="px-4 py-3 font-semibold text-gray-600">Tanggal</th>
-            <th className="px-4 py-3 font-semibold text-gray-600 text-right">Aksi</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading && (
-            <tr>
-              <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
-                <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
-                Memuat data...
-              </td>
-            </tr>
-          )}
-          {!loading && items.length === 0 && (
-            <tr>
-              <td colSpan={7}>
-                <EmptyState message={emptyMessage} />
-              </td>
-            </tr>
-          )}
-          {!loading &&
-            items.map((h, idx) => (
-              <tr
-                key={h.id}
-                className={`border-t cursor-pointer transition-colors hover:bg-violet-50/60 ${
-                  idx % 2 === 1 ? "bg-gray-50/40" : ""
-                }`}
-                onClick={() => onOpenDetail(h.id)}
-              >
-                <td className="px-4 py-3">
-                  <span className="font-mono text-xs font-medium text-violet-700">{h.handoverNumber}</span>
-                  <div className="mt-1">
-                    <span
-                      className={`inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium border ${handoverTypeBadgeClass(h.handoverType)}`}
-                    >
-                      {handoverTypeLabel(h.handoverType)}
-                    </span>
-                  </div>
-                </td>
-                <td className="px-4 py-3 font-mono text-xs text-gray-800">
-                  {h.helpdeskTicketNumber ?? "—"}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
-                  {h.equipmentName && <div className="text-xs text-gray-500">{h.equipmentName}</div>}
-                </td>
-                <td className="px-4 py-3">
-                  <div className="flex items-center gap-1.5 text-gray-700">
-                    <span className="truncate max-w-[100px]" title={h.handedOverByName}>
-                      {h.handedOverByName}
-                    </span>
-                    <ArrowRight className="w-3.5 h-3.5 text-violet-500 shrink-0" />
-                    <span className="truncate max-w-[100px]" title={h.receivedByName}>
-                      {h.receivedByName}
-                    </span>
-                  </div>
-                  <div className="mt-1">
-                    <HandoverStatusBadge status={h.status} />
-                  </div>
-                </td>
-                <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                  {h.previewPhotoBase64 || h.photoCount > 0 ? (
-                    <div className="relative">
-                      <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
-                      {h.photoCount > 1 && (
-                        <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                          {h.photoCount}
-                        </span>
-                      )}
-                    </div>
-                  ) : (
-                    <span className="text-gray-300 text-xs">—</span>
-                  )}
-                </td>
-                <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
-                  {format(new Date(h.handoverAt), "dd MMM yyyy", { locale: localeId })}
-                  <div className="text-xs text-gray-400">
-                    {format(new Date(h.handoverAt), "HH:mm", { locale: localeId })}
-                  </div>
-                </td>
-                <td className="px-4 py-3 text-right" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex gap-2 justify-end">
-                    {canWarehouseSign(h) && onSignRow && (
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors"
-                        title="Lengkapi TTD Penerima"
-                        onClick={() => onSignRow(h)}
-                      >
-                        <span className="shrink-0 w-3.5 h-3.5 flex items-center justify-center">✍️</span>
-                        Tanda Tangan
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 border border-violet-200 rounded-lg text-violet-700 text-xs font-medium hover:bg-violet-50 transition-colors"
-                      title="Lihat detail serah terima"
-                      onClick={() => onOpenDetail(h.id)}
-                    >
-                      <Eye className="w-3.5 h-3.5" />
-                      Detail
-                    </button>
-                  </div>
-                </td>
+      <div className="bg-white rounded-xl border overflow-hidden shadow-sm hidden md:block">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[800px]">
+            <thead className="bg-gray-50/80 text-left border-b">
+              <tr>
+                <th className="px-4 py-3 font-semibold text-gray-600">STR</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">Tiket Helpdesk</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">SN Radio</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">{flowLabel}</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">Foto</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">Tanggal</th>
+                <th className="px-4 py-3 font-semibold text-gray-600 text-right sticky right-0 bg-gray-50/80 z-10">
+                  Aksi
+                </th>
               </tr>
-            ))}
-        </tbody>
-      </table>
-    </div>
+            </thead>
+            <tbody>
+              {loading && (
+                <tr>
+                  <td colSpan={7} className="px-4 py-12 text-center text-gray-400">
+                    <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
+                    Memuat data...
+                  </td>
+                </tr>
+              )}
+              {!loading && items.length === 0 && (
+                <tr>
+                  <td colSpan={7}>
+                    <EmptyState message={emptyMessage} />
+                  </td>
+                </tr>
+              )}
+              {!loading &&
+                groupedItems.map((group) => (
+                  <Fragment key={group.key}>
+                    <tr className="bg-gray-50 border-t border-b border-gray-200">
+                      <td colSpan={6} className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <span
+                            className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold border ${handoverTypeBadgeClass(
+                              group.flowLabel
+                            )}`}
+                          >
+                            {handoverTypeLabel(group.flowLabel)}
+                          </span>
+                          <span className="font-semibold text-gray-800">
+                            Tiket HD: <span className="font-mono text-violet-700">{group.ticketNumber || "—"}</span>
+                          </span>
+                          <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
+                            {group.items.length} Radio
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2 text-right sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.05)] border-l border-gray-100">
+                        {group.hasPendingSignature && onSignRow && (
+                          <button
+                            type="button"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors shadow-sm whitespace-nowrap"
+                            title="Tanda Tangan Massal"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onSignRow(group.firstItem);
+                            }}
+                          >
+                            <span className="shrink-0 w-3 h-3 flex items-center justify-center">✍️</span>
+                            Tanda Tangan ({group.items.filter(canWarehouseSign).length})
+                          </button>
+                        )}
+                      </td>
+                    </tr>
 
-    {/* ====== MOBILE CARD LAYOUT ====== */}
-    <div className="md:hidden space-y-3">
-      {loading ? (
-        <div className="text-center py-8 text-gray-500 text-sm">
-          <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
-          Memuat data...
+                    {group.items.map((h, idx) => (
+                      <tr
+                        key={h.id}
+                        className={`cursor-pointer transition-colors hover:bg-violet-50/60 ${
+                          idx !== group.items.length - 1 ? "border-b border-gray-100/60" : ""
+                        }`}
+                        onClick={() => onOpenDetail(h.id)}
+                      >
+                        <td className="px-4 py-3 pl-8">
+                          <span className="font-mono text-xs font-medium text-gray-700">{h.handoverNumber}</span>
+                        </td>
+                        <td className="px-4 py-3 font-mono text-xs text-gray-400">
+                          {h.helpdeskTicketNumber ?? "—"}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
+                          {h.equipmentName && <div className="text-xs text-gray-500">{h.equipmentName}</div>}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 text-gray-700">
+                            <span
+                              className="truncate max-w-[100px]"
+                              title={h.handedOverByWorkshopTechnicianName || h.handedOverByName}
+                            >
+                              {h.handedOverByWorkshopTechnicianName || h.handedOverByName}
+                            </span>
+                            <ArrowRight className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                            <span
+                              className="truncate max-w-[100px]"
+                              title={h.workshopTechnicianName || h.receivedByName}
+                            >
+                              {h.workshopTechnicianName || h.receivedByName}
+                            </span>
+                          </div>
+                          <div className="mt-1">
+                            <HandoverStatusBadge status={h.status} />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
+                          {h.previewPhotoBase64 || h.photoCount > 0 ? (
+                            <div className="relative inline-block">
+                              <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
+                              {h.photoCount > 1 && (
+                                <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                                  {h.photoCount}
+                                </span>
+                              )}
+                            </div>
+                          ) : (
+                            <span className="text-gray-300 text-xs">—</span>
+                          )}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
+                          {format(new Date(h.handoverAt), "dd MMM yyyy", { locale: localeId })}
+                          <div className="text-xs text-gray-400">
+                            {format(new Date(h.handoverAt), "HH:mm", { locale: localeId })}
+                          </div>
+                        </td>
+                        <td
+                          className="px-4 py-3 text-right sticky right-0 bg-white group-hover/tr:bg-violet-50/60 transition-colors z-10 border-l border-gray-100/60"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex justify-end pr-1">
+                            <button
+                              type="button"
+                              className="inline-flex items-center justify-center w-8 h-8 border border-violet-200 rounded-lg text-violet-700 hover:bg-violet-50 transition-colors bg-white shadow-sm"
+                              title="Lihat detail"
+                              onClick={() => onOpenDetail(h.id)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </Fragment>
+                ))}
+            </tbody>
+          </table>
         </div>
-      ) : items.length === 0 ? (
-        <EmptyState message={emptyMessage} />
-      ) : (
-        items.map((h) => (
-          <div key={h.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2.5 relative">
-            {/* Row 1: Flow Type Badge + Date */}
-            <div className="flex justify-between items-start">
-              <span className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full border ${handoverTypeBadgeClass(h.handoverType)}`}>
-                {handoverTypeLabel(h.handoverType)}
-              </span>
-              <span className="text-xs text-gray-400 font-medium">
-                {h.handoverAt ? format(new Date(h.handoverAt), "dd MMM yyyy", { locale: localeId }) : "-"}
-              </span>
-            </div>
+      </div>
 
-            {/* Row 2: SN + Unit/Alat */}
-            <div>
-              <p className="text-sm font-bold text-gray-900">{h.radioSerialNumber}</p>
-              <p className="text-xs text-gray-500 mt-0.5">
-                Unit: {h.unitNumber || "-"} • Alat: {h.equipmentName || "-"}
-              </p>
-            </div>
-
-            {/* Row 3: Detail Grid Box */}
-            <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-100 rounded-lg p-2.5">
-              <div><span className="text-gray-400">STR:</span> <span className="font-mono font-medium text-violet-700">{h.handoverNumber}</span></div>
-              <div><span className="text-gray-400">Tiket HD:</span> <span className="font-mono">{h.helpdeskTicketNumber || "-"}</span></div>
-              <div className="col-span-2 flex items-baseline gap-1.5 pt-1.5 border-t border-gray-200/50 mt-0.5">
-                <span className="text-gray-400 shrink-0">Alur:</span>
-                <div className="flex items-center gap-1 text-gray-700 font-medium">
-                  <span className="truncate max-w-[80px]" title={h.handedOverByName}>{h.handedOverByName}</span>
-                  <ArrowRight className="w-3 h-3 text-violet-500 shrink-0 mx-0.5" />
-                  <span className="truncate max-w-[80px]" title={h.receivedByName}>{h.receivedByName}</span>
+      <div className="md:hidden space-y-4">
+        {loading ? (
+          <div className="text-center py-8 text-gray-500 text-sm">
+            <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
+            Memuat data...
+          </div>
+        ) : items.length === 0 ? (
+          <EmptyState message={emptyMessage} />
+        ) : (
+          groupedItems.map((group) => (
+            <div
+              key={group.key}
+              className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col relative overflow-hidden"
+            >
+              <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-start justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span
+                      className={`px-2 py-0.5 inline-flex text-[10px] leading-5 font-bold rounded-md border ${handoverTypeBadgeClass(
+                        group.flowLabel
+                      )}`}
+                    >
+                      {handoverTypeLabel(group.flowLabel)}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium">
+                      {group.handoverAt ? format(new Date(group.handoverAt), "dd MMM yyyy", { locale: localeId }) : "-"}
+                    </span>
+                  </div>
+                  <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
+                    Tiket HD: <span className="font-mono text-violet-700">{group.ticketNumber || "—"}</span>
+                  </h3>
+                  <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1 font-medium">
+                    <span className="truncate max-w-[120px]">{group.handedOverByName}</span>
+                    <ArrowRight className="w-3 h-3 text-violet-400 shrink-0" />
+                    <span className="truncate max-w-[120px] text-gray-700">{group.receivedByName}</span>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            {/* Row 4: Status & Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-y-2.5 pt-2.5 mt-1 border-t border-gray-100">
-              <div className="flex flex-wrap items-center gap-2 shrink-0">
-                <HandoverStatusBadge status={h.status} />
+              <div className="divide-y divide-gray-100/60">
+                {group.items.map((h) => (
+                  <div
+                    key={h.id}
+                    className="p-4 hover:bg-gray-50/50 transition-colors cursor-pointer"
+                    onClick={() => onOpenDetail(h.id)}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Unit: {h.unitNumber || "-"} • Alat: {h.equipmentName || "-"}
+                        </p>
+                      </div>
+                      <HandoverStatusBadge status={h.status} />
+                    </div>
+
+                    <div className="flex items-center justify-between mt-3">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] text-gray-500 bg-gray-100/80 px-1.5 py-0.5 rounded border border-gray-200">
+                          {h.handoverNumber}
+                        </span>
+                        {h.previewPhotoBase64 || h.photoCount > 0 ? (
+                          <div className="relative mr-1" onClick={(e) => e.stopPropagation()}>
+                            <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
+                            {h.photoCount > 1 && (
+                              <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                                {h.photoCount}
+                              </span>
+                            )}
+                          </div>
+                        ) : null}
+                      </div>
+
+                      <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="p-1.5 border border-gray-200 rounded text-gray-500 hover:bg-gray-50 hover:text-gray-700"
+                          onClick={() => onOpenDetail(h.id)}
+                        >
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div className="flex flex-wrap gap-1.5 ml-auto items-center justify-end" onClick={(e) => e.stopPropagation()}>
-                {canWarehouseSign(h) && onSignRow && (
+
+              {group.hasPendingSignature && onSignRow && (
+                <div className="p-3 bg-gray-50 border-t border-gray-100">
                   <button
                     type="button"
-                    onClick={() => onSignRow(h)}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors mr-1"
-                    title="Lengkapi TTD Penerima"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-bold shadow-sm"
+                    onClick={() => onSignRow(group.firstItem)}
                   >
-                    <span className="shrink-0 w-3 h-3 flex items-center justify-center">✍️</span>
-                    <span className="hidden xs:inline">Tanda Tangan</span>
+                    Tanda Tangan ({group.items.filter(canWarehouseSign).length})
                   </button>
-                )}
-                {h.previewPhotoBase64 || h.photoCount > 0 ? (
-                  <div className="relative mr-1" onClick={(e) => e.stopPropagation()}>
-                    <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
-                    {h.photoCount > 1 && (
-                      <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
-                        {h.photoCount}
-                      </span>
-                    )}
-                  </div>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => onOpenDetail(h.id)}
-                  className="text-gray-500 hover:text-gray-700 p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-                  title="Detail"
-                >
-                  <Eye className="w-4 h-4" />
-                </button>
-              </div>
+                </div>
+              )}
             </div>
-          </div>
-        ))
-      )}
-    </div>
+          ))
+        )}
+      </div>
     </>
   );
 }
