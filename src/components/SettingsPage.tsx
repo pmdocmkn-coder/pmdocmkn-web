@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import {
   Shield, Users, Key, UserCog, Building2, ScrollText,
-  ChevronRight, ArrowLeft, Settings, Wrench,
+  ChevronRight, ArrowLeft, Settings, Wrench, Home,
 } from 'lucide-react';
 import PermissionsTab from './settings/PermissionsTab';
 import RolesTab from './settings/RolesTab';
@@ -12,6 +12,7 @@ import DivisionsTab from './settings/DivisionsTab';
 import ActivityLogTab from './settings/ActivityLogTab';
 import TechniciansTab from './settings/TechniciansTab';
 import { hasPermission } from '../utils/permissionUtils';
+import { MobilePageHeader } from './ui/MobilePageHeader';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,20 +102,21 @@ const TABS: TabDef[] = [
 
 function TabContent({ id }: { id: TabId }) {
   switch (id) {
-    case 'permissions':      return <PermissionsTab />;
-    case 'roles':            return <RolesTab />;
+    case 'permissions': return <PermissionsTab />;
+    case 'roles': return <RolesTab />;
     case 'role-permissions': return <RolePermissionsTab />;
-    case 'users':            return <UsersManagementTab />;
-    case 'divisions':        return <DivisionsTab />;
-    case 'activity-logs':    return <ActivityLogTab />;
-    case 'technicians':      return <TechniciansTab />;
-    default:                 return null;
+    case 'users': return <UsersManagementTab />;
+    case 'divisions': return <DivisionsTab />;
+    case 'activity-logs': return <ActivityLogTab />;
+    case 'technicians': return <TechniciansTab />;
+    default: return null;
   }
 }
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function SettingsPage() {
+  const navigate = useNavigate();
   const [mobileActive, setMobileActive] = useState<TabId | null>(null);
   const [desktopActive, setDesktopActive] = useState<TabId>('permissions');
 
@@ -132,35 +134,52 @@ export default function SettingsPage() {
   const activeMobileTab = visibleTabs.find(t => t.id === mobileActive);
 
   return (
-    <div className="min-h-screen bg-[#F7F8FA]">
+    <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
 
-      {/* ── MOBILE: Header ── */}
-      <div className="md:hidden sticky top-0 z-10 bg-white border-b border-[#E2E8F0] px-4 py-3 flex items-center gap-3">
-        {mobileActive ? (
-          <button
-            onClick={() => setMobileActive(null)}
-            className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] flex-shrink-0"
-            aria-label="Kembali"
-          >
-            <ArrowLeft className="w-4 h-4" />
-          </button>
-        ) : (
-          <div className="w-9 h-9 flex items-center justify-center rounded-[10px] bg-[#1B3A6B] flex-shrink-0">
-            <Settings className="w-4 h-4 text-white" />
-          </div>
-        )}
-        <div>
-          <p className="text-[10px] font-semibold text-[#2B6CB0] uppercase tracking-wider">System</p>
-          <h1 className="text-[16px] font-bold text-[#1A202C] leading-none">
-            {mobileActive ? (activeMobileTab?.name ?? 'Settings') : 'Settings'}
-          </h1>
-        </div>
-      </div>
+      {/* ── MOBILE: Header (Root) ── */}
+      {mobileActive === null && (
+        <MobilePageHeader
+          label="System"
+          title="System Settings"
+          subtitle="Kelola permission, role, dan pengguna"
+          icon={<Settings className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />}
+          iconBg="bg-[#EBF4FF]"
+          rightAction={
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+              aria-label="Kembali ke Dashboard"
+            >
+              <Home className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+          }
+        />
+      )}
+
+      {/* ── MOBILE: Header (Active Tab) ── */}
+      {mobileActive !== null && (
+        <MobilePageHeader
+          label="Settings"
+          title={activeMobileTab?.name || 'Menu'}
+          subtitle={activeMobileTab?.description}
+          icon={activeMobileTab ? <activeMobileTab.icon className={`w-5 h-5 ${activeMobileTab.iconColor}`} strokeWidth={2} /> : undefined}
+          iconBg={activeMobileTab?.iconBg || 'bg-[#EBF4FF]'}
+          rightAction={
+            <button
+              onClick={() => setMobileActive(null)}
+              className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+              aria-label="Kembali"
+            >
+              <ArrowLeft className="w-4 h-4" strokeWidth={2.5} />
+            </button>
+          }
+        />
+      )}
 
       {/* ── MOBILE: Menu list ── */}
       {mobileActive === null && (
-        <div className="md:hidden px-4 py-4 space-y-2">
-          <p className="text-[11px] text-[#718096] font-medium px-1 mb-3">Pilih menu untuk dikonfigurasi</p>
+        <div className="md:hidden space-y-3">
+          <p className="text-[11px] text-[#718096] font-medium px-1">Pilih menu untuk dikonfigurasi</p>
           {visibleTabs.map(tab => {
             const Icon = tab.icon;
             return (
@@ -185,15 +204,7 @@ export default function SettingsPage() {
 
       {/* ── MOBILE: Tab content ── */}
       {mobileActive !== null && (
-        <div className="md:hidden px-4 py-4">
-          {activeMobileTab && (
-            <div className="flex items-center gap-3 mb-4">
-              <div className={`w-9 h-9 rounded-[10px] flex items-center justify-center flex-shrink-0 ${activeMobileTab.iconBg}`}>
-                <activeMobileTab.icon className={`w-4 h-4 ${activeMobileTab.iconColor}`} />
-              </div>
-              <p className="text-[12px] text-[#718096]">{activeMobileTab.description}</p>
-            </div>
-          )}
+        <div className="md:hidden">
           <div className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm p-4">
             <TabContent id={mobileActive} />
           </div>
@@ -201,7 +212,7 @@ export default function SettingsPage() {
       )}
 
       {/* ── DESKTOP: Header ── */}
-      <div className="hidden md:flex items-center gap-3 px-6 pt-6 pb-4">
+      <div className="hidden md:flex items-center gap-3 pt-2 pb-2">
         <div className="w-10 h-10 rounded-[10px] bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
           <Settings className="w-5 h-5 text-white" />
         </div>
@@ -212,7 +223,7 @@ export default function SettingsPage() {
       </div>
 
       {/* ── DESKTOP: Side-by-side ── */}
-      <div className="hidden md:flex gap-5 px-6 pb-8">
+      <div className="hidden md:flex gap-5">
         {/* Left: Tab sidebar */}
         <div className="w-56 flex-shrink-0">
           <nav className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm overflow-hidden">

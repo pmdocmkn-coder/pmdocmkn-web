@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye, ClipboardCheck } from "lucide-react";
+import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye, ClipboardCheck, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import { api } from "../../services/api";
@@ -28,6 +29,7 @@ interface UserLookupItem {
 
 export default function WarehouseBorrowHistoryPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const isWarehouse = user?.roleName?.toLowerCase() === "warehouse";
   const [items, setItems] = useState<WarehouseBorrowList[]>([]);
@@ -346,10 +348,10 @@ export default function WarehouseBorrowHistoryPage() {
             <p className="text-[12px] text-[#718096] mt-0.5">Riwayat permintaan dan transaksi tools</p>
           </div>
           <button
-            onClick={() => window.history.back()}
+            onClick={() => navigate("/warehouse")}
             className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
-            <History className="h-4 w-4" strokeWidth={2.5} />
+            <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
         {/* Search */}

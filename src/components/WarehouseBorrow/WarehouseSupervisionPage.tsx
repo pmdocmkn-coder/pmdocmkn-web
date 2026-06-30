@@ -3,7 +3,8 @@ import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import type { WarehouseBorrowList } from "../../types/warehouseBorrow";
 import { useToast } from "../../hooks/use-toast";
 import { motion, AnimatePresence } from "framer-motion";
-import { ClipboardCheck, PackageSearch, AlertTriangle, ArrowRight, User } from "lucide-react";
+import { ClipboardCheck, PackageSearch, AlertTriangle, ArrowRight, User, ArrowLeft, Home } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
@@ -13,6 +14,7 @@ import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
 export default function WarehouseSupervisionPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [pending, setPending] = useState<WarehouseBorrowList[]>([]);
   const [loading, setLoading] = useState(true);
   
@@ -83,8 +85,37 @@ export default function WarehouseSupervisionPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-6 max-w-5xl mx-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-[14px] border border-[#E2E8F0] shadow-sm">
+      {/* ====== MOBILE INTEGRATED HEADER ====== */}
+      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
+        <div className="flex items-start gap-4 p-4">
+          <div className="w-12 h-12 rounded-[12px] bg-[#FFFBEB] flex items-center justify-center flex-shrink-0">
+            <ClipboardCheck className="w-5 h-5 text-[#F59E0B]" strokeWidth={2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[10px] font-bold text-[#F59E0B] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
+            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Supervisi Warehouse</h1>
+            <p className="text-[12px] text-[#718096] mt-0.5">Persetujuan pengajuan peminjaman tools</p>
+          </div>
+          <button
+            onClick={() => navigate("/warehouse")}
+            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" strokeWidth={2} />
+          </button>
+        </div>
+        <div className="px-4 pb-4">
+          <div className="bg-[#FFFBEB] px-4 py-2.5 rounded-[10px] border border-amber-200 flex items-center gap-2">
+            <span className="relative flex h-3 w-3">
+              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+              <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
+            </span>
+            <span className="text-amber-800 font-bold text-[13px]">{pending.length} Menunggu Approval</span>
+          </div>
+        </div>
+      </div>
+
+      {/* ====== DESKTOP HEADER ====== */}
+      <div className="hidden md:flex flex-row items-center justify-between gap-4 bg-white p-4 sm:p-5 rounded-[14px] border border-[#E2E8F0] shadow-sm">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-[12px] bg-[#F0FFF4] flex items-center justify-center flex-shrink-0">
             <ClipboardCheck className="w-5 h-5 text-[#059669]" strokeWidth={2} />

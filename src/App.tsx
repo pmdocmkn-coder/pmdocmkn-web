@@ -34,6 +34,7 @@ import RadioInternalPage from "./components/Radio/RadioInternalPage";
 import RadioContractorPage from "./components/Radio/RadioContractorPage";
 import RadioUnitPage from "./components/Radio/RadioUnitPage";
 import RadioScrapPage from "./components/Radio/RadioScrapPage";
+import RadioHubPage from "./components/Radio/RadioHubPage";
 import CctvKpcPage from "./components/CctvKpc/CctvKpcPage";
 import VerifyPage from "./components/VerifyPage";
 import KpiMonitoringPage from "./components/Kpi/KpiMonitoringPage";
@@ -246,6 +247,13 @@ function AppContent() {
 
           <Route path="/swr-signal" element={<SwrSignalPage />} />
 
+          {/* ✅ RADIO HUB (Mobile menu) */}
+          <Route path="/radio" element={
+            <PermissionGuard anyOf={["radio.view", "radio.kpc.menu", "radio.scrap.view", "radio.repair.menu", "radio.handover.menu", "fleet.menu"]}>
+              <RadioHubPage />
+            </PermissionGuard>
+          } />
+
           {/* ✅ RADIO MANAGEMENT ROUTES */}
           <Route path="/radio-internal" element={
             <PermissionGuard permission="radio.view" >
@@ -282,6 +290,13 @@ function AppContent() {
               <RadioHandoverWarehousePage />
             </PermissionGuard>
           } />
+          {/* ✅ WAREHOUSE HUB (Mobile menu) */}
+          <Route path="/warehouse" element={
+            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.view", "warehouse.borrow.create", "warehouse.borrow.supervise"]}>
+              <WarehouseHubPage />
+            </PermissionGuard>
+          } />
+
           <Route path="/warehouse/borrow-history" element={
             <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.view"]}>
               <WarehouseBorrowHistoryPage />
@@ -416,6 +431,7 @@ function AppRoutes() {
   );
 }
 import { SignalRProvider } from "./contexts/SignalRContext";
+import WarehouseHubPage from "./components/WarehouseBorrow/WarehouseHubPage";
 
 export default function App() {
   return (

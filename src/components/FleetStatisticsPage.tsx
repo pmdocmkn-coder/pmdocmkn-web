@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X, RefreshCw, ChevronRight, Radio as RadioIcon, ExternalLink, AlertCircle } from 'lucide-react';
+import { Calendar, Users, Phone, Clock, TrendingUp, Filter, Download, ChevronDown, ChevronUp, ArrowUpDown, ArrowUp, ArrowDown, Search, Info, X, RefreshCw, ChevronRight, Radio as RadioIcon, ExternalLink, AlertCircle, ArrowLeft } from 'lucide-react';
 import { MobilePageHeader } from './ui/MobilePageHeader';
 import { motion, AnimatePresence, cubicBezier } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { callRecordApi } from '../services/api';
 import { hasPermission } from '../utils/permissionUtils';
 import { FleetStatisticsDto, FleetStatisticType, TopCallerFleetDto, TopCalledFleetDto, UniqueCallerDetailDto, UniqueCalledDetailDto } from '../types/callRecord';
@@ -79,6 +80,7 @@ const tableRowVariants = {
 };
 
 const FleetStatisticsPage: React.FC = () => {
+  const navigate = useNavigate();
   // Date range state
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
@@ -319,16 +321,30 @@ const FleetStatisticsPage: React.FC = () => {
     <div className="w-full">
       {/* ==================== MOBILE VIEW ==================== */}
       <div className="md:hidden bg-[#F7F8FA] min-h-screen pb-24 text-[#1A202C]">
-        <MobilePageHeader
-          label="Analytics"
-          title="Fleet Statistics"
-          rightAction={
-            <button onClick={loadFleetStatistics} disabled={isLoading}
-              className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0">
-              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-            </button>
-          }
-        />
+        <div className="px-4 pt-4">
+          <div className="bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm">
+            <div className="flex items-start gap-4 p-4">
+              <div className="w-12 h-12 rounded-[12px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
+                <TrendingUp className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[10px] font-bold text-[#2B6CB0] tracking-[0.1em] uppercase mb-0.5">Radio & Fleet</p>
+                <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Fleet Statistics</h1>
+                <p className="text-[12px] text-[#718096] mt-0.5">Statistik dan analisis data fleet</p>
+              </div>
+              <div className="flex gap-2 flex-shrink-0 items-start">
+                <button onClick={() => navigate("/radio")}
+                  className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0">
+                  <ArrowLeft className="h-5 w-5" strokeWidth={2} />
+                </button>
+                <button onClick={loadFleetStatistics} disabled={isLoading}
+                  className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0">
+                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* Search Bar */}
         <div className="px-4 pt-3 pb-2">

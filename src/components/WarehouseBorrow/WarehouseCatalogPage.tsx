@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from "react";
-import { Database, Search, Upload, Trash2, Package, Home, FileSpreadsheet } from "lucide-react";
+import { Database, Search, Upload, Trash2, Package, Home, FileSpreadsheet, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { warehousePartApi } from "../../services/warehousePartApi";
 import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
 import { Input } from "../ui/input";
@@ -13,6 +14,7 @@ import WarehousePartFormModal from "./WarehousePartFormModal";
 
 export default function WarehouseCatalogPage() {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const [items, setItems] = useState<WarehousePartCatalogItem[]>([]);
@@ -108,19 +110,19 @@ export default function WarehouseCatalogPage() {
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
       <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
         <div className="flex items-start gap-4 p-4">
-          <div className="w-12 h-12 rounded-[12px] bg-[#F0FFF4] flex items-center justify-center flex-shrink-0">
-            <Database className="w-5 h-5 text-[#059669]" strokeWidth={2} />
+          <div className="w-12 h-12 rounded-[12px] bg-[#F3E8FF] flex items-center justify-center flex-shrink-0">
+            <Database className="w-5 h-5 text-[#7E22CE]" strokeWidth={2} />
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-[#059669] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
+            <p className="text-[10px] font-bold text-[#7E22CE] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
             <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Master Data Tools</h1>
             <p className="text-[12px] text-[#718096] mt-0.5">Kelola material dan suku cadang</p>
           </div>
           <button
-            onClick={() => window.history.back()}
+            onClick={() => navigate("/warehouse")}
             className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
-            <Home className="h-4 w-4" strokeWidth={2.5} />
+            <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
         {/* Search */}
