@@ -163,7 +163,7 @@ export default function HandoverRadioEntryStep({
       <div>
         <label className="text-sm font-medium">No Tiket Helpdesk *</label>
         <input
-          className="w-full border rounded-lg px-3 py-2 mt-1"
+          className="w-full border border-[#E2E8F0] rounded-[10px] px-3 py-2 mt-1 focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
           placeholder="#MKN/0526/0669"
           value={ticket}
           onChange={(e) => onTicketChange(e.target.value)}
@@ -176,10 +176,10 @@ export default function HandoverRadioEntryStep({
           <button
             type="button"
             onClick={() => switchMode("single")}
-            className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left text-sm transition-colors ${
+            className={`flex items-center gap-2 p-3 rounded-[10px] border-2 text-left text-sm transition-colors ${
               entryMode === "single"
-                ? "border-violet-500 bg-violet-50 text-violet-900"
-                : "border-gray-200 hover:border-violet-200"
+                ? "border-[#2B6CB0] bg-[#EBF4FF] text-[#1B3A6B]"
+                : "border-[#E2E8F0] hover:border-[#2B6CB0]/40"
             }`}
           >
             <Radio className="w-5 h-5 shrink-0" />
@@ -191,10 +191,10 @@ export default function HandoverRadioEntryStep({
           <button
             type="button"
             onClick={() => switchMode("multiple")}
-            className={`flex items-center gap-2 p-3 rounded-xl border-2 text-left text-sm transition-colors ${
+            className={`flex items-center gap-2 p-3 rounded-[10px] border-2 text-left text-sm transition-colors ${
               entryMode === "multiple"
-                ? "border-violet-500 bg-violet-50 text-violet-900"
-                : "border-gray-200 hover:border-violet-200"
+                ? "border-[#2B6CB0] bg-[#EBF4FF] text-[#1B3A6B]"
+                : "border-[#E2E8F0] hover:border-[#2B6CB0]/40"
             }`}
           >
             <Layers className="w-5 h-5 shrink-0" />
@@ -222,7 +222,7 @@ export default function HandoverRadioEntryStep({
           />
 
           {(!singleLine.radioId || showManualForLine === singleLine.id) && (
-            <div className="rounded-xl border border-gray-200 p-3 space-y-3 bg-gray-50/50">
+            <div className="rounded-[10px] border border-[#E2E8F0] p-3 space-y-3 bg-[#F7F8FA]">
               <p className="text-xs font-medium text-gray-600">
                 {singleLine.radioId ? "Edit data (opsional)" : "Data manual (jika SN tidak di master)"}
               </p>
@@ -282,7 +282,7 @@ export default function HandoverRadioEntryStep({
         </div>
       ) : (
         <>
-          <div className="rounded-lg border border-dashed border-violet-200 bg-violet-50/30 px-3 py-2 text-xs text-violet-800">
+          <div className="rounded-[10px] border border-dashed border-[#2B6CB0]/30 bg-[#EBF4FF]/30 px-3 py-2 text-xs text-[#1B3A6B]">
             Setiap SN dicocokkan ke <strong>master radio</strong>. Jika ketemu, tipe, pemilik, divisi, dan departemen
             terisi otomatis. SN yang tidak ada di master bisa dilengkapi lewat <strong>data bersama</strong> di bawah.
           </div>
@@ -291,7 +291,7 @@ export default function HandoverRadioEntryStep({
             <label className="text-xs font-medium text-gray-600">Tempel banyak SN (baris atau koma)</label>
             <div className="flex gap-2 mt-1">
               <textarea
-                className="flex-1 border rounded-lg px-3 py-2 text-sm min-h-[72px]"
+                className="flex-1 border border-[#E2E8F0] rounded-[10px] px-3 py-2 text-sm min-h-[72px] focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
                 placeholder={"19988858\n21221231\n11101710"}
                 value={bulkSnText}
                 onChange={(e) => setBulkSnText(e.target.value)}
@@ -301,7 +301,7 @@ export default function HandoverRadioEntryStep({
                 type="button"
                 onClick={applyBulkSn}
                 disabled={resolvingBulk}
-                className="px-3 py-2 text-xs font-medium border rounded-lg hover:bg-violet-50 text-violet-700 shrink-0 self-end disabled:opacity-50 flex items-center gap-1"
+                className="px-3 py-2 text-xs font-semibold border border-[#E2E8F0] rounded-[10px] hover:bg-[#EBF4FF] text-[#2B6CB0] shrink-0 self-end disabled:opacity-50 flex items-center gap-1 transition-colors"
               >
                 {resolvingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
                 {resolvingBulk ? "Mencari..." : "Tambah & isi"}

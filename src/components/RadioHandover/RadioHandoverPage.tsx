@@ -740,8 +740,8 @@ export default function RadioHandoverPage() {
 
       {/* Detail dialog */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(open) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent 
-          className="max-w-3xl" 
+        <DialogContent
+          className="max-w-3xl"
           onInteractOutside={(e) => {
             if (galleryOpen) e.preventDefault();
           }}
