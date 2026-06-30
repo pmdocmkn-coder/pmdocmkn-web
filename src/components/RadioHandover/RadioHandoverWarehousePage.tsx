@@ -14,6 +14,8 @@ import {
   Home,
   Search,
   ArrowLeft,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -85,7 +87,7 @@ type HandoverTableProps = {
   emptyMessage: string;
   onOpenDetail: (id: number) => void;
   onOpenGallery: (h: RadioHandoverList) => void;
-  onSignRow?: (h: RadioHandoverList) => void;
+  onSignRow?: (h: RadioHandoverList[]) => void;
 };
 
 function HandoverHistoryTable({
@@ -192,7 +194,7 @@ function HandoverHistoryTable({
                             title="Tanda Tangan Massal"
                             onClick={(e) => {
                               e.stopPropagation();
-                              onSignRow(group.firstItem);
+                              onSignRow(group.items.filter(canWarehouseSign));
                             }}
                           >
                             <span className="shrink-0 w-3 h-3 flex items-center justify-center">✍️</span>
@@ -376,7 +378,7 @@ function HandoverHistoryTable({
                   <button
                     type="button"
                     className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-bold shadow-sm"
-                    onClick={() => onSignRow(group.firstItem)}
+                    onClick={() => onSignRow(group.items.filter(canWarehouseSign))}
                   >
                     Tanda Tangan ({group.items.filter(canWarehouseSign).length})
                   </button>
@@ -408,8 +410,9 @@ export default function RadioHandoverWarehousePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState(searchParams.get("tab") || "incoming");
   const [searchQuery, setSearchQuery] = useState("");
-  const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
-  const [signRowDetail, setSignRowDetail] = useState<RadioHandoverDetail | null>(null);
+  const [signRows, setSignRows] = useState<RadioHandoverList[] | null>(null);
+  const [signRowDetails, setSignRowDetails] = useState<RadioHandoverDetail[]>([]);
+  const [activeTagIndex, setActiveTagIndex] = useState(0);
   const [sigRowReceiver, setSigRowReceiver] = useState<string>("");
   const sigWhRowRef = useRef<any>(null);
 
@@ -421,11 +424,18 @@ export default function RadioHandoverWarehousePage() {
 
   // Fetch full detail when sign dialog opens for tag preview
   useEffect(() => {
-    if (!signRow) { setSignRowDetail(null); return; }
-    radioHandoverApi.getById(signRow.id)
-      .then(setSignRowDetail)
-      .catch(() => setSignRowDetail(null));
-  }, [signRow]);
+    if (!signRows || signRows.length === 0) { 
+      setSignRowDetails([]); 
+      setActiveTagIndex(0);
+      return; 
+    }
+    Promise.all(signRows.map(row => radioHandoverApi.getById(row.id)))
+      .then(details => {
+        setSignRowDetails(details.filter(Boolean) as RadioHandoverDetail[]);
+        setActiveTagIndex(0);
+      })
+      .catch(() => setSignRowDetails([]));
+  }, [signRows]);
 
   const handleTabChange = (val: string) => {
     setActiveTab(val);
@@ -767,7 +777,7 @@ export default function RadioHandoverWarehousePage() {
               emptyMessage="Belum ada radio masuk dari teknisi"
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
-              onSignRow={setSignRow}
+              onSignRow={setSignRows}
             />
           </TabsContent>
 
@@ -782,7 +792,7 @@ export default function RadioHandoverWarehousePage() {
               emptyMessage="Belum ada serah terima ke helpdesk"
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
-              onSignRow={setSignRow}
+              onSignRow={setSignRows}
             />
           </TabsContent>
         </Tabs>
@@ -952,45 +962,89 @@ export default function RadioHandoverWarehousePage() {
       </Dialog>
 
       {/* Sign Row dialog */}
-      <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSignRowDetail(null); setSigRowReceiver(""); }}>
+      <Dialog open={!!signRows} onOpenChange={() => { setSignRows(null); setSignRowDetails([]); setActiveTagIndex(0); setSigRowReceiver(""); }}>
         <DialogContent className="sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>TTD Penerima — {signRow?.handoverNumber}</DialogTitle>
+            <DialogTitle>TTD Penerima — {signRows?.[0]?.helpdeskTicketNumber ? `Tiket ${signRows[0].helpdeskTicketNumber}` : "Tanda Tangan"}</DialogTitle>
           </DialogHeader>
-          {signRow && (
+          {(signRows && signRows.length > 0) && (
             <div className="space-y-4 w-full min-w-0">
               <div className="rounded-lg bg-gray-50 border px-3 py-2 text-sm text-gray-600 mb-2">
-                Tiket {signRow.helpdeskTicketNumber ?? "—"} · SN {signRow.radioSerialNumber}
+                Tiket {signRows[0].helpdeskTicketNumber ?? "—"} · SN {signRows.map(r => r.radioSerialNumber).join(", ")}
               </div>
               <p className="text-sm text-amber-950 bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
-                {signRow.handoverType === "WarehouseToHelpdesk"
-                  ? <>Warehouse sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.receivedByName}</span>.</>
-                  : <>Teknisi sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.receivedByName}</span>.</>
+                {signRows[0].handoverType === "WarehouseToHelpdesk"
+                  ? <>Warehouse sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRows[0].receivedByName}</span>.</>
+                  : <>Teknisi sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRows[0].receivedByName}</span>.</>
                 }
               </p>
 
               {/* Tag Preview */}
-              {signRowDetail && (
+              <div className="mb-2 text-sm font-medium text-gray-700">Pratinjau tag (per SN)</div>
+              {signRowDetails.length > 0 ? (
                 <div className="rounded-lg border bg-white p-3">
-                  <HandoverTagPreview detail={signRowDetail} />
+                  {signRowDetails.length > 1 && (
+                    <div className="flex flex-col gap-3 mb-3 border-b border-gray-100 pb-4">
+                      <div className="flex items-center justify-between bg-gray-50/80 p-2 rounded-lg border border-gray-200">
+                        <button 
+                          type="button" 
+                          disabled={activeTagIndex === 0}
+                          onClick={() => setActiveTagIndex(prev => prev - 1)}
+                          className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
+                        >
+                          <ChevronLeft className="w-3.5 h-3.5" /> Tag sebelumnya
+                        </button>
+                        <div className="text-center">
+                          <div className="text-xs font-bold text-gray-800">Tag {activeTagIndex + 1} / {signRowDetails.length}</div>
+                          <div className="text-[10px] text-gray-500 font-mono mt-0.5">SN {signRowDetails[activeTagIndex]?.radioSerialNumber}</div>
+                        </div>
+                        <button 
+                          type="button" 
+                          disabled={activeTagIndex === signRowDetails.length - 1}
+                          onClick={() => setActiveTagIndex(prev => prev + 1)}
+                          className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
+                        >
+                          Tag berikutnya <ChevronRight className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2 justify-start">
+                        {signRowDetails.map((det, idx) => (
+                          <button
+                            key={det.id}
+                            type="button"
+                            onClick={() => setActiveTagIndex(idx)}
+                            className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
+                              activeTagIndex === idx 
+                                ? 'bg-[#1B3A6B] text-white border-[#1B3A6B] shadow-sm' 
+                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                            }`}
+                          >
+                            {det.radioSerialNumber}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {signRowDetails[activeTagIndex] && (
+                    <HandoverTagPreview detail={signRowDetails[activeTagIndex]} />
+                  )}
                 </div>
-              )}
-              {!signRowDetail && (
-                <div className="text-center py-4 text-gray-400 text-xs">
-                  <Loader2 className="w-4 h-4 animate-spin inline-block mr-1" />
+              ) : (
+                <div className="text-center py-6 text-gray-400 text-xs border border-dashed rounded-lg bg-gray-50">
+                  <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
                   Memuat detail tag...
                 </div>
               )}
 
               <SignaturePadField
                 ref={sigWhRowRef}
-                label={`TTD Penerima (${signRow.receivedByName})`}
+                label={`TTD Penerima (${signRows[0].receivedByName})`}
                 required
                 value={sigRowReceiver}
                 onChange={(val) => setSigRowReceiver(val ?? "")}
               />
               <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRow(null)}>Batal</button>
+                <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRows(null)}>Batal</button>
                 <button
                   type="button"
                   className="w-full px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors flex items-center justify-center"
@@ -1001,12 +1055,15 @@ export default function RadioHandoverWarehousePage() {
                       return;
                     }
                     try {
-                      await radioHandoverApi.completeReceiverSignature(signRow.id, finalSig);
-                      toast({ title: "Tanda tangan berhasil disimpan" });
-                      setSignRow(null);
-                      setSignRowDetail(null);
+                      await Promise.all(
+                        signRows.map((row) => radioHandoverApi.completeReceiverSignature(row.id, finalSig))
+                      );
+                      toast({ title: `Tanda tangan berhasil disimpan untuk ${signRows.length} radio` });
+                      setSignRows(null);
+                      setSignRowDetails([]);
+                      setActiveTagIndex(0);
                       setSigRowReceiver("");
-                      if (detail?.id === signRow.id) setDetail(null);
+                      if (detail && signRows.some(r => r.id === detail.id)) setDetail(null);
                       load();
                     } catch (err: any) {
                       toast({
