@@ -282,32 +282,42 @@ export default function HandoverRadioEntryStep({
         </div>
       ) : (
         <>
-          <div className="rounded-[10px] border border-dashed border-[#2B6CB0]/30 bg-[#EBF4FF]/30 px-3 py-2 text-xs text-[#1B3A6B]">
+          <div className="rounded-[10px] border border-dashed border-[#2B6CB0]/30 bg-[#EBF4FF]/30 px-3 py-2 text-xs text-[#1B3A6B] mb-4">
             Setiap SN dicocokkan ke <strong>master radio</strong>. Jika ketemu, tipe, pemilik, divisi, dan departemen
             terisi otomatis. SN yang tidak ada di master bisa dilengkapi lewat <strong>data bersama</strong> di bawah.
           </div>
 
-          <div>
-            <label className="text-xs font-medium text-gray-600">Tempel banyak SN (baris atau koma)</label>
-            <div className="flex gap-2 mt-1">
-              <textarea
-                className="flex-1 border border-[#E2E8F0] rounded-[10px] px-3 py-2 text-sm min-h-[72px] focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
-                placeholder={"19988858\n21221231\n11101710"}
-                value={bulkSnText}
-                onChange={(e) => setBulkSnText(e.target.value)}
-                disabled={resolvingBulk}
-              />
-              <button
-                type="button"
-                onClick={applyBulkSn}
-                disabled={resolvingBulk}
-                className="px-3 py-2 text-xs font-semibold border border-[#E2E8F0] rounded-[10px] hover:bg-[#EBF4FF] text-[#2B6CB0] shrink-0 self-end disabled:opacity-50 flex items-center gap-1 transition-colors"
-              >
-                {resolvingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                {resolvingBulk ? "Mencari..." : "Tambah & isi"}
-              </button>
+          <MultiRadioSerialList
+            lines={radioLines}
+            onChange={(lines) => {
+              onRadioLinesChange(lines);
+              const synced = syncSharedFromFirstMaster(lines);
+              if (synced) onSharedDefaultsChange(synced);
+            }}
+            compactMode
+          />
+
+          <div className="my-6 border-t border-dashed border-gray-200 pt-5">
+              <label className="text-xs font-medium text-gray-600">Atau tempel banyak SN sekaligus (baris / koma)</label>
+              <div className="flex gap-2 mt-1">
+                <textarea
+                  className="flex-1 border border-[#E2E8F0] rounded-[10px] px-3 py-2 text-sm min-h-[72px] focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
+                  placeholder={"19988858\n21221231\n11101710"}
+                  value={bulkSnText}
+                  onChange={(e) => setBulkSnText(e.target.value)}
+                  disabled={resolvingBulk}
+                />
+                <button
+                  type="button"
+                  onClick={applyBulkSn}
+                  disabled={resolvingBulk}
+                  className="px-3 py-2 text-xs font-semibold border border-[#E2E8F0] rounded-[10px] hover:bg-[#EBF4FF] text-[#2B6CB0] shrink-0 self-end disabled:opacity-50 flex items-center gap-1 transition-colors"
+                >
+                  {resolvingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                  {resolvingBulk ? "Mencari..." : "Tambah & isi"}
+                </button>
+              </div>
             </div>
-          </div>
 
           {filledCount > 0 && (
             <p className="text-xs text-gray-500">
@@ -321,16 +331,6 @@ export default function HandoverRadioEntryStep({
             onChange={onSharedDefaultsChange}
             onApplyToAll={() => onRadioLinesChange(applyDefaultsToLines(radioLines, sharedDefaults))}
             lineCount={filledCount || radioLines.length}
-          />
-
-          <MultiRadioSerialList
-            lines={radioLines}
-            onChange={(lines) => {
-              onRadioLinesChange(lines);
-              const synced = syncSharedFromFirstMaster(lines);
-              if (synced) onSharedDefaultsChange(synced);
-            }}
-            compactMode
           />
 
           {(showManualForLine || radioLines.some((r) => r.serial.trim() && !r.radioId)) && (
