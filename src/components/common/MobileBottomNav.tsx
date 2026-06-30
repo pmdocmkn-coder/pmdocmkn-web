@@ -57,8 +57,8 @@ const fixedTabs: NavTab[] = [
     id: "radio",
     label: "Radio",
     icon: Radio,
-    paths: ["/radio-internal", "/radio-contractor", "/radio-unit", "/radio-scrap", "/radio-repair-dashboard", "/radio-handover", "/fleet-statistics"],
-    navigate: "/radio-internal",
+    paths: ["/radio", "/radio-internal", "/radio-contractor", "/radio-unit", "/radio-scrap", "/radio-repair-dashboard", "/radio-handover", "/fleet-statistics"],
+    navigate: "/radio",
   },
 ];
 
@@ -74,8 +74,8 @@ const warehouseTab: NavTab = {
   id: "warehouse",
   label: "Warehouse",
   icon: Warehouse,
-  paths: ["/warehouse"],
-  navigate: "/warehouse/borrow-history",
+  paths: ["/warehouse", "/warehouse/borrow-history", "/warehouse/borrow-request", "/warehouse/supervision", "/warehouse/catalog"],
+  navigate: "/warehouse",
 };
 
 const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
@@ -93,7 +93,13 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
   return (
     /* Floating container — margin dari tepi, tidak full-width */
     <nav
-      className="fixed bottom-3 left-3 right-3 z-40 md:hidden pb-safe"
+      className="fixed left-3 right-3 z-40 md:hidden"
+      style={{
+        bottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
+        transform: 'translateZ(0)',
+        WebkitTransform: 'translateZ(0)',
+        willChange: 'transform',
+      }}
       aria-label="Bottom navigation"
     >
       {/* Pill container */}

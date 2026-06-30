@@ -45,7 +45,7 @@ import {
   Copy,
   Tag,
   Download,
-  Home,
+  ArrowLeft,
   Check,
   AlertCircle,
 } from "lucide-react";
@@ -694,10 +694,10 @@ export default function RadioInternalPage() {
             <p className="text-[12px] text-[#718096] mt-0.5">Kelola data dan status radio KPC</p>
           </div>
           <button
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/radio")}
             className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
           >
-            <Home className="h-4 w-4" strokeWidth={2.5} />
+            <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           </button>
         </div>
       </div>

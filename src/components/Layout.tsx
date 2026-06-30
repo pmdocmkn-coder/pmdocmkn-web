@@ -195,6 +195,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
   if (!user) return null;
 
   return (
+    <>
     <div className="flex min-h-screen bg-[#F7F8FA]">
       {/* Sidebar */}
       <Sidebar
@@ -450,72 +451,73 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
 
         <Footer />
       </div>
-
-      {/* ── Mobile Bottom Nav (only on mobile) ───────────────────────────── */}
-      <MobileBottomNav onMoreClick={() => setIsMoreSheetOpen(true)} />
-
-      {/* ── "More" Bottom Sheet ──────────────────────────────────────────── */}
-      <BottomSheet
-        open={isMoreSheetOpen}
-        onClose={() => setIsMoreSheetOpen(false)}
-        title="Menu Lainnya"
-        size="xl"
-      >
-        <div ref={moreSheetRef} className="space-y-5 pb-4">
-          {moreNavGroups.map((group) => {
-            const visibleItems = group.items.filter(
-              (item) => !item.permission || hasPerm(item.permission)
-            );
-            if (visibleItems.length === 0) return null;
-            return (
-              <div key={group.label}>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#718096] mb-2 px-1">
-                  {group.label}
-                </p>
-                <div className="space-y-1">
-                  {visibleItems.map((item) => {
-                    const Icon = item.icon;
-                    const exactMatch = location.pathname === item.path;
-                    const prefixMatch = location.pathname.startsWith(item.path + "/");
-                    const groupPaths = visibleItems.map(i => i.path);
-                    const moreSpecificExists = groupPaths.some(
-                      p => p !== item.path && location.pathname.startsWith(p)
-                    );
-                    const isActive = exactMatch || (prefixMatch && !moreSpecificExists);
-                    return (
-                      <button
-                        key={item.path}
-                        data-active={isActive ? "true" : undefined}
-                        onClick={() => {
-                          setActiveTab(item.path.replace("/", ""));
-                          navigate(item.path);
-                          setIsMoreSheetOpen(false);
-                        }}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[14px] font-medium transition-colors text-left ${
-                          isActive
-                            ? "bg-[#EBF4FF] text-[#2B6CB0]"
-                            : "text-[#1A202C] hover:bg-[#F7F8FA]"
-                        }`}
-                      >
-                        <div className={`w-8 h-8 rounded-[6px] flex items-center justify-center flex-shrink-0 ${
-                          isActive ? "bg-[#2B6CB0]" : "bg-[#F7F8FA]"
-                        }`}>
-                          <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-[#718096]"}`} />
-                        </div>
-                        {item.name}
-                        {isActive && (
-                          <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#D94F2B] flex-shrink-0" />
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </BottomSheet>
     </div>
+
+    {/* ── Mobile Bottom Nav — OUTSIDE flex container for proper fixed positioning ── */}
+    <MobileBottomNav onMoreClick={() => setIsMoreSheetOpen(true)} />
+
+    {/* ── "More" Bottom Sheet ──────────────────────────────────────────── */}
+    <BottomSheet
+      open={isMoreSheetOpen}
+      onClose={() => setIsMoreSheetOpen(false)}
+      title="Menu Lainnya"
+      size="xl"
+    >
+      <div ref={moreSheetRef} className="space-y-5 pb-4">
+        {moreNavGroups.map((group) => {
+          const visibleItems = group.items.filter(
+            (item) => !item.permission || hasPerm(item.permission)
+          );
+          if (visibleItems.length === 0) return null;
+          return (
+            <div key={group.label}>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-[#718096] mb-2 px-1">
+                {group.label}
+              </p>
+              <div className="space-y-1">
+                {visibleItems.map((item) => {
+                  const Icon = item.icon;
+                  const exactMatch = location.pathname === item.path;
+                  const prefixMatch = location.pathname.startsWith(item.path + "/");
+                  const groupPaths = visibleItems.map(i => i.path);
+                  const moreSpecificExists = groupPaths.some(
+                    p => p !== item.path && location.pathname.startsWith(p)
+                  );
+                  const isActive = exactMatch || (prefixMatch && !moreSpecificExists);
+                  return (
+                    <button
+                      key={item.path}
+                      data-active={isActive ? "true" : undefined}
+                      onClick={() => {
+                        setActiveTab(item.path.replace("/", ""));
+                        navigate(item.path);
+                        setIsMoreSheetOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-[8px] text-[14px] font-medium transition-colors text-left ${
+                        isActive
+                          ? "bg-[#EBF4FF] text-[#2B6CB0]"
+                          : "text-[#1A202C] hover:bg-[#F7F8FA]"
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-[6px] flex items-center justify-center flex-shrink-0 ${
+                        isActive ? "bg-[#2B6CB0]" : "bg-[#F7F8FA]"
+                      }`}>
+                        <Icon className={`w-4 h-4 ${isActive ? "text-white" : "text-[#718096]"}`} />
+                      </div>
+                      {item.name}
+                      {isActive && (
+                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-[#D94F2B] flex-shrink-0" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </BottomSheet>
+    </>
   );
 };
 
