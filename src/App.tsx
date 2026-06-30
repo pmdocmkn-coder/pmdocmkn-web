@@ -313,7 +313,7 @@ function AppContent() {
             </PermissionGuard>
           } />
           <Route path="/warehouse/catalog" element={
-            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.supervise"]}>
+            <PermissionGuard anyOf={["warehouse.borrow.supervise", "warehouse.menu.tools"]}>
               <WarehouseCatalogPage />
             </PermissionGuard>
           } />

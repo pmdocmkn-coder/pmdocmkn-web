@@ -59,7 +59,7 @@ const WAREHOUSE_MENUS: WarehouseMenuItem[] = [
     icon: Database,
     iconBg: "bg-[#F3E8FF]",
     iconColor: "text-[#7E22CE]",
-    permission: ["warehouse.borrow.menu", "warehouse.borrow.supervise"],
+    permission: ["warehouse.borrow.supervise", "warehouse.menu.tools"],
   },
 ];
 
