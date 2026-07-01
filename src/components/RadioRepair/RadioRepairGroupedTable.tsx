@@ -33,12 +33,14 @@ type Props = {
   canHandoverWh: boolean;
   canViewArchive: boolean;
   canDeletePermanent: boolean;
+  canPurge: boolean;
   onOpenPhoto: (job: RadioRepairJobList) => void;
   onOpenDetail: (id: number) => void;
   onOpenEdit: (job: RadioRepairJobList) => void;
   onSoftDelete: (job: RadioRepairJobList) => void;
   onRestore: (id: number) => void;
   onDeletePermanent: (job: RadioRepairJobList) => void;
+  onPurge: (job: RadioRepairJobList) => void;
   onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
   onOpenBorrowRequest: (job: RadioRepairJobList) => void;
@@ -57,12 +59,14 @@ export default function RadioRepairGroupedTable({
   canHandoverWh,
   canViewArchive,
   canDeletePermanent,
+  canPurge,
   onOpenPhoto,
   onOpenDetail,
   onOpenEdit,
   onSoftDelete,
   onRestore,
   onDeletePermanent,
+  onPurge,
   onQuickStatus,
   onQuickHandoverWh,
   onOpenBorrowRequest,
@@ -136,6 +140,7 @@ export default function RadioRepairGroupedTable({
                         canHandoverWh={canHandoverWh}
                         canViewArchive={canViewArchive}
                         canDeletePermanent={canDeletePermanent}
+                        canPurge={canPurge}
                         detailLoading={detailLoading}
                         onOpenPhoto={onOpenPhoto}
                         onOpenDetail={onOpenDetail}
@@ -143,6 +148,7 @@ export default function RadioRepairGroupedTable({
                         onSoftDelete={onSoftDelete}
                         onRestore={onRestore}
                         onDeletePermanent={onDeletePermanent}
+                        onPurge={onPurge}
                         onQuickStatus={onQuickStatus}
                         onQuickHandoverWh={onQuickHandoverWh}
                         onOpenBorrowRequest={onOpenBorrowRequest}
@@ -299,6 +305,17 @@ export default function RadioRepairGroupedTable({
                               title="Hapus"
                             >
                               <Trash2 className="w-4 h-4" />
+                            </button>
+                          )}
+                          
+                          {canPurge && !showArchive && (
+                            <button
+                              type="button"
+                              onClick={() => onPurge(j)}
+                              className="text-red-700 hover:text-red-900 bg-red-100 p-1.5 rounded-lg hover:bg-red-200 transition-colors font-bold"
+                              title="Hapus Tuntas (Purge)"
+                            >
+                              <Trash2 className="w-4 h-4" strokeWidth={3} />
                             </button>
                           )}
 
@@ -490,6 +507,7 @@ type RowProps = {
   canHandoverWh: boolean;
   canViewArchive: boolean;
   canDeletePermanent: boolean;
+  canPurge: boolean;
   detailLoading: boolean;
   onOpenPhoto: (job: RadioRepairJobList) => void;
   onOpenDetail: (id: number) => void;
@@ -497,6 +515,7 @@ type RowProps = {
   onSoftDelete: (job: RadioRepairJobList) => void;
   onRestore: (id: number) => void;
   onDeletePermanent: (job: RadioRepairJobList) => void;
+  onPurge: (job: RadioRepairJobList) => void;
   onQuickStatus: (job: RadioRepairJobList, status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onQuickHandoverWh: (job: RadioRepairJobList) => void;
   onOpenBorrowRequest: (job: RadioRepairJobList) => void;
@@ -513,6 +532,7 @@ function RadioRepairRow({
   canHandoverWh,
   canViewArchive,
   canDeletePermanent,
+  canPurge,
   detailLoading,
   onOpenPhoto,
   onOpenDetail,
@@ -520,6 +540,7 @@ function RadioRepairRow({
   onSoftDelete,
   onRestore,
   onDeletePermanent,
+  onPurge,
   onQuickStatus,
   onQuickHandoverWh,
   onOpenBorrowRequest,
@@ -635,6 +656,17 @@ function RadioRepairRow({
               onClick={() => onSoftDelete(j)}
             >
               <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+
+          {canPurge && !showArchive && (
+            <button
+              type="button"
+              title="Hapus Tuntas (Purge)"
+              className="p-1.5 border border-red-300 rounded-lg bg-red-100 hover:bg-red-200 text-red-700 font-bold"
+              onClick={() => onPurge(j)}
+            >
+              <Trash2 className="w-4 h-4" strokeWidth={3} />
             </button>
           )}
 

@@ -110,6 +110,7 @@ export interface CreateRadioHandoverPayload {
   accessories: HandoverAccessoryItem[];
 
   remarks?: string;
+  picReceiverName?: string;
 
 }
 
@@ -147,8 +148,8 @@ export interface RadioHandoverList {
   receivedByUserId?: number;
 
   handedOverByName: string;
-
   receivedByName: string;
+  picReceiverName?: string;
 
   workshopTechnicianId?: number;
   workshopTechnicianName?: string;

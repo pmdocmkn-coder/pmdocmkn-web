@@ -7,6 +7,7 @@ export type DamagedEquipmentTagData = {
   handoverNumber: string;
   handedOverByName: string;
   receivedByName: string;
+  picReceiverName?: string;
   handoverAt: string;
   equipmentName?: string | null;
   unitNumber?: string | null;
@@ -33,7 +34,7 @@ function flowLabel(type?: string) {
 export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipmentTagData }) {
   const acc = data.accessories?.filter((a) => a.itemName?.trim()) ?? [];
   const alurLabel = flowLabel(data.handoverType);
-  const flowNames = `${data.handedOverByName} → ${data.receivedByName}`;
+  const flowNames = `${data.handedOverByName} → ${data.receivedByName}${data.picReceiverName ? ` (${data.picReceiverName})` : ""}`;
   const alurValue = alurLabel.toLowerCase() === flowNames.toLowerCase() 
     ? alurLabel 
     : `${alurLabel} · ${flowNames}`;

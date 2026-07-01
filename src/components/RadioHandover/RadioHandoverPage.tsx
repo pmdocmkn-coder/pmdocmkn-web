@@ -454,6 +454,7 @@ export default function RadioHandoverPage() {
   const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
   const [signRowDetail, setSignRowDetail] = useState<RadioHandoverDetail | null>(null);
   const [sigRowReceiver, setSigRowReceiver] = useState<string | null>(null);
+  const [sigRowPicReceiverName, setSigRowPicReceiverName] = useState("");
   const [completing, setCompleting] = useState(false);
   const sigTekRowRef = useRef<SignaturePadHandle>(null);
 
@@ -593,6 +594,7 @@ export default function RadioHandoverPage() {
       toast({ title: "Gambar TTD teknisi di area putih", variant: "destructive" });
       return;
     }
+
     setCompleting(true);
 
     const targets = relatedPendingHandovers.length > 0 ? relatedPendingHandovers : [signRow];
@@ -603,7 +605,7 @@ export default function RadioHandoverPage() {
       
       await Promise.all(targets.map(async (t) => {
         try {
-          await radioHandoverApi.completeReceiverSignature(t.id, tekSig!);
+          await radioHandoverApi.completeReceiverSignature(t.id, tekSig!, sigRowPicReceiverName || undefined);
           okCount++;
         } catch(e) {
           fails.push(t.radioSerialNumber);
@@ -622,6 +624,7 @@ export default function RadioHandoverPage() {
       
       setSignRow(null);
       setSigRowReceiver(null);
+      setSigRowPicReceiverName("");
       if (detail?.id === signRow.id) setDetail(null);
       load();
     } catch (err: unknown) {
@@ -803,6 +806,28 @@ export default function RadioHandoverPage() {
                       <li key={h.id}>SN: <span className="font-medium">{h.radioSerialNumber}</span> ({h.handoverNumber})</li>
                     ))}
                   </ul>
+                </div>
+              )}
+
+              {signRow.handoverType === "WarehouseToHelpdesk" && (
+                <div className="space-y-2 mt-4">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium text-gray-900">Nama PIC Penerima (opsional)</label>
+                    <button
+                      type="button"
+                      className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
+                      onClick={() => setSigRowPicReceiverName(signRow.radioOwnerLabel || "")}
+                    >
+                      Gunakan data Pemilik
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                    placeholder="Nama pengambil radio..."
+                    value={sigRowPicReceiverName}
+                    onChange={(e) => setSigRowPicReceiverName(e.target.value)}
+                  />
                 </div>
               )}
 

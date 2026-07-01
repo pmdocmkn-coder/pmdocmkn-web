@@ -12,6 +12,8 @@ export type HandoverTimelineItem = {
   receivedByName: string;
   equipmentTagType?: string;
   status?: string;
+  picReceiverName?: string | null;
+  remarks?: string | null;
 };
 
 const STEPS: { type: string; label: string; short: string }[] = [
@@ -130,10 +132,21 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
                         <span className="font-bold text-slate-800">{h.receivedByName}</span>
                       </div>
                       
+                      {h.remarks && (
+                        <div className="flex gap-1.5 text-slate-600 px-2 mt-2 bg-slate-50 border border-slate-100 py-1.5 rounded-md">
+                          <span className="font-medium text-[11px] text-slate-500">Catatan:</span>
+                          <span className="text-xs text-slate-700 whitespace-pre-wrap">{h.remarks}</span>
+                        </div>
+                      )}
+                      
                       {h.signedAt && h.status !== "PendingReceiverSignature" && (
                         <div className="flex items-center gap-1.5 text-emerald-600 px-1 mt-2 bg-emerald-50/50 py-1.5 rounded-md">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          <span className="font-medium">Tuntas — TTD Penerima: {format(new Date(h.signedAt), "dd MMM yyyy, HH:mm", { locale: localeId })}</span>
+                          <span className="font-medium">
+                            Tuntas — TTD Penerima
+                            {h.picReceiverName ? ` (PIC: ${h.picReceiverName})` : ""}
+                            : {format(new Date(h.signedAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
+                          </span>
                         </div>
                       )}
                       {(!h.signedAt || h.status === "PendingReceiverSignature") && (

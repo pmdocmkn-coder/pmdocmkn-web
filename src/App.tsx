@@ -10,7 +10,6 @@ import {
 import { AuthProvider, useAuth } from "./contexts/AuthContext";
 import Layout from "./components/Layout";
 import Login from "./components/Login";
-import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import CallRecordsPage from "./components/CallRecordsPage";
 import CallRecordPrintPage from "./components/CallRecordPrintPage";
@@ -408,7 +407,7 @@ function AppRoutes() {
       />
       <Route
         path="/register"
-        element={!user ? <Register /> : <DefaultRoute />}
+        element={!user ? <Login /> : <DefaultRoute />}
       />
       <Route
         path="/forgot-password"

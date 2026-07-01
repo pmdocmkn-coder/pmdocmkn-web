@@ -31,9 +31,9 @@ export const radioHandoverApi = {
   getHelpdeskReceivers: () =>
     api.get("/api/radio-handovers/helpdesk-receivers").then((r) => unwrapList<UserOption>(r)),
 
-  completeReceiverSignature: (id: number, receiverSignatureBase64: string) =>
+  completeReceiverSignature: (id: number, receiverSignatureBase64: string, picReceiverName?: string, remarks?: string) =>
     api
-      .patch(`/api/radio-handovers/${id}/complete-receiver-signature`, { receiverSignatureBase64 })
+      .patch(`/api/radio-handovers/${id}/complete-receiver-signature`, { receiverSignatureBase64, picReceiverName, remarks })
       .then((r) => unwrapData<RadioHandoverDetail>(r)!),
 
   lookupBySerial: (serialNumber: string) =>
