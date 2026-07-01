@@ -76,6 +76,7 @@ const Login: React.FC = () => {
   const [numLook, setNumLook] = useState(0);
   const [isClosed, setIsClosed] = useState(false);
   const [mascotStatus, setMascotStatus] = useState<'idle' | 'success' | 'fail'>('idle');
+  const [fieldSpan, setFieldSpan] = useState<'full' | 'left' | 'right'>('full');
 
   // Clear states when switching modes
   useEffect(() => {
@@ -85,6 +86,7 @@ const Login: React.FC = () => {
     setIsChecking(false);
     setIsClosed(false);
     setNumLook(0);
+    setFieldSpan('full');
   }, [isLoginMode]);
 
   // Load remembered username on mount
@@ -127,12 +129,17 @@ const Login: React.FC = () => {
   }, [showPassword, showConfirmPassword, password]);
 
   // Mascot focus handlers
-  const handleTextFocus = () => {
+  const createFocusHandler = (span: 'full' | 'left' | 'right') => () => {
     setIsChecking(true);
     setIsClosed(false);
     setShowPassword(false);
     setShowConfirmPassword(false);
+    setFieldSpan(span);
   };
+
+  const handleTextFocusFull = createFocusHandler('full');
+  const handleTextFocusLeft = createFocusHandler('left');
+  const handleTextFocusRight = createFocusHandler('right');
 
   const handleTextBlur = () => {
     setIsChecking(false);
@@ -396,12 +403,13 @@ const Login: React.FC = () => {
         >
           {/* CCTV Mascot Container */}
           <motion.div layout className="flex justify-center -mt-20 sm:-mt-24 mb-6 relative z-20">
-            <div className="w-32 h-32 sm:w-40 sm:h-40 bg-[#F7F8FA] rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.15)] border-[6px] border-white overflow-hidden relative flex items-center justify-center">
+            <div className="w-32 h-32 sm:w-40 sm:h-40 bg-[#F7F8FA] rounded-full shadow-[0_10px_25px_rgba(0,0,0,0.15)] border-[6px] border-white relative flex items-center justify-center">
               <CCTVMascot
                 isChecking={isChecking}
                 numLook={numLook}
                 isClosed={isClosed}
                 status={mascotStatus}
+                fieldSpan={fieldSpan}
               />
             </div>
           </motion.div>
@@ -495,7 +503,7 @@ const Login: React.FC = () => {
                         type="text"
                         value={username}
                         onChange={(e) => handleTextChange(e, setUsername)}
-                        onFocus={handleTextFocus}
+                        onFocus={handleTextFocusFull}
                         onBlur={handleTextBlur}
                         className={inputClasses}
                         placeholder="Masukkan username"
@@ -595,7 +603,7 @@ const Login: React.FC = () => {
                           type="text"
                           value={username}
                           onChange={(e) => handleTextChange(e, setUsername)}
-                          onFocus={handleTextFocus}
+                          onFocus={handleTextFocusLeft}
                           onBlur={handleTextBlur}
                           className={inputClasses}
                           placeholder="Buat username"
@@ -615,7 +623,7 @@ const Login: React.FC = () => {
                           type="email"
                           value={email}
                           onChange={(e) => handleTextChange(e, setEmail)}
-                          onFocus={handleTextFocus}
+                          onFocus={handleTextFocusRight}
                           onBlur={handleTextBlur}
                           className={inputClasses}
                           placeholder="Masukkan email"
@@ -636,7 +644,7 @@ const Login: React.FC = () => {
                         type="text"
                         value={fullName}
                         onChange={(e) => handleTextChange(e, setFullName)}
-                        onFocus={handleTextFocus}
+                        onFocus={handleTextFocusFull}
                         onBlur={handleTextBlur}
                         className={inputClasses}
                         placeholder="Masukkan nama lengkap"
@@ -656,7 +664,7 @@ const Login: React.FC = () => {
                         type="text"
                         value={employeeId}
                         onChange={(e) => handleTextChange(e, setEmployeeId)}
-                        onFocus={handleTextFocus}
+                        onFocus={handleTextFocusFull}
                         onBlur={handleTextBlur}
                         className={inputClasses}
                         placeholder="Masukkan NIP (jika ada)"
