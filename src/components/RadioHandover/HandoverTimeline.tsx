@@ -12,8 +12,8 @@ export type HandoverTimelineItem = {
   receivedByName: string;
   equipmentTagType?: string;
   status?: string;
-  picReceiverName?: string;
-  remarks?: string;
+  picReceiverName?: string | null;
+  remarks?: string | null;
 };
 
 const STEPS: { type: string; label: string; short: string }[] = [
