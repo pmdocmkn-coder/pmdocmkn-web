@@ -26,6 +26,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   const [jobDetail, setJobDetail] = useState<RadioRepairJobDetail | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [remarks, setRemarks] = useState("");
+  const [picReceiverName, setPicReceiverName] = useState("");
   const [sigWh, setSigWh] = useState<string | null>(null);
   const [sigHd, setSigHd] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -71,6 +72,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         receiverSignatureBase64: sigHd || undefined,
         accessories: accPayload, // Use the accessories from the previous handover
         remarks: remarks || undefined,
+        picReceiverName: picReceiverName || undefined,
       });
       toast({ title: "Serah terima ke Helpdesk berhasil" });
       onSuccess();
@@ -217,6 +219,26 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         value={sigHd}
         onChange={setSigHd}
       />
+
+      {/* PIC Receiver */}
+      <div className="space-y-2 pt-2">
+        <div className="flex justify-between items-center">
+          <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
+          <button
+            type="button"
+            className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
+            onClick={() => setPicReceiverName(job.radioOwnerLabel || "")}
+          >
+            Gunakan data Pemilik
+          </button>
+        </div>
+        <input
+          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+          value={picReceiverName}
+          onChange={(e) => setPicReceiverName(e.target.value)}
+          placeholder="Nama pengambil radio (opsional)"
+        />
+      </div>
 
       {/* Remarks */}
       <div className="space-y-2 pb-4">

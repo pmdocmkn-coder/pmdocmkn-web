@@ -120,6 +120,7 @@ export default function RadioRepairDashboardPage() {
   const canDeletePermanent = hasPermission("radio.repair.delete.permanent");
   const canHandoverWh = canCreateTekToWarehouseHandover();
   const canResetTestingData = hasPermission("delete.all-data");
+  const canPurge = hasPermission("radio.repair.purge");
 
   const statusOptions = useMemo(() => Object.values(STATUS_LABELS), []);
   const statusLabel = filterStatus ? STATUS_LABELS[filterStatus as RadioRepairJobStatus] ?? "" : "";
@@ -491,6 +492,20 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
+  const handlePurgeJob = async (job: RadioRepairJobList) => {
+    if (!window.confirm(`PERINGATAN: Apakah Anda yakin ingin MENGHAPUS TUNTAS job tiket ${job.helpdeskTicketNumber} (ID: ${job.id})? Semua serah terima (HD→Tek, Tek→WH, WH→HD), foto, dan history akan ikut terhapus permanen.`)) return;
+    if (!window.confirm("Konfirmasi terakhir: Tindakan ini TIDAK DAPAT DIBATALKAN.")) return;
+
+    try {
+      await radioRepairApi.purgeJob(job.id);
+      toast({ title: "Job beserta seluruh serah terimanya berhasil dihapus tuntas." });
+      setDetail(null);
+      load();
+    } catch (err: unknown) {
+      toast({ title: "Gagal hapus tuntas", description: apiMessage(err), variant: "destructive" });
+    }
+  };
+
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="p-4 md:p-6 space-y-6">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
@@ -800,6 +815,7 @@ export default function RadioRepairDashboardPage() {
         canHandoverWh={canHandoverWh}
         canViewArchive={canViewArchive}
         canDeletePermanent={canDeletePermanent}
+        canPurge={canPurge}
         onOpenPhoto={openRowPhoto}
         onOpenDetail={openDetail}
         onOpenEdit={openEdit}
@@ -807,6 +823,7 @@ export default function RadioRepairDashboardPage() {
         onSoftDelete={softDelete}
         onRestore={restore}
         onDeletePermanent={deletePermanent}
+        onPurge={handlePurgeJob}
         onQuickStatus={(j, s, cid) => patchStatus(j.id, s, cid)}
         onQuickHandoverWh={async (job) => {
           // Fetch detail tanpa membuka modal detail

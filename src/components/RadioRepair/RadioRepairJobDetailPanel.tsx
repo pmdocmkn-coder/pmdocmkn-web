@@ -312,7 +312,8 @@ export default function RadioRepairJobDetailPanel({
           <div>
             <p className="font-medium text-gray-800">Serah terima HD→Tek — {handoverDetail.handoverNumber}</p>
             <p className="text-xs text-gray-600 mt-0.5">
-              {handoverDetail.handedOverByName} → {handoverDetail.receivedByName} ·{" "}
+              {handoverDetail.handedOverByName} → {handoverDetail.receivedByName}
+              {handoverDetail.picReceiverName && <span className="font-medium text-gray-800 ml-1">(PIC: {handoverDetail.picReceiverName})</span>} ·{" "}
               {format(new Date(handoverDetail.handoverAt), "dd MMM yyyy HH:mm", { locale: localeId })}
             </p>
           </div>

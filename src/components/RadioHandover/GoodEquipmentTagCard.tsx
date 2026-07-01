@@ -8,6 +8,7 @@ export type GoodEquipmentTagData = {
   handoverAt: string;
   handedOverByName: string;
   receivedByName: string;
+  picReceiverName?: string;
   equipmentName?: string | null;
   unitNumber?: string | null;
   radioSerialNumber: string;
@@ -39,7 +40,7 @@ function flowLabel(type?: string) {
 export default function GoodEquipmentTagCard({ data }: { data: GoodEquipmentTagData }) {
   const acc = data.accessories?.filter((a) => a.itemName?.trim()) ?? [];
   const alurLabel = flowLabel(data.handoverType);
-  const flowNames = `${data.handedOverByName} → ${data.receivedByName}`;
+  const flowNames = `${data.handedOverByName} → ${data.receivedByName}${data.picReceiverName ? ` (${data.picReceiverName})` : ""}`;
   const alurValue = alurLabel.toLowerCase() === flowNames.toLowerCase() 
     ? alurLabel 
     : `${alurLabel} · ${flowNames}`;

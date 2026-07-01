@@ -92,7 +92,7 @@ const TABS: TabDef[] = [
     name: 'Master Teknisi',
     icon: Wrench,
     description: 'Kelola daftar teknisi workshop radio',
-    permission: 'workshop.technician.manage',
+    permission: 'menu.teknisi.mkn',
     iconBg: 'bg-[#FFF0EC]',
     iconColor: 'text-[#D94F2B]',
   },

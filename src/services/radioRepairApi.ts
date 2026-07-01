@@ -108,4 +108,7 @@ export const radioRepairApi = {
     api.delete(`/api/radio-repair-jobs/${id}/permanent`).then((r) => unwrapData(r)),
 
   resetTestingData: () => api.delete("/api/radio-repair-jobs/reset-testing-data").then((r) => unwrapData(r)),
+
+  purgeJob: (id: number) =>
+    api.delete(`/api/radio-repair-jobs/${id}/purge`).then((r) => unwrapData(r)),
 };

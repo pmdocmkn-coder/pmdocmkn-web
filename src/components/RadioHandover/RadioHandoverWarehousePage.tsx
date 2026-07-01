@@ -414,6 +414,8 @@ export default function RadioHandoverWarehousePage() {
   const [signRowDetails, setSignRowDetails] = useState<RadioHandoverDetail[]>([]);
   const [activeTagIndex, setActiveTagIndex] = useState(0);
   const [sigRowReceiver, setSigRowReceiver] = useState<string>("");
+  const [sigRowPicReceiverName, setSigRowPicReceiverName] = useState("");
+  const [sigRowRemarks, setSigRowRemarks] = useState("");
   const sigWhRowRef = useRef<any>(null);
 
   useEffect(() => {
@@ -882,7 +884,10 @@ export default function RadioHandoverWarehousePage() {
                 </div>
                 <div>
                   <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penerima</p>
-                  <p className="mt-0.5 text-gray-900">{detail.receivedByName}</p>
+                  <p className="mt-0.5 text-gray-900">
+                    {detail.receivedByName}
+                    {detail.picReceiverName && <span className="text-gray-500 block text-xs">PIC: {detail.picReceiverName}</span>}
+                  </p>
                 </div>
               </div>
 
@@ -1036,6 +1041,40 @@ export default function RadioHandoverWarehousePage() {
                 </div>
               )}
 
+              {signRows[0]?.handoverType === "WarehouseToHelpdesk" && (
+                <div className="space-y-4 mt-4 bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
+                      <button
+                        type="button"
+                        className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
+                        onClick={() => setSigRowPicReceiverName(signRowDetails[0]?.radioOwnerLabel || signRows[0].radioOwnerLabel || "")}
+                      >
+                        Gunakan data Pemilik
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                      placeholder="Nama pengambil radio (opsional)"
+                      value={sigRowPicReceiverName}
+                      onChange={(e) => setSigRowPicReceiverName(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-900">Catatan</label>
+                    <input
+                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                      value={sigRowRemarks}
+                      onChange={(e) => setSigRowRemarks(e.target.value)}
+                      placeholder="Catatan tambahan (opsional)"
+                    />
+                  </div>
+                </div>
+              )}
+
               <SignaturePadField
                 ref={sigWhRowRef}
                 label={`TTD Penerima (${signRows[0].receivedByName})`}
@@ -1056,13 +1095,15 @@ export default function RadioHandoverWarehousePage() {
                     }
                     try {
                       await Promise.all(
-                        signRows.map((row) => radioHandoverApi.completeReceiverSignature(row.id, finalSig))
+                        signRows.map((row) => radioHandoverApi.completeReceiverSignature(row.id, finalSig, sigRowPicReceiverName || undefined, sigRowRemarks || undefined))
                       );
                       toast({ title: `Tanda tangan berhasil disimpan untuk ${signRows.length} radio` });
                       setSignRows(null);
                       setSignRowDetails([]);
                       setActiveTagIndex(0);
                       setSigRowReceiver("");
+                      setSigRowPicReceiverName("");
+                      setSigRowRemarks("");
                       if (detail && signRows.some(r => r.id === detail.id)) setDetail(null);
                       load();
                     } catch (err: any) {
