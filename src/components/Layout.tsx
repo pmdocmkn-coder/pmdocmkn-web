@@ -48,7 +48,7 @@ const moreNavGroups: MoreNavGroup[] = [
     ],
   },
   {
-    label: "Monitoring",
+    label: "CCTV",
     items: [
       { name: "CCTV KPC", path: "/cctv-kpc", icon: Video, permission: "cctv.kpc.menu" },
     ],
@@ -105,7 +105,7 @@ export const searchableItems = [
   { name: "Serah Terima Radio", path: "/radio-handover", section: "Radio & Fleet" },
   { name: "Radio Masuk WH", path: "/radio-handover/warehouse", section: "Radio & Fleet" },
   { name: "Fleet Statistics", path: "/fleet-statistics", section: "Radio & Fleet" },
-  { name: "CCTV KPC", path: "/cctv-kpc", section: "Monitoring" },
+  { name: "CCTV KPC", path: "/cctv-kpc", section: "CCTV" },
   { name: "Histori Peminjaman", path: "/warehouse/borrow-history", section: "Warehouse" },
   { name: "Ajuan Pinjam Tools", path: "/warehouse/borrow-request", section: "Warehouse" },
   { name: "Supervisi Warehouse", path: "/warehouse/supervision", section: "Warehouse" },

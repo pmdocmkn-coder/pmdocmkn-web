@@ -277,7 +277,7 @@ export default function Sidebar({
         )}
 
         {filteredMonitoring.length > 0 && (
-          <NavGroup label="Monitoring" items={filteredMonitoring} isOpen={openGroups.monitoring}
+          <NavGroup label="CCTV" items={filteredMonitoring} isOpen={openGroups.monitoring}
             onToggle={() => toggleGroup("monitoring")} location={location} setActiveTab={setActiveTab} isCollapsed={isCollapsed} />
         )}
 
