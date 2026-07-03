@@ -7,6 +7,7 @@ import {
   ArrowDownLeft,
   ArrowUpRight,
   Eye,
+  Edit,
   Inbox,
   PackageCheck,
   ClipboardList,
@@ -36,6 +37,7 @@ import HandoverTimeline from "./HandoverTimeline";
 import { HandoverPhotoThumb } from "./HandoverPhotoThumbnails";
 import { canCreateHandoverWhHd } from "../../utils/handoverPermissions";
 import { useToast } from "../../hooks/use-toast";
+import EditHandoverDialog from "./EditHandoverDialog";
 
 function handoverTypeLabel(t: string) {
   if (t === "HelpdeskToTechnician") return "HD → Tek";
@@ -80,6 +82,17 @@ function currentUserId(): number | null {
   }
 }
 
+function hasPermission(permission: string): boolean {
+  const permissions = localStorage.getItem("permissions");
+  if (!permissions) return false;
+  try {
+    const permList: string[] = JSON.parse(permissions);
+    return permList.includes(permission);
+  } catch {
+    return false;
+  }
+}
+
 type HandoverTableProps = {
   items: RadioHandoverList[];
   loading: boolean;
@@ -88,6 +101,7 @@ type HandoverTableProps = {
   onOpenDetail: (id: number) => void;
   onOpenGallery: (h: RadioHandoverList) => void;
   onSignRow?: (h: RadioHandoverList[]) => void;
+  onEdit?: (h: RadioHandoverList) => void;
 };
 
 function HandoverHistoryTable({
@@ -98,6 +112,7 @@ function HandoverHistoryTable({
   onOpenDetail,
   onOpenGallery,
   onSignRow,
+  onEdit,
 }: HandoverTableProps) {
   const myId = currentUserId();
   const canWarehouseSign = (h: RadioHandoverList) => {
@@ -266,7 +281,17 @@ function HandoverHistoryTable({
                           className="px-4 py-3 text-right sticky right-0 bg-white group-hover/tr:bg-violet-50/60 transition-colors z-10 border-l border-gray-100/60"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex justify-end pr-1">
+                          <div className="flex justify-end gap-1.5 pr-1">
+                            {hasPermission("radio.handover.edit") && onEdit && (
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center w-8 h-8 border border-amber-200 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors bg-white shadow-sm"
+                                title="Edit"
+                                onClick={() => onEdit(h)}
+                              >
+                                <Edit className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="inline-flex items-center justify-center w-8 h-8 border border-violet-200 rounded-lg text-violet-700 hover:bg-violet-50 transition-colors bg-white shadow-sm"
@@ -360,6 +385,15 @@ function HandoverHistoryTable({
                       </div>
 
                       <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
+                        {hasPermission("radio.handover.edit") && onEdit && (
+                          <button
+                            type="button"
+                            className="p-1.5 border border-amber-200 rounded text-amber-600 hover:bg-amber-50"
+                            onClick={() => onEdit(h)}
+                          >
+                            <Edit className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="p-1.5 border border-gray-200 rounded text-gray-500 hover:bg-gray-50 hover:text-gray-700"
@@ -417,6 +451,7 @@ export default function RadioHandoverWarehousePage() {
   const [sigRowPicReceiverName, setSigRowPicReceiverName] = useState("");
   const [sigRowRemarks, setSigRowRemarks] = useState("");
   const sigWhRowRef = useRef<any>(null);
+  const [editHandover, setEditHandover] = useState<RadioHandoverDetail | null>(null);
 
   useEffect(() => {
     if (searchParams.get("tab")) {
@@ -550,6 +585,25 @@ export default function RadioHandoverWarehousePage() {
     setGalleryImages(photos);
     setGalleryIndex(start);
     setGalleryOpen(true);
+  };
+
+  const handleEdit = async (h: RadioHandoverList) => {
+    try {
+      const detail = await radioHandoverApi.getById(h.id);
+      setEditHandover(detail);
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({
+        title: "Gagal membuka form edit",
+        description: ax.response?.data?.message,
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleEditSuccess = () => {
+    setEditHandover(null);
+    load(); // Refresh data
   };
 
   return (
@@ -780,6 +834,7 @@ export default function RadioHandoverWarehousePage() {
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
               onSignRow={setSignRows}
+              onEdit={handleEdit}
             />
           </TabsContent>
 
@@ -795,6 +850,7 @@ export default function RadioHandoverWarehousePage() {
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
               onSignRow={setSignRows}
+              onEdit={handleEdit}
             />
           </TabsContent>
         </Tabs>
@@ -1130,6 +1186,15 @@ export default function RadioHandoverWarehousePage() {
         onClose={() => setGalleryOpen(false)}
         onIndexChange={setGalleryIndex}
       />
+
+      {/* Edit Handover Dialog */}
+      {editHandover && (
+        <EditHandoverDialog
+          detail={editHandover}
+          onClose={() => setEditHandover(null)}
+          onSuccess={handleEditSuccess}
+        />
+      )}
     </div>
   );
 }
