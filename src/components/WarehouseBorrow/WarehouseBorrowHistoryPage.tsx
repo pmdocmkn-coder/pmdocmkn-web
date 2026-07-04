@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react";
-import { format } from "date-fns";
+import { useEffect, useState, useRef } from "react";
+import {
+  format, addMonths, subMonths, setMonth, setYear, getMonth, getYear,
+  startOfMonth, endOfMonth, startOfWeek, endOfWeek, eachDayOfInterval,
+  isSameMonth, isSameDay, isWithinInterval,
+} from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye, ClipboardCheck, ArrowLeft } from "lucide-react";
+import ExcelJS from "exceljs";
+import { saveAs } from "file-saver";
+import { History, Package, Search, Calendar, User, CheckCircle2, RotateCcw, PenTool, FileText, Trash2, Eye, ClipboardCheck, ArrowLeft, Printer, Download, ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
 import { workshopTechnicianApi, type WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
 import { api } from "../../services/api";
-import type { WarehouseBorrowList } from "../../types/warehouseBorrow";
+import type { WarehouseBorrowList, WarehouseBorrowDetail } from "../../types/warehouseBorrow";
 import { hasPermission } from "../../utils/permissionUtils";
+import PrintMaterialDialog from "./PrintMaterialDialog";
+import PrintMaterialTemplate from "./PrintMaterialTemplate";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { useToast } from "../../hooks/use-toast";
 import { Textarea } from "../ui/textarea";
 import SignaturePadField from "../common/SignaturePadField";
@@ -27,14 +36,44 @@ interface UserLookupItem {
   roleName?: string | null;
 }
 
+const MONTHS_ID = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember",
+];
+
+const toDateParam = (date: Date) => format(date, "yyyy-MM-dd");
+
+const fromDateParam = (value: string) => {
+  const [year, month, day] = value.split("-").map(Number);
+  return new Date(year, month - 1, day);
+};
+
 export default function WarehouseBorrowHistoryPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const { user } = useAuth();
   const isWarehouse = user?.roleName?.toLowerCase() === "warehouse";
+  const canPrintBorrow = hasPermission("warehouse.print.borrow");
   const [items, setItems] = useState<WarehouseBorrowList[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Filters & Print
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [dateRangeFrom, setDateRangeFrom] = useState("");
+  const [dateRangeTo, setDateRangeTo] = useState("");
+  const [monthFilter, setMonthFilter] = useState(String(new Date().getMonth()));
+  const [yearFilter, setYearFilter] = useState(String(new Date().getFullYear()));
+  const [dateFilterMode, setDateFilterMode] = useState<"month" | "range">("month");
+  const [dateFilterType, setDateFilterType] = useState<"month" | "range" | null>(null);
+  const [customDateFrom, setCustomDateFrom] = useState("");
+  const [customDateTo, setCustomDateTo] = useState("");
+  const [rangeViewMonth, setRangeViewMonth] = useState(new Date());
+  const [rangePicker, setRangePicker] = useState<"month" | "year" | null>(null);
+  const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false);
+  const [printTarget, setPrintTarget] = useState<WarehouseBorrowList | null>(null);
+  const [itemsToPrint, setItemsToPrint] = useState<WarehouseBorrowDetail[]>([]);
+  const printRef = useRef<HTMLDivElement>(null);
 
   // Modal States
   const [activeItem, setActiveItem] = useState<WarehouseBorrowList | null>(null);
@@ -120,8 +159,13 @@ export default function WarehouseBorrowHistoryPage() {
 
   const loadData = () => {
     setLoading(true);
+    const params: any = { page: 1, pageSize: 100 };
+    if (statusFilter !== "all") params.status = statusFilter;
+    if (dateRangeFrom) params.fromDate = dateRangeFrom;
+    if (dateRangeTo) params.toDate = dateRangeTo;
+    
     warehouseBorrowApi
-      .getAll({ page: 1, pageSize: 100 })
+      .getAll(params)
       .then((r) => setItems(r.data ?? []))
       .catch(() => setItems([]))
       .finally(() => setLoading(false));
@@ -129,7 +173,268 @@ export default function WarehouseBorrowHistoryPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [statusFilter, dateRangeFrom, dateRangeTo]);
+
+  const applyMonthYearFilter = (month: string, year: string) => {
+    const selectedYear = Number(year);
+    setMonthFilter(month);
+    setYearFilter(year);
+
+    if (!selectedYear) {
+      setDateRangeFrom("");
+      setDateRangeTo("");
+      return;
+    }
+
+    if (month === "all") {
+      setDateRangeFrom(toDateParam(new Date(selectedYear, 0, 1)));
+      setDateRangeTo(toDateParam(new Date(selectedYear, 11, 31)));
+      return;
+    }
+
+    const selectedMonth = Number(month);
+    setDateRangeFrom(toDateParam(new Date(selectedYear, selectedMonth, 1)));
+    setDateRangeTo(toDateParam(new Date(selectedYear, selectedMonth + 1, 0)));
+  };
+
+  const clearDateFilter = () => {
+    setDateRangeFrom("");
+    setDateRangeTo("");
+    setMonthFilter(String(new Date().getMonth()));
+    setYearFilter(String(new Date().getFullYear()));
+    setCustomDateFrom("");
+    setCustomDateTo("");
+    setDateFilterMode("month");
+    setDateFilterType(null);
+    setRangePicker(null);
+  };
+
+  const getDateFilterLabel = () => {
+    if (!dateRangeFrom || !dateRangeTo) return "Semua tanggal";
+    if (dateFilterType === "range") {
+      if (dateRangeFrom === dateRangeTo) return formatDateFilterLabel(dateRangeFrom);
+      return `${formatDateFilterLabel(dateRangeFrom)} - ${formatDateFilterLabel(dateRangeTo)}`;
+    }
+    if (monthFilter === "all") return `Tahun ${yearFilter}`;
+    return `${MONTHS_ID[Number(monthFilter)]} ${yearFilter}`;
+  };
+
+  const formatDateFilterLabel = (value: string) => {
+    const [year, month, day] = value.split("-").map(Number);
+    return format(new Date(year, month - 1, day), "dd MMM yyyy", { locale: localeId });
+  };
+
+  const applyCustomDateFilter = () => {
+    if (!customDateFrom && !customDateTo) {
+      clearDateFilter();
+      return;
+    }
+
+    const from = customDateFrom || customDateTo;
+    const to = customDateTo || customDateFrom;
+    const [normalizedFrom, normalizedTo] = from > to ? [to, from] : [from, to];
+
+    setDateRangeFrom(normalizedFrom);
+    setDateRangeTo(normalizedTo);
+    setCustomDateFrom(normalizedFrom);
+    setCustomDateTo(normalizedTo);
+    setDateFilterType("range");
+  };
+
+  const applyDateFilter = () => {
+    if (dateFilterMode === "range") {
+      applyCustomDateFilter();
+      return;
+    }
+
+    applyMonthYearFilter(monthFilter, yearFilter);
+    setDateFilterType("month");
+  };
+
+  const rangeCalendarDays = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(rangeViewMonth), { weekStartsOn: 1 }),
+    end: endOfWeek(endOfMonth(rangeViewMonth), { weekStartsOn: 1 }),
+  });
+
+  const selectRangeDate = (date: Date) => {
+    const selected = toDateParam(date);
+    if (!customDateFrom || customDateTo) {
+      setCustomDateFrom(selected);
+      setCustomDateTo("");
+      return;
+    }
+
+    if (selected < customDateFrom) {
+      setCustomDateFrom(selected);
+      setCustomDateTo(customDateFrom);
+      return;
+    }
+
+    setCustomDateTo(selected);
+  };
+
+  const isRangeStart = (date: Date) => customDateFrom && isSameDay(date, fromDateParam(customDateFrom));
+  const isRangeEnd = (date: Date) => customDateTo && isSameDay(date, fromDateParam(customDateTo));
+  const isInSelectedRange = (date: Date) => {
+    if (!customDateFrom || !customDateTo) return false;
+    return isWithinInterval(date, {
+      start: fromDateParam(customDateFrom),
+      end: fromDateParam(customDateTo),
+    });
+  };
+
+  const getStatusLabelText = (status: string) => {
+    switch (status) {
+      case "PendingApproval": return "Waiting Approval";
+      case "PendingSignature": return "Menunggu TTD";
+      case "Approved": return "Disetujui";
+      case "Rejected": return "Ditolak";
+      case "Issued": return "Telah Diberikan";
+      case "Returned": return "Dikembalikan";
+      case "Cancelled": return "Dibatalkan";
+      default: return status;
+    }
+  };
+
+  const handleExportExcel = async () => {
+    if (filteredItems.length === 0) {
+      toast({ title: "Data kosong", description: "Tidak ada data untuk diexport", variant: "destructive" });
+      return;
+    }
+
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = "PM Docs System";
+    workbook.created = new Date();
+    const worksheet = workbook.addWorksheet("Histori Peminjaman");
+
+    worksheet.columns = [
+      { header: "No", key: "no", width: 6 },
+      { header: "No Transaksi", key: "borrowNumber", width: 18 },
+      { header: "Tanggal", key: "requestedAt", width: 18 },
+      { header: "Status", key: "status", width: 18 },
+      { header: "Peminjam", key: "borrower", width: 24 },
+      { header: "Akun Pengaju", key: "borrowedBy", width: 24 },
+      { header: "Terkait Pekerjaan", key: "relatedJob", width: 18 },
+      { header: "No. Tiket", key: "ticketNumber", width: 18 },
+      { header: "Jumlah Jenis", key: "totalItems", width: 12 },
+      { header: "Total Qty", key: "totalQty", width: 12 },
+      { header: "Item Dipinjam", key: "items", width: 70 },
+      { header: "Keperluan", key: "purpose", width: 36 },
+    ];
+
+    worksheet.mergeCells("A1:L1");
+    const titleCell = worksheet.getCell("A1");
+    titleCell.value = "Histori Peminjaman Tools";
+    titleCell.font = { bold: true, size: 16, color: { argb: "FFFFFFFF" } };
+    titleCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF1B3A6B" } };
+    titleCell.alignment = { vertical: "middle", horizontal: "center" };
+    worksheet.getRow(1).height = 28;
+
+    worksheet.mergeCells("A2:L2");
+    const filterCell = worksheet.getCell("A2");
+    filterCell.value = `Periode: ${getDateFilterLabel()} | Status: ${statusFilter === "all" ? "Semua Status" : getStatusLabelText(statusFilter)} | Search: ${search || "-"}`;
+    filterCell.font = { size: 10, color: { argb: "FF4A5568" } };
+    filterCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFF7F8FA" } };
+    filterCell.alignment = { vertical: "middle", horizontal: "left" };
+
+    const headerRow = worksheet.getRow(4);
+    headerRow.values = [
+      "No",
+      "No Transaksi",
+      "Tanggal",
+      "Status",
+      "Peminjam",
+      "Akun Pengaju",
+      "Terkait Pekerjaan",
+      "No. Tiket",
+      "Jumlah Jenis",
+      "Total Qty",
+      "Item Dipinjam",
+      "Keperluan",
+    ];
+    headerRow.height = 24;
+    headerRow.eachCell((cell) => {
+      cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+      cell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FF2B6CB0" } };
+      cell.alignment = { vertical: "middle", horizontal: "center", wrapText: true };
+      cell.border = {
+        top: { style: "thin", color: { argb: "FFE2E8F0" } },
+        left: { style: "thin", color: { argb: "FFE2E8F0" } },
+        bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+        right: { style: "thin", color: { argb: "FFE2E8F0" } },
+      };
+    });
+
+    const statusFill: Record<string, string> = {
+      PendingApproval: "FFFFFBEB",
+      PendingSignature: "FFFFF7ED",
+      Approved: "FFEBF4FF",
+      Rejected: "FFFEF2F2",
+      Issued: "FFE0E7FF",
+      Returned: "FFD1FAE5",
+      Cancelled: "FFF1F5F9",
+    };
+
+    filteredItems.forEach((borrow, index) => {
+      const row = worksheet.addRow({
+        no: index + 1,
+        borrowNumber: borrow.borrowNumber,
+        requestedAt: format(new Date(borrow.requestedAt), "dd/MM/yyyy HH:mm"),
+        status: getStatusLabelText(borrow.status),
+        borrower: borrow.borrowerName || borrow.borrowedByName,
+        borrowedBy: borrow.borrowedByName,
+        relatedJob: borrow.relatedJobNumber || "-",
+        ticketNumber: borrow.ticketNumber || "-",
+        totalItems: borrow.items?.length ?? 0,
+        totalQty: borrow.items?.reduce((sum, item) => sum + item.quantity, 0) ?? 0,
+        items: borrow.items?.map((item, itemIndex) =>
+          `${itemIndex + 1}. ${item.partDescription}${item.partCode ? ` [${item.partCode}]` : ""} - x${item.quantity}${item.unit ? ` ${item.unit}` : ""}`
+        ).join("\n") || "-",
+        purpose: borrow.purpose || "-",
+      });
+
+      row.eachCell((cell, colNumber) => {
+        cell.alignment = {
+          vertical: "top",
+          horizontal: colNumber === 1 || colNumber === 9 || colNumber === 10 ? "center" : "left",
+          wrapText: true,
+        };
+        cell.border = {
+          top: { style: "thin", color: { argb: "FFE2E8F0" } },
+          left: { style: "thin", color: { argb: "FFE2E8F0" } },
+          bottom: { style: "thin", color: { argb: "FFE2E8F0" } },
+          right: { style: "thin", color: { argb: "FFE2E8F0" } },
+        };
+      });
+
+      const statusCell = row.getCell("status");
+      statusCell.font = { bold: true, color: { argb: "FF1A202C" } };
+      statusCell.fill = { type: "pattern", pattern: "solid", fgColor: { argb: statusFill[borrow.status] ?? "FFF7F8FA" } };
+      row.height = Math.max(22, (borrow.items?.length ?? 1) * 18);
+    });
+
+    worksheet.views = [{ state: "frozen", ySplit: 4 }];
+    worksheet.autoFilter = {
+      from: { row: 4, column: 1 },
+      to: { row: 4, column: 12 },
+    };
+
+    const buffer = await workbook.xlsx.writeBuffer();
+    saveAs(
+      new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+      `Histori_Peminjaman_Tools_${format(new Date(), "yyyyMMdd_HHmmss")}.xlsx`
+    );
+  };
+  
+  useEffect(() => {
+    if (itemsToPrint.length > 0) {
+      // Trigger print slightly after render
+      setTimeout(() => {
+        window.print();
+        setItemsToPrint([]); // Reset after print
+      }, 500);
+    }
+  }, [itemsToPrint]);
 
   // Live refresh saat ada perubahan data warehouse borrow dari user lain
   useLiveRefresh("WarehouseBorrow", () => {
@@ -323,9 +628,262 @@ export default function WarehouseBorrowHistoryPage() {
             <div className="font-semibold text-gray-900 text-sm">{item.partDescription}</div>
             {item.partCode && <div className="text-xs text-gray-500 font-mono">{item.partCode}</div>}
           </div>
-          <span className="font-bold text-indigo-700 text-sm ml-3 shrink-0">x{item.quantity}</span>
+          <span className="font-bold text-indigo-700 text-sm ml-3 shrink-0">
+            x{item.quantity}{item.unit ? ` ${item.unit}` : ""}
+          </span>
         </div>
       ))}
+    </div>
+  );
+
+  const renderPeriodFilterPanel = () => (
+    <div className="space-y-4">
+      <div>
+        <h3 className="text-sm font-bold text-[#1A202C]">Filter Periode</h3>
+        <p className="text-xs text-[#718096] mt-0.5">Pilih bulan/tahun atau rentang tanggal manual.</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 rounded-[10px] bg-[#F7F8FA] p-1 border border-[#E2E8F0]">
+        <button
+          type="button"
+          onClick={() => {
+            setDateFilterMode("month");
+            setRangePicker(null);
+          }}
+          className={`h-9 rounded-[8px] text-xs font-bold transition-colors ${
+            dateFilterMode === "month" ? "bg-white text-[#1B3A6B] shadow-sm" : "text-[#718096] hover:text-[#1A202C]"
+          }`}
+        >
+          Bulan & Tahun
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setDateFilterMode("range");
+            setRangeViewMonth(customDateFrom ? fromDateParam(customDateFrom) : new Date());
+            setRangePicker(null);
+          }}
+          className={`h-9 rounded-[8px] text-xs font-bold transition-colors ${
+            dateFilterMode === "range" ? "bg-white text-[#1B3A6B] shadow-sm" : "text-[#718096] hover:text-[#1A202C]"
+          }`}
+        >
+          Rentang Tanggal
+        </button>
+      </div>
+
+      {dateFilterMode === "month" ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between rounded-[10px] border border-[#E2E8F0] bg-white p-2">
+            <button
+              type="button"
+              onClick={() => setYearFilter(String(Number(yearFilter) - 1))}
+              className="w-9 h-9 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <div className="text-center">
+              <div className="text-[10px] uppercase tracking-[0.12em] font-bold text-[#718096]">Tahun</div>
+              <div className="text-lg font-bold text-[#1A202C] leading-tight">{yearFilter}</div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setYearFilter(String(Number(yearFilter) + 1))}
+              className="w-9 h-9 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2">
+            <button
+              type="button"
+              onClick={() => setMonthFilter("all")}
+              className={`col-span-3 h-9 rounded-[8px] text-xs font-bold border transition-colors ${
+                monthFilter === "all"
+                  ? "bg-[#1B3A6B] border-[#1B3A6B] text-white"
+                  : "bg-white border-[#E2E8F0] text-[#4A5568] hover:border-[#2B6CB0]"
+              }`}
+            >
+              Semua Bulan
+            </button>
+            {MONTHS_ID.map((month, idx) => (
+              <button
+                key={month}
+                type="button"
+                onClick={() => setMonthFilter(String(idx))}
+                className={`h-10 rounded-[8px] text-xs font-semibold border transition-colors ${
+                  monthFilter === String(idx)
+                    ? "bg-[#1B3A6B] border-[#1B3A6B] text-white"
+                    : "bg-white border-[#E2E8F0] text-[#4A5568] hover:border-[#2B6CB0] hover:text-[#1B3A6B]"
+                }`}
+              >
+                {month.slice(0, 3)}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="relative rounded-[14px] border border-[#E2E8F0] bg-white p-3 shadow-sm">
+          <div className="flex items-center justify-between gap-2 mb-3">
+            <button
+              type="button"
+              onClick={() => setRangeViewMonth((prev) => subMonths(prev, 1))}
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+            >
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRangePicker(rangePicker === "month" ? null : "month")}
+              className="h-9 flex-1 min-w-0 rounded-[10px] border border-[#E2E8F0] bg-[#F7F8FA] px-3 text-xs font-bold text-[#1A202C] flex items-center justify-between gap-2 hover:border-[#2B6CB0] transition-colors"
+            >
+              <span className="truncate">{MONTHS_ID[getMonth(rangeViewMonth)]}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#718096] shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRangePicker(rangePicker === "year" ? null : "year")}
+              className="h-9 w-24 rounded-[10px] border border-[#E2E8F0] bg-[#F7F8FA] px-3 text-xs font-bold text-[#1A202C] flex items-center justify-between gap-2 hover:border-[#2B6CB0] transition-colors"
+            >
+              <span>{getYear(rangeViewMonth)}</span>
+              <ChevronDown className="w-3.5 h-3.5 text-[#718096] shrink-0" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setRangeViewMonth((prev) => addMonths(prev, 1))}
+              className="w-9 h-9 flex items-center justify-center rounded-[10px] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+
+          {rangePicker && (
+            <div className="absolute left-3 right-3 top-[58px] z-30 overflow-hidden rounded-[14px] border border-[#E2E8F0] bg-white shadow-xl">
+              <div className="flex items-center justify-between border-b border-[#E2E8F0] px-4 py-3">
+                <span className="text-sm font-bold text-[#1A202C]">
+                  {rangePicker === "month" ? "Pilih Bulan" : "Pilih Tahun"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setRangePicker(null)}
+                  className="text-xs font-semibold text-[#2B6CB0] hover:text-[#1B3A6B]"
+                >
+                  Tutup
+                </button>
+              </div>
+              <div className="max-h-64 overflow-y-auto">
+                {rangePicker === "month"
+                  ? MONTHS_ID.map((month, idx) => {
+                      const active = idx === getMonth(rangeViewMonth);
+                      return (
+                        <button
+                          key={month}
+                          type="button"
+                          onClick={() => {
+                            setRangeViewMonth((prev) => setMonth(prev, idx));
+                            setRangePicker(null);
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm border-b border-[#F7F8FA] transition-colors ${
+                            active ? "bg-[#EBF4FF] text-[#1B3A6B] font-bold" : "text-[#1A202C] hover:bg-[#F7F8FA]"
+                          }`}
+                        >
+                          {month}
+                        </button>
+                      );
+                    })
+                  : Array.from({ length: new Date().getFullYear() - 1999 + 3 }, (_, i) => 2000 + i).map((year) => {
+                      const active = year === getYear(rangeViewMonth);
+                      return (
+                        <button
+                          key={year}
+                          type="button"
+                          onClick={() => {
+                            setRangeViewMonth((prev) => setYear(prev, year));
+                            setRangePicker(null);
+                          }}
+                          className={`w-full px-4 py-3 text-left text-sm border-b border-[#F7F8FA] transition-colors ${
+                            active ? "bg-[#EBF4FF] text-[#1B3A6B] font-bold" : "text-[#1A202C] hover:bg-[#F7F8FA]"
+                          }`}
+                        >
+                          {year}
+                        </button>
+                      );
+                    })}
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-7 gap-1 mb-1">
+            {["Sen", "Sel", "Rab", "Kam", "Jum", "Sab", "Min"].map((day) => (
+              <div key={day} className="h-7 flex items-center justify-center text-[10px] font-semibold text-[#718096]">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-1">
+            {rangeCalendarDays.map((date) => {
+              const inMonth = isSameMonth(date, rangeViewMonth);
+              const start = !!isRangeStart(date);
+              const end = !!isRangeEnd(date);
+              const inRange = isInSelectedRange(date);
+              const single = start && !customDateTo;
+              const selected = start || end;
+
+              return (
+                <button
+                  key={date.toISOString()}
+                  type="button"
+                  onClick={() => selectRangeDate(date)}
+                  className={`h-9 min-w-0 text-xs font-semibold transition-colors ${
+                    selected || single
+                      ? "bg-[#1B3A6B] text-white shadow-sm"
+                      : inRange
+                        ? "bg-[#EBF4FF] text-[#1B3A6B]"
+                        : inMonth
+                          ? "text-[#1A202C] hover:bg-[#F7F8FA]"
+                          : "text-[#CBD5E0]"
+                  } ${start ? "rounded-l-[10px]" : ""} ${end ? "rounded-r-[10px]" : ""} ${single || (!inRange && !selected) ? "rounded-[10px]" : ""}`}
+                >
+                  {date.getDate()}
+                </button>
+              );
+            })}
+          </div>
+
+          <div className="mt-3 rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] px-3 py-2 text-[11px] text-[#718096]">
+            {customDateFrom ? (
+              <span>
+                {formatDateFilterLabel(customDateFrom)}
+                {customDateTo ? ` - ${formatDateFilterLabel(customDateTo)}` : " - pilih tanggal akhir"}
+              </span>
+            ) : (
+              <span>Pilih tanggal awal, lalu pilih tanggal akhir.</span>
+            )}
+          </div>
+        </div>
+      )}
+
+      <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
+        <button
+          type="button"
+          onClick={clearDateFilter}
+          className="text-xs font-semibold text-[#718096] hover:text-[#DC2626] transition-colors"
+        >
+          Hapus
+        </button>
+        <Button
+          type="button"
+          size="sm"
+          className="bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white"
+          onClick={applyDateFilter}
+        >
+          Terapkan
+        </Button>
+      </div>
     </div>
   );
 
@@ -360,6 +918,41 @@ export default function WarehouseBorrowHistoryPage() {
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
+          <div className="grid grid-cols-2 gap-2 mt-3">
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-10 bg-[#F7F8FA] border-[#E2E8F0] text-[12px]">
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="PendingApproval">Waiting Approval</SelectItem>
+                <SelectItem value="PendingSignature">Menunggu TTD</SelectItem>
+                <SelectItem value="Approved">Disetujui</SelectItem>
+                <SelectItem value="Rejected">Ditolak</SelectItem>
+                <SelectItem value="Issued">Telah Diberikan</SelectItem>
+                <SelectItem value="Returned">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className={`h-10 px-3 rounded-[10px] border text-[12px] font-semibold flex items-center justify-between gap-2 ${
+                    dateRangeFrom
+                      ? "bg-[#EBF4FF] border-[#2B6CB0] text-[#1B3A6B]"
+                      : "bg-[#F7F8FA] border-[#E2E8F0] text-[#4A5568]"
+                  }`}
+                >
+                  <span className="truncate">{getDateFilterLabel()}</span>
+                  <Calendar className="w-3.5 h-3.5 shrink-0" />
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-[calc(100vw-2rem)] p-4 z-[200]">
+                {renderPeriodFilterPanel()}
+              </PopoverContent>
+            </Popover>
+          </div>
         </div>
       </div>
 
@@ -375,14 +968,55 @@ export default function WarehouseBorrowHistoryPage() {
           </div>
         </div>
 
-        <div className="relative w-full md:w-72">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
-          <Input
-            placeholder="Cari transaksi, part, atau peminjam..."
-            className="pl-9 h-10 w-full border-[#E2E8F0] focus:border-[#2B6CB0]"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+        <div className="flex flex-col gap-3 w-full md:w-auto">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
+              <Input
+                placeholder="Cari transaksi..."
+                className="pl-9 h-10 w-full border-[#E2E8F0] focus:border-[#2B6CB0]"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full sm:w-48 h-10 bg-white"><SelectValue placeholder="Semua Status" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Status</SelectItem>
+                <SelectItem value="PendingApproval">Waiting Approval</SelectItem>
+                <SelectItem value="PendingSignature">Menunggu TTD</SelectItem>
+                <SelectItem value="Approved">Disetujui</SelectItem>
+                <SelectItem value="Rejected">Ditolak</SelectItem>
+                <SelectItem value="Issued">Telah Diberikan</SelectItem>
+                <SelectItem value="Returned">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className={`w-full sm:w-56 h-10 justify-between bg-white border-[#E2E8F0] ${
+                    dateRangeFrom ? "text-[#1B3A6B] border-[#2B6CB0] bg-[#EBF4FF]" : "text-[#1A202C]"
+                  }`}
+                >
+                  <span className="flex items-center gap-2 truncate">
+                    <Calendar className="w-4 h-4 text-[#2B6CB0]" />
+                    <span className="truncate">{getDateFilterLabel()}</span>
+                  </span>
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-96 p-4 z-[200]">
+                {renderPeriodFilterPanel()}
+              </PopoverContent>
+            </Popover>
+
+            <Button variant="outline" className="h-10 bg-white whitespace-nowrap" onClick={handleExportExcel}>
+              <Download className="w-4 h-4 mr-2" /> Export
+            </Button>
+          </div>
         </div>
       </div>
 
@@ -448,6 +1082,19 @@ export default function WarehouseBorrowHistoryPage() {
                     <PenTool className="w-3.5 h-3.5 mr-1" /> TTD Serah Terima
                   </Button>
                 )}
+                {canPrintBorrow && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 text-[#4A5568] hover:bg-[#EDF2F7]"
+                    onClick={() => {
+                      setPrintTarget(b);
+                      setIsPrintDialogOpen(true);
+                    }}
+                  >
+                    <Printer className="w-3.5 h-3.5 mr-1" /> Print
+                  </Button>
+                )}
                 {b.status === "PendingReturnSignature" && isWarehouse && (
                   <Button
                     variant="outline"
@@ -501,6 +1148,7 @@ export default function WarehouseBorrowHistoryPage() {
                 <th className="px-4 py-3.5 whitespace-nowrap">Peminjam</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Status</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Terkait Pekerjaan</th>
+                <th className="px-4 py-3.5 whitespace-nowrap">No. Tiket</th>
                 <th className="px-4 py-3.5 whitespace-nowrap">Tanggal</th>
                 <th className="px-4 py-3.5 text-right whitespace-nowrap">Aksi</th>
               </tr>
@@ -508,7 +1156,7 @@ export default function WarehouseBorrowHistoryPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12">
+                  <td colSpan={9} className="text-center py-12">
                     <div className="flex flex-col items-center gap-3">
                       <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-violet-600" />
                       <span className="text-sm text-gray-400">Memuat data...</span>
@@ -517,7 +1165,7 @@ export default function WarehouseBorrowHistoryPage() {
                 </tr>
               ) : filteredItems.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-12 text-gray-400">
+                  <td colSpan={9} className="text-center py-12 text-gray-400">
                     <div className="flex flex-col items-center gap-2">
                       <Package className="w-10 h-10 opacity-20" />
                       <span className="text-sm">Tidak ada data ditemukan</span>
@@ -562,6 +1210,15 @@ export default function WarehouseBorrowHistoryPage() {
                       {b.relatedJobNumber ? (
                         <span className="text-xs font-mono font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded border border-blue-100">
                           {b.relatedJobNumber}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 text-xs">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {b.ticketNumber ? (
+                        <span className="text-xs font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-1 rounded border border-emerald-100">
+                          {b.ticketNumber}
                         </span>
                       ) : (
                         <span className="text-gray-400 text-xs">—</span>
@@ -618,15 +1275,31 @@ export default function WarehouseBorrowHistoryPage() {
                           </button>
                         )}
                         {b.status === "Issued" && (
+                          <>
+                            <button
+                              title="Terima Pengembalian"
+                              className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 transition-colors"
+                              onClick={() => openReturn(b)}
+                            >
+                              <RotateCcw className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                        {canPrintBorrow && (
                           <button
-                            title="Terima Pengembalian"
-                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 transition-colors"
-                            onClick={() => openReturn(b)}
+                            title="Print Bukti Material"
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-gray-600 hover:text-white hover:bg-blue-600 border border-gray-200 transition-colors"
+                            onClick={() => {
+                              setPrintTarget(b);
+                              setIsPrintDialogOpen(true);
+                            }}
                           >
-                            <RotateCcw className="w-4 h-4 text-emerald-600" />
+                            <Printer className="w-4 h-4" />
                           </button>
                         )}
-                        <div className="w-px h-5 bg-gray-200 mx-0.5" />
+                        {(canPrintBorrow || hasPermission("warehouse.borrow.delete")) && (
+                          <div className="w-px h-5 bg-gray-200 mx-0.5" />
+                        )}
                         {hasPermission("warehouse.borrow.delete") && (
                           <button
                             title="Hapus"
@@ -998,10 +1671,25 @@ export default function WarehouseBorrowHistoryPage() {
 
       {/* Modal Detail Peminjaman */}
       <WarehouseBorrowDetailModal
-        borrowId={detailTargetId}
-        isOpen={!!detailTargetId}
+        isOpen={detailTargetId !== null}
         onClose={() => setDetailTargetId(null)}
+        borrowId={detailTargetId}
       />
+
+      <PrintMaterialDialog
+        open={isPrintDialogOpen}
+        onOpenChange={setIsPrintDialogOpen}
+        targetBorrow={printTarget}
+        onConfirmPrint={(items) => {
+          setIsPrintDialogOpen(false);
+          setItemsToPrint(items);
+        }}
+      />
+      
+      {/* Hidden print template */}
+      {itemsToPrint.length > 0 && (
+        <PrintMaterialTemplate ref={printRef} itemsToPrint={itemsToPrint} />
+      )}
 
       {/* Dialog Hapus Riwayat */}
       <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>

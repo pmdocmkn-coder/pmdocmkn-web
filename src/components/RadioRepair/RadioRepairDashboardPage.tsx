@@ -884,9 +884,9 @@ export default function RadioRepairDashboardPage() {
             </DialogTitle>
             {detail && (
               <p className="text-sm text-gray-600">
-                Teknisi: <strong>{detail.assignedTechnicianName}</strong>
-                {detail.workshopTechnicianName && (
-                  <span className="ml-2 text-violet-600">· Workshop: <strong>{detail.workshopTechnicianName}</strong></span>
+                Teknisi: <strong>{detail.workshopTechnicianName || detail.assignedTechnicianName}</strong>
+                {detail.workshopTechnicianName && detail.assignedTechnicianName && detail.workshopTechnicianName !== detail.assignedTechnicianName && (
+                  <span className="ml-2 text-gray-500">· Akun: {detail.assignedTechnicianName}</span>
                 )}
               </p>
             )}
