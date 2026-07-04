@@ -43,7 +43,7 @@ export function formatActiveWorkshopDuration(
   // (misalnya karena reset saat kembali ke InProgress) - kita tetap hitung totalnya
   const { days, hours, minutes } = getActiveWorkshopDays(accumulatedMinutes, currentProgressStartedAt);
 
-  if (days === 0 && hours === 0 && minutes === 0 && status !== 'InProgress') {
+  if (days === 0 && hours === 0 && minutes === 0 && status !== 'InProgress' && status !== 'Monitoring') {
       return "0 menit";
   }
 

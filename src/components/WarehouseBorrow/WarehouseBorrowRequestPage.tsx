@@ -28,7 +28,8 @@ interface BorrowItemRow {
   key: number;
   partDescription: string;
   partCode: string;
-  quantity: number;
+  unit: string;
+  quantity: number | string;
   suggestions: WarehousePartCatalogItem[];
   searching: boolean;
   showSuggestions: boolean;
@@ -41,6 +42,7 @@ function createEmptyRow(): BorrowItemRow {
     key: ++rowKeyCounter,
     partDescription: "",
     partCode: "",
+    unit: "",
     quantity: 1,
     suggestions: [],
     searching: false,
@@ -214,6 +216,7 @@ export default function WarehouseBorrowRequestPage() {
     updateRow(idx, {
       partDescription: item.partName,
       partCode: item.partCode,
+      unit: item.unit ?? "",
       suggestions: [],
       showSuggestions: false,
     });
@@ -235,11 +238,17 @@ export default function WarehouseBorrowRequestPage() {
       .map((r) => ({
         partDescription: r.partDescription.trim(),
         partCode: r.partCode.trim() || undefined,
-        quantity: r.quantity,
+        unit: r.unit.trim() || undefined,
+        quantity: Number(r.quantity) || 0,
       }));
 
     if (validItems.length === 0) {
       toast({ title: "Minimal 1 barang harus diisi", variant: "destructive" });
+      return;
+    }
+
+    if (validItems.some((item) => item.quantity <= 0)) {
+      toast({ title: "Kuantitas harus diisi dengan angka lebih besar dari 0", variant: "destructive" });
       return;
     }
 
@@ -401,7 +410,7 @@ export default function WarehouseBorrowRequestPage() {
                         className="pl-9 h-10 bg-white"
                         value={row.partDescription}
                         onChange={(e) =>
-                          updateRow(idx, { partDescription: e.target.value, showSuggestions: true })
+                          updateRow(idx, { partDescription: e.target.value, unit: "", showSuggestions: true })
                         }
                         onFocus={() => updateRow(idx, { showSuggestions: true })}
                         onBlur={() => setTimeout(() => updateRow(idx, { showSuggestions: false }), 200)}
@@ -420,7 +429,10 @@ export default function WarehouseBorrowRequestPage() {
                               onClick={() => selectPartSuggestion(idx, item)}
                             >
                               <div className="text-sm font-semibold text-gray-800">{item.partName}</div>
-                              <div className="text-xs text-gray-500">{item.partCode}</div>
+                              <div className="text-xs text-gray-500">
+                                {item.partCode}
+                                {item.unit ? <span className="ml-2 font-semibold text-emerald-600">Satuan: {item.unit}</span> : null}
+                              </div>
                             </button>
                           </li>
                         ))}
@@ -428,7 +440,7 @@ export default function WarehouseBorrowRequestPage() {
                     )}
                   </div>
 
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div className="space-y-1.5">
                       <label className="text-sm font-semibold text-slate-700">Tools Code</label>
                       <Input
@@ -438,6 +450,7 @@ export default function WarehouseBorrowRequestPage() {
                         onChange={(e) => updateRow(idx, { partCode: e.target.value })}
                       />
                     </div>
+                    
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-gray-600">Kuantitas</label>
                       <Input
@@ -445,8 +458,17 @@ export default function WarehouseBorrowRequestPage() {
                         min={1}
                         className="h-10 bg-white"
                         value={row.quantity}
-                        onChange={(e) => updateRow(idx, { quantity: Number(e.target.value) || 1 })}
+                        onChange={(e) => updateRow(idx, { quantity: e.target.value })}
                         required
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-xs font-semibold text-gray-600">Satuan</label>
+                      <Input
+                        placeholder="Otomatis"
+                        className="h-10 bg-white font-semibold text-emerald-700"
+                        value={row.unit}
+                        readOnly
                       />
                     </div>
                   </div>

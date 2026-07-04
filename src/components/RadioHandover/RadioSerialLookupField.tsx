@@ -13,6 +13,7 @@ type Props = {
   onSelect: (serial: string, radioId: number | null, lookup?: RadioLookup) => void;
   label?: string;
   required?: boolean;
+  disabled?: boolean;
 };
 
 export default function RadioSerialLookupField({
@@ -22,6 +23,7 @@ export default function RadioSerialLookupField({
   onSelect,
   label = "Serial Number Radio",
   required,
+  disabled,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [masterOpen, setMasterOpen] = useState(false);
@@ -95,16 +97,17 @@ export default function RadioSerialLookupField({
           </button>
         )}
       </div>
-      <DialogPrimitive.Root open={open} onOpenChange={setOpen}>
+      <DialogPrimitive.Root open={open} onOpenChange={(v) => { if (!disabled) setOpen(v); }}>
         <DialogPrimitive.Trigger asChild>
           <button
             type="button"
-            className="w-full h-10 flex items-center justify-between gap-2 px-3 mt-1 rounded-lg border bg-white text-sm shadow-sm hover:border-violet-300"
+            disabled={disabled}
+            className={`w-full h-10 flex items-center justify-between gap-2 px-3 mt-1 rounded-lg border text-sm shadow-sm ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-80 text-gray-500' : 'bg-white hover:border-violet-300'}`}
           >
             <span className={`truncate text-left ${display ? "text-gray-800 font-medium" : "text-gray-400"}`}>
               {display || "Cari SN di master radio..."}
             </span>
-            <Search className="w-4 h-4 text-gray-400 shrink-0" />
+            {!disabled && <Search className="w-4 h-4 text-gray-400 shrink-0" />}
           </button>
         </DialogPrimitive.Trigger>
         <DialogPrimitive.Portal>

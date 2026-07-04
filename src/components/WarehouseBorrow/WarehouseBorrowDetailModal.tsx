@@ -193,6 +193,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                       <tr>
                         <th className="px-4 py-2 text-left font-medium">Part Code</th>
                         <th className="px-4 py-2 text-left font-medium">Deskripsi</th>
+                        <th className="px-4 py-2 text-left font-medium">Satuan</th>
                         <th className="px-4 py-2 text-right font-medium">Qty</th>
                       </tr>
                     </thead>
@@ -201,6 +202,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                         <tr key={idx}>
                           <td className="px-4 py-2.5 font-mono text-xs">{item.partCode || "—"}</td>
                           <td className="px-4 py-2.5 font-medium">{item.partDescription}</td>
+                          <td className="px-4 py-2.5 text-xs font-semibold text-emerald-700">{item.unit || "—"}</td>
                           <td className="px-4 py-2.5 text-right font-bold text-indigo-600">{item.quantity}</td>
                         </tr>
                       ))}

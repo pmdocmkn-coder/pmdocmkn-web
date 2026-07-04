@@ -13,6 +13,7 @@ import SignaturePadField, { type SignaturePadHandle } from "../common/SignatureP
 import GreenTagFieldsForm from "./GreenTagFieldsForm";
 import RadioSerialLookupField from "./RadioSerialLookupField";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useAuth } from "../../contexts/AuthContext";
 
 type Props = {
   detail: RadioHandoverDetail;
@@ -22,6 +23,11 @@ type Props = {
 
 export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props) {
   const { toast } = useToast();
+  const { user } = useAuth();
+  const isWorkshopTech = user?.roleName === "Teknisi WKS";
+  const isTechToWh = detail.handoverType === "TechnicianToWarehouse";
+  const lockCoreFields = isWorkshopTech || isTechToWh;
+
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
   const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
@@ -43,7 +49,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     displayCondition: detail.displayCondition || "",
   });
   const [techId, setTechId] = useState(detail.receivedByUserId?.toString() || "");
-  const [workshopTechId, setWorkshopTechId] = useState(detail.workshopTechnicianId?.toString() || "");
+  const [workshopTechId, setWorkshopTechId] = useState((detail.workshopTechnicianId || detail.handedOverByWorkshopTechnicianId)?.toString() || "");
   const [lookup, setLookup] = useState<RadioLookup | null>(detail.radioId ? {
     id: detail.radioId,
     radioId: detail.radioMasterRadioId || undefined,
@@ -147,10 +153,11 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-900">Tiket Helpdesk *</label>
               <input
-                className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                className={`w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors ${lockCoreFields ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
                 value={ticket}
                 onChange={(e) => setTicket(e.target.value)}
                 placeholder="#MKN/1234/5678"
+                disabled={lockCoreFields}
               />
             </div>
             <div>
@@ -160,6 +167,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
                 lookup={lookup}
                 label="Serial Number"
                 required
+                disabled={lockCoreFields}
                 onSelect={(s, id, l) => {
                   setSerial(s);
                   setRadioId(id);
@@ -176,10 +184,11 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           <div className="space-y-2">
             <label className="text-sm font-medium text-gray-900">Nama/Tipe Peralatan</label>
             <input
-              className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+              className={`w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors ${lockCoreFields ? 'bg-gray-100 cursor-not-allowed text-gray-500' : ''}`}
               value={equipmentName}
               onChange={(e) => setEquipmentName(e.target.value)}
               placeholder="Motorola DP4800, TP8100, ..."
+              disabled={lockCoreFields}
             />
           </div>
 
@@ -189,22 +198,24 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 type="button"
-                onClick={() => setTagType("Damaged")}
+                onClick={() => { if (!lockCoreFields) setTagType("Damaged"); }}
+                disabled={lockCoreFields}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${tagType === "Damaged"
                   ? "border-amber-500 bg-amber-50 shadow-sm ring-2 ring-amber-200"
-                  : "border-gray-200 bg-white hover:border-amber-300"
-                  }`}
+                  : "border-gray-200 bg-white"
+                  } ${lockCoreFields ? "opacity-75 cursor-not-allowed" : "hover:border-amber-300"}`}
               >
                 <p className="font-bold text-sm text-amber-900">Tag kuning (Rusak)</p>
                 <p className="text-xs text-amber-700 mt-0.5">Peralatan masuk perbaikan</p>
               </button>
               <button
                 type="button"
-                onClick={() => setTagType("Good")}
+                onClick={() => { if (!lockCoreFields) setTagType("Good"); }}
+                disabled={lockCoreFields}
                 className={`p-3 rounded-xl border-2 text-left transition-all ${tagType === "Good"
                   ? "border-emerald-500 bg-emerald-50 shadow-sm ring-2 ring-emerald-200"
-                  : "border-gray-200 bg-white hover:border-emerald-300"
-                  }`}
+                  : "border-gray-200 bg-white"
+                  } ${lockCoreFields ? "opacity-75 cursor-not-allowed" : "hover:border-emerald-300"}`}
               >
                 <p className="font-bold text-sm text-emerald-900">Tag hijau (Baik)</p>
                 <p className="text-xs text-emerald-700 mt-0.5">Kondisi baik / inspeksi</p>
@@ -234,8 +245,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Akun Sistem Penerima *</label>
-              <Select value={techId} onValueChange={setTechId}>
-                <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+              <Select value={techId} onValueChange={setTechId} disabled={lockCoreFields}>
+                <SelectTrigger className={`w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${lockCoreFields ? 'bg-gray-100 cursor-not-allowed opacity-80' : 'bg-white'}`}>
                   <SelectValue placeholder="Pilih akun sistem" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
@@ -251,8 +262,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Teknisi Penerima *</label>
-              <Select value={workshopTechId} onValueChange={setWorkshopTechId}>
-                <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white">
+              <Select value={workshopTechId} onValueChange={setWorkshopTechId} disabled={lockCoreFields}>
+                <SelectTrigger className={`w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${lockCoreFields ? 'bg-gray-100 cursor-not-allowed opacity-80' : 'bg-white'}`}>
                   <SelectValue placeholder="Pilih teknisi fisik" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">

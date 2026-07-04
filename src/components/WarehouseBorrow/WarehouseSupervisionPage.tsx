@@ -243,7 +243,9 @@ export default function WarehouseSupervisionPage() {
                         <div className="font-semibold text-gray-900">{item.partDescription}</div>
                         {item.partCode && <div className="text-xs text-gray-500 font-mono">{item.partCode}</div>}
                       </div>
-                      <span className="font-bold text-violet-700 ml-2">x{item.quantity}</span>
+                      <span className="font-bold text-violet-700 ml-2">
+                        x{item.quantity}{item.unit ? ` ${item.unit}` : ""}
+                      </span>
                     </div>
                   ))}
                 </div>

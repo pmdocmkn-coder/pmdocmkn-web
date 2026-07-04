@@ -500,7 +500,9 @@ const Login: React.FC = () => {
                       </div>
                       <input
                         id="username"
+                        name="username"
                         type="text"
+                        autoComplete="username"
                         value={username}
                         onChange={(e) => handleTextChange(e, setUsername)}
                         onFocus={handleTextFocusFull}
@@ -521,7 +523,9 @@ const Login: React.FC = () => {
                       </div>
                       <input
                         id="password"
+                        name="password"
                         type={showPassword ? 'text' : 'password'}
+                        autoComplete={isLoginMode ? "current-password" : "new-password"}
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         onFocus={handlePasswordFocus}

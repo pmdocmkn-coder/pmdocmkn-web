@@ -12,6 +12,7 @@ export interface WarehouseBorrowItem {
   id?: number;
   partDescription: string;
   partCode?: string | null;
+  unit?: string | null;
   quantity: number;
 }
 
