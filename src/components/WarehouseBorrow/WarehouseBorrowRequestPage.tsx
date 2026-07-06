@@ -87,21 +87,13 @@ export default function WarehouseBorrowRequestPage() {
   // Simpan object user yang dipilih agar bisa akses roleName langsung
   const [selectedBorrowerUser, setSelectedBorrowerUser] = useState<UserLookupItem | null>(null);
 
-  // Deteksi apakah user yang dipilih punya teknisi terkait — tampilkan step 2 jika ada linked technicians
-  // ATAU jika role adalah Teknisi WSK (bisa jadi teknisi mandiri)
-  const WORKSHOP_ROLE = "teknisi wsk";
-  const selectedUserIsWorkshop =
-    (selectedBorrowerUser?.roleName ?? "").toLowerCase().trim() === WORKSHOP_ROLE;
-
-  // Teknisi yang terkait dengan user yang dipilih
+  // Teknisi yang terkait dengan user yang dipilih (berdasarkan userId, bukan hardcode role)
   const linkedTechniciansForUser = selectedBorrowerUser
-    ? technicians.filter(t => t.userId === selectedBorrowerUser.id)
+    ? technicians.filter(t => t.userId != null && t.userId === selectedBorrowerUser.id)
     : [];
 
-  // Tampilkan step 2 jika: user adalah Teknisi WSK, ATAU user punya teknisi linked
-  const shouldShowTechPicker = borrowerName && (
-    selectedUserIsWorkshop || linkedTechniciansForUser.length > 0
-  );
+  // Tampilkan step 2 secara otomatis jika akun yang dipilih punya ≥1 teknisi linked
+  const shouldShowTechPicker = borrowerName && linkedTechniciansForUser.length > 0;
 
   // Load kedua data sekaligus
   useEffect(() => {
@@ -111,7 +103,9 @@ export default function WarehouseBorrowRequestPage() {
         setAllUsers(users);
       })
       .catch(() => setAllUsers([]));
-    workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setTechnicians(res.data.data)).catch(() => setTechnicians([]));
+    // Load semua teknisi aktif tanpa filter role — agar akun apapun (workshop, engineer, dll)
+    // yang punya teknisi terhubung (lewat userId) otomatis terdeteksi
+    workshopTechnicianApi.getAllActive().then(res => setTechnicians(res.data.data)).catch(() => setTechnicians([]));
   }, []);
 
   // Auto-detect user yang dipilih dari borrowerName (fallback jika FormMobileSelect tidak trigger onChange dengan object)
@@ -263,7 +257,7 @@ export default function WarehouseBorrowRequestPage() {
         relatedRepairJobId:
           selectedRepairJobId ?? (jobId ? Number(jobId) : undefined),
         ticketNumber: finalTicket,
-        // Jika user yang dipilih punya linked teknisi dan ada nama spesifik → pakai nama teknisi
+        // Jika akun yang dipilih punya linked teknisi dan ada nama spesifik → pakai nama teknisi
         // Jika tidak → pakai nama akun/borrowerName yang diinput
         borrowerName: (shouldShowTechPicker && workshopTechName ? workshopTechName : borrowerName.trim()) || undefined,
       });
@@ -578,8 +572,7 @@ export default function WarehouseBorrowRequestPage() {
                     placeholder="— Pilih nama teknisi —"
                     label="Pilih Nama Teknisi"
                     color="violet"
-                  />
-                  {workshopTechName && (
+                  />                  {workshopTechName && (
                     <p className="text-xs text-emerald-600 flex items-center gap-1">
                       ✓ Peminjam: <strong>{workshopTechName}</strong>
                     </p>
