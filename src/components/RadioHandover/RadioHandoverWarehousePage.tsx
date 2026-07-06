@@ -138,7 +138,11 @@ function HandoverHistoryTable({
         flowLabel: first.handoverType,
         handoverAt: first.handoverAt,
         handedOverByName: first.handedOverByWorkshopTechnicianName || first.handedOverByName,
-        receivedByName: first.workshopTechnicianName || first.receivedByName,
+        // Tek→WH: penerima adalah akun Warehouse (receivedByName), bukan workshopTechnicianName (itu penyerah)
+        // WH→HD / HD→Tek: tetap prioritaskan workshopTechnicianName jika ada
+        receivedByName: first.handoverType === "TechnicianToWarehouse"
+          ? first.receivedByName
+          : (first.workshopTechnicianName || first.receivedByName),
         hasPendingSignature,
         firstItem: first,
         items: group,
@@ -248,9 +252,13 @@ function HandoverHistoryTable({
                             <ArrowRight className="w-3.5 h-3.5 text-violet-500 shrink-0" />
                             <span
                               className="truncate max-w-[100px]"
-                              title={h.workshopTechnicianName || h.receivedByName}
+                              title={h.handoverType === "TechnicianToWarehouse"
+                                ? h.receivedByName
+                                : (h.workshopTechnicianName || h.receivedByName)}
                             >
-                              {h.workshopTechnicianName || h.receivedByName}
+                              {h.handoverType === "TechnicianToWarehouse"
+                                ? h.receivedByName
+                                : (h.workshopTechnicianName || h.receivedByName)}
                             </span>
                           </div>
                           <div className="mt-1">
