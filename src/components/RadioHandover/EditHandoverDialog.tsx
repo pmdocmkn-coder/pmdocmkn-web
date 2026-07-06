@@ -30,6 +30,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
+  const [warehouseReceivers, setWarehouseReceivers] = useState<UserOption[]>([]);
   const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [ticket, setTicket] = useState(detail.helpdeskTicketNumber || "");
   const [serial, setSerial] = useState(detail.radioSerialNumber || "");
@@ -49,7 +50,11 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     displayCondition: detail.displayCondition || "",
   });
   const [techId, setTechId] = useState(detail.receivedByUserId?.toString() || "");
-  const [workshopTechId, setWorkshopTechId] = useState((detail.workshopTechnicianId || detail.handedOverByWorkshopTechnicianId)?.toString() || "");
+  const [workshopTechId, setWorkshopTechId] = useState(
+    // workshopTechnicianId = teknisi PENERIMA (WH side)
+    // JANGAN fallback ke handedOverByWorkshopTechnicianId (itu teknisi PENYERAH)
+    detail.workshopTechnicianId?.toString() || ""
+  );
   const [lookup, setLookup] = useState<RadioLookup | null>(detail.radioId ? {
     id: detail.radioId,
     radioId: detail.radioMasterRadioId || undefined,
@@ -72,9 +77,17 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   const sigTekRef = useRef<SignaturePadHandle>(null);
 
   useEffect(() => {
-    radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
+    radioHandoverApi.getTechnicians().then((list) => {
+      setTechnicians(list);
+    }).catch(() => setTechnicians([]));
+    // Untuk handover Tek→WH, penerima adalah akun Warehouse (bukan teknisi)
+    if (isTechToWh) {
+      radioHandoverApi.getWarehouseReceivers().then((list) => {
+        setWarehouseReceivers(list);
+      }).catch(() => setWarehouseReceivers([]));
+    }
     workshopTechnicianApi.getAllActive("Teknisi WKS").then((res) => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
-  }, []);
+  }, [isTechToWh]);
 
   const validate = (): string[] => {
     const missing: string[] = [];
@@ -250,7 +263,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
                   <SelectValue placeholder="Pilih akun sistem" />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {technicians.map((t) => (
+                  {/* Tek→WH: penerima adalah akun Warehouse; selainnya: akun Teknisi */}
+                  {(isTechToWh ? warehouseReceivers : technicians).map((t) => (
                     <SelectItem key={t.userId} value={t.userId.toString()}>
                       <span className="font-medium">{t.fullName}</span>{" "}
                       <span className="text-xs text-gray-500">(@{t.username})</span>
