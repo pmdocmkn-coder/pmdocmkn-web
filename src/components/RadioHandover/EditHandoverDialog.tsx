@@ -26,6 +26,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   const { user } = useAuth();
   const isWorkshopTech = user?.roleName === "Teknisi WKS";
   const isTechToWh = detail.handoverType === "TechnicianToWarehouse";
+  const isWhToHd = detail.handoverType === "WarehouseToHelpdesk";
 
   // Teknisi WSK tidak boleh ubah field inti (tiket, SN, tag type, penerima)
   // tapi boleh edit data perbaikan (green/yellow tag fields) dan foto
@@ -37,6 +38,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
   const [technicians, setTechnicians] = useState<UserOption[]>([]);
   const [warehouseReceivers, setWarehouseReceivers] = useState<UserOption[]>([]);
+  const [helpdeskReceivers, setHelpdeskReceivers] = useState<UserOption[]>([]);
   const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [ticket, setTicket] = useState(detail.helpdeskTicketNumber || "");
   const [serial, setSerial] = useState(detail.radioSerialNumber || "");
@@ -92,8 +94,14 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
         setWarehouseReceivers(list);
       }).catch(() => setWarehouseReceivers([]));
     }
+    // Untuk handover WH→HD, penerima adalah akun Helpdesk
+    if (isWhToHd) {
+      radioHandoverApi.getHelpdeskReceivers().then((list) => {
+        setHelpdeskReceivers(list);
+      }).catch(() => setHelpdeskReceivers([]));
+    }
     workshopTechnicianApi.getAllActive("Teknisi WKS").then((res) => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
-  }, [isTechToWh]);
+  }, [isTechToWh, isWhToHd]);
 
   const validate = (): string[] => {
     const missing: string[] = [];
@@ -101,8 +109,9 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     if (!serial.trim()) missing.push("Serial Number");
     if (tagType === "Damaged" && !damage.trim()) missing.push("Keterangan kerusakan");
     if (tagType === "Good" && !greenFields.repairDataDescription?.trim()) missing.push("Data perbaikan (Tag Hijau)");
-    if (!techId) missing.push("Akun Sistem Penerima");
-    if (!workshopTechId) missing.push("Teknisi Penerima");
+    if (!techId) missing.push(isWhToHd ? "Akun Helpdesk Penerima" : "Akun Sistem Penerima");
+    // WH→HD tidak memerlukan Teknisi Penerima (field workshopTechnician tidak relevan)
+    if (!isWhToHd && !workshopTechId) missing.push("Teknisi Penerima");
     if (photos.length === 0) missing.push("Foto radio");
     return missing;
   };
@@ -263,14 +272,16 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           {/* Technician Selection */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Akun Sistem Penerima *</label>
+              <label className="text-sm font-medium text-gray-700">
+                {isWhToHd ? "Akun Helpdesk Penerima *" : "Akun Sistem Penerima *"}
+              </label>
               <Select value={techId} onValueChange={setTechId} disabled={lockReceiverFields}>
                 <SelectTrigger className={`w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${lockReceiverFields ? 'bg-gray-100 cursor-not-allowed opacity-80' : 'bg-white'}`}>
-                  <SelectValue placeholder="Pilih akun sistem" />
+                  <SelectValue placeholder={isWhToHd ? "Pilih staff helpdesk" : "Pilih akun sistem"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
-                  {/* Tek→WH: penerima adalah akun Warehouse; selainnya: akun Teknisi */}
-                  {(isTechToWh ? warehouseReceivers : technicians).map((t) => (
+                  {/* Tek→WH: penerima adalah akun Warehouse; WH→HD: akun Helpdesk; selainnya: akun Teknisi */}
+                  {(isTechToWh ? warehouseReceivers : isWhToHd ? helpdeskReceivers : technicians).map((t) => (
                     <SelectItem key={t.userId} value={t.userId.toString()}>
                       <span className="font-medium">{t.fullName}</span>{" "}
                       <span className="text-xs text-gray-500">(@{t.username})</span>
@@ -280,6 +291,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
               </Select>
             </div>
 
+            {/* Teknisi Penerima — tidak relevan untuk WH→HD */}
+            {!isWhToHd && (
             <div className="space-y-1">
               <label className="text-sm font-medium text-gray-700">Teknisi Penerima *</label>
               <Select value={workshopTechId} onValueChange={setWorkshopTechId} disabled={lockReceiverFields}>
@@ -295,6 +308,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
                 </SelectContent>
               </Select>
             </div>
+            )}
           </div>
 
           {/* Photos — semua role boleh tambah/hapus */}
