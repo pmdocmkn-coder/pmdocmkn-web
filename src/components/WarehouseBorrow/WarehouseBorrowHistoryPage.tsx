@@ -60,6 +60,7 @@ export default function WarehouseBorrowHistoryPage() {
 
   // Filters & Print
   const [statusFilter, setStatusFilter] = useState("all");
+  const [borrowerFilter, setBorrowerFilter] = useState("all");
   const [dateRangeFrom, setDateRangeFrom] = useState("");
   const [dateRangeTo, setDateRangeTo] = useState("");
   const [monthFilter, setMonthFilter] = useState(String(new Date().getMonth()));
@@ -583,9 +584,13 @@ export default function WarehouseBorrowHistoryPage() {
     return b.items.reduce((sum, i) => sum + i.quantity, 0);
   };
 
+  // Helper: cari roleName dari borrowedByName via allUsers
+  const getRoleByName = (fullName: string): string | null =>
+    allUsers.find(u => u.name === fullName)?.roleName ?? null;
+
   const filteredItems = items.filter((b) => {
     const s = search.toLowerCase();
-    return (
+    const matchSearch =
       b.borrowNumber.toLowerCase().includes(s) ||
       b.borrowedByName.toLowerCase().includes(s) ||
       (b.borrowerName && b.borrowerName.toLowerCase().includes(s)) ||
@@ -595,9 +600,20 @@ export default function WarehouseBorrowHistoryPage() {
         (i) =>
           i.partDescription.toLowerCase().includes(s) ||
           (i.partCode && i.partCode.toLowerCase().includes(s))
-      ))
-    );
+      ));
+    const matchBorrower = borrowerFilter === "all"
+      || getRoleByName(b.borrowedByName) === borrowerFilter;
+    return matchSearch && matchBorrower;
   });
+
+  // Daftar role unik dari peminjam yang ada di data (untuk dropdown filter)
+  const borrowerRoleOptions = Array.from(
+    new Set(
+      items
+        .map(b => getRoleByName(b.borrowedByName))
+        .filter((r): r is string => !!r)
+    )
+  ).sort();
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -934,6 +950,18 @@ export default function WarehouseBorrowHistoryPage() {
               </SelectContent>
             </Select>
 
+            <Select value={borrowerFilter} onValueChange={setBorrowerFilter}>
+              <SelectTrigger className="h-10 bg-[#F7F8FA] border-[#E2E8F0] text-[12px]">
+                <SelectValue placeholder="Semua Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Group</SelectItem>
+                {borrowerRoleOptions.map(role => (
+                  <SelectItem key={role} value={role}>{role}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Popover>
               <PopoverTrigger asChild>
                 <button
@@ -990,6 +1018,18 @@ export default function WarehouseBorrowHistoryPage() {
                 <SelectItem value="Rejected">Ditolak</SelectItem>
                 <SelectItem value="Issued">Telah Diberikan</SelectItem>
                 <SelectItem value="Returned">Dikembalikan</SelectItem>
+              </SelectContent>
+            </Select>
+            
+            <Select value={borrowerFilter} onValueChange={setBorrowerFilter}>
+              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-[#E2E8F0]">
+                <SelectValue placeholder="Semua Role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Group</SelectItem>
+                {borrowerRoleOptions.map(role => (
+                  <SelectItem key={role} value={role}>{role}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             
