@@ -158,6 +158,7 @@ export default function TechniciansTab() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [filterActive, setFilterActive] = useState<'all' | 'active' | 'inactive'>('all');
+  const [filterGroup, setFilterGroup] = useState<string>('all');
   const [allUsers, setAllUsers] = useState<UserLookupItem[]>([]);
 
   // Create
@@ -235,8 +236,22 @@ export default function TechniciansTab() {
   const filtered = technicians.filter(t => {
     const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase());
     const matchActive = filterActive === 'all' || (filterActive === 'active' ? t.isActive : !t.isActive);
-    return matchSearch && matchActive;
+    const linkedUser = userById(t.userId);
+    const matchGroup = filterGroup === 'all'
+      || (filterGroup === 'unlinked' && !t.userId)
+      || (filterGroup !== 'unlinked' && linkedUser?.username === filterGroup);
+    return matchSearch && matchActive && matchGroup;
   });
+
+  // Kumpulkan semua akun unik dari linked user yang ada
+  const groupOptions = Array.from(
+    new Set(
+      technicians
+        .map(t => userById(t.userId))
+        .filter((u): u is UserLookupItem => !!u)
+        .map(u => u.username)
+    )
+  ).sort();
 
   const stats = {
     total: technicians.length,
@@ -284,6 +299,23 @@ export default function TechniciansTab() {
             placeholder="Cari nama teknisi..."
             className="w-full pl-9 pr-3 py-2.5 text-[13px] border border-[#E2E8F0] rounded-[8px] bg-[#F7F8FA] focus:outline-none focus:border-[#2B6CB0] min-h-[40px]" />
         </div>
+        <Select value={filterGroup} onValueChange={v => setFilterGroup(v)}>
+          <SelectTrigger className="sm:w-48 h-10 border-[#E2E8F0] bg-[#F7F8FA] text-[13px] focus:ring-[#2B6CB0] focus:border-[#2B6CB0] rounded-[8px]">
+            <SelectValue placeholder="Semua Akun" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Semua Akun</SelectItem>
+            <SelectItem value="unlinked">— Belum dilink —</SelectItem>
+            {groupOptions.map(username => {
+              const u = allUsers.find(u => u.username === username);
+              return (
+                <SelectItem key={username} value={username}>
+                  @{username}{u?.name ? ` · ${u.name}` : ''}
+                </SelectItem>
+              );
+            })}
+          </SelectContent>
+        </Select>
         <Select value={filterActive} onValueChange={v => setFilterActive(v as any)}>
           <SelectTrigger className="sm:w-44 h-10 border-[#E2E8F0] bg-[#F7F8FA] text-[13px] focus:ring-[#2B6CB0] focus:border-[#2B6CB0] rounded-[8px]">
             <SelectValue />
