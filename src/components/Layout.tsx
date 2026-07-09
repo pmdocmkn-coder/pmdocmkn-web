@@ -32,6 +32,7 @@ const moreNavGroups: MoreNavGroup[] = [
       { name: "NEC History", path: "/nec-history", icon: TrendingUp, permission: "nec.histori.menu" },
       { name: "Link Internal", path: "/link-internal", icon: Link2, permission: "internal.link.menu" },
       { name: "SWR Signal", path: "/swr-signal", icon: Radio, permission: "swr.signal.menu" },
+      { name: "Monitoring Dokumen", path: "/operational-documents", icon: BookOpen, permission: "operationaldocument.menu" },
     ],
   },
   {
@@ -77,6 +78,7 @@ const moreNavGroups: MoreNavGroup[] = [
       { name: "Letter Numbers", path: "/letter-numbers", icon: FileText, permission: "letter.view" },
       { name: "Companies", path: "/companies", icon: Building2, permission: "companies.view" },
       { name: "Document Types", path: "/document-types", icon: FileType, permission: "document.type.menu" },
+      { name: "Operational Doc Types", path: "/operational-document-types", icon: FileType, permission: "operationaldocument.menu" },
     ],
   },
   {
@@ -97,6 +99,7 @@ export const searchableItems = [
   { name: "NEC History", path: "/nec-history", section: "PM Management" },
   { name: "Link Internal", path: "/link-internal", section: "PM Management" },
   { name: "SWR Signal", path: "/swr-signal", section: "PM Management" },
+  { name: "Monitoring Dokumen", path: "/operational-documents", section: "PM Management" },
   { name: "Radio KPC", path: "/radio-internal", section: "Radio & Fleet" },
   { name: "Radio Contractor", path: "/radio-contractor", section: "Radio & Fleet" },
   { name: "Radio Unit", path: "/radio-unit", section: "Radio & Fleet" },

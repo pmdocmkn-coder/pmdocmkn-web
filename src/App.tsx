@@ -47,6 +47,9 @@ import WarehouseBorrowHistoryPage from "./components/WarehouseBorrow/WarehouseBo
 import WarehouseBorrowRequestPage from "./components/WarehouseBorrow/WarehouseBorrowRequestPage";
 import WarehouseSupervisionPage from "./components/WarehouseBorrow/WarehouseSupervisionPage";
 import WarehouseCatalogPage from "./components/WarehouseBorrow/WarehouseCatalogPage";
+import OperationalDocumentPage from "./components/OperationalDocument/OperationalDocumentPage";
+import OperationalDocumentImportPage from "./components/OperationalDocument/OperationalDocumentImportPage";
+import OperationalDocumentTypePage from "./components/OperationalDocument/OperationalDocumentTypePage";
 
 // ✅ HELPER: CEK PERMISSION DARI LOCALSTORAGE
 function hasPermission(permission: string): boolean {
@@ -367,6 +370,32 @@ function AppContent() {
             element={
               <PermissionGuard permission="pmschedule.view">
                 <PmSchedulePage />
+              </PermissionGuard>
+            }
+          />
+
+          {/* ✅ OPERATIONAL DOCUMENTS ROUTE */}
+          <Route
+            path="/operational-documents"
+            element={
+              <PermissionGuard permission="operationaldocument.view">
+                <OperationalDocumentPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="/operational-documents/import"
+            element={
+              <PermissionGuard permission="operationaldocument.create">
+                <OperationalDocumentImportPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="/operational-document-types"
+            element={
+              <PermissionGuard permission="operationaldocument.menu">
+                <OperationalDocumentTypePage />
               </PermissionGuard>
             }
           />

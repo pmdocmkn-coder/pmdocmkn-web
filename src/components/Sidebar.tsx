@@ -27,6 +27,7 @@ import {
   Warehouse,
   ClipboardCheck,
   Database,
+  ShieldAlert,
   X,
 } from "lucide-react";
 
@@ -78,6 +79,7 @@ const pmManagementMenu: NavItem[] = [
   { name: "NEC History", path: "/nec-history", icon: TrendingUp, id: "nec-history", permission: "nec.histori.menu" },
   { name: "Link Internal", path: "/link-internal", icon: Link2, id: "link-internal", permission: "internal.link.menu" },
   { name: "SWR Signal", path: "/swr-signal", icon: Radio, id: "swr-signal", permission: "swr.signal.menu" },
+  { name: "Monitoring Dokumen", path: "/operational-documents", icon: ShieldAlert, id: "operational-documents", permission: "operationaldocument.menu" },
 ];
 
 const radioFleetMenu: NavItem[] = [
@@ -113,6 +115,7 @@ const administrationMenu: NavItem[] = [
   { name: "Letter Numbers", path: "/letter-numbers", icon: FileText, id: "letter-numbers", permission: "letter.view" },
   { name: "Companies", path: "/companies", icon: Building2, id: "companies", permission: "companies.view" },
   { name: "Document Types", path: "/document-types", icon: FileType, id: "document-types", permission: "document.type.menu" },
+  { name: "Operational Doc Types", path: "/operational-document-types", icon: FileType, id: "operational-document-types", permission: "operationaldocument.menu" },
 ];
 
 const hasSettingsAccess = () =>
@@ -142,10 +145,10 @@ const NavGroup: React.FC<NavGroupProps> = ({
       {!isCollapsed && (
         <p 
           onClick={onToggle}
-          className="px-4 pt-4 pb-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-white/45 select-none cursor-pointer hover:text-white/60 transition-colors flex items-center justify-between group"
+          className="px-4 pt-4 pb-2 text-[12px] font-bold uppercase tracking-[0.05em] text-white/80 select-none cursor-pointer hover:text-white transition-colors flex items-center justify-between group"
         >
           {label}
-          <ChevronDown className={`w-3 h-3 transition-transform ${isOpen ? "" : "-rotate-90"} opacity-0 group-hover:opacity-100`} />
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${isOpen ? "" : "-rotate-90"} opacity-100`} />
         </p>
       )}
       
@@ -195,14 +198,18 @@ export default function Sidebar({
   const { user, logout } = useAuth();
   const location = useLocation();
 
-  // Group open states
+  // Helper untuk mendeteksi apakah salah satu rute di grup sedang aktif
+  const isGroupActive = (items: NavItem[]) =>
+    items.some(item => location.pathname.startsWith(item.path));
+
+  // Group open states - default collapsed kecuali grup yang sedang aktif
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    pm: true,
-    radio: true,
-    monitoring: true,
-    warehouse: true,
-    callrecords: true,
-    administration: true,
+    pm: isGroupActive(pmManagementMenu),
+    radio: isGroupActive(radioFleetMenu),
+    monitoring: isGroupActive(monitoringMenu),
+    warehouse: isGroupActive(warehouseMenu),
+    callrecords: isGroupActive(callRecordsMenu),
+    administration: isGroupActive(administrationMenu),
   });
 
   const toggleGroup = (key: string) =>
