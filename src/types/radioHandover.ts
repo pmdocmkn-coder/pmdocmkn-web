@@ -81,6 +81,7 @@ export interface CreateRadioHandoverPayload {
   damageDescription?: string;
 
   equipmentTagType?: EquipmentTagType;
+  isWarranty?: boolean;
 
   originFrom?: string;
   repairDataDescription?: string;
@@ -184,6 +185,7 @@ export interface RadioHandoverDetail extends RadioHandoverList {
   radioId?: number | null;
 
   radioMasterRadioId?: string | null;
+  isWarranty?: boolean;
 
   radioFleet?: string | null;
 

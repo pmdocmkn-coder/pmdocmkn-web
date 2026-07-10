@@ -252,6 +252,7 @@ export default function RadioRepairGroupedTable({
                             customStatusLabel={j.customStatusLabel}
                             customStatusColor={j.customStatusColor}
                             pendingHandoverType={j.pendingHandoverType}
+                            isWarranty={j.isWarranty}
                           />
                         </div>
                         <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
@@ -582,6 +583,7 @@ function RadioRepairRow({
           customStatusLabel={j.customStatusLabel}
           customStatusColor={j.customStatusColor}
           pendingHandoverType={j.pendingHandoverType}
+          isWarranty={j.isWarranty}
         />
       </td>
       <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">

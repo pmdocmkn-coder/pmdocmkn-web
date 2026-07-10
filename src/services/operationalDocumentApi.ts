@@ -10,9 +10,10 @@ export interface OperationalDocumentDto {
   validFrom: string;
   validUntil: string;
   picName?: string;
-  picPhone?: string;
+  picTelegramId?: string;
   fileLink?: string;
-  followUpStatus: "Pending" | "SedangDiproses" | "Selesai";
+  followUpStatus: "Tidak Ada" | "Pending" | "SedangDiproses" | "Selesai";
+  followUpRemark?: string;
   createdAt: string;
   updatedAt?: string;
   daysRemaining: number;
@@ -33,7 +34,7 @@ export interface CreateOperationalDocumentDto {
   validFrom: string;
   validUntil: string;
   picName?: string;
-  picPhone?: string;
+  picTelegramId?: string;
   fileLink?: string;
 }
 
@@ -88,11 +89,23 @@ export const operationalDocumentApi = {
   update: (id: number, data: CreateOperationalDocumentDto) =>
     api.put<any>(`/api/operational-documents/${id}`, data),
 
-  updateFollowUpStatus: (id: number, status: string) =>
-    api.patch<any>(`/api/operational-documents/${id}/follow-up-status`, { status }),
+  updateFollowUpStatus: (id: number, status: string, remark?: string) =>
+    api.patch<any>(`/api/operational-documents/${id}/follow-up-status`, { status, remark }),
 
   delete: (id: number) =>
     api.delete(`/api/operational-documents/${id}`),
+
+  triggerNotification: () =>
+    api.post<any>("/api/operational-documents/trigger-notification"),
+
+  sendNotification: (id: number) =>
+    api.post<any>(`/api/operational-documents/${id}/send-notification`),
+  
+  sendNotificationBulk: (req: { groupName?: string, type?: string, expiryStatus?: string }) =>
+    api.post<any>(`/api/operational-documents/send-notification-bulk`, req),
+
+  getGroups: () =>
+    api.get<any>("/api/operational-documents", { params: { page: 1, pageSize: 9999 } }),
 };
 
 export const operationalDocumentTypeApi = {
@@ -111,3 +124,4 @@ export const operationalDocumentTypeApi = {
   delete: (id: number) =>
     api.delete(`/api/OperationalDocumentTypes/${id}`),
 };
+

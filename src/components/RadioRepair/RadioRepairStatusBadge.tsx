@@ -19,34 +19,49 @@ type Props = {
   customStatusColor?: string | null;
   /** Jika diatur, status akan diganti menjadi Menunggu TTD sesuai tipe serah terima */
   pendingHandoverType?: string | null;
+  isWarranty?: boolean;
 };
 
-export default function RadioRepairStatusBadge({ status, customStatusLabel, customStatusColor, pendingHandoverType }: Props) {
-  if (pendingHandoverType) {
-    let label = "Menunggu TTD";
-    if (pendingHandoverType === "TechnicianToWarehouse") label = "Menunggu TTD WH";
-    else if (pendingHandoverType === "WarehouseToHelpdesk") label = "Menunggu TTD HD";
-    else if (pendingHandoverType === "HelpdeskToTechnician") label = "Menunggu TTD Teknisi";
-    
+export default function RadioRepairStatusBadge({ status, customStatusLabel, customStatusColor, pendingHandoverType, isWarranty }: Props) {
+  const mainBadge = (() => {
+    if (pendingHandoverType) {
+      let label = "Menunggu TTD";
+      if (pendingHandoverType === "TechnicianToWarehouse") label = "Menunggu TTD WH";
+      else if (pendingHandoverType === "WarehouseToHelpdesk") label = "Menunggu TTD HD";
+      else if (pendingHandoverType === "HelpdeskToTechnician") label = "Menunggu TTD Teknisi";
+      
+      return (
+        <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+          {label}
+        </span>
+      );
+    }
+
+    if (customStatusLabel) {
+      return (
+        <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold text-white ${customStatusColor ?? "bg-slate-500"}`}>
+          {customStatusLabel}
+        </span>
+      );
+    }
+    const c = STATUS_CONFIG[status] ?? { label: status, className: "bg-gray-100 text-gray-600" };
     return (
-      <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
-        {label}
+      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${c.className}`}>
+        {c.label}
       </span>
+    );
+  })();
+
+  if (isWarranty) {
+    return (
+      <div className="flex items-center gap-1.5 flex-wrap">
+        {mainBadge}
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-bold bg-violet-100 text-violet-700 uppercase tracking-wide border border-violet-200" title="Dalam masa garansi">
+          Warranty
+        </span>
+      </div>
     );
   }
 
-  // Jika ada custom status, tampilkan dengan warna custom
-  if (customStatusLabel) {
-    return (
-      <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold text-white ${customStatusColor ?? "bg-slate-500"}`}>
-        {customStatusLabel}
-      </span>
-    );
-  }
-  const c = STATUS_CONFIG[status] ?? { label: status, className: "bg-gray-100 text-gray-600" };
-  return (
-    <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${c.className}`}>
-      {c.label}
-    </span>
-  );
+  return mainBadge;
 }

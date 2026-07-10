@@ -6,7 +6,7 @@ import {
   FileText, Plus, Search, ExternalLink, Edit2, Trash2,
   CheckCircle, Clock, AlertTriangle, ChevronDown, Filter, X,
   Calendar, ChevronRight, TrendingUp, RotateCw, CalendarX,
-  MoreHorizontal, Download, Upload, FileSpreadsheet, Info
+  MoreHorizontal, Download, Upload, FileSpreadsheet, Info, Bell, Eye
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import BottomSheet from "../common/BottomSheet";
@@ -30,7 +30,7 @@ import { id as localeId } from "date-fns/locale";
 // ── Constants ────────────────────────────────────────────────────────────────
 
 
-const FOLLOW_UP_STATUS_OPTIONS = ["Pending", "SedangDiproses", "Selesai"] as const;
+const FOLLOW_UP_STATUS_OPTIONS = ["Tidak Ada", "Pending", "SedangDiproses", "Selesai"] as const;
 type FollowUpStatus = typeof FOLLOW_UP_STATUS_OPTIONS[number];
 
 const PAGE_SIZE = 10;
@@ -60,20 +60,28 @@ function MobileExpiryBadge({ status }: { status: string }) {
   return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[6px] border text-[11px] font-semibold bg-emerald-50 border-emerald-200 text-[#059669]"><CheckCircle className="w-3 h-3" /> Aman</span>;
 }
 
-function FollowUpBadge({ status }: { status: FollowUpStatus }) {
+function FollowUpBadge({ status, onClick }: { status: FollowUpStatus; onClick?: () => void }) {
   const cfg: Record<FollowUpStatus, { cls: string; label: string }> = {
+    "Tidak Ada": { cls: "bg-gray-100 text-[#718096] border-gray-200", label: "Tidak Ada" },
     Pending: { cls: "bg-slate-100 text-[#718096] border-slate-200", label: "Pending" },
     SedangDiproses: { cls: "bg-[#EBF4FF] text-[#2B6CB0] border-[#2B6CB0]/20", label: "Diproses" },
     Selesai: { cls: "bg-emerald-50 text-[#059669] border-emerald-200", label: "Selesai" },
   };
-  const c = cfg[status] ?? cfg.Pending;
+  const c = cfg[status] ?? cfg["Tidak Ada"];
+  if (onClick) {
+    return (
+      <button type="button" onClick={onClick} className={`inline-flex items-center px-2 py-0.5 rounded-[6px] border text-[11px] font-semibold cursor-pointer hover:opacity-80 transition-opacity ${c.cls}`}>
+        {c.label}
+      </button>
+    );
+  }
   return <span className={`inline-flex items-center px-2 py-0.5 rounded-[6px] border text-[11px] font-semibold ${c.cls}`}>{c.label}</span>;
 }
 
 // ── Default form ──────────────────────────────────────────────────────────────
 const defaultForm = (): CreateOperationalDocumentDto => ({
   name: "", type: "", referenceNumber: "", groupName: "", validFrom: "", validUntil: "",
-  picName: "", picPhone: "", fileLink: "",
+  picName: "", picTelegramId: "", fileLink: "",
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -94,10 +102,14 @@ export default function OperationalDocumentPage() {
   const [filterType, setFilterType] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   const [filterFollowUp, setFilterFollowUp] = useState("");
+  const [filterGroup, setFilterGroup] = useState("");
+  const [availableGroups, setAvailableGroups] = useState<string[]>([]);
+  const [sendingNotifId, setSendingNotifId] = useState<number | null>(null);
   
   const [typeSheetOpen, setTypeSheetOpen] = useState(false);
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
   const [followUpSheetOpen, setFollowUpSheetOpen] = useState(false);
+  const [groupSheetOpen, setGroupSheetOpen] = useState(false);
 
   // Responsive check
   const [isMobile, setIsMobile] = useState(false);
@@ -110,16 +122,25 @@ export default function OperationalDocumentPage() {
 
   // Form state
   const [formOpen, setFormOpen] = useState(false);
+  const [detailModalOpen, setDetailModalOpen] = useState(false);
+  const [selectedDetailDoc, setSelectedDetailDoc] = useState<OperationalDocumentDto | null>(null);
+  const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
+  const [selectedFollowUpDoc, setSelectedFollowUpDoc] = useState<OperationalDocumentDto | null>(null);
+  const [followUpFormStatus, setFollowUpFormStatus] = useState<string>("Tidak Ada");
+  const [followUpFormRemark, setFollowUpFormRemark] = useState<string>("");
+  const [isUpdatingFollowUp, setIsUpdatingFollowUp] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [form, setForm] = useState<CreateOperationalDocumentDto>(defaultForm());
   const [validFromDate, setValidFromDate] = useState<Date | undefined>();
   const [validUntilDate, setValidUntilDate] = useState<Date | undefined>();
   const [deleteConfirm, setDeleteConfirm] = useState<OperationalDocumentDto | null>(null);
   const [isBusy, setIsBusy] = useState(false);
+  const [isSendingNotif, setIsSendingNotif] = useState(false);
 
   const canCreate = hasPermission("operationaldocument.create");
   const canUpdate = hasPermission("operationaldocument.update");
   const canDelete = hasPermission("operationaldocument.delete");
+  const canSendNotification = hasPermission("operationaldocument.sendnotification");
 
   // ── Fetching ──
   const loadSummary = useCallback(async () => {
@@ -148,6 +169,7 @@ export default function OperationalDocumentPage() {
         type: filterType || undefined,
         expiryStatus: filterStatus || undefined,
         followUpStatus: filterFollowUp || undefined,
+        groupName: filterGroup || undefined,
         sortBy: "ValidUntil", sortDir: "asc",
       });
       const parsed = parseResponse(res.data);
@@ -159,12 +181,24 @@ export default function OperationalDocumentPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, filterType, filterStatus, filterFollowUp, toast]);
+  }, [page, search, filterType, filterStatus, filterFollowUp, filterGroup, toast]);
+
+  const loadGroups = useCallback(async () => {
+    try {
+      const res = await operationalDocumentApi.getAll({ page: 1, pageSize: 9999 });
+      const allItems: OperationalDocumentDto[] = res.data?.data ?? [];
+      const groups = [...new Set(allItems.map(d => d.groupName).filter(Boolean) as string[])].sort();
+      setAvailableGroups(groups);
+    } catch (error) {
+      console.error("Gagal load groups", error);
+    }
+  }, []);
 
   useEffect(() => {
     loadSummary();
     loadTypes();
-  }, [loadSummary, loadTypes]);
+    loadGroups();
+  }, [loadSummary, loadTypes, loadGroups]);
 
   useEffect(() => {
     loadData();
@@ -172,6 +206,12 @@ export default function OperationalDocumentPage() {
 
   // ── Actions ──
   const openCreate = () => { setEditId(null); setForm(defaultForm()); setValidFromDate(undefined); setValidUntilDate(undefined); setFormOpen(true); };
+  
+  const openDetail = (doc: OperationalDocumentDto) => {
+    setSelectedDetailDoc(doc);
+    setDetailModalOpen(true);
+  };
+
   const openEdit = (doc: OperationalDocumentDto) => {
     setEditId(doc.id);
     setForm({      name: doc.name,
@@ -179,7 +219,7 @@ export default function OperationalDocumentPage() {
       referenceNumber: doc.referenceNumber ?? "",
       groupName: doc.groupName ?? "",
       validFrom: doc.validFrom,
-      validUntil: doc.validUntil, picName: doc.picName ?? "", picPhone: doc.picPhone ?? "", fileLink: doc.fileLink ?? "" });
+      validUntil: doc.validUntil, picName: doc.picName ?? "", picTelegramId: doc.picTelegramId ?? "", fileLink: doc.fileLink ?? "" });
     setValidFromDate(parseISO(doc.validFrom));
     setValidUntilDate(parseISO(doc.validUntil));
     setFormOpen(true);
@@ -215,13 +255,25 @@ export default function OperationalDocumentPage() {
     }
   };
 
-  const handleFollowUpChange = async (id: number, status: string) => {
+  const handleFollowUpChange = (doc: OperationalDocumentDto, status: string) => {
+    setSelectedFollowUpDoc(doc);
+    setFollowUpFormStatus(status);
+    setFollowUpFormRemark(doc.followUpRemark || "");
+    setFollowUpModalOpen(true);
+  };
+
+  const submitFollowUpStatus = async () => {
+    if (!selectedFollowUpDoc) return;
+    setIsUpdatingFollowUp(true);
     try {
-      await operationalDocumentApi.updateFollowUpStatus(id, status);
+      await operationalDocumentApi.updateFollowUpStatus(selectedFollowUpDoc.id, followUpFormStatus, followUpFormRemark);
       toast({ title: "Status tindak lanjut diperbarui" });
+      setFollowUpModalOpen(false);
       loadData();
     } catch (e: any) {
       toast({ title: "Gagal", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+    } finally {
+      setIsUpdatingFollowUp(false);
     }
   };
 
@@ -241,8 +293,56 @@ export default function OperationalDocumentPage() {
   };
 
   const applySearch = () => { setSearch(searchInput); setPage(1); };
-  const clearFilters = () => { setFilterType(""); setFilterStatus(""); setFilterFollowUp(""); setSearch(""); setSearchInput(""); setPage(1); };
-  const hasActiveFilter = filterType || filterStatus || filterFollowUp || search;
+  const clearFilters = () => { setFilterType(""); setFilterStatus(""); setFilterFollowUp(""); setFilterGroup(""); setSearch(""); setSearchInput(""); setPage(1); };
+  const hasActiveFilter = filterType || filterStatus || filterFollowUp || filterGroup || search;
+
+  const handleTriggerNotification = async () => {
+    if (isSendingNotif) return;
+    setIsSendingNotif(true);
+    try {
+      await operationalDocumentApi.triggerNotification();
+      toast({ title: "✅ Notifikasi Telegram Terkirim!", description: "Job notifikasi berhasil dijalankan. Periksa Telegram Anda." });
+    } catch (e: any) {
+      toast({ title: "Gagal kirim notifikasi", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
+
+  const handleSendNotification = async (doc: OperationalDocumentDto) => {
+    if (sendingNotifId !== null) return;
+    if (!doc.picTelegramId) {
+      toast({ title: "Tidak ada Telegram ID", description: `Dokumen "${doc.name}" tidak memiliki Telegram Chat ID PIC.`, variant: "destructive" });
+      return;
+    }
+    setSendingNotifId(doc.id);
+    try {
+      const res = await operationalDocumentApi.sendNotification(doc.id);
+      toast({ title: "✅ Telegram Terkirim!", description: res.data?.message ?? `Notifikasi berhasil dikirim ke ${doc.picTelegramId}` });
+    } catch (e: any) {
+      toast({ title: "Gagal kirim Telegram", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+    } finally {
+      setSendingNotifId(null);
+    }
+  };
+
+  const handleSendNotificationBulk = async () => {
+    if (isSendingNotif) return;
+    setIsSendingNotif(true);
+    try {
+      const res = await operationalDocumentApi.sendNotificationBulk({
+        groupName: filterGroup || undefined,
+        type: filterType || undefined,
+        expiryStatus: filterStatus || undefined
+      });
+      const count = res.data?.data?.sentCount || 0;
+      toast({ title: "✅ WA Bulk Terkirim!", description: res.data?.message ?? `Notifikasi berhasil dikirim ke ${count} dokumen` });
+    } catch (e: any) {
+      toast({ title: "Gagal kirim Telegram Bulk", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+    } finally {
+      setIsSendingNotif(false);
+    }
+  };
 
   const fmtDate = (iso: string) => {
     if (!iso) return "-";
@@ -256,6 +356,7 @@ export default function OperationalDocumentPage() {
     { value: "Expired", label: "Sudah Expired" }
   ];
   const followUpOptions = FOLLOW_UP_STATUS_OPTIONS.map(s => ({ value: s, label: s }));
+  const groupOptions = availableGroups.map(g => ({ value: g, label: g }));
 
   // ── Excel Export ──────────────────────────────────────────────────────────────
   const handleExport = async () => {
@@ -294,7 +395,7 @@ export default function OperationalDocumentPage() {
         { header: "Status Kadaluarsa",   key: "expiryStatus",    width: 18 },
         { header: "Tindak Lanjut",       key: "followUpStatus",  width: 18 },
         { header: "PIC",                 key: "picName",         width: 22 },
-        { header: "No. WA PIC",          key: "picPhone",        width: 18 },
+        { header: "Telegram Chat ID PIC",          key: "picTelegramId",        width: 18 },
         { header: "Link Dokumen",        key: "fileLink",        width: 40 },
       ];
 
@@ -324,7 +425,7 @@ export default function OperationalDocumentPage() {
           expiryStatus:    doc.expiryStatus,
           followUpStatus:  doc.followUpStatus,
           picName:         doc.picName ?? "",
-          picPhone:        doc.picPhone ?? "",
+          picTelegramId:        doc.picTelegramId ?? "",
           fileLink:        doc.fileLink ?? "",
         });
 
@@ -377,7 +478,7 @@ export default function OperationalDocumentPage() {
       { header: "Tanggal Berlaku *",    key: "validFrom",       width: 18 },
       { header: "Tanggal Berakhir *",   key: "validUntil",      width: 18 },
       { header: "Nama PIC",             key: "picName",         width: 22 },
-      { header: "No. WA PIC",           key: "picPhone",        width: 18 },
+      { header: "Telegram Chat ID PIC",           key: "picTelegramId",        width: 18 },
       { header: "Link Dokumen",         key: "fileLink",        width: 40 },
     ];
 
@@ -393,7 +494,7 @@ export default function OperationalDocumentPage() {
     ws.addRow({
       name: "Ijin Frekuensi", type: "Ijin Frekuensi", referenceNumber: "REF/001/2025", groupName: "Grup ISR KPC",
       validFrom: "01/01/2025", validUntil: "31/12/2025",
-      picName: "Nama PIC", picPhone: "628123456789", fileLink: "https://sharepoint..."
+      picName: "Nama PIC", picTelegramId: "123456789", fileLink: "https://sharepoint..."
     });
 
     // Instructions sheet
@@ -403,7 +504,7 @@ export default function OperationalDocumentPage() {
       [""],
       ["Kolom Wajib (*): Nama Dokumen, Tipe Dokumen, Tanggal Berlaku, Tanggal Berakhir"],
       ["Format Tanggal: DD/MM/YYYY (contoh: 31/12/2025)"],
-      ["No. WA PIC: awali dengan 62, tanpa + atau spasi (contoh: 628123456789)"],
+      ["Telegram Chat ID PIC: awali dengan 62, tanpa + atau spasi (contoh: 123456789)"],
       ["Tipe Dokumen: harus sesuai dengan master data Operational Doc Types yang tersedia"],
     ];
     instructions.forEach(r => ws2.addRow(r));
@@ -484,7 +585,6 @@ export default function OperationalDocumentPage() {
           <div>
             <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Total Dokumen</p>
             <p className="text-[24px] md:text-[28px] font-bold text-[#1A202C] leading-none mt-1.5 mb-1.5">{summary.totalDocuments.toLocaleString()}</p>
-            <p className="text-[11px] md:text-[12px] text-[#059669] flex items-center gap-1"><TrendingUp className="w-3 h-3"/> ~ 12% dibanding bulan lalu</p>
           </div>
         </div>
         {/* Card 2 */}
@@ -505,7 +605,7 @@ export default function OperationalDocumentPage() {
           </div>
           <div>
             <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Sudah Expired</p>
-            <p className="text-[24px] md:text-[28px] font-bold text-[#DC2626] leading-none mt-1.5 mb-1.5">{summary.expired < 10 ? `0${summary.expired}` : summary.expired}</p>
+            <p className="text-[24px] md:text-[28px] font-bold text-[#DC2626] leading-none mt-1.5 mb-1.5">{summary.expired}</p>
             <p className="text-[11px] md:text-[12px] text-[#718096] italic">Tindakan segera diperlukan</p>
           </div>
         </div>
@@ -531,6 +631,7 @@ export default function OperationalDocumentPage() {
             { label: filterType || "Tipe Dokumen", active: !!filterType, onClick: () => setTypeSheetOpen(true) },
             { label: filterStatus || "Status Berakhir", active: !!filterStatus, onClick: () => setStatusSheetOpen(true) },
             { label: filterFollowUp || "Tindak Lanjut", active: !!filterFollowUp, onClick: () => setFollowUpSheetOpen(true) },
+            { label: filterGroup || "Grup", active: !!filterGroup, onClick: () => setGroupSheetOpen(true) },
           ].map((chip, idx) => (
             <button key={idx} onClick={chip.onClick}
               className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${chip.active ? "bg-[#1B3A6B] border-[#1B3A6B] text-white" : "bg-white border-[#E2E8F0] text-[#4A5568]"}`}>
@@ -540,6 +641,19 @@ export default function OperationalDocumentPage() {
           {hasActiveFilter && (
             <button onClick={clearFilters} className="px-3 h-9 bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] rounded-[10px] flex-shrink-0">
               <X className="w-4 h-4" />
+            </button>
+          )}
+          {canSendNotification && (
+            <button 
+              onClick={handleSendNotificationBulk} 
+              disabled={isSendingNotif || (!filterType && !filterStatus && !filterGroup)}
+              className="flex items-center gap-1.5 h-9 px-3 rounded-[10px] bg-[#1A202C] text-white border border-[#2D3748] text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors hover:bg-[#2D3748] disabled:opacity-50">
+              {isSendingNotif ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : (
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+              )}
+              Kirim Telegram Filter
             </button>
           )}
         </div>
@@ -587,16 +701,45 @@ export default function OperationalDocumentPage() {
             </SelectContent>
           </Select>
         </div>
+        <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
+        <div className="min-w-[160px]">
+          <Select value={filterGroup || "all"} onValueChange={(v) => { setFilterGroup(v === "all" ? "" : v); setPage(1); }}>
+            <SelectTrigger className="h-10 border-none bg-transparent hover:bg-[#F7F8FA] shadow-none focus:ring-0 px-3 text-[13px] font-medium text-[#4A5568]">
+              <SelectValue placeholder="Grup Dokumen" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Grup</SelectItem>
+              {groupOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+        </div>
         <button onClick={() => { applySearch(); }} className="ml-2 h-9 px-4 bg-[#F7F8FA] hover:bg-[#E2E8F0] text-[#4A5568] text-[13px] font-semibold rounded-[8px] transition-colors border border-[#E2E8F0]">
           Search
         </button>
 
-        {hasActiveFilter && (
-          <button onClick={clearFilters} className="ml-auto flex items-center gap-1.5 px-3 h-9 text-[13px] font-semibold text-[#2B6CB0] hover:bg-[#EBF4FF] rounded-[8px] transition-colors">
-            <Filter className="w-3.5 h-3.5" /> Reset Filter
-          </button>
-        )}
+        <div className="ml-auto flex items-center gap-2">
+          {hasActiveFilter && (
+            <button onClick={clearFilters} className="flex items-center gap-1.5 px-3 h-9 text-[13px] font-semibold text-[#2B6CB0] hover:bg-[#EBF4FF] rounded-[8px] transition-colors">
+              <Filter className="w-3.5 h-3.5" /> Reset Filter
+            </button>
+          )}
+
+          {canSendNotification && (
+            <button 
+              onClick={handleSendNotificationBulk} 
+              disabled={isSendingNotif || (!filterType && !filterStatus && !filterGroup)}
+              title={!filterType && !filterStatus && !filterGroup ? "Pilih minimal 1 filter (Tipe/Status/Grup) untuk kirim massal" : "Kirim Telegram Massal berdasar Filter"}
+              className="flex items-center gap-1.5 px-3 h-9 bg-[#1A202C] text-white hover:bg-[#2D3748] text-[13px] font-semibold rounded-[8px] transition-colors border border-[#2D3748] disabled:opacity-50 disabled:cursor-not-allowed">
+              {isSendingNotif ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : (
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                </svg>
+              )}
+              Kirim Telegram Filter
+            </button>
+          )}
+        </div>
       </div>
 
       {/* ── Desktop Table (Mockup Style) ── */}
@@ -644,14 +787,10 @@ export default function OperationalDocumentPage() {
                     <TableExpiryBadge status={doc.expiryStatus} />
                   </td>
                   <td className="px-5 py-4">
-                    <div className="relative" tabIndex={0} onBlur={(e) => {
-                      if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-                        // could close dropdown here if we made a custom one, but for table inline let's just use native select but styled minimalist
-                      }
-                    }}>
+                    <div className="relative">
                       <Select
                         value={doc.followUpStatus}
-                        onValueChange={(v) => handleFollowUpChange(doc.id, v)}
+                        onValueChange={(v) => handleFollowUpChange(doc, v)}
                         disabled={!canUpdate}
                       >
                         <SelectTrigger className="h-8 min-w-[120px] text-[12px] font-medium border-[#E2E8F0] rounded-[6px] bg-white focus:ring-1 focus:ring-[#2B6CB0]/20 text-[#4A5568]">
@@ -664,12 +803,28 @@ export default function OperationalDocumentPage() {
                     </div>
                   </td>
                   <td className="px-5 py-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => openDetail(doc)}
+                        title="Lihat Detail"
+                        className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
+                        <Eye className="w-4 h-4" />
+                      </button>
                       {doc.fileLink && (
                         <a href={doc.fileLink} target="_blank" rel="noopener noreferrer"
                           className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
                           <ExternalLink className="w-4 h-4" />
                         </a>
+                      )}
+                      {canSendNotification && (
+                        <button onClick={() => handleSendNotification(doc)} disabled={sendingNotifId === doc.id}
+                          title="Kirim Notifikasi Telegram (Manual)"
+                          className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#229ED9] hover:bg-[#E8F4FD] transition-colors disabled:opacity-50">
+                          {sendingNotifId === doc.id ? <RotateCw className="w-4 h-4 animate-spin" /> : (
+                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                            </svg>
+                          )}
+                        </button>
                       )}
                       {canUpdate && (
                         <button onClick={() => openEdit(doc)}
@@ -722,33 +877,33 @@ export default function OperationalDocumentPage() {
               </span>
             </div>
 
-            {doc.picName && (
-              <p className="text-[12px] text-[#718096]">PIC: <span className="font-medium text-[#1A202C]">{doc.picName}</span>
-                {doc.picPhone && ` · ${doc.picPhone}`}
-              </p>
-            )}
-
-            <div className="flex items-center gap-2 pt-2 border-t border-[#E2E8F0]">
-              <FollowUpBadge status={doc.followUpStatus} />
-              {canUpdate && (
-                <Select
-                  value={doc.followUpStatus}
-                  onValueChange={(v) => handleFollowUpChange(doc.id, v)}
-                >
-                  <SelectTrigger className="flex-1 max-w-[120px] h-8 text-[11px] font-medium border border-[#E2E8F0] rounded-[6px] px-2 py-1 bg-white focus:outline-none focus:border-[#2B6CB0]">
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              )}
+            <div className="flex items-center justify-between pt-2 border-t border-[#E2E8F0]">
+              <FollowUpBadge 
+                status={doc.followUpStatus} 
+                onClick={canUpdate ? () => handleFollowUpChange(doc, doc.followUpStatus) : undefined} 
+              />
               <div className="flex gap-1 ml-auto">
+                <button onClick={() => openDetail(doc)}
+                  title="Lihat Detail"
+                  className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-white border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0]">
+                  <Eye className="w-3.5 h-3.5" />
+                </button>
                 {doc.fileLink && (
                   <a href={doc.fileLink} target="_blank" rel="noopener noreferrer"
                     className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-white border border-[#E2E8F0] text-[#718096]">
                     <ExternalLink className="w-3.5 h-3.5" />
                   </a>
+                )}
+                {canSendNotification && (
+                  <button onClick={() => handleSendNotification(doc)} disabled={sendingNotifId === doc.id}
+                    title="Kirim Notifikasi Telegram (Manual)"
+                    className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-white border border-[#E2E8F0] text-[#229ED9] hover:bg-[#E8F4FD] disabled:opacity-50">
+                    {sendingNotifId === doc.id ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : (
+                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                      </svg>
+                    )}
+                  </button>
                 )}
                 {canUpdate && (
                   <button onClick={() => openEdit(doc)}
@@ -780,9 +935,7 @@ export default function OperationalDocumentPage() {
               ‹
             </button>
             <div className="flex items-center px-1">
-              {/* Simplistic pagination display */}
               {[...Array(Math.min(5, totalPages))].map((_, i) => {
-                // Logic to show near pages
                 let pageNum = page;
                 if (page <= 3) pageNum = i + 1;
                 else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
@@ -818,14 +971,12 @@ export default function OperationalDocumentPage() {
       {/* ── Mobile FAB group ── */}
       <div className="md:hidden fixed bottom-[100px] right-4 z-30 flex flex-col items-end gap-2">
         {canCreate && (
-          <>
-            <button
-              onClick={() => navigate("/operational-documents/import")}
-              className="flex items-center gap-2 bg-[#2B6CB0] hover:bg-[#1B3A6B] text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95"
-            >
-              <Upload className="w-4 h-4" /> Import
-            </button>
-          </>
+          <button
+            onClick={() => navigate("/operational-documents/import")}
+            className="flex items-center gap-2 bg-[#2B6CB0] hover:bg-[#1B3A6B] text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95"
+          >
+            <Upload className="w-4 h-4" /> Import
+          </button>
         )}
         <button onClick={handleExport}
           className="flex items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95">
@@ -921,9 +1072,9 @@ export default function OperationalDocumentPage() {
               <Input value={form.picName} onChange={(e) => setForm(f => ({ ...f, picName: e.target.value }))} placeholder="Nama penanggung jawab" className="h-11 rounded-[10px]" />
             </div>
             <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">No. WhatsApp PIC</label>
-              <Input value={form.picPhone} onChange={(e) => setForm(f => ({ ...f, picPhone: e.target.value }))} placeholder="6281234567890 (awali 62)" type="tel" className="h-11 rounded-[10px]" />
-              <p className="text-[11px] text-[#718096] mt-1.5">Format: 62xxxxxxxxxx (tanpa + atau spasi)</p>
+              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Telegram Chat ID PIC</label>
+              <Input value={form.picTelegramId} onChange={(e) => setForm(f => ({ ...f, picTelegramId: e.target.value }))} placeholder="Chat ID Telegram (cth: 123456789)" type="text" className="h-11 rounded-[10px]" />
+              <p className="text-[11px] text-[#718096] mt-1.5">Chat ID dari Telegram (buka bot @userinfobot untuk cek ID Anda). Pisahkan dengan koma jika lebih dari 1.</p>
             </div>
             <div>
               <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Link Dokumen (OneDrive/SharePoint)</label>
@@ -990,6 +1141,103 @@ export default function OperationalDocumentPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Detail Modal */}
+      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
+        <DialogContent className="max-w-md bg-white rounded-[16px]">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="text-[20px] font-bold text-[#1A202C]">Detail Dokumen</DialogTitle>
+          </DialogHeader>
+          {selectedDetailDoc && (
+            <div className="space-y-4">
+              <div>
+                <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Nama Dokumen</p>
+                <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.name}</p>
+                {selectedDetailDoc.referenceNumber && (
+                  <p className="text-[13px] text-[#718096] mt-0.5">REF: {selectedDetailDoc.referenceNumber}</p>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Tipe</p>
+                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.type}</p>
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Grup</p>
+                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.groupName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Mulai Berlaku</p>
+                  <p className="text-[14px] font-medium text-[#1A202C]">{format(parseISO(selectedDetailDoc.validFrom), "dd MMM yyyy", { locale: localeId })}</p>
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Berakhir</p>
+                  <p className="text-[14px] font-medium text-[#1A202C]">{format(parseISO(selectedDetailDoc.validUntil), "dd MMM yyyy", { locale: localeId })}</p>
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Nama PIC</p>
+                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.picName || "-"}</p>
+                </div>
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Telegram Chat ID</p>
+                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.picTelegramId || "-"}</p>
+                </div>
+              </div>
+              {selectedDetailDoc.followUpRemark && (
+                <div>
+                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Catatan Tindak Lanjut</p>
+                  <p className="text-[14px] font-medium text-[#1A202C] whitespace-pre-line">{selectedDetailDoc.followUpRemark}</p>
+                </div>
+              )}
+            </div>
+          )}
+          <DialogFooter className="mt-4 pt-4 border-t border-[#E2E8F0]">
+            <Button onClick={() => setDetailModalOpen(false)} className="w-full h-10 rounded-[10px] font-semibold bg-[#1A202C] hover:bg-[#2D3748] text-white">
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Follow Up Modal */}
+      <Dialog open={followUpModalOpen} onOpenChange={setFollowUpModalOpen}>
+        <DialogContent className="max-w-md bg-white rounded-[16px]">
+          <DialogHeader className="mb-2">
+            <DialogTitle className="text-[20px] font-bold text-[#1A202C]">Tindak Lanjut</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-[13px] font-semibold text-[#4A5568] mb-1">Status</label>
+              <Select value={followUpFormStatus} onValueChange={setFollowUpFormStatus}>
+                <SelectTrigger className="w-full h-10 rounded-[8px] bg-white border-[#E2E8F0]">
+                  <SelectValue placeholder="Pilih status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="block text-[13px] font-semibold text-[#4A5568] mb-1">Catatan</label>
+              <textarea
+                value={followUpFormRemark}
+                onChange={(e) => setFollowUpFormRemark(e.target.value)}
+                placeholder="Tambahkan catatan tindak lanjut..."
+                className="w-full h-24 text-[14px] border border-[#E2E8F0] rounded-[8px] p-3 focus:outline-none focus:ring-2 focus:ring-[#2B6CB0] focus:border-transparent resize-none"
+              />
+            </div>
+          </div>
+          <DialogFooter className="mt-4 pt-4 border-t border-[#E2E8F0] flex gap-2 justify-end">
+            <Button variant="outline" onClick={() => setFollowUpModalOpen(false)} className="h-10 rounded-[10px] font-semibold">Batal</Button>
+            <Button onClick={submitFollowUpStatus} disabled={isUpdatingFollowUp} className="h-10 rounded-[10px] font-semibold bg-[#2B6CB0] hover:bg-[#1A365D] text-white">
+              {isUpdatingFollowUp ? "Menyimpan..." : "Simpan"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+
+

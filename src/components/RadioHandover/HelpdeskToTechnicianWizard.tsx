@@ -72,6 +72,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
   const [useSharedPhotos, setUseSharedPhotos] = useState(true);
   const [sigHandover, setSigHandover] = useState<string | null>(null);
   const [sigReceiver, setSigReceiver] = useState<string | null>(null);
+  const [isWarranty, setIsWarranty] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const sigHdRef = useRef<SignaturePadHandle>(null);
   const sigTekRef = useRef<SignaturePadHandle>(null);
@@ -182,6 +183,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
       helpdeskTicketNumber: ticket.trim(),
       noJobErp: noJobErp.trim() || undefined,
       equipmentTagType: tagType,
+      isWarranty,
       originFrom: greenFields.originFrom?.trim() || sharedDefaults.radioOwnerLabel || undefined,
       repairDataDescription: greenFields.repairDataDescription?.trim() || undefined,
       repairedByName: greenFields.repairedByName?.trim() || undefined,
@@ -381,18 +383,38 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
         )}
 
         {step === 1 && (
-          <HandoverRadioEntryStep
-            ticket={ticket}
-            onTicketChange={setTicket}
-            noJobErp={noJobErp}
-            onNoJobErpChange={setNoJobErp}
-            entryMode={entryMode}
-            onEntryModeChange={setEntryMode}
-            radioLines={radioLines}
-            onRadioLinesChange={setRadioLines}
-            sharedDefaults={sharedDefaults}
-            onSharedDefaultsChange={setSharedDefaults}
-          />
+          <div className="space-y-6">
+            <HandoverRadioEntryStep
+              ticket={ticket}
+              onTicketChange={setTicket}
+              noJobErp={noJobErp}
+              onNoJobErpChange={setNoJobErp}
+              entryMode={entryMode}
+              onEntryModeChange={setEntryMode}
+              radioLines={radioLines}
+              onRadioLinesChange={setRadioLines}
+              sharedDefaults={sharedDefaults}
+              onSharedDefaultsChange={setSharedDefaults}
+            />
+
+            <div className="rounded-xl border border-gray-200 bg-white p-4">
+              <label className="flex items-center justify-between cursor-pointer">
+                <div>
+                  <p className="font-semibold text-gray-900 text-sm">Status Warranty</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Tandai jika radio ini masih dalam masa garansi.</p>
+                </div>
+                <div className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={isWarranty}
+                    onChange={(e) => setIsWarranty(e.target.checked)}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-emerald-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </div>
+              </label>
+            </div>
+          </div>
         )}
 
         {step === 2 && (
