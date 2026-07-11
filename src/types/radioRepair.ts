@@ -24,6 +24,7 @@ export interface RadioRepairJobList {
   previewPhotoBase64?: string | null;
   damageDescription: string;
   equipmentTagType?: "Good" | "Damaged" | null;
+  isWarranty: boolean;
   originFrom?: string | null;
   repairDataDescription?: string | null;
   repairedByName?: string | null;

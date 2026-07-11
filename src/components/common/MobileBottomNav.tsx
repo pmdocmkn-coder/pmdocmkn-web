@@ -50,7 +50,7 @@ const fixedTabs: NavTab[] = [
     id: "pm",
     label: "PM",
     icon: CalendarDays,
-    paths: ["/pm-schedule", "/kpi-tracking", "/inspeksi-kpc", "/nec-history", "/link-internal", "/swr-signal"],
+    paths: ["/pm-schedule", "/kpi-tracking", "/inspeksi-kpc", "/nec-history", "/link-internal", "/swr-signal", "/operational-documents"],
     navigate: "/pm-schedule",
   },
   {

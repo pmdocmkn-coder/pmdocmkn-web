@@ -179,7 +179,7 @@ export function FormMobileDatePicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full h-10 flex items-center gap-2 px-3 rounded-lg border border-gray-200 bg-white text-sm shadow-sm hover:border-[#2B6CB0] transition-all cursor-pointer select-none"
+        className="w-full h-11 flex items-center gap-2 px-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[13px] shadow-sm hover:border-[#2B6CB0] focus:ring-2 focus:ring-[#2B6CB0]/20 transition-all cursor-pointer select-none"
       >
         <CalendarIcon className="w-4 h-4 text-[#718096] shrink-0" />
         <span className={`truncate text-left ${date ? "text-[#1A202C] font-medium" : "text-gray-400"}`}>
