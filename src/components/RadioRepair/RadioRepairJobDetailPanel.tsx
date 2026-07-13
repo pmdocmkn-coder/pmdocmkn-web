@@ -81,6 +81,7 @@ export default function RadioRepairJobDetailPanel({
   const [editingDamage, setEditingDamage] = useState(false);
   const [tagTypeInput, setTagTypeInput] = useState<"Good" | "Damaged">(job.equipmentTagType === "Good" ? "Good" : "Damaged");
   const [damageInput, setDamageInput] = useState(job.damageDescription);
+  const [isWarrantyInput, setIsWarrantyInput] = useState(job.isWarranty || false);
   const [greenTagInput, setGreenTagInput] = useState<GreenTagFields>({
     originFrom: job.originFrom || [job.radioOwnerLabel, job.ownerDivision].filter(Boolean).join(" - ") || "",
     repairDataDescription: job.repairDataDescription ?? undefined,
@@ -95,10 +96,10 @@ export default function RadioRepairJobDetailPanel({
   });
   const [savingDamage, setSavingDamage] = useState(false);
 
-  // Sync input saat job berubah (misal setelah refresh)
   useEffect(() => {
     setTagTypeInput(job.equipmentTagType === "Good" ? "Good" : "Damaged");
     setDamageInput(job.damageDescription);
+    setIsWarrantyInput(job.isWarranty || false);
     setGreenTagInput({
       originFrom: job.originFrom || [job.radioOwnerLabel, job.ownerDivision].filter(Boolean).join(" - ") || "",
       repairDataDescription: job.repairDataDescription ?? undefined,
@@ -169,6 +170,7 @@ export default function RadioRepairJobDetailPanel({
       const payload: Parameters<typeof radioRepairApi.technicianUpdate>[1] = {
         damageDescription: damageInput,
         equipmentTagType: tagTypeInput,
+        isWarranty: isWarrantyInput,
       };
       if (tagTypeInput === "Good") {
         Object.assign(payload, greenTagInput);
@@ -251,6 +253,22 @@ export default function RadioRepairJobDetailPanel({
                   <span>Tag Hijau (Bagus)</span>
                 </label>
               </div>
+              
+              <div className="flex items-center justify-between p-2 bg-white rounded-lg border">
+                <div>
+                  <p className="text-sm font-medium text-gray-800">Status Warranty</p>
+                </div>
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="sr-only peer"
+                    checked={isWarrantyInput}
+                    onChange={(e) => setIsWarrantyInput(e.target.checked)}
+                    disabled={savingDamage}
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#2B6CB0] rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500"></div>
+                </label>
+              </div>
 
               {tagTypeInput === "Damaged" ? (
                 <textarea
@@ -291,6 +309,16 @@ export default function RadioRepairJobDetailPanel({
             </div>
           ) : (
             <div>
+              {job.isWarranty && (
+                <div className="mb-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Dalam Masa Garansi
+                </div>
+              )}
+              {!job.isWarranty && (
+                <div className="mb-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-600 border border-gray-200">
+                  Tidak Ada Garansi
+                </div>
+              )}
               {job.equipmentTagType === "Good" ? (
                 <p className="text-sm text-emerald-900 line-clamp-2">
                   <span className="font-semibold block text-xs mb-1">Peralatan Bagus (Tag Hijau)</span>

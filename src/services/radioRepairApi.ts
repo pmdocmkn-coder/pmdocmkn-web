@@ -62,6 +62,7 @@ export const radioRepairApi = {
     payload: {
       damageDescription?: string;
       equipmentTagType?: string;
+      isWarranty?: boolean;
       originFrom?: string | null;
       repairDataDescription?: string | null;
       repairedByName?: string | null;
