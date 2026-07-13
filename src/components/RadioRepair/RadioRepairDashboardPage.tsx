@@ -25,6 +25,7 @@ import WorkshopTechnicianManager from "./WorkshopTechnicianManager";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
 import RadioCompletionTagModal from "./RadioCompletionTagModal";
+import RadioWarrantyCheckModal from "./RadioWarrantyCheckModal";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -102,6 +103,8 @@ export default function RadioRepairDashboardPage() {
 
   const [workshopTechs, setWorkshopTechs] = useState<WorkshopTechnicianDto[]>([]);
   const [techPickerOpen, setTechPickerOpen] = useState(false);
+  const [warrantyCheckOpen, setWarrantyCheckOpen] = useState(false);
+  const [selectedWarranty, setSelectedWarranty] = useState<boolean | null>(null);
   const [tagPickerOpen, setTagPickerOpen] = useState(false);
   const [autoOpenTag, setAutoOpenTag] = useState<"Good" | "Damaged" | null>(null);
   const [pendingAction, setPendingAction] = useState<{
@@ -357,7 +360,11 @@ export default function RadioRepairDashboardPage() {
     const currentJob = detail?.id === jobId ? detail : jobs.find(j => j.id === jobId);
     if (!workshopTechnicianId && currentJob && needsTechnicianPick(status, currentJob.status)) {
       setPendingAction({ type: "status", jobId, status, customStatusId });
-      setTechPickerOpen(true);
+      if (currentJob.status === "Received") {
+        setWarrantyCheckOpen(true);
+      } else {
+        setTechPickerOpen(true);
+      }
       return;
     }
 
@@ -403,11 +410,26 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const handleTechnicianPicked = (techId: number) => {
+  const handleTechnicianPicked = async (techId: number) => {
     setTechPickerOpen(false);
     if (!pendingAction) return;
     const action = pendingAction;
     setPendingAction(null);
+
+    // Simpan status warranty jika dipilih
+    if (selectedWarranty !== null) {
+      setPatchingStatus(true);
+      try {
+        await radioRepairApi.technicianUpdate(action.jobId, { isWarranty: selectedWarranty });
+        setSelectedWarranty(null);
+      } catch (err: unknown) {
+        toast({ title: "Gagal update garansi", description: apiMessage(err), variant: "destructive" });
+        setPatchingStatus(false);
+        return;
+      }
+      setPatchingStatus(false);
+    }
+
     if (action.type === "status" && action.status) {
       patchStatus(action.jobId, action.status, action.customStatusId, techId);
     } else if (action.type === "approve" && action.resumeStatus) {
@@ -947,6 +969,22 @@ export default function RadioRepairDashboardPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      <RadioWarrantyCheckModal
+        open={warrantyCheckOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWarrantyCheckOpen(false);
+            setPendingAction(null);
+            setSelectedWarranty(null);
+          }
+        }}
+        onSelect={(isWarranty) => {
+          setSelectedWarranty(isWarranty);
+          setWarrantyCheckOpen(false);
+          setTechPickerOpen(true);
+        }}
+      />
 
       {/* Technician Picker Dialog */}
       <Dialog open={techPickerOpen} onOpenChange={(open) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}>
