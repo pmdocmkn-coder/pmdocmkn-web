@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useToast } from "../../hooks/use-toast";
+import { FormMobileDatePicker } from "../Radio/FormMobileDatePicker";
 import { pmScheduleApi } from "../../services/pmScheduleService";
 import { hasPermission } from "../../utils/permissionUtils";
 import {
@@ -31,6 +32,7 @@ import {
   DialogTitle,
 } from "../ui/dialog";
 import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
 import { exportPmScheduleToExcel } from "../../utils/exportExcel";
 
 const MONTHS_FULL = [
@@ -80,6 +82,26 @@ export default function PmYearlySchedule() {
   const [addDeviceSiteName, setAddDeviceSiteName] = useState("");
   const [newDeviceName, setNewDeviceName] = useState("");
   const [addingDevice, setAddingDevice] = useState(false);
+
+  // Checklist Mode & Dialog
+  const [isChecklistMode, setIsChecklistMode] = useState(false);
+  const [completeDialogOpen, setCompleteDialogOpen] = useState(false);
+  const [completingTask, setCompletingTask] = useState<PmScheduleTaskDto | null>(null);
+  const [completingContext, setCompletingContext] = useState<{deviceName: string, month: number, week: number} | null>(null);
+  const [completingRemarks, setCompletingRemarks] = useState("");
+  const [completingDate, setCompletingDate] = useState<Date>(new Date());
+  const [completingSubmitting, setCompletingSubmitting] = useState(false);
+
+  const currentDate = new Date();
+  const currentMonthNum = currentDate.getMonth() + 1;
+  const currentWeekNum = Math.ceil(currentDate.getDate() / 7);
+
+  const getTaskStatusInfo = (task: PmScheduleTaskDto) => {
+    if (task.isCompleted) return { color: "bg-[#059669]", icon: true, tooltip: "Selesai" };
+    const isOverdue = task.month < currentMonthNum || (task.month === currentMonthNum && task.week < currentWeekNum);
+    if (isOverdue) return { color: "bg-[#F59E0B]", icon: false, tooltip: "Terlewat" };
+    return { color: "bg-[#1B3A6B]", icon: false, tooltip: "Terjadwal" };
+  };
 
   const handleSelectMonthAndScroll = (monthIdx: number, siteId: number, deviceName: string) => {
     if (!canUpdate) return;
@@ -162,8 +184,28 @@ export default function PmYearlySchedule() {
     siteId: number,
     device: PmDeviceScheduleDto,
     month: number,
-    week: number
+    week: number,
+    task?: PmScheduleTaskDto
   ) => {
+    // If in checklist mode, we handle completion instead
+    if (isChecklistMode) {
+      if (task) {
+        if (task.isCompleted) {
+          // If already completed, toggle it back immediately (uncheck)
+          handleToggleCompletionSubmit(task, "");
+        } else {
+          // If not completed, open dialog to ask for remarks
+          setCompletingTask(task);
+          setCompletingContext({ deviceName: device.deviceName, month, week });
+          setCompletingRemarks("");
+          setCompletingDate(new Date());
+          setCompleteDialogOpen(true);
+        }
+      }
+      return;
+    }
+
+    // Normal Edit Mode
     const cellKey = `${siteId}-${device.deviceName}-${month}-${week}`;
     if (updatingCells[cellKey]) return;
 
@@ -192,11 +234,36 @@ export default function PmYearlySchedule() {
     setUpdatingCells((prev) => ({ ...prev, [cellKey]: true }));
     try {
       await pmScheduleApi.upsertSchedule({ year, pmSiteId: siteId, deviceName: device.deviceName, tasks: newTasks });
+      // Reload to get the IDs for newly created tasks so they can be completed later
+      if (!isCurrentlyScheduled) loadSchedule(); 
     } catch (error: any) {
       toast({ title: "Gagal", description: "Perubahan dibatalkan", variant: "destructive" });
       loadSchedule();
     } finally {
       setUpdatingCells((prev) => ({ ...prev, [cellKey]: false }));
+    }
+  };
+
+  const handleToggleCompletionSubmit = async (task: PmScheduleTaskDto, remarks: string, completedAt?: Date) => {
+    if (!task.id) {
+      toast({ title: "Error", description: "ID Tugas tidak ditemukan. Silakan muat ulang halaman.", variant: "destructive" });
+      return;
+    }
+    
+    setCompletingSubmitting(true);
+    try {
+      await pmScheduleApi.toggleTaskCompletion(
+        task.id, 
+        remarks, 
+        completedAt ? new Date(completedAt.getTime() - completedAt.getTimezoneOffset() * 60000).toISOString() : undefined
+      );
+      toast({ title: "Success", description: "Status tugas PM berhasil diubah" });
+      setCompleteDialogOpen(false);
+      loadSchedule();
+    } catch (error: any) {
+      toast({ title: "Error", description: error.response?.data?.message || "Gagal mengubah status tugas", variant: "destructive" });
+    } finally {
+      setCompletingSubmitting(false);
     }
   };
 
@@ -364,14 +431,25 @@ export default function PmYearlySchedule() {
                               >
                                 <div className="grid grid-cols-4 gap-[2px] w-full max-w-[80px] mx-auto px-1 py-2">
                                   {[1, 2, 3, 4].map((w) => {
-                                    const isScheduled = device.tasks.some((t) => t.month === monthNum && t.week === w);
+                                    const task = device.tasks.find((t) => t.month === monthNum && t.week === w);
+                                    const isScheduled = !!task;
+                                    let colorClass = "bg-slate-200/70";
+                                    if (isScheduled) {
+                                      if (isChecklistMode && task) {
+                                        colorClass = getTaskStatusInfo(task).color;
+                                      } else {
+                                        colorClass = getWeekColor(w);
+                                      }
+                                    }
                                     return (
                                       <div
                                         key={w}
-                                        className={`h-4 rounded-[3px] transition-colors w-full ${
-                                          isScheduled ? getWeekColor(w) : "bg-slate-200/70"
-                                        }`}
-                                      ></div>
+                                        className={`h-4 rounded-[3px] transition-colors w-full flex items-center justify-center ${colorClass}`}
+                                      >
+                                        {isChecklistMode && task?.isCompleted && (
+                                          <Check className="w-2.5 h-2.5 text-white" />
+                                        )}
+                                      </div>
                                     );
                                   })}
                                 </div>
@@ -411,13 +489,33 @@ export default function PmYearlySchedule() {
 
         {/* Legend — desktop only */}
         <div className="hidden md:flex flex-wrap items-center gap-4 px-1">
-          <span className="text-[11px] text-[#718096] font-medium">Keterangan Terjadwal:</span>
-          {[1, 2, 3, 4].map((w) => (
-            <div key={w} className="flex items-center gap-1.5">
-              <div className={`w-3 h-4 rounded-sm ${getWeekColor(w)}`}></div>
-              <span className="text-[11px] text-[#718096] font-medium">Week {w}</span>
-            </div>
-          ))}
+          {isChecklistMode ? (
+            <>
+              <span className="text-[11px] text-[#718096] font-medium">Keterangan Status PM:</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-4 rounded-sm bg-[#059669] flex items-center justify-center"><Check className="w-2 h-2 text-white" /></div>
+                <span className="text-[11px] text-[#718096] font-medium">Selesai</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-4 rounded-sm bg-[#F59E0B]"></div>
+                <span className="text-[11px] text-[#718096] font-medium">Terlewat / Overdue</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-4 rounded-sm bg-[#1B3A6B]"></div>
+                <span className="text-[11px] text-[#718096] font-medium">Terjadwal (Future)</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-[11px] text-[#718096] font-medium">Keterangan Terjadwal:</span>
+              {[1, 2, 3, 4].map((w) => (
+                <div key={w} className="flex items-center gap-1.5">
+                  <div className={`w-3 h-4 rounded-sm ${getWeekColor(w)}`}></div>
+                  <span className="text-[11px] text-[#718096] font-medium">Week {w}</span>
+                </div>
+              ))}
+            </>
+          )}
           <div className="flex items-center gap-1.5 ml-2">
             <div className="w-3 h-4 rounded-sm bg-[#E2E8F0]"></div>
             <span className="text-[11px] text-[#718096] font-medium">Kosong</span>
@@ -542,31 +640,42 @@ export default function PmYearlySchedule() {
                         {/* 4 week toggle buttons */}
                         <div className="flex gap-2 flex-shrink-0">
                           {[1, 2, 3, 4].map((week) => {
-                            const isScheduled = device.tasks.some(t => t.month === monthNum && t.week === week);
+                            const task = device.tasks.find(t => t.month === monthNum && t.week === week);
+                            const isScheduled = !!task;
                             const cellKey = `${site.siteId}-${device.deviceName}-${monthNum}-${week}`;
                             const isUpdating = updatingCells[cellKey];
+                            
+                            let btnClass = "bg-white border-2 border-[#E2E8F0]";
+                            let content = <span className="text-[9px] font-bold text-[#718096]">W{week}</span>;
+
+                            if (isScheduled) {
+                              if (isChecklistMode && task) {
+                                const status = getTaskStatusInfo(task);
+                                btnClass = `${status.color} hover:opacity-80 active:scale-95 border-none shadow-sm`;
+                                content = status.icon ? <Check className="w-4 h-4 text-white stroke-[3]" /> : <span className="text-[9px] font-bold text-white">W{week}</span>;
+                              } else {
+                                btnClass = `${getWeekDetailClass(week)} border-none shadow-sm text-white`;
+                                content = <Check className="w-4 h-4 text-white stroke-[3]" />;
+                              }
+                            } else if (canUpdate && !isChecklistMode) {
+                              btnClass = "bg-white border-2 border-[#E2E8F0] hover:border-[#2B6CB0] active:scale-95 text-[#718096]";
+                            }
+
                             return (
                               <button
                                 key={week}
-                                onClick={() => canUpdate && handleToggleSchedule(site.siteId, device, monthNum, week)}
-                                disabled={isUpdating || !canUpdate}
+                                onClick={() => {
+                                  if (!canUpdate) return;
+                                  if (isChecklistMode && !isScheduled) return;
+                                  handleToggleSchedule(site.siteId, device, monthNum, week, task);
+                                }}
+                                disabled={isUpdating || !canUpdate || (isChecklistMode && !isScheduled)}
                                 className={`w-10 h-10 rounded-[8px] flex items-center justify-center transition-all duration-150 flex-shrink-0
-                                  ${isUpdating
-                                    ? "bg-[#F7F8FA] cursor-wait"
-                                    : isScheduled
-                                      ? getWeekDetailClass(week)
-                                      : canUpdate
-                                        ? "bg-white border-2 border-[#E2E8F0] hover:border-[#2B6CB0] active:scale-95"
-                                        : "bg-white border-2 border-[#E2E8F0]"
-                                  }`}
+                                  ${isUpdating ? "bg-[#F7F8FA] cursor-wait border border-[#E2E8F0]" : btnClass}`}
                               >
                                 {isUpdating ? (
                                   <Loader2 className="w-3.5 h-3.5 animate-spin text-[#718096]" />
-                                ) : isScheduled ? (
-                                  <Check className="w-4 h-4 text-white stroke-[3]" />
-                                ) : (
-                                  <span className="text-[9px] font-bold text-[#718096]">W{week}</span>
-                                )}
+                                ) : content}
                               </button>
                             );
                           })}
@@ -582,13 +691,33 @@ export default function PmYearlySchedule() {
 
         {/* Legend */}
         <div className="flex flex-wrap items-center gap-3 px-1">
-          <span className="text-[11px] text-[#718096] font-medium">Week:</span>
-          {[1, 2, 3, 4].map((w) => (
-            <div key={w} className="flex items-center gap-1.5">
-              <div className={`w-4 h-4 rounded-[4px] ${getWeekColor(w)}`} />
-              <span className="text-[11px] text-[#718096]">W{w}</span>
-            </div>
-          ))}
+          {isChecklistMode ? (
+            <>
+              <span className="text-[11px] text-[#718096] font-medium">Status PM:</span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 rounded-[4px] bg-[#059669] flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>
+                <span className="text-[11px] text-[#718096]">Selesai</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 rounded-[4px] bg-[#F59E0B]"></div>
+                <span className="text-[11px] text-[#718096]">Overdue</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-4 h-4 rounded-[4px] bg-[#1B3A6B]"></div>
+                <span className="text-[11px] text-[#718096]">Terjadwal</span>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-[11px] text-[#718096] font-medium">Week:</span>
+              {[1, 2, 3, 4].map((w) => (
+                <div key={w} className="flex items-center gap-1.5">
+                  <div className={`w-4 h-4 rounded-[4px] ${getWeekColor(w)}`} />
+                  <span className="text-[11px] text-[#718096]">W{w}</span>
+                </div>
+              ))}
+            </>
+          )}
         </div>
       </div>
     );
@@ -600,17 +729,58 @@ export default function PmYearlySchedule() {
   return (
     <div className="flex flex-col gap-6">
       {/* ====== GLOBAL HEADER & YEAR SELECTOR ====== */}
-      <div className="flex items-center justify-between bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm px-4 py-3">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-[10px] bg-[#1B3A6B] flex items-center justify-center">
-            <CalendarDays className="w-5 h-5 text-white" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm px-4 py-3 gap-3 sm:gap-0">
+        <div className="flex items-center justify-between w-full sm:w-auto">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-[10px] bg-[#1B3A6B] flex items-center justify-center flex-shrink-0">
+              <CalendarDays className="w-5 h-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-[14px] font-bold text-[#1A202C]">PM Schedule</h2>
+              <p className="text-[11px] text-[#718096] hidden md:block">Kelola Jadwal & Checklist PM</p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-[14px] font-bold text-[#1A202C]">PM Schedule</h2>
-            <p className="text-[11px] text-[#718096] hidden sm:block">Pilih bulan untuk melihat detail & edit jadwal</p>
+          
+          {/* Mode Toggle (Mobile) */}
+          <div className="flex sm:hidden items-center bg-[#F7F8FA] p-1 rounded-[8px] border border-[#E2E8F0]">
+            <button 
+              onClick={() => setIsChecklistMode(false)}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-[6px] transition-colors ${!isChecklistMode ? "bg-white shadow-sm text-[#1A202C]" : "text-[#718096] hover:text-[#1A202C]"}`}
+            >
+              Edit
+            </button>
+            <button 
+              onClick={() => {
+                setIsChecklistMode(true);
+                if (selectedMonth === null) setSelectedMonth(currentMonthNum - 1);
+              }}
+              className={`px-3 py-1.5 text-[11px] font-bold rounded-[6px] transition-colors ${isChecklistMode ? "bg-[#2B6CB0] shadow-sm text-white" : "text-[#718096] hover:text-[#2B6CB0]"}`}
+            >
+              Checklist
+            </button>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2">
+          {/* Mode Toggle (Desktop) */}
+          <div className="hidden sm:flex items-center bg-[#F7F8FA] p-1 rounded-[8px] border border-[#E2E8F0] mr-2">
+            <button 
+              onClick={() => setIsChecklistMode(false)}
+              className={`px-3 py-1.5 text-[12px] font-bold rounded-[6px] transition-colors ${!isChecklistMode ? "bg-white shadow-sm text-[#1A202C]" : "text-[#718096] hover:text-[#1A202C]"}`}
+            >
+              Mode Edit
+            </button>
+            <button 
+              onClick={() => {
+                setIsChecklistMode(true);
+                if (selectedMonth === null) setSelectedMonth(currentMonthNum - 1);
+              }}
+              className={`px-3 py-1.5 text-[12px] font-bold rounded-[6px] transition-colors ${isChecklistMode ? "bg-[#2B6CB0] shadow-sm text-white" : "text-[#718096] hover:text-[#2B6CB0]"}`}
+            >
+              Mode Checklist
+            </button>
+          </div>
+
           <div className="flex items-center gap-1 bg-[#F7F8FA] p-1 rounded-[10px] border border-[#E2E8F0]">
             <button onClick={() => setYear((y) => y - 1)}
               className="p-1.5 rounded-[8px] hover:bg-white hover:shadow-sm text-[#718096] transition-all">
@@ -756,6 +926,72 @@ export default function PmYearlySchedule() {
               className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-bold px-6">
               {addingDevice ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
               Tambah PM
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ====== COMPLETE PM DIALOG ====== */}
+      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
+        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
+          <DialogHeader>
+            <DialogTitle className="text-[#059669] flex items-center gap-2 text-lg font-bold">
+              <div className="w-8 h-8 rounded-full bg-[#D1FAE5] flex items-center justify-center">
+                <Check className="w-5 h-5 text-[#059669]" />
+              </div>
+              Tandai Selesai
+            </DialogTitle>
+            <DialogDescription className="text-[#718096]">
+              Anda akan menandai PM ini sebagai selesai. Silakan tambahkan catatan jika diperlukan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            {completingContext && (
+              <div className="bg-[#F7F8FA] p-3 rounded-[10px] border border-[#E2E8F0] mb-2">
+                <p className="text-[12px] text-[#718096] mb-1">Perangkat / Sistem</p>
+                <p className="text-[14px] font-bold text-[#1B3A6B]">{completingContext.deviceName}</p>
+                <div className="flex gap-4 mt-2">
+                  <div>
+                    <p className="text-[11px] text-[#718096]">Bulan</p>
+                    <p className="text-[13px] font-semibold text-[#1A202C]">{MONTHS_FULL[completingContext.month - 1]}</p>
+                  </div>
+                  <div>
+                    <p className="text-[11px] text-[#718096]">Minggu (Week)</p>
+                    <p className="text-[13px] font-semibold text-[#1A202C]">Week {completingContext.week}</p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label className="font-bold text-[#1A202C]">Tanggal Pelaksanaan *</Label>
+              <FormMobileDatePicker
+                date={completingDate}
+                onSelect={(d) => d && setCompletingDate(d)}
+                placeholder="Pilih tanggal pelaksanaan PM"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="remarks" className="font-bold text-[#1A202C]">Catatan / Temuan (Opsional)</Label>
+              <Textarea
+                id="remarks"
+                value={completingRemarks}
+                onChange={(e) => setCompletingRemarks(e.target.value)}
+                placeholder="Masukkan catatan perbaikan atau kondisi hardware di sini..."
+                className="rounded-[10px] border-[#E2E8F0] min-h-[100px] focus-visible:ring-[#059669]"
+              />
+            </div>
+          </div>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button variant="outline" onClick={() => setCompleteDialogOpen(false)}
+              className="rounded-[10px] h-10 font-bold text-[#718096] border-[#E2E8F0]">
+              Batal
+            </Button>
+            <Button 
+              onClick={() => completingTask && handleToggleCompletionSubmit(completingTask, completingRemarks, completingDate)} 
+              disabled={completingSubmitting}
+              className="rounded-[10px] h-10 bg-[#059669] hover:bg-emerald-600 text-white font-bold px-6">
+              {completingSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
+              Simpan PM
             </Button>
           </DialogFooter>
         </DialogContent>

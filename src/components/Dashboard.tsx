@@ -11,6 +11,10 @@ import { radioApi } from "../services/radioApi";
 import { radioRepairApi } from "../services/radioRepairApi";
 import { warehouseBorrowApi } from "../services/warehouseBorrowApi";
 import { internalLinkApi } from "../services/internalLinkService";
+import { pmScheduleApi } from "../services/pmScheduleService";
+import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+
+const MONTHS_FULL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
 // ─── Permission helper ────────────────────────────────────────────────────────
 
@@ -168,6 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     networkLinks: null,
     warehousePending: null,
   });
+  const [pmDashboard, setPmDashboard] = useState<any>(null);
 
   // Recent activity — placeholder (will be replaced with activityLogApi later)
   const recentActivity: ActivityItem[] = [
@@ -217,6 +222,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         try {
           const pending = await warehouseBorrowApi.getPending();
           setStats(s => ({ ...s, warehousePending: pending.length }));
+        } catch { /* silent */ }
+      }
+
+      // PM Dashboard
+      if (hasPerm("pmschedule.menu")) {
+        try {
+          const dash = await pmScheduleApi.getComplianceDashboard(new Date().getFullYear());
+          setPmDashboard(dash);
         } catch { /* silent */ }
       }
     };
@@ -494,18 +507,81 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
           {/* Charts row */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
-            <PlaceholderChart
-              title="PM Compliance"
-              subtitle="Data belum tersedia"
-            />
-            <PlaceholderChart
-              title="PM Trend (6 Bulan)"
-              subtitle="Data belum tersedia"
-            />
-            <PlaceholderChart
-              title="Aset Condition"
-              subtitle="Data belum tersedia"
-            />
+            {pmDashboard ? (
+              <>
+                <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col items-center min-h-[200px]">
+                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center">Yearly PM Compliance (Tahun Ini)</h3>
+                  <div className="w-full h-[140px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={[
+                            { name: 'Selesai', value: pmDashboard.totalCompleted },
+                            { name: 'Belum Selesai', value: pmDashboard.totalScheduled - pmDashboard.totalCompleted }
+                          ]}
+                          cx="50%"
+                          cy="50%"
+                          innerRadius={45}
+                          outerRadius={60}
+                          paddingAngle={2}
+                          dataKey="value"
+                          stroke="none"
+                        >
+                          <Cell key="cell-0" fill="#059669" />
+                          <Cell key="cell-1" fill="#E2E8F0" />
+                        </Pie>
+                        <RechartsTooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="text-center -mt-24 pointer-events-none">
+                    <p className="text-[20px] font-bold text-[#1A202C]">{Math.round(pmDashboard.compliancePercentage)}%</p>
+                    <p className="text-[10px] text-[#718096]">Selesai / Terjadwal</p>
+                  </div>
+                  <div className="mt-10 flex items-center justify-center gap-4 w-full">
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#059669]"></span>
+                      <span className="text-[11px] text-[#718096]">Selesai ({pmDashboard.totalCompleted})</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="w-2 h-2 rounded-full bg-[#E2E8F0]"></span>
+                      <span className="text-[11px] text-[#718096]">Total ({pmDashboard.totalScheduled})</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col min-h-[200px] md:col-span-2">
+                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4">Tren PM 6 Bulan</h3>
+                  <div className="w-full h-[140px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={pmDashboard.trend6Months.slice().reverse()} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <XAxis dataKey="monthName" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dy={10} />
+                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dx={-10} />
+                        <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                        <Bar dataKey="completed" name="Selesai" fill="#059669" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                        <Bar dataKey="overdue" name="Overdue" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <PlaceholderChart
+                  title="PM Compliance"
+                  subtitle="Data sedang dimuat..."
+                />
+                <PlaceholderChart
+                  title="PM Trend (6 Bulan)"
+                  subtitle="Data sedang dimuat..."
+                />
+                <PlaceholderChart
+                  title="Aset Condition"
+                  subtitle="Data belum tersedia"
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -513,55 +589,108 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         <div className="space-y-4">
 
           {/* PM Bulanan widget — ready for future API */}
-          <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[14px] font-semibold text-[#1A202C]">PM Bulan Ini</h3>
-              <span className="text-[11px] text-[#718096]">
-                {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
-              </span>
-            </div>
-            {/* Progress bar placeholder */}
-            <div className="mb-3">
-              <div className="flex justify-between text-[12px] text-[#718096] mb-1">
-                <span>Progress</span>
-                <span className="font-semibold text-[#1A202C]">— %</span>
-              </div>
-              <div className="h-2 bg-[#F7F8FA] rounded-full overflow-hidden border border-[#E2E8F0]">
-                <div className="h-full bg-[#2B6CB0] rounded-full" style={{ width: "0%" }} />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <div className="flex justify-between text-[12px]">
-                <span className="flex items-center gap-1.5 text-[#718096]">
-                  <span className="w-2 h-2 rounded-full bg-[#059669]" />Selesai
+          {pmDashboard ? (
+            <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[14px] font-semibold text-[#1A202C]">PM Bulan Ini</h3>
+                <span className="text-[11px] text-[#718096]">
+                  {MONTHS_FULL[new Date().getMonth()]} {new Date().getFullYear()}
                 </span>
-                <span className="font-semibold text-[#1A202C]">—</span>
               </div>
-              <div className="flex justify-between text-[12px]">
-                <span className="flex items-center gap-1.5 text-[#718096]">
-                  <span className="w-2 h-2 rounded-full bg-[#2B6CB0]" />Terjadwal
-                </span>
-                <span className="font-semibold text-[#1A202C]">—</span>
+              <div className="mb-3">
+                <div className="flex justify-between text-[12px] text-[#718096] mb-1">
+                  <span>Progress</span>
+                  <span className="font-semibold text-[#1A202C]">{Math.round(pmDashboard.currentMonth.progressPercentage)}%</span>
+                </div>
+                <div className="h-2 bg-[#F7F8FA] rounded-full overflow-hidden border border-[#E2E8F0]">
+                  <div className="h-full bg-[#059669] rounded-full transition-all duration-500" style={{ width: `${Math.round(pmDashboard.currentMonth.progressPercentage)}%` }} />
+                </div>
               </div>
-              <div className="flex justify-between text-[12px]">
-                <span className="flex items-center gap-1.5 text-[#718096]">
-                  <span className="w-2 h-2 rounded-full bg-[#DC2626]" />Overdue
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5 text-[#718096]">
+                    <span className="w-2 h-2 rounded-full bg-[#059669]" />Selesai
+                  </span>
+                  <span className="font-semibold text-[#1A202C]">{pmDashboard.currentMonth.completed}</span>
+                </div>
+                <div className="flex justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5 text-[#718096]">
+                    <span className="w-2 h-2 rounded-full bg-[#2B6CB0]" />Terjadwal
+                  </span>
+                  <span className="font-semibold text-[#1A202C]">{pmDashboard.currentMonth.totalScheduled - pmDashboard.currentMonth.completed - pmDashboard.currentMonth.overdue}</span>
+                </div>
+                <div className="flex justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5 text-[#718096]">
+                    <span className="w-2 h-2 rounded-full bg-[#DC2626]" />Overdue
+                  </span>
+                  <span className="font-semibold text-[#1A202C]">{pmDashboard.currentMonth.overdue}</span>
+                </div>
+              </div>
+              {hasPerm("pmschedule.menu") && (
+                <div className="mt-4 pt-3 border-t border-[#E2E8F0]">
+                  <button
+                    onClick={() => go("pm-schedule", "/pm-schedule")}
+                    className="w-full text-center text-[12px] text-[#2B6CB0] font-medium py-1.5 bg-[#EBF4FF] rounded-md hover:bg-[#D5E3FF] transition-colors"
+                  >
+                    Lihat Detail →
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4 opacity-70">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-[14px] font-semibold text-[#1A202C]">PM Bulan Ini</h3>
+                <span className="text-[11px] text-[#718096]">
+                  {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
                 </span>
-                <span className="font-semibold text-[#1A202C]">—</span>
+              </div>
+              <div className="mb-3">
+                <div className="flex justify-between text-[12px] text-[#718096] mb-1">
+                  <span>Progress</span>
+                  <span className="font-semibold text-[#1A202C]">— %</span>
+                </div>
+                <div className="h-2 bg-[#F7F8FA] rounded-full overflow-hidden border border-[#E2E8F0]">
+                  <div className="h-full bg-[#2B6CB0] rounded-full" style={{ width: "0%" }} />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <div className="flex justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5 text-[#718096]">
+                    <span className="w-2 h-2 rounded-full bg-[#059669]" />Selesai
+                  </span>
+                  <span className="font-semibold text-[#1A202C]">—</span>
+                </div>
+                <div className="flex justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5 text-[#718096]">
+                    <span className="w-2 h-2 rounded-full bg-[#2B6CB0]" />Terjadwal
+                  </span>
+                  <span className="font-semibold text-[#1A202C]">—</span>
+                </div>
+                <div className="flex justify-between text-[12px]">
+                  <span className="flex items-center gap-1.5 text-[#718096]">
+                    <span className="w-2 h-2 rounded-full bg-[#DC2626]" />Overdue
+                  </span>
+                  <span className="font-semibold text-[#1A202C]">—</span>
+                </div>
+              </div>
+              
+              <div className="mt-4 pt-3 border-t border-[#E2E8F0]">
+                <p className="text-[11px] text-[#718096] italic mb-2">
+                  Data PM Bulanan akan tersedia setelah modul terhubung
+                </p>
+                {hasPerm("pmschedule.menu") && (
+                  <button
+                    onClick={() => go("pm-schedule", "/pm-schedule")}
+                    className="w-full text-center text-[12px] text-[#2B6CB0] font-medium py-1.5 bg-[#EBF4FF] rounded-md opacity-50 cursor-not-allowed"
+                    disabled
+                  >
+                    Lihat Detail →
+                  </button>
+                )}
               </div>
             </div>
-            <p className="text-[11px] text-[#718096] mt-3 italic">
-              Data PM Bulanan akan tersedia setelah modul terhubung
-            </p>
-            {hasPerm("pmschedule.menu") && (
-              <button
-                onClick={() => go("pm-schedule", "/pm-schedule")}
-                className="mt-3 w-full text-center text-[13px] text-[#2B6CB0] font-medium hover:underline flex items-center justify-center gap-1"
-              >
-                Lihat Detail <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            )}
-          </div>
+          )}
 
           {/* Recent Activity */}
           <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
