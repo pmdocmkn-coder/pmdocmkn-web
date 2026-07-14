@@ -355,7 +355,7 @@ export default function OperationalDocumentPage() {
     { value: "Warning", label: "Segera Berakhir (<30 hari)" },
     { value: "Expired", label: "Sudah Expired" }
   ];
-  const followUpOptions = FOLLOW_UP_STATUS_OPTIONS.map(s => ({ value: s, label: s }));
+  const followUpOptions = FOLLOW_UP_STATUS_OPTIONS.map(s => ({ value: s, label: s === "SedangDiproses" ? "Sedang Diproses" : s }));
   const groupOptions = availableGroups.map(g => ({ value: g, label: g }));
 
   // ── Excel Export ──────────────────────────────────────────────────────────────
@@ -797,7 +797,7 @@ export default function OperationalDocumentPage() {
                           <SelectValue placeholder="Pilih status" />
                         </SelectTrigger>
                         <SelectContent>
-                          {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                          {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "SedangDiproses" ? "Sedang Diproses" : s}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
@@ -1213,7 +1213,7 @@ export default function OperationalDocumentPage() {
                   <SelectValue placeholder="Pilih status" />
                 </SelectTrigger>
                 <SelectContent>
-                  {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                  {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "SedangDiproses" ? "Sedang Diproses" : s}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>

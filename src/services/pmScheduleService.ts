@@ -2,6 +2,7 @@ import {
   PmSiteDto,
   PmYearlyScheduleResponseDto,
   PmScheduleUpsertDto,
+  PmComplianceDashboardDto,
 } from "../types/pmSchedule";
 import { api } from "./api";
 
@@ -50,5 +51,16 @@ export const pmScheduleApi = {
 
   deleteSchedule: async (year: number, pmSiteId: number, deviceName: string): Promise<void> => {
     await api.delete(`/api/pm-schedules/${year}/${pmSiteId}/${encodeURIComponent(deviceName)}`);
+  },
+
+  toggleTaskCompletion: async (taskId: number, remarks?: string, completedAt?: string): Promise<void> => {
+    await api.post(`/api/pm-schedules/tasks/${taskId}/toggle-complete`, { remarks, completedAt });
+  },
+
+  getComplianceDashboard: async (year?: number): Promise<PmComplianceDashboardDto> => {
+    const response = await api.get("/api/pm-schedules/dashboard/compliance", {
+      params: year ? { year } : undefined
+    });
+    return response.data.data;
   },
 };
