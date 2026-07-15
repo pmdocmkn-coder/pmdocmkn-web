@@ -18,6 +18,11 @@ import { hasPermission } from "../../utils/permissionUtils";
 import KpiDatesModal from "./KpiDatesModal";
 import KpiFormModal from "./KpiFormModal";
 import { format, parseISO, subMonths } from "date-fns";
+import {
+    PieChart, Pie, Cell,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    ResponsiveContainer, Tooltip as RechartsTooltip
+} from 'recharts';
 
 export default function KpiMonitoringPage() {
     const { toast } = useToast();
@@ -335,6 +340,23 @@ export default function KpiMonitoringPage() {
     const pendingReviewDocs = data.filter(d => d.status.includes("Menunggu Sign User")).length;
     const waitingDataDocs = data.filter(d => d.status.includes("Menunggu Data") || d.status.includes("Data Diterima") || (!d.status.includes("Selesai") && !d.status.includes("Menunggu Sign") && d.status !== "Approved")).length;
 
+    // Chart Data — Donut (status breakdown)
+    const completionPct = totalDocs > 0 ? Math.round((completedDocs / totalDocs) * 100) : 0;
+    const donutData = [
+        { name: 'Selesai', value: completedDocs, color: '#059669' },
+        { name: 'Pending TTD', value: pendingReviewDocs, color: '#F59E0B' },
+        { name: 'Menunggu Data', value: Math.max(0, waitingDataDocs), color: '#DC2626' },
+    ].filter(d => d.value > 0);
+    if (donutData.length === 0) donutData.push({ name: 'Kosong', value: 1, color: '#E2E8F0' });
+
+    // Chart Data — Bar (per area)
+    const barChartData = Object.entries(groupedData).map(([area, docs]) => ({
+        area: area.length > 12 ? area.substring(0, 12) + '…' : area,
+        areaFull: area,
+        total: docs.length,
+        selesai: docs.filter(d => d.status.includes('Selesai') || d.status === 'Approved').length,
+    }));
+
     // Month label for display
     const monthLabel = (() => {
         try { return format(parseISO(currentMonth), "MMMM yyyy"); } catch { return currentMonth; }
@@ -541,6 +563,89 @@ export default function KpiMonitoringPage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* ── CHART SECTION (matching Dashboard style) ─────────────────── */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                {/* Donut Chart — Sebaran Status */}
+                <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col items-center min-h-[200px]">
+                    <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center">Sebaran Status Dokumen</h3>
+                    <div className="w-full h-[140px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={donutData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={45}
+                                    outerRadius={60}
+                                    paddingAngle={2}
+                                    dataKey="value"
+                                    stroke="none"
+                                >
+                                    {donutData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <RechartsTooltip
+                                    contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}
+                                    formatter={(value: number | undefined, name: string | undefined) => [`${value ?? 0} dok`, name ?? '']}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    </div>
+                    <div className="text-center -mt-24 pointer-events-none">
+                        <p className="text-[20px] font-bold text-[#1A202C]">{completionPct}%</p>
+                        <p className="text-[10px] text-[#718096]">Selesai / Total</p>
+                    </div>
+                    <div className="mt-10 flex flex-col gap-1.5 w-full px-2">
+                        {[{ label: 'Selesai', color: '#059669' }, { label: 'Pending TTD', color: '#F59E0B' }, { label: 'Menunggu Data', color: '#DC2626' }].map(({ label, color }) => (
+                            <div key={label} className="flex items-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
+                                <span className="text-[11px] text-[#718096]">{label} ({donutData.find(d => d.name === label)?.value ?? 0})</span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Bar Chart — Dokumen per Area */}
+                <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col min-h-[200px] md:col-span-2">
+                    <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4">Dokumen per Area</h3>
+                    {barChartData.length > 0 ? (
+                        <div className="w-full h-[160px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={barChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                                    <XAxis dataKey="area" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#718096' }} dy={10} />
+                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dx={-10} allowDecimals={false} />
+                                    <RechartsTooltip
+                                        cursor={{ fill: 'rgba(43,108,176,0.05)' }}
+                                        contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
+                                        formatter={(value: number | undefined, name: string | undefined) => [`${value ?? 0} dok`, name === 'total' ? 'Total' : 'Selesai']}
+                                        labelFormatter={(label, payload) => payload?.[0]?.payload?.areaFull ?? label}
+                                    />
+                                    <Bar dataKey="total" name="Total" fill="#2B6CB0" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                    <Bar dataKey="selesai" name="Selesai" fill="#059669" radius={[4, 4, 0, 0]} maxBarSize={30} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center text-[12px] text-[#718096]">
+                            Belum ada data untuk bulan ini.
+                        </div>
+                    )}
+                    <div className="mt-3 flex items-center gap-4">
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-[3px] bg-[#2B6CB0]" />
+                            <span className="text-[11px] text-[#718096]">Total</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-3 h-3 rounded-[3px] bg-[#059669]" />
+                            <span className="text-[11px] text-[#718096]">Selesai</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {/* ── END CHART SECTION ────────────────────────────────────────── */}
 
             <div className="bg-white rounded-[14px] md:rounded-xl shadow-sm border border-[#E2E8F0] overflow-hidden">
                 {/* Desktop search */}
