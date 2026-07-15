@@ -232,54 +232,48 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         } catch { /* silent */ }
       }
 
-      // PM Dashboard
-      if (hasPerm("pmschedule.menu")) {
-        try {
-          const dash = await pmScheduleApi.getComplianceDashboard(new Date().getFullYear());
-          setPmDashboard(dash);
-        } catch { /* silent */ }
-      }
+      // PM Dashboard — fetch for all logged-in users (API handles auth)
+      try {
+        const dash = await pmScheduleApi.getComplianceDashboard(new Date().getFullYear());
+        setPmDashboard(dash);
+      } catch { /* silent */ }
 
-      // KPI Dashboard (bulan ini)
-      if (hasPerm("kpi.view")) {
-        try {
-          const now = new Date();
-          const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
-          const res = await kpiApi.getAll({ periodMonth: monthStr, pageSize: 500, page: 1 });
-          const docs = res.data?.data ?? [];
-          const total = docs.length;
-          const selesai = docs.filter((d: any) => d.status?.includes('Selesai') || d.status === 'Approved').length;
-          const pending = docs.filter((d: any) => d.status?.includes('Menunggu Sign')).length;
-          const menunggu = Math.max(0, total - selesai - pending);
-          const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
-          // group by areaGroup
-          const areaMap: Record<string, { total: number; selesai: number }> = {};
-          docs.forEach((d: any) => {
-            const area = d.areaGroup || 'Lainnya';
-            if (!areaMap[area]) areaMap[area] = { total: 0, selesai: 0 };
-            areaMap[area].total++;
-            if (d.status?.includes('Selesai') || d.status === 'Approved') areaMap[area].selesai++;
-          });
-          const byArea = Object.entries(areaMap).map(([area, v]) => ({
-            area: area.length > 12 ? area.substring(0, 12) + '…' : area,
-            ...v,
-          }));
-          setKpiDashboard({ total, selesai, pending, menunggu, pct, byArea });
-        } catch { /* silent */ }
-      }
+      // KPI Dashboard (bulan ini) — fetch for all logged-in users
+      try {
+        const now = new Date();
+        const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+        const res = await kpiApi.getAll({ periodMonth: monthStr, pageSize: 500, page: 1 });
+        const docs = res.data?.data ?? [];
+        const total = docs.length;
+        const selesai = docs.filter((d: any) => d.status?.includes('Selesai') || d.status === 'Approved').length;
+        const pending = docs.filter((d: any) => d.status?.includes('Menunggu Sign')).length;
+        const menunggu = Math.max(0, total - selesai - pending);
+        const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+        // group by areaGroup
+        const areaMap: Record<string, { total: number; selesai: number }> = {};
+        docs.forEach((d: any) => {
+          const area = d.areaGroup || 'Lainnya';
+          if (!areaMap[area]) areaMap[area] = { total: 0, selesai: 0 };
+          areaMap[area].total++;
+          if (d.status?.includes('Selesai') || d.status === 'Approved') areaMap[area].selesai++;
+        });
+        const byArea = Object.entries(areaMap).map(([area, v]) => ({
+          area: area.length > 12 ? area.substring(0, 12) + '…' : area,
+          ...v,
+        }));
+        setKpiDashboard({ total, selesai, pending, menunggu, pct, byArea });
+      } catch { /* silent */ }
 
-      // Operational Document Expiry
-      if (hasPerm("operationaldocument.view")) {
-        try {
-          const res = await operationalDocumentApi.getSummary();
-          const d = res.data?.data ?? res.data ?? {};
-          setDocSummary({
-            totalDocuments: d.totalDocuments ?? 0,
-            expiringSoon: d.expiringSoon ?? 0,
-            expired: d.expired ?? 0,
-          });
-        } catch { /* silent */ }
-      }
+      // Operational Document Expiry — fetch for all logged-in users
+      try {
+        const res = await operationalDocumentApi.getSummary();
+        const d = res.data?.data ?? res.data ?? {};
+        setDocSummary({
+          totalDocuments: d.totalDocuments ?? 0,
+          expiringSoon: d.expiringSoon ?? 0,
+          expired: d.expired ?? 0,
+        });
+      } catch { /* silent */ }
     };
     load();
   }, []);
