@@ -21,7 +21,6 @@ import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
 import RadioRepairJobDetailPanel from "./RadioRepairJobDetailPanel";
 import RadioRepairJobEditForm from "./RadioRepairJobEditForm";
 import TechnicianToWarehouseForm from "../RadioHandover/TechnicianToWarehouseForm";
-import WorkshopTechnicianManager from "./WorkshopTechnicianManager";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
 import RadioCompletionTagModal from "./RadioCompletionTagModal";
@@ -571,7 +570,6 @@ export default function RadioRepairDashboardPage() {
               Reset Data Uji
             </Button>
           )}
-          {canSupervise && <WorkshopTechnicianManager />}
           {canViewArchive && (
             <Button
               variant={showArchive ? "default" : "outline"}
