@@ -12,6 +12,8 @@ import { radioRepairApi } from "../services/radioRepairApi";
 import { warehouseBorrowApi } from "../services/warehouseBorrowApi";
 import { internalLinkApi } from "../services/internalLinkService";
 import { pmScheduleApi } from "../services/pmScheduleService";
+import { kpiApi } from "../services/kpiApi";
+import { operationalDocumentApi } from "../services/operationalDocumentApi";
 import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 
 const MONTHS_FULL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
@@ -55,24 +57,24 @@ const StatCard: React.FC<StatCardProps> = ({
 }) => (
   <button
     onClick={onClick}
-    className="bg-white border border-[#E2E8F0] rounded-[10px] p-4 flex items-center gap-4 hover:shadow-md transition-shadow text-left w-full group"
+    className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 flex items-center gap-4 hover:shadow-[0_8px_30px_rgb(0,0,0,0.06)] hover:-translate-y-0.5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.04)] transition-all duration-300 text-left w-full group"
   >
-    <div className={`w-12 h-12 rounded-[10px] flex items-center justify-center flex-shrink-0 ${iconBg}`}>
+    <div className={`w-12 h-12 rounded-[14px] flex items-center justify-center flex-shrink-0 ${iconBg}`}>
       {icon}
     </div>
     <div className="flex-1 min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-[#718096]">{label}</p>
-      <p className="text-2xl font-bold text-[#1A202C] leading-tight">
+      <p className="text-[11px] font-bold uppercase tracking-wider text-[#718096] mb-1">{label}</p>
+      <p className="text-[26px] font-extrabold text-[#1A202C] leading-none tracking-tight">
         {value === null ? <span className="text-base text-[#718096]">—</span> : value.toLocaleString("id-ID")}
       </p>
-      <p className="text-[12px] text-[#718096] truncate">{sub}</p>
+      {sub && <p className="text-[12px] text-[#718096] truncate mt-1">{sub}</p>}
     </div>
     {ringValue !== undefined && (
       <div className="flex-shrink-0 text-right">
         <p className={`text-sm font-bold ${ring}`}>{ringValue}%</p>
       </div>
     )}
-    <ChevronRight className="w-4 h-4 text-[#E2E8F0] group-hover:text-[#2B6CB0] transition-colors flex-shrink-0" />
+    <ChevronRight className="w-5 h-5 text-[#E2E8F0] group-hover:text-[#2B6CB0] transition-colors flex-shrink-0" />
   </button>
 );
 
@@ -153,6 +155,17 @@ const PlaceholderChart: React.FC<PlaceholderChartProps> = ({ title, subtitle }) 
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
+const AppIcon: React.FC<{ icon: React.ReactNode; iconBg: string; title: string; onClick: () => void }> = ({ icon, iconBg, title, onClick }) => (
+  <button onClick={onClick} className="flex flex-col items-center gap-2.5 group cursor-pointer w-full">
+    <div className={`w-12 h-12 md:w-14 md:h-14 rounded-full flex items-center justify-center shadow-[0_2px_8px_-2px_rgba(0,0,0,0.08)] group-hover:shadow-[0_8px_20px_-4px_rgba(43,108,176,0.25)] group-hover:-translate-y-1 transition-all duration-300 ${iconBg}`}>
+      {icon}
+    </div>
+    <span className="text-[11px] md:text-[12px] font-medium text-[#1A202C] text-center leading-tight line-clamp-2 px-1">
+      {title}
+    </span>
+  </button>
+);
+
 const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -173,15 +186,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     warehousePending: null,
   });
   const [pmDashboard, setPmDashboard] = useState<any>(null);
-
-  // Recent activity — placeholder (will be replaced with activityLogApi later)
-  const recentActivity: ActivityItem[] = [
-    { type: "success", message: "PM Schedule Site A selesai dikerjakan", time: "08:25" },
-    { type: "info",    message: "Radio HT-102 masuk ke warehouse perbaikan", time: "07:45" },
-    { type: "warning", message: "PM Site B overdue — belum dikerjakan", time: "07:30" },
-    { type: "success", message: "Data aset warehouse diperbarui", time: "06:15" },
-    { type: "info",    message: "Radio baru terdaftar (R-356)", time: "05:20" },
-  ];
+  const [kpiDashboard, setKpiDashboard] = useState<{ total: number; selesai: number; pending: number; menunggu: number; pct: number; byArea: { area: string; total: number; selesai: number }[] } | null>(null);
+  const [showAllModules, setShowAllModules] = useState(false);
+  const [docSummary, setDocSummary] = useState<{ totalDocuments: number; expiringSoon: number; expired: number } | null>(null);
 
   const go = (tab: string, path: string) => {
     setActiveTab(tab);
@@ -230,6 +237,47 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         try {
           const dash = await pmScheduleApi.getComplianceDashboard(new Date().getFullYear());
           setPmDashboard(dash);
+        } catch { /* silent */ }
+      }
+
+      // KPI Dashboard (bulan ini)
+      if (hasPerm("kpi.view")) {
+        try {
+          const now = new Date();
+          const monthStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-01`;
+          const res = await kpiApi.getAll({ periodMonth: monthStr, pageSize: 500, page: 1 });
+          const docs = res.data?.data ?? [];
+          const total = docs.length;
+          const selesai = docs.filter((d: any) => d.status?.includes('Selesai') || d.status === 'Approved').length;
+          const pending = docs.filter((d: any) => d.status?.includes('Menunggu Sign')).length;
+          const menunggu = Math.max(0, total - selesai - pending);
+          const pct = total > 0 ? Math.round((selesai / total) * 100) : 0;
+          // group by areaGroup
+          const areaMap: Record<string, { total: number; selesai: number }> = {};
+          docs.forEach((d: any) => {
+            const area = d.areaGroup || 'Lainnya';
+            if (!areaMap[area]) areaMap[area] = { total: 0, selesai: 0 };
+            areaMap[area].total++;
+            if (d.status?.includes('Selesai') || d.status === 'Approved') areaMap[area].selesai++;
+          });
+          const byArea = Object.entries(areaMap).map(([area, v]) => ({
+            area: area.length > 12 ? area.substring(0, 12) + '…' : area,
+            ...v,
+          }));
+          setKpiDashboard({ total, selesai, pending, menunggu, pct, byArea });
+        } catch { /* silent */ }
+      }
+
+      // Operational Document Expiry
+      if (hasPerm("operationaldocument.view")) {
+        try {
+          const res = await operationalDocumentApi.getSummary();
+          const d = res.data?.data ?? res.data ?? {};
+          setDocSummary({
+            totalDocuments: d.totalDocuments ?? 0,
+            expiringSoon: d.expiringSoon ?? 0,
+            expired: d.expired ?? 0,
+          });
         } catch { /* silent */ }
       }
     };
@@ -483,34 +531,48 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
         {/* Left: Modul Utama (2/3 width) */}
         <div className="xl:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[15px] font-semibold text-[#1A202C]">Modul Utama</h2>
-            <button
-              onClick={() => {}}
-              className="text-[13px] text-[#2B6CB0] font-medium hover:underline flex items-center gap-1"
-            >
-              Lihat Semua Modul <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            {visibleModules.slice(0, 6).map((m) => (
-              <ModuleCard
-                key={m.id}
-                icon={m.icon}
-                iconBg={m.iconBg}
-                title={m.title}
-                description={m.description}
-                onClick={() => go(m.tab, m.path)}
-              />
-            ))}
+          <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
+            <h2 className="text-[14px] font-bold text-[#1A202C] mb-5">Modul Utama</h2>
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 gap-y-6 gap-x-2">
+              {visibleModules.slice(0, showAllModules ? visibleModules.length : 3).map((m) => (
+                <AppIcon
+                  key={m.id}
+                  icon={m.icon}
+                  iconBg={m.iconBg}
+                  title={m.title}
+                  onClick={() => go(m.tab, m.path)}
+                />
+              ))}
+              {!showAllModules && visibleModules.length > 3 && (
+                <AppIcon
+                  icon={
+                    <div className="grid grid-cols-2 gap-[2px] w-5 h-5">
+                      <div className="bg-white rounded-full" /><div className="bg-white rounded-full" />
+                      <div className="bg-white rounded-full" /><div className="bg-white rounded-full" />
+                    </div>
+                  }
+                  iconBg="bg-[#718096]"
+                  title="Semua Modul"
+                  onClick={() => setShowAllModules(true)}
+                />
+              )}
+              {showAllModules && (
+                <AppIcon
+                  icon={<ChevronRight className="w-6 h-6 text-white rotate-[-90deg]" />}
+                  iconBg="bg-[#718096]"
+                  title="Sembunyikan"
+                  onClick={() => setShowAllModules(false)}
+                />
+              )}
+            </div>
           </div>
 
           {/* Charts row */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-2">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-2">
             {pmDashboard ? (
               <>
-                <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col items-center min-h-[200px]">
-                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center">Yearly PM Compliance (Tahun Ini)</h3>
+                <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col items-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
+                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center tracking-wide">Yearly PM Compliance</h3>
                   <div className="w-full h-[140px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
@@ -550,8 +612,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                   </div>
                 </div>
 
-                <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col min-h-[200px] md:col-span-2">
-                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4">Tren PM 6 Bulan</h3>
+                <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col min-h-[220px] md:col-span-2 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
+                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4 tracking-wide">Tren PM 6 Bulan</h3>
                   <div className="w-full h-[140px]">
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={pmDashboard.trend6Months.slice().reverse()} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -583,6 +645,127 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               </>
             )}
           </div>
+
+          {/* Third Row: KPI & Doc Expiry Charts */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
+            
+            {/* KPI Donut */}
+            {kpiDashboard ? (
+              <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col items-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
+                <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center tracking-wide">KPI Bulan Ini — Status</h3>
+                <div className="w-full h-[140px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Selesai', value: kpiDashboard.selesai },
+                          { name: 'Pending TTD', value: kpiDashboard.pending },
+                          { name: 'Menunggu Data', value: kpiDashboard.menunggu },
+                        ].filter(d => d.value > 0)}
+                        cx="50%" cy="50%"
+                        innerRadius={45} outerRadius={60}
+                        paddingAngle={2} dataKey="value" stroke="none"
+                      >
+                        <Cell fill="#059669" />
+                        <Cell fill="#F59E0B" />
+                        <Cell fill="#E2E8F0" />
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-center -mt-24 pointer-events-none">
+                  <p className="text-[20px] font-bold text-[#1A202C]">{kpiDashboard.pct}%</p>
+                  <p className="text-[10px] text-[#718096]">Selesai / Total</p>
+                </div>
+                <div className="mt-10 flex items-center justify-center gap-4 w-full">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                    <span className="text-[11px] text-[#718096]">Selesai ({kpiDashboard.selesai})</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+                    <span className="text-[11px] text-[#718096]">Pending ({kpiDashboard.pending})</span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* KPI Bar Chart per Area */}
+            {kpiDashboard ? (
+              <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col min-h-[220px] md:col-span-2 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
+                <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4 tracking-wide">KPI Dokumen per Area</h3>
+                <div className="w-full h-[140px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={kpiDashboard.byArea} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                      <XAxis dataKey="area" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#718096' }} dy={10} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dx={-10} allowDecimals={false} />
+                      <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                      <Bar dataKey="total" name="Total" fill="#2B6CB0" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                      <Bar dataKey="selesai" name="Selesai" fill="#059669" radius={[4, 4, 0, 0]} maxBarSize={28} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="mt-3 flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-[3px] bg-[#2B6CB0]" />
+                    <span className="text-[11px] text-[#718096]">Total</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-3 h-3 rounded-[3px] bg-[#059669]" />
+                    <span className="text-[11px] text-[#718096]">Selesai</span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+
+            {/* Doc Expiry Donut */}
+            {docSummary ? (
+              <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col items-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
+                <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center tracking-wide">Masa Berlaku Dokumen</h3>
+                <div className="w-full h-[140px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={[
+                          { name: 'Aman', value: Math.max(0, docSummary.totalDocuments - docSummary.expiringSoon - docSummary.expired) },
+                          { name: 'Segera', value: docSummary.expiringSoon },
+                          { name: 'Expired', value: docSummary.expired },
+                        ].filter(d => d.value > 0)}
+                        cx="50%" cy="50%"
+                        innerRadius={45} outerRadius={60}
+                        paddingAngle={2} dataKey="value" stroke="none"
+                      >
+                        <Cell fill="#059669" />
+                        <Cell fill="#F59E0B" />
+                        <Cell fill="#DC2626" />
+                      </Pie>
+                      <RechartsTooltip contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }} />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="text-center -mt-24 pointer-events-none">
+                  <p className="text-[20px] font-bold text-[#1A202C]">{docSummary.totalDocuments}</p>
+                  <p className="text-[10px] text-[#718096]">Total Dokumen</p>
+                </div>
+                <div className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 w-full">
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#059669]" />
+                    <span className="text-[10px] text-[#718096]">Aman</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#F59E0B]" />
+                    <span className="text-[10px] text-[#718096]">Segera ({docSummary.expiringSoon})</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-[#DC2626]" />
+                    <span className="text-[10px] text-[#718096]">Expired ({docSummary.expired})</span>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         {/* Right: Info widgets (1/3 width) */}
@@ -590,20 +773,20 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
           {/* PM Bulanan widget — ready for future API */}
           {pmDashboard ? (
-            <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
+            <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[14px] font-semibold text-[#1A202C]">PM Bulan Ini</h3>
+                <h3 className="text-[14px] font-semibold text-[#1A202C] tracking-wide">PM Bulan Ini</h3>
                 <span className="text-[11px] text-[#718096]">
                   {MONTHS_FULL[new Date().getMonth()]} {new Date().getFullYear()}
                 </span>
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-[12px] text-[#718096] mb-1">
+                <div className="flex justify-between text-[12px] text-[#718096] mb-2">
                   <span>Progress</span>
-                  <span className="font-semibold text-[#1A202C]">{Math.round(pmDashboard.currentMonth.progressPercentage)}%</span>
+                  <span className="font-bold text-[#1A202C]">{Math.round(pmDashboard.currentMonth.progressPercentage)}%</span>
                 </div>
-                <div className="h-2 bg-[#F7F8FA] rounded-full overflow-hidden border border-[#E2E8F0]">
-                  <div className="h-full bg-[#059669] rounded-full transition-all duration-500" style={{ width: `${Math.round(pmDashboard.currentMonth.progressPercentage)}%` }} />
+                <div className="h-2.5 bg-[#F7F8FA] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#059669] to-[#34D399] rounded-full transition-all duration-700" style={{ width: `${Math.round(pmDashboard.currentMonth.progressPercentage)}%` }} />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -638,79 +821,42 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               )}
             </div>
           ) : (
-            <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4 opacity-70">
+            <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] opacity-70">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-[14px] font-semibold text-[#1A202C]">PM Bulan Ini</h3>
+                <h3 className="text-[14px] font-bold text-[#1A202C]">PM Bulan Ini</h3>
                 <span className="text-[11px] text-[#718096]">
                   {new Date().toLocaleDateString("id-ID", { month: "long", year: "numeric" })}
                 </span>
               </div>
               <div className="mb-3">
-                <div className="flex justify-between text-[12px] text-[#718096] mb-1">
+                <div className="flex justify-between text-[12px] text-[#718096] mb-2">
                   <span>Progress</span>
-                  <span className="font-semibold text-[#1A202C]">— %</span>
+                  <span className="font-bold text-[#1A202C]">— %</span>
                 </div>
-                <div className="h-2 bg-[#F7F8FA] rounded-full overflow-hidden border border-[#E2E8F0]">
-                  <div className="h-full bg-[#2B6CB0] rounded-full" style={{ width: "0%" }} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <div className="flex justify-between text-[12px]">
-                  <span className="flex items-center gap-1.5 text-[#718096]">
-                    <span className="w-2 h-2 rounded-full bg-[#059669]" />Selesai
-                  </span>
-                  <span className="font-semibold text-[#1A202C]">—</span>
-                </div>
-                <div className="flex justify-between text-[12px]">
-                  <span className="flex items-center gap-1.5 text-[#718096]">
-                    <span className="w-2 h-2 rounded-full bg-[#2B6CB0]" />Terjadwal
-                  </span>
-                  <span className="font-semibold text-[#1A202C]">—</span>
-                </div>
-                <div className="flex justify-between text-[12px]">
-                  <span className="flex items-center gap-1.5 text-[#718096]">
-                    <span className="w-2 h-2 rounded-full bg-[#DC2626]" />Overdue
-                  </span>
-                  <span className="font-semibold text-[#1A202C]">—</span>
+                <div className="h-2.5 bg-[#F7F8FA] rounded-full overflow-hidden">
+                  <div className="h-full bg-gradient-to-r from-[#2B6CB0] to-[#63B3ED] rounded-full" style={{ width: "0%" }} />
                 </div>
               </div>
-              
+              <div className="space-y-2">
+                {["Selesai","Terjadwal","Overdue"].map((lbl, i) => (
+                  <div key={lbl} className="flex justify-between text-[12px]">
+                    <span className="flex items-center gap-1.5 text-[#718096]">
+                      <span className={`w-2 h-2 rounded-full ${["bg-[#059669]","bg-[#2B6CB0]","bg-[#DC2626]"][i]}`} />{lbl}
+                    </span>
+                    <span className="font-semibold text-[#1A202C]">—</span>
+                  </div>
+                ))}
+              </div>
               <div className="mt-4 pt-3 border-t border-[#E2E8F0]">
-                <p className="text-[11px] text-[#718096] italic mb-2">
-                  Data PM Bulanan akan tersedia setelah modul terhubung
-                </p>
-                {hasPerm("pmschedule.menu") && (
-                  <button
-                    onClick={() => go("pm-schedule", "/pm-schedule")}
-                    className="w-full text-center text-[12px] text-[#2B6CB0] font-medium py-1.5 bg-[#EBF4FF] rounded-md opacity-50 cursor-not-allowed"
-                    disabled
-                  >
-                    Lihat Detail →
-                  </button>
-                )}
+                <p className="text-[11px] text-[#718096] italic">Data PM Bulanan akan tersedia setelah modul terhubung</p>
               </div>
             </div>
           )}
 
-          {/* Recent Activity */}
-          <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-[14px] font-semibold text-[#1A202C]">Recent Activity</h3>
-            </div>
-            <div>
-              {recentActivity.map((item, i) => (
-                <ActivityRow key={i} item={item} />
-              ))}
-            </div>
-            <button className="mt-3 w-full text-center text-[13px] text-[#2B6CB0] font-medium hover:underline flex items-center justify-center gap-1">
-              Lihat Semua Aktivitas <ArrowRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-
           {/* Status Sistem */}
-          <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-4">
-            <h3 className="text-[14px] font-semibold text-[#1A202C] mb-3">Status Sistem</h3>
-            <div className="space-y-2">
+          <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
+            <h3 className="text-[14px] font-bold text-[#1A202C] mb-4">Status Sistem</h3>
+            <div className="space-y-3">
               {[
                 { label: "Koneksi Server", status: true },
                 { label: "Database", status: true },
@@ -718,8 +864,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               ].map((s) => (
                 <div key={s.label} className="flex items-center justify-between text-[13px]">
                   <span className="text-[#718096]">{s.label}</span>
-                  <span className={`flex items-center gap-1.5 font-medium ${s.status ? "text-[#059669]" : "text-[#DC2626]"}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${s.status ? "bg-[#059669]" : "bg-[#DC2626]"}`} />
+                  <span className={`flex items-center gap-1.5 font-semibold text-[12px] ${s.status ? "text-[#059669]" : "text-[#DC2626]"}`}>
+                    <span className="relative flex w-2 h-2">
+                      {s.status && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#059669] opacity-40" />}
+                      <span className={`relative inline-flex rounded-full w-2 h-2 ${s.status ? "bg-[#059669]" : "bg-[#DC2626]"}`} />
+                    </span>
                     {s.status ? "Online" : "Offline"}
                   </span>
                 </div>
