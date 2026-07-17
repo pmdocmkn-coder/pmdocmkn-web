@@ -81,8 +81,8 @@ export default function OperationalDocumentImportPage() {
 
         const name      = get(1);
         const type      = get(2);
-        const groupName = get(3);
-        const referenceNumber = get(4);
+        const referenceNumber = get(3);
+        const groupName = get(4);
         const validFrom = get(5);
         const validUntil= get(6);
 
@@ -139,7 +139,7 @@ export default function OperationalDocumentImportPage() {
     for (const r of validRows) {
       const idx = updated.findIndex(u => u.rowNum === r.rowNum);
       try {
-        await operationalDocumentApi.create({
+        await operationalDocumentApi.upsert({
           name:            r.name,
           type:            r.type,
           groupName:       r.groupName,

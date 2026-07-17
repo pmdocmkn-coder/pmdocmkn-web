@@ -5,13 +5,18 @@ import { saveAs } from "file-saver";
 import {
   FileText, Plus, Search, ExternalLink, Edit2, Trash2,
   CheckCircle, Clock, AlertTriangle, ChevronDown, Filter, X,
-  Calendar, ChevronRight, TrendingUp, RotateCw, CalendarX,
+  Calendar, ChevronRight, TrendingUp, RotateCw, CalendarX, Loader2,
   MoreHorizontal, Download, Upload, FileSpreadsheet, Info, Bell, Eye
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import BottomSheet from "../common/BottomSheet";
+import { PageWrapper } from "../common/PageWrapper";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "../ui/command";
+import { Check } from "lucide-react";
+import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { useToast } from "../../hooks/use-toast";
@@ -84,6 +89,84 @@ const defaultForm = (): CreateOperationalDocumentDto => ({
   picName: "", picTelegramId: "", fileLink: "",
 });
 
+// ── Combobox Filter Helper ───────────────────────────────────────────────────
+function ComboboxFilter({
+  value,
+  onChange,
+  options,
+  placeholder,
+  emptyText = "Tidak ditemukan.",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  emptyText?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedLabel = value === "all" || !value 
+    ? `Semua ${placeholder.split(' ')[0]}` 
+    : options.find((opt) => opt.value === value)?.label || value;
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          role="combobox"
+          aria-expanded={open}
+          className="flex items-center justify-between w-full h-10 px-3 text-[13px] font-medium text-[#4A5568] bg-transparent hover:bg-[#F7F8FA] rounded-[6px] transition-colors"
+        >
+          <span className="truncate">{selectedLabel}</span>
+          <ChevronDown className="w-4 h-4 ml-2 opacity-50 shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[200px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={`Cari ${placeholder.toLowerCase()}...`} className="h-9" />
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="all"
+                onSelect={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+              >
+                Semua {placeholder.split(' ')[0]}
+                <Check
+                  className={cn(
+                    "ml-auto h-4 w-4",
+                    !value || value === "all" ? "opacity-100" : "opacity-0"
+                  )}
+                />
+              </CommandItem>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.value}
+                  value={opt.label} // shadcn command uses the text content to search, but we can just use label
+                  onSelect={() => {
+                    onChange(opt.value);
+                    setOpen(false);
+                  }}
+                >
+                  {opt.label}
+                  <Check
+                    className={cn(
+                      "ml-auto h-4 w-4",
+                      value === opt.value ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function OperationalDocumentPage() {
   const { toast } = useToast();
@@ -136,6 +219,8 @@ export default function OperationalDocumentPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<OperationalDocumentDto | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isSendingNotif, setIsSendingNotif] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
 
   const canCreate = hasPermission("operationaldocument.create");
   const canUpdate = hasPermission("operationaldocument.update");
@@ -203,6 +288,17 @@ export default function OperationalDocumentPage() {
   useEffect(() => {
     loadData();
   }, [loadData]);
+
+  // Debounce search input
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      if (search !== searchInput) {
+        setSearch(searchInput);
+        setPage(1);
+      }
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchInput, search]);
 
   // ── Actions ──
   const openCreate = () => { setEditId(null); setForm(defaultForm()); setValidFromDate(undefined); setValidUntilDate(undefined); setFormOpen(true); };
@@ -361,6 +457,7 @@ export default function OperationalDocumentPage() {
   // ── Excel Export ──────────────────────────────────────────────────────────────
   const handleExport = async () => {
     try {
+      setIsExporting(true);
       toast({ title: "Mempersiapkan export...", description: "Mengambil semua data dokumen" });
 
       // Fetch all records (no pagination)
@@ -462,13 +559,17 @@ export default function OperationalDocumentPage() {
       toast({ title: "Export berhasil", description: `${allItems.length} dokumen diekspor ke Excel` });
     } catch (e: any) {
       toast({ title: "Gagal export", description: e.message, variant: "destructive" });
+    } finally {
+      setIsExporting(false);
     }
   };
 
   // ── Excel Template Download ───────────────────────────────────────────────────
   const handleDownloadTemplate = async () => {
-    const wb = new ExcelJS.Workbook();
-    const ws = wb.addWorksheet("Template Import");
+    try {
+      setIsDownloadingTemplate(true);
+      const wb = new ExcelJS.Workbook();
+      const ws = wb.addWorksheet("Template Import");
 
     ws.columns = [
       { header: "Nama Dokumen *",      key: "name",            width: 35 },
@@ -513,11 +614,14 @@ export default function OperationalDocumentPage() {
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
     saveAs(blob, "Template_Import_Monitoring_Dokumen.xlsx");
+    } finally {
+      setIsDownloadingTemplate(false);
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="p-4 sm:p-6 space-y-5 max-w-[1400px] mx-auto min-h-[calc(100vh-64px)] bg-[#F7F8FA] md:bg-white md:rounded-[16px] md:shadow-sm md:m-4 md:p-8 md:border md:border-[#E2E8F0]">
+    <PageWrapper>
 
       {/* ── Mobile Header ── */}
       <div className="md:hidden">
@@ -543,19 +647,21 @@ export default function OperationalDocumentPage() {
           {/* Export & Template Buttons */}
           <button
             onClick={handleExport}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-[8px] border border-[#E2E8F0] bg-white text-[13px] font-semibold text-[#4A5568] hover:bg-[#F7F8FA] transition-colors"
+            disabled={isExporting}
+            className={`flex items-center gap-1.5 px-3 py-2 rounded-[8px] border border-[#E2E8F0] bg-white text-[13px] font-semibold text-[#4A5568] transition-colors ${isExporting ? "opacity-60 cursor-not-allowed" : "hover:bg-[#F7F8FA]"}`}
             title="Export ke Excel"
           >
-            <Download className="w-3.5 h-3.5 text-[#059669]" /> Export
+            {isExporting ? <Loader2 className="w-3.5 h-3.5 text-[#059669] animate-spin" /> : <Download className="w-3.5 h-3.5 text-[#059669]" />} Export
           </button>
           {canCreate && (
             <>
               <button
                 onClick={handleDownloadTemplate}
-                className="flex items-center gap-1.5 px-3 py-2 rounded-[8px] border border-[#E2E8F0] bg-white text-[13px] font-semibold text-[#4A5568] hover:bg-[#F7F8FA] transition-colors"
+                disabled={isDownloadingTemplate}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[8px] border border-[#E2E8F0] bg-white text-[13px] font-semibold text-[#4A5568] transition-colors ${isDownloadingTemplate ? "opacity-60 cursor-not-allowed" : "hover:bg-[#F7F8FA]"}`}
                 title="Download Template Import"
               >
-                <FileSpreadsheet className="w-3.5 h-3.5 text-[#2B6CB0]" /> Template
+                {isDownloadingTemplate ? <Loader2 className="w-3.5 h-3.5 text-[#2B6CB0] animate-spin" /> : <FileSpreadsheet className="w-3.5 h-3.5 text-[#2B6CB0]" />} Template
               </button>
               <button
                 onClick={() => navigate("/operational-documents/import")}
@@ -665,11 +771,10 @@ export default function OperationalDocumentPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
           <input
             className="w-full pl-9 pr-3 h-10 border-none bg-transparent text-[13px] text-[#1A202C] focus:outline-none placeholder-[#A0AEC0]"
-            placeholder="Cari berdasarkan nama dokumen..."
+            placeholder="Cari..."
             value={searchInput}
             onChange={(e) => {
               setSearchInput(e.target.value);
-              // Auto search on desktop when typing could be nice, or just rely on enter
             }}
             onKeyDown={(e) => e.key === "Enter" && applySearch()}
           />
@@ -677,42 +782,33 @@ export default function OperationalDocumentPage() {
         <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
         <div className="min-w-[160px]">
-          <Select value={filterType || "all"} onValueChange={(v) => { setFilterType(v === "all" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-10 border-none bg-transparent hover:bg-[#F7F8FA] shadow-none focus:ring-0 px-3 text-[13px] font-medium text-[#4A5568]">
-              <SelectValue placeholder="Tipe Dokumen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Tipe</SelectItem>
-              {typeOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <ComboboxFilter
+            value={filterType}
+            onChange={(v) => { setFilterType(v); setPage(1); }}
+            options={typeOptions}
+            placeholder="Tipe Dokumen"
+          />
         </div>
 
         <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
         <div className="min-w-[160px]">
-          <Select value={filterStatus || "all"} onValueChange={(v) => { setFilterStatus(v === "all" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-10 border-none bg-transparent hover:bg-[#F7F8FA] shadow-none focus:ring-0 px-3 text-[13px] font-medium text-[#4A5568]">
-              <SelectValue placeholder="Status Berakhir" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Status</SelectItem>
-              {statusOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <ComboboxFilter
+            value={filterStatus}
+            onChange={(v) => { setFilterStatus(v); setPage(1); }}
+            options={statusOptions}
+            placeholder="Status Berakhir"
+          />
         </div>
         <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
         <div className="min-w-[160px]">
-          <Select value={filterGroup || "all"} onValueChange={(v) => { setFilterGroup(v === "all" ? "" : v); setPage(1); }}>
-            <SelectTrigger className="h-10 border-none bg-transparent hover:bg-[#F7F8FA] shadow-none focus:ring-0 px-3 text-[13px] font-medium text-[#4A5568]">
-              <SelectValue placeholder="Grup Dokumen" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Semua Grup</SelectItem>
-              {groupOptions.map(opt => <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
+          <ComboboxFilter
+            value={filterGroup}
+            onChange={(v) => { setFilterGroup(v); setPage(1); }}
+            options={groupOptions}
+            placeholder="Grup Dokumen"
+          />
         </div>
         <button onClick={() => { applySearch(); }} className="ml-2 h-9 px-4 bg-[#F7F8FA] hover:bg-[#E2E8F0] text-[#4A5568] text-[13px] font-semibold rounded-[8px] transition-colors border border-[#E2E8F0]">
           Search
@@ -979,8 +1075,9 @@ export default function OperationalDocumentPage() {
           </button>
         )}
         <button onClick={handleExport}
-          className="flex items-center gap-2 bg-[#059669] hover:bg-[#047857] text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95">
-          <Download className="w-4 h-4" /> Export
+          disabled={isExporting}
+          className={`flex items-center gap-2 text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95 ${isExporting ? 'bg-[#059669]/60 cursor-not-allowed' : 'bg-[#059669] hover:bg-[#047857]'}`}>
+          {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Export
         </button>
         {canCreate && (
           <button onClick={openCreate}
@@ -1017,6 +1114,16 @@ export default function OperationalDocumentPage() {
             className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${filterFollowUp === opt.value ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
             <span>{opt.label}</span>
             {filterFollowUp === opt.value && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+          </button>
+        ))}
+      </BottomSheet>
+
+      <BottomSheet open={groupSheetOpen} onClose={() => setGroupSheetOpen(false)} title="Grup Dokumen">
+        {[{ value: "", label: "Semua Grup" }, ...groupOptions].map(opt => (
+          <button key={opt.value} onClick={() => { setFilterGroup(opt.value); setPage(1); setGroupSheetOpen(false); }}
+            className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${filterGroup === opt.value ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+            <span>{opt.label}</span>
+            {filterGroup === opt.value && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
           </button>
         ))}
       </BottomSheet>
@@ -1235,7 +1342,7 @@ export default function OperationalDocumentPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageWrapper>
   );
 }
 

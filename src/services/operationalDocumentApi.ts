@@ -86,6 +86,9 @@ export const operationalDocumentApi = {
   create: (data: CreateOperationalDocumentDto) =>
     api.post<any>("/api/operational-documents", data),
 
+  upsert: (data: CreateOperationalDocumentDto) =>
+    api.post<any>("/api/operational-documents/upsert", data),
+
   update: (id: number, data: CreateOperationalDocumentDto) =>
     api.put<any>(`/api/operational-documents/${id}`, data),
 
