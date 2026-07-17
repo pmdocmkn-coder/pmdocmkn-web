@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
@@ -42,7 +42,7 @@ const filterPanelVariants: Variants = {
 
 // ─── Severity Badge ───────────────────────────────────────────────────────────
 function SeverityBadge({ severity }: { severity: string }) {
-  const map: Record<string, { cls: string; icon: JSX.Element; label: string }> = {
+  const map: Record<string, { cls: string; icon: React.ReactNode; label: string }> = {
     High: {
       cls: "bg-red-100 text-red-700 border-red-300",
       icon: <ShieldAlert className="w-3 h-3" />,
