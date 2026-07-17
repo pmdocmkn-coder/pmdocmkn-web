@@ -343,7 +343,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                         <div className="h-16 flex items-center justify-center text-gray-300 text-xs italic">Belum TTD</div>
                       )}
                       <p className="text-xs font-medium text-gray-700 mt-1.5 border-t border-gray-100 pt-1.5">
-                        {data.statusLogs.find(l => l.toStatus === "Returned")?.userName || "—"}
+                        {data.returnReceiverName || data.statusLogs.find(l => l.toStatus === "Returned")?.userName || "—"}
                       </p>
                       <p className="text-[10px] text-gray-400">Warehouse</p>
                     </div>

@@ -88,13 +88,17 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     conn.on('ReceiveNotification', (notification: NotificationItem) => {
       playNotificationSound();
       setNotifications(prev => {
-        if (prev.some(n => n.id === notification.id)) return prev;
+        // Jika notif dengan id sama sudah ada → update pesannya (bukan tambah baru)
+        if (prev.some(n => n.id === notification.id)) {
+          return prev.map(n => n.id === notification.id ? { ...notification } : n);
+        }
         return [notification, ...prev];
       });
       setUnreadCount(prev => prev + 1);
     });
 
-    conn.on('RefreshData', (_entityName: string) => {
+    conn.on('RefreshData', (entityName: string) => {
+      console.log(`[SignalR] RefreshData received: ${entityName}`);
       // Handled by useLiveRefresh hooks in individual pages
     });
 
@@ -115,6 +119,7 @@ export const SignalRProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     conn.onreconnected((connId) => {
+      // Buat object baru agar React mendeteksi perubahan dan useLiveRefresh re-register listener
       setConnState({ connection: conn, isConnected: true });
       fetchInitialData();
     });

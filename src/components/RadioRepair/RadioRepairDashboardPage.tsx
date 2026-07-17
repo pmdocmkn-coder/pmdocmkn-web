@@ -174,8 +174,8 @@ export default function RadioRepairDashboardPage() {
 
 
 
-  const load = async () => {
-    setLoading(true);
+  const load = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const params: Record<string, unknown> = {
         page,
@@ -198,10 +198,12 @@ export default function RadioRepairDashboardPage() {
       setTotalPages(pg.totalPages || 1);
       setLastUpdated(new Date());
     } catch (err: unknown) {
-      setDash(null);
-      setJobs([]);
-      setTotalCount(0);
-      setTotalPages(1);
+      if (!silent) {
+        setDash(null);
+        setJobs([]);
+        setTotalCount(0);
+        setTotalPages(1);
+      }
       const ax = err as { response?: { status?: number } };
       toast({
         title: ax.response?.status === 403 ? "Akses ditolak" : "Gagal memuat data",
@@ -209,7 +211,7 @@ export default function RadioRepairDashboardPage() {
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -275,11 +277,11 @@ export default function RadioRepairDashboardPage() {
   };
 
   useLiveRefresh("RadioRepairJob", () => {
-    load();
+    load(true);
   });
 
   useLiveRefresh("RadioHandover", () => {
-    load();
+    load(true);
   });
 
   const openEdit = async (job: RadioRepairJobList) => {

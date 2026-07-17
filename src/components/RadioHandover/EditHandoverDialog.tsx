@@ -25,14 +25,17 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   const { toast } = useToast();
   const { user } = useAuth();
   const isWorkshopTech = user?.roleName === "Teknisi WKS";
+  const isWarehouse = user?.roleName?.toLowerCase() === "warehouse";
   const isTechToWh = detail.handoverType === "TechnicianToWarehouse";
   const isWhToHd = detail.handoverType === "WarehouseToHelpdesk";
 
   // Teknisi WSK tidak boleh ubah field inti (tiket, SN, tag type, penerima)
   // tapi boleh edit data perbaikan (green/yellow tag fields) dan foto
-  const lockCoreFields = isWorkshopTech;      // tag type: teknisi tidak bisa ganti
-  const lockTicketSerial = isTechToWh;        // tiket & SN selalu readonly untuk Tek→WH
-  const lockReceiverFields = isWorkshopTech;  // penerima: hanya teknisi yang tidak bisa ubah
+  const lockCoreFields = isWorkshopTech || isWhToHd;      // tag type: teknisi dan saat serah ke HD tidak bisa ganti
+  const lockTicketSerial = isTechToWh || isWhToHd;        // tiket & SN selalu readonly untuk Tek→WH dan WH→HD
+  // Hanya Teknisi WKS yang tidak boleh ubah field penerima
+  // Warehouse boleh edit akun penerima
+  const lockReceiverFields = isWorkshopTech;
   // foto: semua role boleh tambah/hapus (lockPhotos dihapus)
 
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
@@ -40,6 +43,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   const [warehouseReceivers, setWarehouseReceivers] = useState<UserOption[]>([]);
   const [helpdeskReceivers, setHelpdeskReceivers] = useState<UserOption[]>([]);
   const [workshopTechnicians, setWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
+  const [allWorkshopTechnicians, setAllWorkshopTechnicians] = useState<WorkshopTechnicianDto[]>([]);
   const [ticket, setTicket] = useState(detail.helpdeskTicketNumber || "");
   const [serial, setSerial] = useState(detail.radioSerialNumber || "");
   const [radioId, setRadioId] = useState<number | null>(detail.radioId ?? null);
@@ -59,9 +63,11 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   });
   const [techId, setTechId] = useState(detail.receivedByUserId?.toString() || "");
   const [workshopTechId, setWorkshopTechId] = useState(
-    // workshopTechnicianId = teknisi PENERIMA (WH side)
-    // JANGAN fallback ke handedOverByWorkshopTechnicianId (itu teknisi PENYERAH)
-    detail.workshopTechnicianId?.toString() || ""
+    // TechnicianToWarehouse → handedOverByWorkshopTechnicianId (penyerah)
+    // HelpdeskToTechnician  → workshopTechnicianId (penerima teknisi)
+    isTechToWh
+      ? detail.handedOverByWorkshopTechnicianId?.toString() || ""
+      : detail.workshopTechnicianId?.toString() || ""
   );
   const [lookup, setLookup] = useState<RadioLookup | null>(detail.radioId ? {
     id: detail.radioId,
@@ -92,16 +98,65 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     if (isTechToWh) {
       radioHandoverApi.getWarehouseReceivers().then((list) => {
         setWarehouseReceivers(list);
+        // Auto-fill techId — bandingkan sebagai Number untuk hindari type mismatch
+        if (detail.receivedByUserId) {
+          const targetId = Number(detail.receivedByUserId);
+          const match = list.find(r => Number(r.userId) === targetId);
+          console.log("[EditHandover] warehouseReceivers loaded:", list.length, "looking for userId:", targetId, "match:", match?.fullName ?? "NOT FOUND");
+          if (match) setTechId(match.userId.toString());
+        }
       }).catch(() => setWarehouseReceivers([]));
     }
     // Untuk handover WH→HD, penerima adalah akun Helpdesk
     if (isWhToHd) {
       radioHandoverApi.getHelpdeskReceivers().then((list) => {
         setHelpdeskReceivers(list);
+        if (detail.receivedByUserId) {
+          const match = list.find(r => r.userId === detail.receivedByUserId);
+          if (match) setTechId(match.userId.toString());
+        }
       }).catch(() => setHelpdeskReceivers([]));
     }
-    workshopTechnicianApi.getAllActive("Teknisi WKS").then((res) => setWorkshopTechnicians(res.data.data)).catch(() => setWorkshopTechnicians([]));
+    workshopTechnicianApi.getAllActive().then((res) => {
+      setAllWorkshopTechnicians(res.data.data);
+      // Auto-fill workshopTechId — sumber berbeda tergantung flow
+      const sourceId = isTechToWh
+        ? detail.handedOverByWorkshopTechnicianId  // Tek→WH: penyerah (semua teknisi)
+        : detail.workshopTechnicianId;              // HD→Tek: penerima teknisi (difilter per akun)
+      if (sourceId) {
+        const match = res.data.data.find((t: WorkshopTechnicianDto) => t.id === sourceId);
+        if (match) setWorkshopTechId(match.id.toString());
+      }
+    }).catch(() => setAllWorkshopTechnicians([]));
   }, [isTechToWh, isWhToHd]);
+
+  // Filter teknisi berdasarkan akun yang terkait:
+  // - HD→Tek: filter berdasarkan akun sistem penerima (techId = userId akun workshop)
+  // - Tek→WH: filter berdasarkan userId dari teknisi penyerah asal (dari handedOverByWorkshopTechnicianId)
+  const filteredWorkshopTechnicians = (() => {
+    if (!isTechToWh && techId) {
+      // HD→Tek: tampilkan teknisi yang terhubung ke akun worskhop penerima
+      return allWorkshopTechnicians.filter(t => t.userId === Number(techId));
+    }
+    if (isTechToWh && detail.handedOverByWorkshopTechnicianId) {
+      // Tek→WH: cari userId dari teknisi penyerah asal, lalu filter semua teknisi dengan userId yang sama
+      const penyerahAsal = allWorkshopTechnicians.find(t => t.id === detail.handedOverByWorkshopTechnicianId);
+      if (penyerahAsal?.userId) {
+        return allWorkshopTechnicians.filter(t => t.userId === penyerahAsal.userId);
+      }
+    }
+    return allWorkshopTechnicians;
+  })();
+
+  // Sync workshopTechnicians dari filtered list
+  useEffect(() => {
+    setWorkshopTechnicians(filteredWorkshopTechnicians);
+    // Reset pilihan jika teknisi yang dipilih tidak ada di filtered list
+    if (workshopTechId && !filteredWorkshopTechnicians.find(t => t.id.toString() === workshopTechId)) {
+      setWorkshopTechId("");
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [techId, allWorkshopTechnicians]);
 
   const validate = (): string[] => {
     const missing: string[] = [];
@@ -110,8 +165,9 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
     if (tagType === "Damaged" && !damage.trim()) missing.push("Keterangan kerusakan");
     if (tagType === "Good" && !greenFields.repairDataDescription?.trim()) missing.push("Data perbaikan (Tag Hijau)");
     if (!techId) missing.push(isWhToHd ? "Akun Helpdesk Penerima" : "Akun Sistem Penerima");
-    // WH→HD tidak memerlukan Teknisi Penerima (field workshopTechnician tidak relevan)
-    if (!isWhToHd && !workshopTechId) missing.push("Teknisi Penerima");
+    // WH→HD tidak memerlukan Teknisi Penyerah
+    // Warehouse yang edit juga tidak wajib isi Teknisi Penyerah (sudah tercatat dari data awal)
+    if (!isWhToHd && !isWarehouse && !workshopTechId) missing.push("Teknisi Penyerah");
     if (photos.length === 0) missing.push("Foto radio");
     return missing;
   };
@@ -144,7 +200,9 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
       physicalCondition: greenFields.physicalCondition?.trim() || undefined,
       displayCondition: greenFields.displayCondition?.trim() || undefined,
       receivedByUserId: Number(techId),
-      workshopTechnicianId: Number(workshopTechId),
+      // Bedakan field tujuan berdasarkan flow
+      workshopTechnicianId: !isTechToWh && workshopTechId ? Number(workshopTechId) : undefined,
+      handedOverByWorkshopTechnicianId: isTechToWh && workshopTechId ? Number(workshopTechId) : undefined,
       radioPhotos: photos,
       receiverSignatureBase64: receiverOk ? tekSig! : undefined,
       accessories,
@@ -289,15 +347,21 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+              {lockReceiverFields && isWarehouse && isTechToWh && detail.receivedByUserId && (
+                <p className="text-xs text-amber-600 mt-1">
+                  ⚠️ Penerima sudah ditentukan oleh helpdesk, tidak dapat diubah.
+                </p>
+              )}            </div>
 
-            {/* Teknisi Penerima — tidak relevan untuk WH→HD */}
+            {/* Teknisi Penyerah — tidak relevan untuk WH→HD */}
             {!isWhToHd && (
             <div className="space-y-1">
-              <label className="text-sm font-medium text-gray-700">Teknisi Penerima *</label>
+              <label className="text-sm font-medium text-gray-700">
+                {isTechToWh ? `Teknisi Penyerah${!isWarehouse ? " *" : ""}` : "Teknisi Penerima *"}
+              </label>
               <Select value={workshopTechId} onValueChange={setWorkshopTechId} disabled={lockReceiverFields}>
                 <SelectTrigger className={`w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${lockReceiverFields ? 'bg-gray-100 cursor-not-allowed opacity-80' : 'bg-white'}`}>
-                  <SelectValue placeholder="Pilih teknisi fisik" />
+                  <SelectValue placeholder={isTechToWh ? "Pilih teknisi penyerah" : "Pilih teknisi penerima"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
                   {workshopTechnicians.map((t) => (
@@ -317,15 +381,23 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
           {/* Accessories */}
           <HandoverAccessoryList items={accessories} onChange={setAccessories} />
 
-          {/* Signature */}
-          {!detail.receiverSignatureBase64 && (
-            <SignaturePadField
-              ref={sigTekRef}
-              label="TTD Penerima (opsional)"
-              value={sigReceiver}
-              onChange={setSigReceiver}
-            />
-          )}
+          {/* Signature — muncul jika warehouse login adalah penerima yang dituju */}
+          {(!detail.receiverSignatureBase64 || isWarehouse) && (() => {
+            // Jika sudah pilih penerima dan bukan akun sendiri → sembunyikan TTD
+            // Biarkan penerima yang dituju TTD dari akunnya nanti
+            const selectedReceiverId = techId ? Number(techId) : null;
+            const myUserId = user?.userId ?? null;
+            const iAmTheReceiver = !selectedReceiverId || selectedReceiverId === myUserId;
+            if (!iAmTheReceiver) return null;
+            return (
+              <SignaturePadField
+                ref={sigTekRef}
+                label={isWarehouse ? "TTD Penerima (Warehouse)" : "TTD Penerima (opsional)"}
+                value={sigReceiver}
+                onChange={setSigReceiver}
+              />
+            );
+          })()}
 
           {/* Remarks */}
           <div className="space-y-2 pb-4">

@@ -147,6 +147,9 @@ export default function WarehouseBorrowHistoryPage() {
 
   }, [selectedReturnerUser, selectedReturnerIsWorkshop, returnedByName]);
 
+  // Pilihan penerima warehouse saat non-warehouse melakukan pengembalian
+  const [selectedReceiverWarehouse, setSelectedReceiverWarehouse] = useState<string>("");
+
   // Signature state
   const [issuerSigned, setIssuerSigned] = useState<string | null>(null);
   const [receiverSigned, setReceiverSigned] = useState<string | null>(null);
@@ -158,8 +161,8 @@ export default function WarehouseBorrowHistoryPage() {
   const [deleteTarget, setDeleteTarget] = useState<WarehouseBorrowList | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  const loadData = () => {
-    setLoading(true);
+  const loadData = (silent = false) => {
+    if (!silent) setLoading(true);
     const params: any = { page: 1, pageSize: 100 };
     if (statusFilter !== "all") params.status = statusFilter;
     if (dateRangeFrom) params.fromDate = dateRangeFrom;
@@ -169,7 +172,7 @@ export default function WarehouseBorrowHistoryPage() {
       .getAll(params)
       .then((r) => setItems(r.data ?? []))
       .catch(() => setItems([]))
-      .finally(() => setLoading(false));
+      .finally(() => { if (!silent) setLoading(false); });
   };
 
   useEffect(() => {
@@ -439,8 +442,8 @@ export default function WarehouseBorrowHistoryPage() {
 
   // Live refresh saat ada perubahan data warehouse borrow dari user lain
   useLiveRefresh("WarehouseBorrow", () => {
-    // Small delay to ensure backend DB transaction is committed before re-fetching
-    setTimeout(() => loadData(), 500);
+    // Silent refresh — tidak tampilkan loading, data langsung berubah di background
+    setTimeout(() => loadData(true), 500);
   });
 
   const openIssue = (item: WarehouseBorrowList) => {
@@ -456,6 +459,7 @@ export default function WarehouseBorrowHistoryPage() {
     setReturnedByName(item.borrowerName || item.borrowedByName);
     setWorkshopTechName("");
     setSelectedReturnerUser(null); // reset pilihan user
+    setSelectedReceiverWarehouse(""); // reset pilihan warehouse penerima
   };
 
   const closeDialog = () => {
@@ -467,6 +471,7 @@ export default function WarehouseBorrowHistoryPage() {
     setReturnReceiverSigned(null);
     setSelectedReturnerUser(null);
     setWorkshopTechName("");
+    setSelectedReceiverWarehouse(""); // reset pilihan warehouse penerima
   };
 
   const handleIssue = async () => {
@@ -505,6 +510,8 @@ export default function WarehouseBorrowHistoryPage() {
         returnReceiverSignatureBase64: returnReceiverSigned ?? undefined,
         // Jika user punya linked teknisi dan ada nama spesifik → pakai nama teknisi, bukan nama akun
         returnedByName: (shouldShowReturnTechPicker && workshopTechName ? workshopTechName : returnedByName.trim()) || undefined,
+        // Nama warehouse penerima yang dipilih manual (jika submit dari akun non-warehouse)
+        returnReceiverName: (!isWarehouse && selectedReceiverWarehouse) ? selectedReceiverWarehouse : undefined,
       });
       toast({ title: "Berhasil", description: "Pengembalian part berhasil dicatat." });
       closeDialog();
@@ -1582,7 +1589,46 @@ export default function WarehouseBorrowHistoryPage() {
                 {/* Return Dual Signature */}
                 <div className="space-y-4">
                   <SignaturePadField label="TTD Penyerah (Peminjam)" required value={returnIssuerSigned} onChange={setReturnIssuerSigned} signerName={returnedByName || activeItem.borrowerName || activeItem.borrowedByName} />
-                  <SignaturePadField label="TTD Penerima (Warehouse)" value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={isWarehouse ? user?.fullName || "Admin Warehouse" : "Admin Warehouse"} />
+                  {isWarehouse ? (
+                    <SignaturePadField label="TTD Penerima (Warehouse)" value={returnReceiverSigned} onChange={setReturnReceiverSigned} signerName={user?.fullName || "Admin Warehouse"} />
+                  ) : (
+                    <div className="space-y-3">
+                      <div className="space-y-1.5">
+                        <label className="text-sm font-semibold text-gray-700">
+                          Penerima Warehouse <span className="text-xs text-gray-400 font-normal">(Opsional)</span>
+                        </label>
+                        <FormMobileSelect
+                          value={selectedReceiverWarehouse}
+                          onChange={(val) => {
+                            setSelectedReceiverWarehouse(val);
+                            setReturnReceiverSigned(null); // reset TTD jika ganti pilihan
+                          }}
+                          options={allUsers
+                            .filter(u => u.roleName?.toLowerCase() === "warehouse")
+                            .map(u => u.name)}
+                          placeholder="— Pilih admin warehouse penerima (opsional) —"
+                          label="Pilih Penerima Warehouse"
+                          color="emerald"
+                        />
+                      </div>
+                      {selectedReceiverWarehouse ? (
+                        <SignaturePadField
+                          label="TTD Penerima (Warehouse)"
+                          value={returnReceiverSigned}
+                          onChange={setReturnReceiverSigned}
+                          signerName={selectedReceiverWarehouse}
+                        />
+                      ) : (
+                        <div className="rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-800">
+                          <p className="font-semibold mb-1">TTD Penerima (Warehouse)</p>
+                          <p className="text-blue-700 text-xs">
+                            Pilih admin warehouse di atas agar TTD penerima bisa diisi sekarang.
+                            Jika tidak dipilih, Admin Warehouse akan menandatangani terpisah dan status berubah ke <span className="font-bold">Menunggu TTD Warehouse</span>.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

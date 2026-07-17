@@ -14,7 +14,15 @@ import { internalLinkApi } from "../services/internalLinkService";
 import { pmScheduleApi } from "../services/pmScheduleService";
 import { kpiApi } from "../services/kpiApi";
 import { operationalDocumentApi } from "../services/operationalDocumentApi";
-import { PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
+import {
+  EvilBarChart,
+  Bar as EvilBar,
+  XAxis as EvilXAxis,
+  YAxis as EvilYAxis,
+  Grid as EvilGrid,
+  Tooltip as EvilTooltip,
+  Legend as EvilLegend,
+} from "@/components/evilcharts/charts/bar-chart";
 
 const MONTHS_FULL = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
 
@@ -138,18 +146,71 @@ const ActivityRow: React.FC<{ item: ActivityItem }> = ({ item }) => {
   );
 };
 
-// ─── Placeholder Donut (for charts not yet connected to API) ──────────────────
+// ─── Skeleton / Loading placeholder ──────────────────────────────────────────
 
-interface PlaceholderChartProps {
-  title: string;
-  subtitle?: string;
-}
+// Pure SVG donut — no Recharts dependency, works with any version
+interface DonutSlice { value: number; color: string; name: string; }
+const SvgDonut: React.FC<{ slices: DonutSlice[]; label: string; sublabel: string }> = ({ slices, label, sublabel }) => {
+  const r = 52, cx = 70, cy = 70, stroke = 14, gap = 2;
+  const circumference = 2 * Math.PI * r;
+  const total = slices.reduce((s, d) => s + d.value, 0) || 1;
+  let offset = 0;
+  const arcs = slices.map(s => {
+    const pct = s.value / total;
+    const dash = Math.max(0, pct * circumference - gap);
+    const arc = { ...s, dash, space: circumference - dash, offset };
+    offset += pct * circumference;
+    return arc;
+  });
+  return (
+    <svg width={140} height={140} viewBox="0 0 140 140">
+      {/* track */}
+      <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth={stroke} />
+      {arcs.map((a, i) => (
+        <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+          stroke={a.color} strokeWidth={stroke}
+          strokeDasharray={`${a.dash} ${a.space}`}
+          strokeDashoffset={-a.offset + circumference / 4}
+          strokeLinecap="round"
+          style={{ transition: 'stroke-dasharray 0.5s ease' }}
+        />
+      ))}
+      <text x={cx} y={cy - 6} textAnchor="middle" fontSize={18} fontWeight={700} fill="#1A202C">{label}</text>
+      <text x={cx} y={cy + 12} textAnchor="middle" fontSize={10} fill="#718096">{sublabel}</text>
+    </svg>
+  );
+};
 
-const PlaceholderChart: React.FC<PlaceholderChartProps> = ({ title, subtitle }) => (
-  <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col items-center justify-center min-h-[200px] gap-2">
-    <div className="w-16 h-16 rounded-full border-4 border-[#E2E8F0] border-t-[#2B6CB0] opacity-30" />
-    <p className="text-[13px] font-semibold text-[#718096]">{title}</p>
-    {subtitle && <p className="text-[11px] text-[#718096]">{subtitle}</p>}
+const ChartSkeleton: React.FC<{ title: string; wide?: boolean }> = ({ title, wide }) => (
+  <div className={`bg-white border border-[#E2E8F0] rounded-[16px] p-5 flex flex-col min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] ${wide ? 'md:col-span-2' : ''}`}>
+    <div className="h-4 w-32 bg-[#E2E8F0] rounded-full animate-pulse mb-4" />
+    <div className="flex-1 flex flex-col justify-end gap-2">
+      <div className="flex items-end gap-2 h-[120px]">
+        {[60, 85, 45, 90, 70, 55].map((h, i) => (
+          <div
+            key={i}
+            className="flex-1 bg-[#E2E8F0] rounded-t-[4px] animate-pulse"
+            style={{ height: `${h}%`, animationDelay: `${i * 80}ms` }}
+          />
+        ))}
+      </div>
+      <div className="flex justify-between">
+        {['', '', '', '', '', ''].map((_, i) => (
+          <div key={i} className="h-2.5 w-6 bg-[#E2E8F0] rounded-full animate-pulse" style={{ animationDelay: `${i * 80}ms` }} />
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+const DonutSkeleton: React.FC = () => (
+  <div className="bg-white border border-[#E2E8F0] rounded-[16px] p-5 flex flex-col items-center justify-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
+    <div className="h-4 w-32 bg-[#E2E8F0] rounded-full animate-pulse mb-6" />
+    <div className="w-[120px] h-[120px] rounded-full border-[14px] border-[#E2E8F0] animate-pulse" />
+    <div className="mt-6 flex gap-4">
+      <div className="h-3 w-20 bg-[#E2E8F0] rounded-full animate-pulse" />
+      <div className="h-3 w-20 bg-[#E2E8F0] rounded-full animate-pulse" />
+    </div>
   </div>
 );
 
@@ -567,34 +628,17 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               <>
                 <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col items-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
                   <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center tracking-wide">Yearly PM Compliance</h3>
-                  <div className="w-full h-[140px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie
-                          data={[
-                            { name: 'Selesai', value: pmDashboard.totalCompleted },
-                            { name: 'Belum Selesai', value: pmDashboard.totalScheduled - pmDashboard.totalCompleted }
-                          ]}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={45}
-                          outerRadius={60}
-                          paddingAngle={2}
-                          dataKey="value"
-                          stroke="none"
-                        >
-                          <Cell key="cell-0" fill="#059669" />
-                          <Cell key="cell-1" fill="#E2E8F0" />
-                        </Pie>
-                        <RechartsTooltip contentStyle={{ fontSize: '12px', borderRadius: '8px' }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                  <div className="w-full h-[140px] flex justify-center items-center">
+                    <SvgDonut
+                      slices={[
+                        { name: 'Selesai', value: pmDashboard.totalCompleted, color: '#059669' },
+                        { name: 'Belum', value: pmDashboard.totalScheduled - pmDashboard.totalCompleted, color: '#E2E8F0' },
+                      ]}
+                      label={`${Math.round(pmDashboard.compliancePercentage)}%`}
+                      sublabel="Selesai / Terjadwal"
+                    />
                   </div>
-                  <div className="text-center -mt-24 pointer-events-none">
-                    <p className="text-[20px] font-bold text-[#1A202C]">{Math.round(pmDashboard.compliancePercentage)}%</p>
-                    <p className="text-[10px] text-[#718096]">Selesai / Terjadwal</p>
-                  </div>
-                  <div className="mt-10 flex items-center justify-center gap-4 w-full">
+                  <div className="mt-2 flex items-center justify-center gap-4 w-full">
                     <div className="flex items-center gap-1.5">
                       <span className="w-2 h-2 rounded-full bg-[#059669]"></span>
                       <span className="text-[11px] text-[#718096]">Selesai ({pmDashboard.totalCompleted})</span>
@@ -607,35 +651,66 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 </div>
 
                 <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col min-h-[220px] md:col-span-2 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
-                  <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4 tracking-wide">Tren PM 6 Bulan</h3>
-                  <div className="w-full h-[140px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={pmDashboard.trend6Months.slice().reverse()} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                        <XAxis dataKey="monthName" axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dy={10} />
-                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dx={-10} />
-                        <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                        <Bar dataKey="completed" name="Selesai" fill="#059669" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                        <Bar dataKey="overdue" name="Overdue" fill="#DC2626" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                  <div className="flex items-center justify-between mb-3">
+                    <h3 className="text-[13px] font-semibold text-[#1A202C] tracking-wide">Tren PM 6 Bulan</h3>
+                    <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-[3px] bg-[#059669]" />
+                        <span className="text-[11px] text-[#718096]">Selesai</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-3 h-3 rounded-[3px] bg-[#EF4444]" />
+                        <span className="text-[11px] text-[#718096]">Overdue</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="w-full flex-1 min-h-[150px]">
+                    <EvilBarChart
+                      config={{
+                        completed: { label: "Selesai", colors: { light: ["#059669"] } },
+                        overdue:   { label: "Overdue", colors: { light: ["#EF4444"] } },
+                      }}
+                      data={pmDashboard.trend6Months.slice().reverse()}
+                      stackType="stacked"
+                      barRadius={4}
+                      animationType="left-to-right"
+                      className="h-full w-full"
+                    >
+                      <EvilGrid stroke="#E2E8F0" />
+                      <EvilXAxis dataKey="monthName" tick={{ fontSize: 11, fill: "#718096" }} />
+                      <EvilYAxis tick={{ fontSize: 11, fill: "#718096" }} width={30} />
+                      <EvilTooltip />
+                      <EvilBar dataKey="completed" />
+                      <EvilBar dataKey="overdue" />
+                    </EvilBarChart>
                   </div>
                 </div>
               </>
             ) : (
               <>
-                <PlaceholderChart
-                  title="PM Compliance"
-                  subtitle="Data sedang dimuat..."
-                />
-                <PlaceholderChart
-                  title="PM Trend (6 Bulan)"
-                  subtitle="Data sedang dimuat..."
-                />
-                <PlaceholderChart
-                  title="Aset Condition"
-                  subtitle="Data belum tersedia"
-                />
+                {/* Donut skeleton — 1 col */}
+                <DonutSkeleton />
+                {/* Bar skeleton — 2 col, sesuai chart aslinya */}
+                <div className="bg-white border border-[#E2E8F0] rounded-[16px] p-5 md:col-span-2 flex flex-col min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)]">
+                  <div className="h-4 w-36 bg-[#E2E8F0] rounded-full animate-pulse mb-3" />
+                  <div className="flex gap-3 mb-4">
+                    <div className="h-3 w-16 bg-[#E2E8F0] rounded-full animate-pulse" />
+                    <div className="h-3 w-16 bg-[#E2E8F0] rounded-full animate-pulse" />
+                  </div>
+                  <div className="flex-1 flex items-end gap-2 pb-6">
+                    {[55, 80, 40, 90, 65, 50].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col justify-end gap-0.5">
+                        <div className="bg-[#DC2626]/20 rounded-t-[3px] animate-pulse" style={{ height: `${h * 0.3}%`, animationDelay: `${i * 60}ms` }} />
+                        <div className="bg-[#059669]/20 rounded-t-[3px] animate-pulse" style={{ height: `${h * 0.7}%`, animationDelay: `${i * 60}ms` }} />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="flex justify-between px-1">
+                    {['Jan','Feb','Mar','Apr','Mei','Jun'].map((m, i) => (
+                      <div key={i} className="h-2.5 w-6 bg-[#E2E8F0] rounded-full animate-pulse" style={{ animationDelay: `${i * 60}ms` }} />
+                    ))}
+                  </div>
+                </div>
               </>
             )}
           </div>
@@ -647,32 +722,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             {kpiDashboard ? (
               <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col items-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
                 <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center tracking-wide">KPI Bulan Ini — Status</h3>
-                <div className="w-full h-[140px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Selesai', value: kpiDashboard.selesai },
-                          { name: 'Pending TTD', value: kpiDashboard.pending },
-                          { name: 'Menunggu Data', value: kpiDashboard.menunggu },
-                        ].filter(d => d.value > 0)}
-                        cx="50%" cy="50%"
-                        innerRadius={45} outerRadius={60}
-                        paddingAngle={2} dataKey="value" stroke="none"
-                      >
-                        <Cell fill="#059669" />
-                        <Cell fill="#F59E0B" />
-                        <Cell fill="#E2E8F0" />
-                      </Pie>
-                      <RechartsTooltip contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="w-full h-[140px] flex justify-center items-center">
+                  <SvgDonut
+                    slices={[
+                      { name: 'Selesai', value: kpiDashboard.selesai, color: '#059669' },
+                      { name: 'Pending', value: kpiDashboard.pending, color: '#F59E0B' },
+                      { name: 'Menunggu', value: kpiDashboard.menunggu, color: '#E2E8F0' },
+                    ].filter(s => s.value > 0)}
+                    label={`${kpiDashboard.pct}%`}
+                    sublabel="Selesai / Total"
+                  />
                 </div>
-                <div className="text-center -mt-24 pointer-events-none">
-                  <p className="text-[20px] font-bold text-[#1A202C]">{kpiDashboard.pct}%</p>
-                  <p className="text-[10px] text-[#718096]">Selesai / Total</p>
-                </div>
-                <div className="mt-10 flex items-center justify-center gap-4 w-full">
+                <div className="mt-2 flex items-center justify-center gap-4 w-full">
                   <div className="flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-[#059669]" />
                     <span className="text-[11px] text-[#718096]">Selesai ({kpiDashboard.selesai})</span>
@@ -690,16 +751,23 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col min-h-[220px] md:col-span-2 shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
                 <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4 tracking-wide">KPI Dokumen per Area</h3>
                 <div className="w-full h-[140px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={kpiDashboard.byArea} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                      <XAxis dataKey="area" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#718096' }} dy={10} />
-                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dx={-10} allowDecimals={false} />
-                      <RechartsTooltip cursor={{ fill: 'transparent' }} contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
-                      <Bar dataKey="total" name="Total" fill="#2B6CB0" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                      <Bar dataKey="selesai" name="Selesai" fill="#059669" radius={[4, 4, 0, 0]} maxBarSize={28} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  <EvilBarChart
+                    config={{
+                      total:   { label: "Total",   colors: { light: ["#2B6CB0"] } },
+                      selesai: { label: "Selesai", colors: { light: ["#059669"] } },
+                    }}
+                    data={kpiDashboard.byArea}
+                    barRadius={4}
+                    animationType="left-to-right"
+                    className="h-full w-full"
+                  >
+                    <EvilGrid stroke="#E2E8F0" />
+                    <EvilXAxis dataKey="area" tick={{ fontSize: 10, fill: '#718096' }} />
+                    <EvilYAxis tick={{ fontSize: 11, fill: '#718096' }} width={30} />
+                    <EvilTooltip />
+                    <EvilBar dataKey="total" />
+                    <EvilBar dataKey="selesai" />
+                  </EvilBarChart>
                 </div>
                 <div className="mt-3 flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
@@ -718,32 +786,18 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             {docSummary ? (
               <div className="bg-white border border-[#E2E8F0]/80 rounded-[16px] p-5 md:p-6 flex flex-col items-center min-h-[220px] shadow-[0_2px_10px_-3px_rgba(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.05)] transition-shadow duration-300">
                 <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center tracking-wide">Masa Berlaku Dokumen</h3>
-                <div className="w-full h-[140px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={[
-                          { name: 'Aman', value: Math.max(0, docSummary.totalDocuments - docSummary.expiringSoon - docSummary.expired) },
-                          { name: 'Segera', value: docSummary.expiringSoon },
-                          { name: 'Expired', value: docSummary.expired },
-                        ].filter(d => d.value > 0)}
-                        cx="50%" cy="50%"
-                        innerRadius={45} outerRadius={60}
-                        paddingAngle={2} dataKey="value" stroke="none"
-                      >
-                        <Cell fill="#059669" />
-                        <Cell fill="#F59E0B" />
-                        <Cell fill="#DC2626" />
-                      </Pie>
-                      <RechartsTooltip contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }} />
-                    </PieChart>
-                  </ResponsiveContainer>
+                <div className="w-full h-[140px] flex justify-center items-center">
+                  <SvgDonut
+                    slices={[
+                      { name: 'Aman', value: Math.max(0, docSummary.totalDocuments - docSummary.expiringSoon - docSummary.expired), color: '#059669' },
+                      { name: 'Segera', value: docSummary.expiringSoon, color: '#F59E0B' },
+                      { name: 'Expired', value: docSummary.expired, color: '#DC2626' },
+                    ].filter(s => s.value > 0)}
+                    label={`${docSummary.totalDocuments}`}
+                    sublabel="Total Dokumen"
+                  />
                 </div>
-                <div className="text-center -mt-24 pointer-events-none">
-                  <p className="text-[20px] font-bold text-[#1A202C]">{docSummary.totalDocuments}</p>
-                  <p className="text-[10px] text-[#718096]">Total Dokumen</p>
-                </div>
-                <div className="mt-10 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 w-full">
+                <div className="mt-2 flex flex-wrap items-center justify-center gap-x-3 gap-y-1 w-full">
                   <div className="flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-[#059669]" />
                     <span className="text-[10px] text-[#718096]">Aman</span>

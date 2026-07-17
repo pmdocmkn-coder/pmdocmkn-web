@@ -32,14 +32,17 @@ export const useLiveRefresh = (entityName: string | null, onRefresh: () => void)
   }, [stableHandler]);
 
   useEffect(() => {
-    if (!connection || !isConnected) return;
+    if (!connection || !isConnected) {
+      console.log(`[LiveRefresh] Skipped — connection: ${!!connection}, isConnected: ${isConnected}, entity: ${entityName}`);
+      return;
+    }
 
     const handler = (receivedEntityName: string) => {
       handleRefreshRef.current(receivedEntityName);
     };
 
     connection.on('RefreshData', handler);
-    console.log(`[LiveRefresh] Registered listener for: ${entityName ?? 'ALL'}`);
+    console.log(`[LiveRefresh] Registered listener for: ${entityName ?? 'ALL'}, connState: ${connection.state}`);
 
     return () => {
       connection.off('RefreshData', handler);
