@@ -1,10 +1,10 @@
 import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { warehousePartApi } from "../../services/warehousePartApi";
 import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
 import { useToast } from "../../hooks/use-toast";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Loader2 } from "lucide-react";
 
 interface WarehousePartFormModalProps {
@@ -74,15 +74,24 @@ export default function WarehousePartFormModal({ isOpen, onClose, onSuccess, ini
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-white p-6 rounded-xl shadow-2xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold text-slate-800">
-            {initialData ? "Ubah Data Tools" : "Tambah Tools Baru"}
-          </DialogTitle>
-        </DialogHeader>
-        
-        <form onSubmit={handleSubmit} className="space-y-4 mt-4">
+    <ResponsiveModal 
+      open={isOpen} 
+      onOpenChange={onClose}
+      title={initialData ? "Ubah Data Tools" : "Tambah Tools Baru"}
+      bottomSheetSize="lg"
+      desktopClassName="max-w-md bg-white p-6 rounded-xl shadow-2xl"
+      footer={
+        <>
+          <Button type="button" variant="outline" onClick={onClose} disabled={loading} className="flex-1 sm:flex-none">
+            Batal
+          </Button>
+          <Button type="submit" disabled={loading} onClick={handleSubmit} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-24 flex-1 sm:flex-none">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Simpan"}
+          </Button>
+        </>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4 mt-2">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-slate-700">Tools Code <span className="text-red-500">*</span></label>
             <Input 
@@ -132,16 +141,7 @@ export default function WarehousePartFormModal({ isOpen, onClose, onSuccess, ini
             />
           </div>
 
-          <DialogFooter className="pt-4 mt-6 border-t border-slate-100">
-            <Button type="button" variant="outline" onClick={onClose} disabled={loading}>
-              Batal
-            </Button>
-            <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white min-w-24">
-              {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : "Simpan"}
-            </Button>
-          </DialogFooter>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

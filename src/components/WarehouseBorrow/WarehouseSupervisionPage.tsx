@@ -7,10 +7,10 @@ import { ClipboardCheck, PackageSearch, AlertTriangle, ArrowRight, User, ArrowLe
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
 import { Button } from "../ui/button";
 import { Textarea } from "../ui/textarea";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 
 export default function WarehouseSupervisionPage() {
   const { toast } = useToast();
@@ -213,11 +213,12 @@ export default function WarehouseSupervisionPage() {
       )}
 
       {/* Review Modal */}
-      <Dialog open={!!activeItem} onOpenChange={(open) => !open && closeReview()}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Review Pengajuan Tools</DialogTitle>
-          </DialogHeader>
+      <ResponsiveModal
+        open={!!activeItem}
+        onOpenChange={(open) => !open && closeReview()}
+        title="Review Pengajuan Tools"
+        bottomSheetSize="xl"
+      >
           
           {activeItem && (
             <div className="space-y-5">
@@ -316,8 +317,7 @@ export default function WarehouseSupervisionPage() {
               </div>
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
     </div>
   );
 }

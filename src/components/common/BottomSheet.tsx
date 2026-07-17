@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { AnimatePresence, motion, PanInfo } from "framer-motion";
+import { AnimatePresence, motion, PanInfo, useDragControls } from "framer-motion";
 import { X } from "lucide-react";
 
 /**
@@ -15,7 +15,7 @@ import { X } from "lucide-react";
 interface BottomSheetProps {
   open: boolean;
   onClose: () => void;
-  title?: string;
+  title?: React.ReactNode;
   children: React.ReactNode;
   /** "md" = 60vh (default), "lg" = 75vh, "xl" = 90vh */
   size?: "md" | "lg" | "xl";
@@ -38,6 +38,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   noDragHandle = false,
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
+  const dragControls = useDragControls();
 
   // Lock body scroll when open
   useEffect(() => {
@@ -75,6 +76,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             key="bs-sheet"
             ref={sheetRef}
             drag="y"
+            dragListener={false}
+            dragControls={dragControls}
             dragConstraints={{ top: 0 }}
             dragElastic={{ top: 0, bottom: 0.3 }}
             onDragEnd={handleDragEnd}
@@ -89,28 +92,35 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
               minHeight: "30vh",
             }}
           >
-            {/* Drag handle */}
-            {!noDragHandle && (
-              <div className="flex justify-center pt-3 pb-1 flex-shrink-0 cursor-grab active:cursor-grabbing">
-                <div
-                  className="rounded-full"
-                  style={{ width: 32, height: 4, backgroundColor: "#CBD5E0" }}
-                />
-              </div>
-            )}
+            {/* Header Area (Draggable) */}
+            <div 
+              onPointerDown={(e) => dragControls.start(e)}
+              className="touch-none flex-shrink-0 cursor-grab active:cursor-grabbing"
+            >
+              {/* Drag handle */}
+              {!noDragHandle && (
+                <div className="flex justify-center pt-3 pb-1">
+                  <div
+                    className="rounded-full"
+                    style={{ width: 32, height: 4, backgroundColor: "#CBD5E0" }}
+                  />
+                </div>
+              )}
 
-            {/* Header */}
-            {title && (
-              <div className="flex items-center justify-between px-5 py-3 border-b border-[#E2E8F0] flex-shrink-0">
-                <h2 className="text-[16px] font-semibold text-[#1A202C]">{title}</h2>
-                <button
-                  onClick={onClose}
-                  className="w-8 h-8 flex items-center justify-center rounded-lg text-[#718096] hover:text-[#1A202C] hover:bg-[#F7F8FA] transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+              {/* Header */}
+              {title && (
+                <div className="flex items-center justify-between px-5 py-3 border-b border-[#E2E8F0]">
+                  <h2 className="text-[16px] font-semibold text-[#1A202C]">{title}</h2>
+                  <button
+                    onPointerDown={(e) => e.stopPropagation()} // Prevent drag when clicking close
+                    onClick={onClose}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg text-[#718096] hover:text-[#1A202C] hover:bg-[#F7F8FA] transition-colors"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-safe py-4">

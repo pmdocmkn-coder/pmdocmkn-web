@@ -6,8 +6,8 @@ import type { WarehousePartCatalogItem } from "../../services/warehousePartApi";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
 import { useToast } from "../../hooks/use-toast";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { motion } from "framer-motion";
 import RadioImportModal from "../Radio/RadioImportModal";
 import WarehousePartFormModal from "./WarehousePartFormModal";
@@ -382,32 +382,33 @@ export default function WarehouseCatalogPage() {
       />
 
       {/* Delete Confirmation Dialog */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Hapus Tools</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus tools ini dari master data?
-            </DialogDescription>
-          </DialogHeader>
-          {deleteTarget && (
-            <div className="bg-red-50 rounded-xl p-4 border border-red-100 text-sm space-y-1 my-2">
-              <p className="font-semibold text-gray-900">{deleteTarget.partName}</p>
-              <p className="text-gray-500 font-mono text-xs">{deleteTarget.partCode}</p>
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+      <ResponsiveModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Hapus Tools"
+        description="Apakah Anda yakin ingin menghapus tools ini dari master data?"
+        bottomSheetSize="md"
+        desktopClassName="max-w-sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 sm:flex-none">Batal</Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white flex-1 sm:flex-none"
               onClick={handleDelete}
               disabled={deleting}
             >
               {deleting ? "Menghapus..." : "Ya, Hapus"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        {deleteTarget && (
+          <div className="bg-red-50 rounded-xl p-4 border border-red-100 text-sm space-y-1 my-2">
+            <p className="font-semibold text-gray-900">{deleteTarget.partName}</p>
+            <p className="text-gray-500 font-mono text-xs">{deleteTarget.partCode}</p>
+          </div>
+        )}
+      </ResponsiveModal>
       <WarehousePartFormModal 
         isOpen={isFormModalOpen}
         onClose={() => setIsFormModalOpen(false)}
