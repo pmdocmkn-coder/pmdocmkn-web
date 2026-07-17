@@ -870,7 +870,7 @@ const SwrYearlyDashboard: React.FC = () => {
                 label={{ value: 'VSWR', angle: -90, position: 'insideLeft' }}
               />
               <RechartsTooltip
-                formatter={(value: number | undefined) => value !== undefined ? [`${value.toFixed(2)}`, "VSWR"] : ["-", "VSWR"]}
+                formatter={(value: any) => value !== undefined ? [`${value.toFixed(2)}`, "VSWR"] : ["-", "VSWR"]}
                 labelFormatter={(label) => `Month: ${label}`}
               />
               <Legend />
@@ -919,7 +919,7 @@ const SwrYearlyDashboard: React.FC = () => {
               <YAxis yAxisId="left" domain={[0, 100]} label={{ value: 'Performance %', angle: -90, position: 'insideLeft' }} />
               <YAxis yAxisId="right" orientation="right" domain={[1.0, 4.0]} label={{ value: 'Avg VSWR', angle: 90, position: 'insideRight' }} />
               <RechartsTooltip
-                formatter={(value: number | undefined, name: string | undefined) => {
+                formatter={(value: any, name: any) => {
                   if (value === undefined) return ['-', name || ''];
                   if (name === 'performance') return [`${value.toFixed(1)}%`, "Performance"];
                   if (name === 'avgVswr') return [`${value.toFixed(2)}`, "Avg VSWR"];
@@ -1756,7 +1756,7 @@ const SwrYearlyDashboard: React.FC = () => {
                           />
                           <RechartsTooltip
                             cursor={{ fill: 'transparent' }}
-                            formatter={(value: number | undefined) => [
+                            formatter={(value: any) => [
                               value !== undefined ? `${value} Channels` : '-',
                               "Total"
                             ]}

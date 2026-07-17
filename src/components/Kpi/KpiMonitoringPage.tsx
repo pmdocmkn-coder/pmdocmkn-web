@@ -18,11 +18,46 @@ import { hasPermission } from "../../utils/permissionUtils";
 import KpiDatesModal from "./KpiDatesModal";
 import KpiFormModal from "./KpiFormModal";
 import { format, parseISO, subMonths } from "date-fns";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip as RechartsTooltip } from 'recharts';
 import {
-    PieChart, Pie, Cell,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    ResponsiveContainer, Tooltip as RechartsTooltip
-} from 'recharts';
+    EvilBarChart,
+    Bar as EvilBar,
+    XAxis as EvilXAxis,
+    YAxis as EvilYAxis,
+    Grid as EvilGrid,
+    Tooltip as EvilTooltip,
+} from "@/components/evilcharts/charts/bar-chart";
+
+// Pure SVG donut
+interface DonutSliceKpi { value: number; color: string; name: string; }
+function SvgDonutKpi({ slices, label, sublabel }: { slices: DonutSliceKpi[]; label: string; sublabel: string }) {
+    const r = 52, cx = 70, cy = 70, stroke = 14, gap = 2;
+    const circumference = 2 * Math.PI * r;
+    const total = slices.reduce((s, d) => s + d.value, 0) || 1;
+    let offset = 0;
+    const arcs = slices.map(s => {
+        const pct = s.value / total;
+        const dash = Math.max(0, pct * circumference - gap);
+        const arc = { ...s, dash, space: circumference - dash, offset };
+        offset += pct * circumference;
+        return arc;
+    });
+    return (
+        <svg width={140} height={140} viewBox="0 0 140 140">
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="#E2E8F0" strokeWidth={stroke} />
+            {arcs.map((a, i) => (
+                <circle key={i} cx={cx} cy={cy} r={r} fill="none"
+                    stroke={a.color} strokeWidth={stroke}
+                    strokeDasharray={`${a.dash} ${a.space}`}
+                    strokeDashoffset={-a.offset + circumference / 4}
+                    strokeLinecap="round"
+                />
+            ))}
+            <text x={cx} y={cy - 6} textAnchor="middle" fontSize={18} fontWeight={700} fill="#1A202C">{label}</text>
+            <text x={cx} y={cy + 12} textAnchor="middle" fontSize={10} fill="#718096">{sublabel}</text>
+        </svg>
+    );
+}
 
 export default function KpiMonitoringPage() {
     const { toast } = useToast();
@@ -569,35 +604,14 @@ export default function KpiMonitoringPage() {
                 {/* Donut Chart — Sebaran Status */}
                 <div className="bg-white border border-[#E2E8F0] rounded-[10px] p-5 flex flex-col items-center min-h-[200px]">
                     <h3 className="text-[13px] font-semibold text-[#1A202C] mb-2 self-start w-full text-center">Sebaran Status Dokumen</h3>
-                    <div className="w-full h-[140px]">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <PieChart>
-                                <Pie
-                                    data={donutData}
-                                    cx="50%"
-                                    cy="50%"
-                                    innerRadius={45}
-                                    outerRadius={60}
-                                    paddingAngle={2}
-                                    dataKey="value"
-                                    stroke="none"
-                                >
-                                    {donutData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <RechartsTooltip
-                                    contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0' }}
-                                    formatter={(value: number | undefined, name: string | undefined) => [`${value ?? 0} dok`, name ?? '']}
-                                />
-                            </PieChart>
-                        </ResponsiveContainer>
+                    <div className="w-full h-[140px] flex justify-center items-center">
+                        <SvgDonutKpi
+                            slices={donutData.map(d => ({ name: d.name, value: d.value, color: d.color }))}
+                            label={`${completionPct}%`}
+                            sublabel="Selesai / Total"
+                        />
                     </div>
-                    <div className="text-center -mt-24 pointer-events-none">
-                        <p className="text-[20px] font-bold text-[#1A202C]">{completionPct}%</p>
-                        <p className="text-[10px] text-[#718096]">Selesai / Total</p>
-                    </div>
-                    <div className="mt-10 flex flex-col gap-1.5 w-full px-2">
+                    <div className="mt-2 flex flex-col gap-1.5 w-full px-2">
                         {[{ label: 'Selesai', color: '#059669' }, { label: 'Pending TTD', color: '#F59E0B' }, { label: 'Menunggu Data', color: '#DC2626' }].map(({ label, color }) => (
                             <div key={label} className="flex items-center gap-1.5">
                                 <span className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: color }} />
@@ -612,21 +626,23 @@ export default function KpiMonitoringPage() {
                     <h3 className="text-[13px] font-semibold text-[#1A202C] mb-4">Dokumen per Area</h3>
                     {barChartData.length > 0 ? (
                         <div className="w-full h-[160px]">
-                            <ResponsiveContainer width="100%" height="100%">
-                                <BarChart data={barChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                                    <XAxis dataKey="area" axisLine={false} tickLine={false} tick={{ fontSize: 10, fill: '#718096' }} dy={10} />
-                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 11, fill: '#718096' }} dx={-10} allowDecimals={false} />
-                                    <RechartsTooltip
-                                        cursor={{ fill: 'rgba(43,108,176,0.05)' }}
-                                        contentStyle={{ fontSize: '12px', borderRadius: '8px', border: '1px solid #E2E8F0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}
-                                        formatter={(value: number | undefined, name: string | undefined) => [`${value ?? 0} dok`, name === 'total' ? 'Total' : 'Selesai']}
-                                        labelFormatter={(label, payload) => payload?.[0]?.payload?.areaFull ?? label}
-                                    />
-                                    <Bar dataKey="total" name="Total" fill="#2B6CB0" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                    <Bar dataKey="selesai" name="Selesai" fill="#059669" radius={[4, 4, 0, 0]} maxBarSize={30} />
-                                </BarChart>
-                            </ResponsiveContainer>
+                            <EvilBarChart
+                                config={{
+                                    total:   { label: "Total",   colors: { light: ["#2B6CB0"] } },
+                                    selesai: { label: "Selesai", colors: { light: ["#059669"] } },
+                                }}
+                                data={barChartData}
+                                barRadius={4}
+                                animationType="left-to-right"
+                                className="h-full w-full"
+                            >
+                                <EvilGrid stroke="#E2E8F0" />
+                                <EvilXAxis dataKey="area" tick={{ fontSize: 10, fill: '#718096' }} />
+                                <EvilYAxis tick={{ fontSize: 11, fill: '#718096' }} width={30} />
+                                <EvilTooltip />
+                                <EvilBar dataKey="total" />
+                                <EvilBar dataKey="selesai" />
+                            </EvilBarChart>
                         </div>
                     ) : (
                         <div className="flex-1 flex items-center justify-center text-[12px] text-[#718096]">

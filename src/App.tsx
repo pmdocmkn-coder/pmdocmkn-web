@@ -97,7 +97,7 @@ function DefaultRoute() {
   );
 }
 
-function ProtectedRoute({ children }: { children: JSX.Element }) {
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
   const location = useLocation();
 
@@ -121,7 +121,7 @@ function PermissionGuard({
 }: {
   permission?: string;
   anyOf?: string[];
-  children: JSX.Element;
+  children: React.ReactNode;
 }) {
   const hasAccess = anyOf?.length
     ? anyOf.some((p) => hasPermission(p))

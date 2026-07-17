@@ -82,6 +82,15 @@ function currentUserId(): number | null {
   }
 }
 
+function currentUserRole(): string {
+  try {
+    const u = JSON.parse(localStorage.getItem("user") || "{}");
+    return (u.roleName ?? u.RoleName ?? "").toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
 function hasPermission(permission: string): boolean {
   const permissions = localStorage.getItem("permissions");
   if (!permissions) return false;
@@ -118,6 +127,16 @@ function HandoverHistoryTable({
   const canWarehouseSign = (h: RadioHandoverList) => {
     // Only the designated receiver can sign
     return h.status === "PendingReceiverSignature" && h.receivedByUserId === myId;
+  };
+  // Warehouse hanya bisa edit serah terima yang ditujukan ke dirinya
+  // (atau jika penerima belum ditentukan)
+  const canWarehouseEdit = (_h: RadioHandoverList) => {
+    const role = currentUserRole();
+    if (role === "helpdesk") return false;
+    
+    // Semua warehouse boleh edit (misal foto salah, dll)
+    // Pembatasan penerima hanya di dalam form edit (field disabled)
+    return true;
   };
 
   const groupedItems = useMemo(() => {
@@ -290,7 +309,7 @@ function HandoverHistoryTable({
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex justify-end gap-1.5 pr-1">
-                            {hasPermission("radio.handover.edit") && onEdit && (
+                            {hasPermission("radio.handover.edit") && onEdit && canWarehouseEdit(h) && (
                               <button
                                 type="button"
                                 className="inline-flex items-center justify-center w-8 h-8 border border-amber-200 rounded-lg text-amber-700 hover:bg-amber-50 transition-colors bg-white shadow-sm"
@@ -393,7 +412,7 @@ function HandoverHistoryTable({
                       </div>
 
                       <div className="flex gap-1.5" onClick={(e) => e.stopPropagation()}>
-                        {hasPermission("radio.handover.edit") && onEdit && (
+                        {hasPermission("radio.handover.edit") && onEdit && canWarehouseEdit(h) && (
                           <button
                             type="button"
                             className="p-1.5 border border-amber-200 rounded text-amber-600 hover:bg-amber-50"
@@ -437,6 +456,8 @@ function HandoverHistoryTable({
 export default function RadioHandoverWarehousePage() {
   const { toast } = useToast();
   const navigate = useNavigate();
+  // Workshop (Teknisi WKS) tidak boleh edit tab "Serah ke Helpdesk"
+  const isWorkshopUser = currentUserRole() === "teknisi wks";
   const [incoming, setIncoming] = useState<RadioHandoverList[]>([]);
   const [outgoing, setOutgoing] = useState<RadioHandoverList[]>([]);
   const [pendingJobs, setPendingJobs] = useState<RadioRepairJobList[]>([]);
@@ -502,21 +523,23 @@ export default function RadioHandoverWarehousePage() {
   );
 
 
-  const load = useCallback(() => {
-    setLoadingIncoming(true);
-    setLoadingOutgoing(true);
+  const load = useCallback((silent = false) => {
+    if (!silent) {
+      setLoadingIncoming(true);
+      setLoadingOutgoing(true);
+    }
 
     radioHandoverApi
       .getAll({ page: 1, pageSize: 50, handoverType: "TechnicianToWarehouse" })
       .then((r) => setIncoming(r.data ?? []))
       .catch(() => setIncoming([]))
-      .finally(() => setLoadingIncoming(false));
+      .finally(() => { if (!silent) setLoadingIncoming(false); });
 
     radioHandoverApi
       .getAll({ page: 1, pageSize: 50, handoverType: "WarehouseToHelpdesk" })
       .then((r) => setOutgoing(r.data ?? []))
       .catch(() => setOutgoing([]))
-      .finally(() => setLoadingOutgoing(false));
+      .finally(() => { if (!silent) setLoadingOutgoing(false); });
 
     radioRepairApi
       .getAll({ page: 1, pageSize: 50, status: "HandedToWarehouse" })
@@ -525,11 +548,11 @@ export default function RadioHandoverWarehousePage() {
   }, []);
 
   useLiveRefresh("RadioHandover", () => {
-    load();
+    load(true);
   });
 
   useLiveRefresh("RadioRepairJob", () => {
-    load();
+    load(true);
   });
 
   useEffect(() => {
@@ -858,7 +881,7 @@ export default function RadioHandoverWarehousePage() {
               onOpenDetail={openDetail}
               onOpenGallery={openGallery}
               onSignRow={setSignRows}
-              onEdit={handleEdit}
+              onEdit={isWorkshopUser ? undefined : handleEdit}
             />
           </TabsContent>
         </Tabs>

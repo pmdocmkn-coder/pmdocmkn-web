@@ -42,6 +42,7 @@ export interface WarehouseBorrowDetail extends WarehouseBorrowList {
   returnCondition?: string | null;
   returnNote?: string | null;
   returnedByName?: string | null;
+  returnReceiverName?: string | null;
   issuerSignatureBase64?: string | null;
   receiverSignatureBase64?: string | null;
   returnIssuerSignatureBase64?: string | null;

@@ -28,10 +28,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   ReferenceLine,
-  PieChart,
-  Pie,
-  Cell,
 } from "recharts";
+import { NecStatusPieChart } from "@/components/evilcharts/NecStatusPieChart";
 import { necSignalApi } from "../../services/necSignalService";
 import type { NecYearlyPivotDto } from "../../types/necSignal";
 
@@ -310,6 +308,7 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
   };
 
   const chartData = prepareChartData();
+
   const COLORS = [
     "#3b82f6",
     "#ef4444",
@@ -517,14 +516,13 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
                     }}
                   >
                     <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} />
-                    <YAxis domain={[-95, -30]} label={{ value: 'RSL (dBm)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }} tick={{ fontSize: 11, fill: '#6b7280' }} />
+                    <XAxis dataKey="month" tick={{ fontSize: 12, fill: '#6b7280' }} axisLine={false} tickLine={false} />
+                    <YAxis domain={[-95, -30]} label={{ value: 'RSL (dBm)', angle: -90, position: 'insideLeft', style: { fontSize: 12, fill: '#6b7280' } }} tick={{ fontSize: 11, fill: '#6b7280' }} axisLine={false} tickLine={false} />
                     <Tooltip
                       content={({ active, payload, label }) => {
                         if (!active || !payload || !payload.length) return null;
                         const validPayload = payload.filter(entry => entry.value !== null && entry.value !== undefined);
                         if (validPayload.length === 0) return null;
-
                         return (
                           <div className="bg-white border-2 border-blue-400 rounded-xl shadow-2xl p-4 max-w-md pointer-events-auto">
                             <div className="flex items-center justify-between mb-3 pb-2 border-b-2 border-blue-100">
@@ -535,34 +533,18 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
                               {validPayload.map((entry, idx) => {
                                 const isHighlighted = highlightedLine === entry.name;
                                 const linkIndex = pivotData.findIndex(l => l.linkName === entry.name);
-                                const actualColor = linkIndex >= 0 ? COLORS[linkIndex % COLORS.length] : entry.color;
+                                const actualColor = linkIndex >= 0 ? COLORS[linkIndex % COLORS.length] : (entry.color as string);
                                 return (
-                                  <div
-                                    key={idx}
-                                    onClick={() => {
-                                      const linkName = entry.name as string;
-                                      setHighlightedLine(linkName);
-                                      setHighlightedLineColor(actualColor);
-                                    }}
-                                    className={`flex items-center justify-between gap-3 text-sm py-1.5 px-2 rounded cursor-pointer transition-all ${
-                                      isHighlighted
-                                        ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105'
-                                        : 'hover:bg-blue-50 border-2 border-transparent'
-                                    }`}
+                                  <div key={idx}
+                                    onClick={() => { setHighlightedLine(entry.name as string); setHighlightedLineColor(actualColor); }}
+                                    className={`flex items-center justify-between gap-3 text-sm py-1.5 px-2 rounded cursor-pointer transition-all ${isHighlighted ? 'bg-blue-100 border-2 border-blue-400 shadow-md scale-105' : 'hover:bg-blue-50 border-2 border-transparent'}`}
                                   >
                                     <div className="flex items-center gap-2 flex-1 min-w-0">
-                                      <div
-                                        className={`w-3 h-3 rounded-full flex-shrink-0 ring-2 ring-white shadow-sm ${isHighlighted ? 'animate-pulse scale-125' : ''}`}
-                                        style={{ backgroundColor: actualColor }}
-                                      />
-                                      <span className={`text-gray-800 truncate font-medium ${isHighlighted ? 'font-bold text-blue-700' : ''}`} title={entry.name as string}>
-                                        {entry.name}
-                                      </span>
+                                      <div className={`w-3 h-3 rounded-full flex-shrink-0 ${isHighlighted ? 'animate-pulse scale-125' : ''}`} style={{ backgroundColor: actualColor }} />
+                                      <span className={`truncate font-medium ${isHighlighted ? 'font-bold text-blue-700' : 'text-gray-800'}`} title={entry.name as string}>{entry.name}</span>
                                     </div>
                                     <div className="flex items-baseline gap-1">
-                                      <span className={`font-mono font-bold ${isHighlighted ? 'text-blue-700 text-base' : 'text-gray-900'}`}>
-                                        {(entry.value as number).toFixed(1)}
-                                      </span>
+                                      <span className={`font-mono font-bold ${isHighlighted ? 'text-blue-700 text-base' : 'text-gray-900'}`}>{(entry.value as number).toFixed(1)}</span>
                                       <span className="text-[10px] font-semibold text-gray-500">dBm</span>
                                     </div>
                                   </div>
@@ -571,12 +553,8 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
                             </div>
                             {validPayload.length > 5 && (
                               <div className="pt-3 mt-3 border-t text-center">
-                                <p className="text-xs text-blue-600 font-semibold">
-                                  ↕️ Scroll untuk lihat semua {validPayload.length} link
-                                </p>
-                                <p className="text-xs text-gray-500 mt-1">
-                                  💡 Klik link untuk highlight di grafik
-                                </p>
+                                <p className="text-xs text-blue-600 font-semibold">↕️ Scroll untuk lihat semua {validPayload.length} link</p>
+                                <p className="text-xs text-gray-500 mt-1">💡 Klik link untuk highlight di grafik</p>
                               </div>
                             )}
                           </div>
@@ -593,22 +571,16 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
                       const isHighlighted = highlightedLine === link.linkName;
                       const shouldHide = highlightedLine && !isHighlighted;
                       const lineColor = COLORS[idx % COLORS.length];
-
                       if (shouldHide) return null;
-
                       const hexToRgb = (hex: string) => {
                         const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
                         return result ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) } : { r: 6, g: 182, b: 212 };
                       };
                       const rgb = hexToRgb(lineColor);
                       const shadowColor = `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.6)`;
-
                       return (
-                        <Line
-                          key={link.linkName}
-                          type="monotone"
-                          dataKey={link.linkName}
-                          stroke={isHighlighted ? 'url(#flowingGradientNec)' : lineColor}
+                        <Line key={link.linkName} type="monotone" dataKey={link.linkName}
+                          stroke={isHighlighted ? `url(#flowingGradientNec)` : lineColor}
                           strokeWidth={isHighlighted ? 7 : 2}
                           dot={{ r: isHighlighted ? 7 : 3, strokeWidth: isHighlighted ? 3 : 2, fill: isHighlighted ? '#ffffff' : lineColor, stroke: lineColor }}
                           activeDot={{ r: isHighlighted ? 9 : 5, fill: '#ffffff', stroke: lineColor, strokeWidth: 3 }}
@@ -716,37 +688,9 @@ const NecRslPivotTable: React.FC<NecRslPivotTableProps> = ({
           <CardHeader><CardTitle>Distribusi Status Link</CardTitle></CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-              {/* Chart */}
-              <div className="flex justify-center">
-                <ResponsiveContainer width="100%" height={280}>
-                  <PieChart>
-                    <Pie
-                      data={generatePieChartData()}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ cx = 0, cy = 0, midAngle = 0, innerRadius = 0, outerRadius = 0, percent = 0 }) => {
-                        const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                        const x = cx + radius * Math.cos(-midAngle * (Math.PI / 180));
-                        const y = cy + radius * Math.sin(-midAngle * (Math.PI / 180));
-                        return percent > 0 ? (
-                          <text x={x} y={y} fill="white" textAnchor="middle" dominantBaseline="central" fontSize="11" fontWeight="bold">
-                            {`${(percent * 100).toFixed(0)}%`}
-                          </text>
-                        ) : null;
-                      }}
-                      outerRadius="95%"
-                      fill="#8884d8"
-                      dataKey="value"
-                      stroke="none"
-                    >
-                      {generatePieChartData().map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.fill} />
-                      ))}
-                    </Pie>
-                    <Tooltip formatter={(value) => [`${value} data points`, "Jumlah"]} />
-                  </PieChart>
-                </ResponsiveContainer>
+              {/* Chart — EvilPieChart reusable */}
+              <div className="flex justify-center h-[280px]">
+                <NecStatusPieChart data={generatePieChartData()} />
               </div>
               {/* Statistics */}
               <div className="space-y-2.5">

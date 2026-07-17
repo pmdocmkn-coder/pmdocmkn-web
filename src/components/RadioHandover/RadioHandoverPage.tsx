@@ -479,8 +479,8 @@ export default function RadioHandoverPage() {
   }, [signRow, outgoing]);
 
 
-  const load = useCallback(() => {
-    setLoadingOutgoing(true);
+  const load = useCallback((silent = false) => {
+    if (!silent) setLoadingOutgoing(true);
 
     radioHandoverApi
       .getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToTechnician" })
@@ -490,11 +490,11 @@ export default function RadioHandoverPage() {
         setPendingCount(pending);
       })
       .catch(() => setOutgoing([]))
-      .finally(() => setLoadingOutgoing(false));
+      .finally(() => { if (!silent) setLoadingOutgoing(false); });
   }, []);
 
   useLiveRefresh("RadioHandover", () => {
-    load();
+    load(true);
   });
 
   useEffect(() => {

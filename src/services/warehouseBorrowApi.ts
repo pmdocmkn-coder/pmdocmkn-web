@@ -34,7 +34,7 @@ export const warehouseBorrowApi = {
   issue: (id: number, body?: { issuerSignatureBase64?: string; receiverSignatureBase64?: string }) =>
     api.patch(`/api/warehouse-part-borrows/${id}/issue`, body ?? {}).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
-  return: (id: number, body?: { returnCondition?: string; returnNote?: string; returnIssuerSignatureBase64?: string; returnReceiverSignatureBase64?: string; returnedByName?: string }) =>
+  return: (id: number, body?: { returnCondition?: string; returnNote?: string; returnIssuerSignatureBase64?: string; returnReceiverSignatureBase64?: string; returnedByName?: string; returnReceiverName?: string }) =>
     api.patch(`/api/warehouse-part-borrows/${id}/return`, body ?? {}).then((r) => unwrapData<WarehouseBorrowDetail>(r)!),
 
   signReturnReceiver: (id: number, body: { returnReceiverSignatureBase64: string; returnCondition?: string; returnNote?: string }) =>
