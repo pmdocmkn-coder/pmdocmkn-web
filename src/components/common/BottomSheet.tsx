@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { AnimatePresence, motion, PanInfo, useDragControls } from "framer-motion";
 import { X } from "lucide-react";
 
@@ -10,6 +11,9 @@ import { X } from "lucide-react";
  * - Border radius: 16px top corners only
  * - Default height: 60% viewport, draggable to 90%
  * - Animation: slide up 300ms ease-out
+ *
+ * NOTE: Rendered via ReactDOM.createPortal ke document.body agar
+ * position:fixed tidak terkurung dalam overflow container di Layout.
  */
 
 interface BottomSheetProps {
@@ -57,7 +61,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
     if (info.offset.y > 80) onClose();
   };
 
-  return (
+  return ReactDOM.createPortal(
     <AnimatePresence>
       {open && (
         <>
@@ -95,7 +99,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             }}
           >
             {/* Header Area (Draggable) */}
-            <div 
+            <div
               onPointerDown={(e) => dragControls.start(e)}
               className="touch-none flex-shrink-0 cursor-grab active:cursor-grabbing"
             >
@@ -114,7 +118,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
                 <div className="flex items-center justify-between px-5 py-3 border-b border-[#E2E8F0]">
                   <h2 className="text-[16px] font-semibold text-[#1A202C]">{title}</h2>
                   <button
-                    onPointerDown={(e) => e.stopPropagation()} // Prevent drag when clicking close
+                    onPointerDown={(e) => e.stopPropagation()}
                     onClick={onClose}
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-[#718096] hover:text-[#1A202C] hover:bg-[#F7F8FA] transition-colors"
                   >
@@ -131,7 +135,8 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
           </motion.div>
         </>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };
 

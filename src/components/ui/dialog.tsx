@@ -21,7 +21,7 @@ const DialogOverlay = React.forwardRef<
   <DialogPrimitive.Overlay
     ref={ref}
     className={cn(
-      "fixed inset-0 z-50 bg-black/80  data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
+      "fixed inset-0 z-50 bg-black/80 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0",
       className
     )}
     {...props}
@@ -38,7 +38,7 @@ const DialogContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Mobile: bottom sheet — proper height respecting browser UI chrome
+        // Mobile: bottom sheet
         "fixed bottom-0 left-0 right-0 z-50 w-full mx-auto bg-background rounded-t-3xl shadow-2xl overflow-hidden",
         "max-h-[82vh] flex flex-col",
         "pb-safe",
@@ -58,17 +58,17 @@ const DialogContent = React.forwardRef<
       )}
       {...props}
     >
-      {/* Mobile handle bar - more prominent */}
+      {/* Mobile handle bar */}
       <div className="sm:hidden flex justify-center pt-2 pb-2 shrink-0">
         <div className="w-12 h-1.5 bg-gray-300 rounded-full" />
       </div>
-      
-      {/* Content wrapper — scrollable, clips at modal boundary */}
+
+      {/* Content wrapper — scrollable */}
       <div className="p-4 sm:p-6 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
         {children}
       </div>
-      
-      {/* Close button — hidden when hideCloseButton is true */}
+
+      {/* Close button */}
       {!hideCloseButton && (
         <DialogPrimitive.Close className="absolute right-4 top-3 sm:top-6 rounded-full p-1.5 opacity-70 ring-offset-background transition-all hover:opacity-100 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none z-50">
           <X className="h-5 w-5 sm:h-4 sm:w-4" />

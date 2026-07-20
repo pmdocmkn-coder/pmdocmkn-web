@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { Plus, Trash2, Camera } from "lucide-react";
 import { compressImageForStorage, IMAGE_PRESETS } from "../../utils/imageCompress";
 import LiveCameraCapture from "./LiveCameraCapture";
@@ -171,13 +172,16 @@ export default function MultiPhotoUpload({
         )}
       </div>
 
-      {/* Live camera modal */}
-      <LiveCameraCapture
-        open={cameraOpen}
-        onClose={() => setCameraOpen(false)}
-        onCapture={onCameraCapture}
-        remaining={remaining}
-      />
+      {/* Live camera modal — portal ke document.body agar tidak terkurung di dalam modal parent */}
+      {createPortal(
+        <LiveCameraCapture
+          open={cameraOpen}
+          onClose={() => setCameraOpen(false)}
+          onCapture={onCameraCapture}
+          remaining={remaining}
+        />,
+        document.body
+      )}
     </>
   );
 }
