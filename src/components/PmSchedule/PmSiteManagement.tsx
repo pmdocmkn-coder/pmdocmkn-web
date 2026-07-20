@@ -6,14 +6,7 @@ import { Plus, Edit, Trash2, Search, Server, GripVertical } from "lucide-react";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Label } from "../ui/label";
 import {
   DndContext,
@@ -327,14 +320,7 @@ export default function PmSiteManagement() {
       </DndContext>
 
       {/* Create Dialog */}
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[#1B3A6B] text-lg font-bold">Tambah PM Site</DialogTitle>
-            <DialogDescription className="text-[#718096]">
-              Tambahkan site/lokasi baru untuk Preventive Maintenance.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} title="Tambah PM Site" description="Tambahkan site/lokasi baru untuk Preventive Maintenance." desktopClassName="sm:max-w-[425px] rounded-[14px]">
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name" className="font-bold text-[#1A202C]">Nama Site *</Label>
@@ -347,28 +333,20 @@ export default function PmSiteManagement() {
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <div className="flex justify-end gap-2 sm:gap-0 sm:justify-between pt-4 mt-4 border-t">
             <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}
-              className="rounded-[10px] h-10 font-semibold text-[#718096] border-[#E2E8F0]">
+              className="rounded-[10px] h-10 text-[#4A5568] border-[#E2E8F0] hover:bg-[#F7F8FA]">
               Batal
             </Button>
             <Button onClick={handleCreate}
               className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-semibold px-6">
               Create Site
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* Edit Dialog */}
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[#1B3A6B] text-lg font-bold">Edit PM Site</DialogTitle>
-            <DialogDescription className="text-[#718096]">
-              Perbarui informasi site PM yang ada.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} title="Edit PM Site" description="Perbarui informasi site PM yang ada." desktopClassName="sm:max-w-[425px] rounded-[14px]">
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="edit-name" className="font-bold text-[#1A202C]">Nama Site *</Label>
@@ -380,18 +358,17 @@ export default function PmSiteManagement() {
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <div className="flex justify-end gap-2 sm:gap-0 sm:justify-between pt-4 mt-4 border-t">
             <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}
-              className="rounded-[10px] h-10 font-semibold text-[#718096] border-[#E2E8F0]">
+              className="rounded-[10px] h-10 text-[#4A5568] border-[#E2E8F0] hover:bg-[#F7F8FA]">
               Batal
             </Button>
             <Button onClick={handleUpdate}
               className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-semibold px-6">
-              Simpan
+              Simpan Perubahan
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
     </div>
   );
 }

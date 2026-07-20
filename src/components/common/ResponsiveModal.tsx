@@ -16,6 +16,7 @@ interface ResponsiveModalProps {
   desktopClassName?: string;
   /** Hide the drag handle on mobile */
   noDragHandle?: boolean;
+  contentClassName?: string;
 }
 
 export function ResponsiveModal({
@@ -28,6 +29,7 @@ export function ResponsiveModal({
   bottomSheetSize = "md",
   desktopClassName = "max-w-md",
   noDragHandle = false,
+  contentClassName = "p-6",
 }: ResponsiveModalProps) {
   const { isMobile } = useResponsive();
 
@@ -39,6 +41,7 @@ export function ResponsiveModal({
         title={title}
         size={bottomSheetSize}
         noDragHandle={noDragHandle}
+        contentClassName={contentClassName}
       >
         {description && <div className="text-[14px] text-[#718096] mb-4">{description}</div>}
         {children}
@@ -49,13 +52,17 @@ export function ResponsiveModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`bg-white rounded-xl ${desktopClassName}`}>
-        <DialogHeader>
-          {title && <DialogTitle className="text-xl font-bold text-[#1A202C]">{title}</DialogTitle>}
-          {description && <DialogDescription className="text-[14px] text-[#718096]">{description}</DialogDescription>}
-        </DialogHeader>
-        {children}
-        {footer && <DialogFooter className="mt-4 pt-4 border-t border-[#E2E8F0]">{footer}</DialogFooter>}
+      <DialogContent className={`bg-white rounded-xl flex flex-col ${desktopClassName}`}>
+        {(title || description) && (
+          <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
+            {title && <DialogTitle className="text-xl font-bold text-[#1A202C]">{title}</DialogTitle>}
+            {description && <DialogDescription className="text-[14px] text-[#718096] mt-1">{description}</DialogDescription>}
+          </DialogHeader>
+        )}
+        <div className={`flex-1 overflow-y-auto min-h-0 ${contentClassName || ""}`}>
+          {children}
+        </div>
+        {footer && <DialogFooter className="px-6 py-4 border-t border-[#E2E8F0] flex-shrink-0">{footer}</DialogFooter>}
       </DialogContent>
     </Dialog>
   );

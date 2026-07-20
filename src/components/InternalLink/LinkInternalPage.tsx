@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
@@ -15,6 +16,7 @@ import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, Command
 import { cn } from "@/lib/utils";
 import { hasPermission } from "../../utils/permissionUtils";
 import { toast } from "@/hooks/use-toast";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -2562,11 +2564,17 @@ const LinkInternalPage: React.FC = () => {
                                             </ResponsiveContainer>
                                         </div>
 
-                                        {/* Detail Modal (Dialog) - Clean & Mobile Responsive */}
-                                        <Dialog open={pinnedTooltip !== null} onOpenChange={(open) => !open && setPinnedTooltip(null)}>
-                                            <DialogContent className="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden">
+                                        {/* Detail Modal (ResponsiveModal) - Clean & Mobile Responsive */}
+                                        <ResponsiveModal 
+                                            open={pinnedTooltip !== null} 
+                                            onOpenChange={(open) => !open && setPinnedTooltip(null)}
+                                            desktopClassName="max-w-2xl max-h-[90vh] p-0 gap-0 overflow-hidden"
+                                            contentClassName="p-0 flex flex-col h-full overflow-hidden"
+                                            noDragHandle
+                                        >
+                                            <div className="flex flex-col h-full w-full max-h-[90vh]">
                                                 {/* Header */}
-                                                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white">
+                                                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-6 py-6 text-white shrink-0">
                                                     <div className="flex items-center justify-between">
                                                         <div>
                                                             <h2 className="text-3xl md:text-4xl font-black mb-2">{pinnedTooltip?.month} {selectedYear}</h2>
@@ -2585,7 +2593,7 @@ const LinkInternalPage: React.FC = () => {
                                                 </div>
 
                                                 {/* Hint */}
-                                                <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100">
+                                                <div className="px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-blue-100 shrink-0">
                                                     <p className="text-sm text-blue-700 flex items-center gap-2 font-semibold">
                                                         <span className="text-lg">💡</span>
                                                         Klik link untuk highlight di grafik
@@ -2655,8 +2663,8 @@ const LinkInternalPage: React.FC = () => {
                                                         })}
                                                     </div>
                                                 </div>
-                                            </DialogContent>
-                                        </Dialog>
+                                            </div>
+                                        </ResponsiveModal>
                                         
                                         {/* Compact Legend with Better Scroll */}
                                         <div className="border rounded-xl bg-white shadow-sm">
@@ -3484,12 +3492,13 @@ const LinkInternalPage: React.FC = () => {
             </Tabs>
 
             {/* MODAL: LINK CREATE/EDIT */}
-            <Dialog open={showLinkModal} onOpenChange={setShowLinkModal}>
-                <DialogContent className="max-w-lg">
-                    <DialogHeader>
-                        <DialogTitle>{linkModalMode === "edit" ? "Edit Link" : "Tambah Link Baru"}</DialogTitle>
-                        <DialogDescription>Isi detail link internal di bawah ini.</DialogDescription>
-                    </DialogHeader>
+            <ResponsiveModal
+                open={showLinkModal}
+                onOpenChange={setShowLinkModal}
+                title={linkModalMode === "edit" ? "Edit Link" : "Tambah Link Baru"}
+                description="Isi detail link internal di bawah ini."
+            >
+                <div className="p-4">
                     {(() => {
                         const uniqueGroups = Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort() as string[];
                         return (
@@ -3604,23 +3613,24 @@ const LinkInternalPage: React.FC = () => {
                                     <input type="checkbox" checked={linkForm.isActive} onChange={(e) => setLinkForm(prev => ({ ...prev, isActive: e.target.checked }))} className="rounded" />
                                     <Label>Active</Label>
                                 </div>
-                                <DialogFooter>
+                                <div className="flex justify-end gap-2 pt-4 border-t">
                                     <Button type="button" variant="outline" onClick={() => setShowLinkModal(false)}>Batal</Button>
                                     <Button type="submit" disabled={loading}>{loading ? "Menyimpan..." : linkModalMode === "edit" ? "Simpan Perubahan" : "Tambah Link"}</Button>
-                                </DialogFooter>
+                                </div>
                             </form>
                         );
                     })()}
-                </DialogContent>
-            </Dialog>
+                </div>
+            </ResponsiveModal>
 
             {/* MODAL: HISTORY CREATE/EDIT */}
-            <Dialog open={showHistoryModal} onOpenChange={setShowHistoryModal}>
-                <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>{historyModalMode === "edit" ? "Edit History" : "Tambah History Baru"}</DialogTitle>
-                        <DialogDescription>Isi detail history recording link internal.</DialogDescription>
-                    </DialogHeader>
+            <ResponsiveModal
+                open={showHistoryModal}
+                onOpenChange={setShowHistoryModal}
+                title={historyModalMode === "edit" ? "Edit History" : "Tambah History Baru"}
+                description="Isi detail history recording link internal."
+            >
+                <div className="p-4">
                     <form onSubmit={handleHistorySubmit} className="space-y-4">
                         <div>
                             <Label>Link *</Label>
@@ -3707,18 +3717,21 @@ const LinkInternalPage: React.FC = () => {
                                 <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleScreenshotUpload} />
                             </div>
                         </div>
-                        <DialogFooter>
+                        <div className="flex justify-end gap-2 pt-4 border-t">
                             <Button type="button" variant="outline" onClick={() => setShowHistoryModal(false)}>Batal</Button>
                             <Button type="submit" disabled={loading}>{loading ? "Menyimpan..." : historyModalMode === "edit" ? "Simpan Perubahan" : "Tambah History"}</Button>
-                        </DialogFooter>
+                        </div>
                     </form>
-                </DialogContent>
-            </Dialog>
+                </div>
+            </ResponsiveModal>
 
             {/* MODAL: DETAIL */}
-            <Dialog open={showDetailModal} onOpenChange={(open) => { setShowDetailModal(open); if (!open) setDetailHistory(null); }}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Detail History</DialogTitle></DialogHeader>
+            <ResponsiveModal
+                open={showDetailModal}
+                onOpenChange={(open) => { setShowDetailModal(open); if (!open) setDetailHistory(null); }}
+                title="Detail History"
+            >
+                <div className="p-4">
                     {detailLoading ? (
                         <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600" /></div>
                     ) : detailHistory ? (() => {
@@ -3789,7 +3802,7 @@ const LinkInternalPage: React.FC = () => {
                                         <div className="mt-2 border rounded-lg overflow-hidden bg-gray-100">
                                             <img src={detailHistory.screenshotBase64} alt="Screenshot"
                                                 className="w-full h-auto cursor-zoom-in hover:opacity-90 transition-opacity"
-                                                onClick={() => window.open(detailHistory.screenshotBase64!, '_blank')} title="Klik untuk zoom" />
+                                                onClick={() => setScreenshotLightbox(detailHistory.screenshotBase64!)} title="Klik untuk zoom" />
                                         </div>
                                         <p className="text-xs text-gray-400 mt-1 text-center">Klik gambar untuk melihat ukuran penuh</p>
                                     </div>
@@ -3797,39 +3810,40 @@ const LinkInternalPage: React.FC = () => {
                             </div>
                         );
                     })() : null}
-                </DialogContent>
-            </Dialog>
+                </div>
+            </ResponsiveModal>
 
             {/* MODAL: GROUP DETAIL (Tahunan) */}
-            <Dialog open={showGroupDetailModal} onOpenChange={(open) => { setShowGroupDetailModal(open); if (!open) { setSelectedGroupLinks([]); setSelectedGroupName(""); } }}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Detail Group: {selectedGroupName}</DialogTitle>
-                        <DialogDescription>Menampilkan daftar link yang tergabung dalam group ini.</DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        {selectedGroupLinks.map(link => {
-                            const linkHistories = allHistories.filter(h => h.internalLinkId === link.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-                            return (
-                                <Card key={link.id} className="border border-gray-200 shadow-sm">
-                                    <CardHeader className="py-3 bg-gray-50 border-b">
-                                        <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2">
-                                                <h4 className="font-semibold text-blue-800">{link.linkName}</h4>
-                                                <span className={`px-2 py-0.5 rounded text-xs font-semibold ${link.directionString === 'TX' ? 'bg-indigo-100 text-indigo-700' : link.directionString === 'RX' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-200 text-gray-700'}`}>
-                                                    {link.directionString !== 'None' ? link.directionString : 'No Dir'}
-                                                </span>
-                                            </div>
-                                            <div className="flex gap-2">
-                                                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">{link.device || 'No Device'}</span>
-                                                <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border font-mono">{link.ipAddress || 'No IP'}</span>
-                                            </div>
+            <ResponsiveModal
+                open={showGroupDetailModal}
+                onOpenChange={(open) => { setShowGroupDetailModal(open); if (!open) { setSelectedGroupLinks([]); setSelectedGroupName(""); } }}
+                title={`Detail Group: ${selectedGroupName}`}
+                description="Menampilkan daftar link yang tergabung dalam group ini."
+            >
+                <div className="p-4 space-y-4">
+                    {selectedGroupLinks.map(link => {
+                        const linkHistories = allHistories.filter(h => h.internalLinkId === link.id).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+                        return (
+                            <Card key={link.id} className="border border-gray-200 shadow-sm">
+                                <CardHeader className="py-3 bg-gray-50 border-b">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="font-semibold text-blue-800">{link.linkName}</h4>
+                                            <span className={`px-2 py-0.5 rounded text-xs font-semibold ${link.directionString === 'TX' ? 'bg-indigo-100 text-indigo-700' : link.directionString === 'RX' ? 'bg-fuchsia-100 text-fuchsia-700' : 'bg-gray-200 text-gray-700'}`}>
+                                                {link.directionString !== 'None' ? link.directionString : 'No Dir'}
+                                            </span>
                                         </div>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        {linkHistories.length === 0 ? (
-                                            <div className="p-4 text-center text-sm text-gray-500">Belum ada history untuk link ini.</div>
-                                        ) : (
+                                        <div className="flex gap-2">
+                                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border">{link.device || 'No Device'}</span>
+                                            <span className="text-xs text-gray-500 bg-white px-2 py-1 rounded border font-mono">{link.ipAddress || 'No IP'}</span>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-0">
+                                    {linkHistories.length === 0 ? (
+                                        <div className="p-4 text-center text-sm text-gray-500">Belum ada history untuk link ini.</div>
+                                    ) : (
+                                        <div className="overflow-x-auto">
                                             <table className="w-full text-sm text-left">
                                                 <thead className="text-xs text-gray-500 bg-gray-50/50 uppercase border-b">
                                                     <tr>
@@ -3867,49 +3881,46 @@ const LinkInternalPage: React.FC = () => {
                                                     )}
                                                 </tbody>
                                             </table>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            );
-                        })}
-                    </div>
-                </DialogContent>
-            </Dialog>
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        );
+                    })}
+                </div>
+            </ResponsiveModal>
 
             {/* MODAL: DELETE CONFIRMATION */}
-            <Dialog open={!!confirmDelete} onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}>
-                <DialogContent className="max-w-sm">
-                    <DialogHeader>
-                        <DialogTitle>Konfirmasi Hapus</DialogTitle>
-                        <DialogDescription>Apakah Anda yakin ingin menghapus {confirmDelete?.type === "link" ? "link" : "history"} ini? Aksi ini tidak bisa dibatalkan.</DialogDescription>
-                    </DialogHeader>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setConfirmDelete(null)}>Batal</Button>
-                        <Button variant="destructive" onClick={() => { if (confirmDelete?.type === "link") handleDeleteLink(confirmDelete.id); else if (confirmDelete?.type === "history") handleDeleteHistory(confirmDelete.id); }}>
-                            {loading ? "Menghapus..." : "Hapus"}
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* MODAL: DELETE CONFIRMATION */}
+            <ResponsiveModal
+                open={!!confirmDelete}
+                onOpenChange={(open) => { if (!open) setConfirmDelete(null); }}
+                title="Konfirmasi Hapus"
+                description={`Apakah Anda yakin ingin menghapus ${confirmDelete?.type === "link" ? "link" : "history"} ini? Aksi ini tidak bisa dibatalkan.`}
+            >
+                <div className="p-4 flex justify-end gap-2 pt-4">
+                    <Button variant="outline" onClick={() => setConfirmDelete(null)}>Batal</Button>
+                    <Button variant="destructive" onClick={() => { if (confirmDelete?.type === "link") handleDeleteLink(confirmDelete.id); else if (confirmDelete?.type === "history") handleDeleteHistory(confirmDelete.id); }}>
+                        {loading ? "Menghapus..." : "Hapus"}
+                    </Button>
+                </div>
+            </ResponsiveModal>
 
             {/* MODAL: PIVOT NOTE */}
-            <Dialog open={isNoteModalOpen} onOpenChange={(open) => { if (!open) { setIsNoteModalOpen(false); setEditingNote(null); } }}>
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>{editingNote ? `${pivotNotes[editingNote.monthKey] ? 'Edit' : 'Add'} Note` : 'Note'}</DialogTitle>
-                        <DialogDescription>
-                            {editingNote && `${editingNote.linkName} — ${editingNote.monthLabel}`}
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4">
-                        <div>
-                            <Label>Catatan</Label>
-                            <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)}
-                                className="w-full border rounded-md px-3 py-2 text-sm min-h-[100px]"
-                                placeholder="Tulis catatan di sini..." />
-                        </div>
+            <ResponsiveModal
+                open={isNoteModalOpen}
+                onOpenChange={(open) => { if (!open) { setIsNoteModalOpen(false); setEditingNote(null); } }}
+                title={editingNote ? `${pivotNotes[editingNote.monthKey] ? 'Edit' : 'Add'} Note` : 'Note'}
+                description={editingNote ? `${editingNote.linkName} — ${editingNote.monthLabel}` : undefined}
+            >
+                <div className="p-4 space-y-4">
+                    <div>
+                        <Label>Catatan</Label>
+                        <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)}
+                            className="w-full border rounded-md px-3 py-2 text-sm min-h-[100px]"
+                            placeholder="Tulis catatan di sini..." />
                     </div>
-                    <DialogFooter>
+                    <div className="flex justify-end gap-2 pt-4">
                         <Button variant="outline" onClick={() => { setIsNoteModalOpen(false); setEditingNote(null); }}>Batal</Button>
                         {editingNote && pivotNotes[editingNote.monthKey] && (
                             <Button variant="destructive" onClick={() => {
@@ -3944,14 +3955,14 @@ const LinkInternalPage: React.FC = () => {
                             setNoteText('');
                             toast({ title: 'Berhasil', description: 'Catatan berhasil disimpan' });
                         }}>Simpan</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </div>
+                </div>
+            </ResponsiveModal>
 
             {/* LIGHTBOX: SCREENSHOT ONLY */}
-            {screenshotLightbox && (
-                <div className="fixed inset-0 z-50 bg-black/80 flex items-center justify-center p-4" onClick={() => setScreenshotLightbox(null)}>
-                    <div className="relative max-w-5xl w-full max-h-[90vh]" onClick={(e) => e.stopPropagation()}>
+            {screenshotLightbox && typeof document !== "undefined" && createPortal(
+                <div className="fixed inset-0 z-[100] bg-black/80 flex items-center justify-center p-4" onClick={() => setScreenshotLightbox(null)}>
+                    <div className="relative max-w-5xl w-full max-h-[90vh] flex items-center justify-center" onClick={(e) => e.stopPropagation()}>
                         <button onClick={() => setScreenshotLightbox(null)} className="absolute -top-3 -right-3 z-10 bg-white rounded-full p-1.5 shadow-lg hover:bg-gray-100 transition-colors">
                             <X className="h-5 w-5 text-gray-700" />
                         </button>
@@ -3960,185 +3971,185 @@ const LinkInternalPage: React.FC = () => {
                                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white" />
                             </div>
                         ) : (
-                            <img src={screenshotLightbox} alt="Screenshot" className="w-full h-auto rounded-lg shadow-2xl" />
+                            <img 
+                                src={screenshotLightbox?.startsWith("data:") ? screenshotLightbox : `data:image/jpeg;base64,${screenshotLightbox}`} 
+                                alt="Screenshot" 
+                                className="w-full max-h-[90vh] object-contain rounded-lg shadow-2xl" 
+                            />
+                        )}
+                    </div>
+                </div>,
+                document.body
+            )}
+            {/* MOBILE FILTER MODAL (Bottom Sheet) */}
+            <ResponsiveModal
+                open={!!activeMobileFilter}
+                onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}
+                title={(() => {
+                    switch (activeMobileFilter) {
+                        case "history-link": return "Pilih Link (History)";
+                        case "pivot-type": return "Pilih Tipe Link";
+                        case "pivot-year": return "Pilih Tahun";
+                        case "chart-year": return "Pilih Tahun Grafik";
+                        case "chart-month": return "Pilih Bulan Grafik";
+                        case "chart-type": return "Pilih Tipe Link";
+                        case "links-group": return "Pilih Group Link";
+                        case "links-type": return "Pilih Tipe Link";
+                        case "links-direction": return "Pilih Direction";
+                        case "links-service": return "Pilih Service";
+                        case "links-status": return "Pilih Status";
+                        default: return "Filter";
+                    }
+                })()}
+            >
+                <div className="p-4 pb-12">
+                    <div className="grid grid-cols-1 gap-2">
+                        {activeMobileFilter === "history-link" && (
+                            <>
+                                <button onClick={() => { setSelectedLinkId(undefined); fetchHistories(1, searchTerm, undefined); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl transition-all border", !selectedLinkId ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                                    Semua Link
+                                </button>
+                                {links.map(l => (
+                                    <button key={l.id} onClick={() => { setSelectedLinkId(l.id); fetchHistories(1, searchTerm, l.id); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl transition-all border", selectedLinkId === l.id ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                                        {l.linkName}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {activeMobileFilter === "pivot-type" && (
+                            <>
+                                <button onClick={() => { setPivotTypeFilter(null); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", !pivotTypeFilter ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Semua Tipe
+                                </button>
+                                {LINK_TYPE_OPTIONS.map(opt => (
+                                    <button key={opt.value} onClick={() => { setPivotTypeFilter(opt.value); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", pivotTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {activeMobileFilter === "pivot-year" && (
+                            availableYears().map(y => (
+                                <button key={y} onClick={() => { setSelectedYear(y); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", selectedYear === y ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Tahun {y}
+                                </button>
+                            ))
+                        )}
+                        {activeMobileFilter === "chart-year" && (
+                            availableYears().map(y => (
+                                <button key={y} onClick={() => { setSelectedYear(y); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", selectedYear === y ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    <span>Tahun {y}</span>
+                                    {selectedYear === y && <Check className="w-5 h-5 shrink-0" />}
+                                </button>
+                            ))
+                        )}
+                        {activeMobileFilter === "chart-month" && (
+                            ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"].map((m, i) => (
+                                <button key={i} onClick={() => { setSelectedMonth(i + 1); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", selectedMonth === i + 1 ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    <span>{m}</span>
+                                    {selectedMonth === i + 1 && <Check className="w-5 h-5 shrink-0" />}
+                                </button>
+                            ))
+                        )}
+                        {activeMobileFilter === "chart-type" && (
+                            <>
+                                <button onClick={() => { setChartTypeFilter(null); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", !chartTypeFilter ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    <span>Semua Tipe</span>
+                                    {!chartTypeFilter && <Check className="w-5 h-5 shrink-0" />}
+                                </button>
+                                {LINK_TYPE_OPTIONS.map(opt => (
+                                    <button key={opt.value} onClick={() => { setChartTypeFilter(opt.value); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", chartTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        <span>{opt.label}</span>
+                                        {chartTypeFilter === opt.value && <Check className="w-5 h-5 shrink-0" />}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {activeMobileFilter === "links-group" && (
+                            <>
+                                <button onClick={() => { setLinkGroupFilter("all"); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", linkGroupFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Semua Group
+                                </button>
+                                {Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort().map(g => (
+                                    <button key={g!} onClick={() => { setLinkGroupFilter(g!); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkGroupFilter === g ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        {g}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {activeMobileFilter === "links-type" && (
+                            <>
+                                <button onClick={() => { setLinkTypeFilter("all"); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", linkTypeFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Semua Tipe
+                                </button>
+                                {LINK_TYPE_OPTIONS.map(opt => (
+                                    <button key={opt.value} onClick={() => { setLinkTypeFilter(opt.value); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {activeMobileFilter === "links-direction" && (
+                            <>
+                                <button onClick={() => { setLinkDirectionFilter("all"); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", linkDirectionFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Semua Direction
+                                </button>
+                                {DIRECTION_OPTIONS.map(opt => (
+                                    <button key={opt.value} onClick={() => { setLinkDirectionFilter(opt.value); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkDirectionFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </>
+                        )}
+                        {activeMobileFilter === "links-service" && (
+                            <>
+                                <button onClick={() => { setLinkServiceFilter("all"); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", linkServiceFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Semua Service
+                                </button>
+                                {SERVICE_TYPE_OPTIONS.map(opt => {
+                                    const val = opt.value === "Internet" ? "0" : opt.value === "AudioCodesVoip" ? "1" : opt.value === "LocalLoop" ? "2" : opt.value === "CCTV" ? "3" : "4";
+                                    return (
+                                        <button key={opt.value} onClick={() => { setLinkServiceFilter(val); setActiveMobileFilter(null); }}
+                                            className={cn("w-full text-left p-4 rounded-xl border", linkServiceFilter === val ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                            {opt.label}
+                                        </button>
+                                    );
+                                })}
+                            </>
+                        )}
+                        {activeMobileFilter === "links-status" && (
+                            <>
+                                <button onClick={() => { setLinkStatusFilter("all"); setActiveMobileFilter(null); }}
+                                    className={cn("w-full text-left p-4 rounded-xl border", linkStatusFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                    Semua Status
+                                </button>
+                                {STATUS_OPTIONS.map(opt => (
+                                    <button key={opt.value} onClick={() => { setLinkStatusFilter(opt.value); setActiveMobileFilter(null); }}
+                                        className={cn("w-full text-left p-4 rounded-xl border", linkStatusFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
+                                        {opt.label}
+                                    </button>
+                                ))}
+                            </>
                         )}
                     </div>
                 </div>
-            )}
-            {/* MOBILE FILTER MODAL (Bottom Sheet) */}
-            <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
-                <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300">
-                    <DialogHeader className="p-4 border-b bg-gray-50/80">
-                        <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
-                        <DialogTitle className="text-lg font-bold flex items-center gap-2">
-                            <Filter className="w-5 h-5 text-blue-600" />
-                            {(() => {
-                                switch (activeMobileFilter) {
-                                    case "history-link": return "Pilih Link (History)";
-                                    case "pivot-type": return "Pilih Tipe Link";
-                                    case "pivot-year": return "Pilih Tahun";
-                                    case "chart-year": return "Pilih Tahun Grafik";
-                                    case "chart-month": return "Pilih Bulan Grafik";
-                                    case "chart-type": return "Pilih Tipe Link";
-                                    case "links-group": return "Pilih Group Link";
-                                    case "links-type": return "Pilih Tipe Link";
-                                    case "links-direction": return "Pilih Direction";
-                                    case "links-service": return "Pilih Service";
-                                    case "links-status": return "Pilih Status";
-                                    default: return "Filter";
-                                }
-                            })()}
-                        </DialogTitle>
-                    </DialogHeader>
-                    <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
-                        <div className="grid grid-cols-1 gap-2">
-                            {activeMobileFilter === "history-link" && (
-                                <>
-                                    <button onClick={() => { setSelectedLinkId(undefined); fetchHistories(1, searchTerm, undefined); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl transition-all border", !selectedLinkId ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
-                                        Semua Link
-                                    </button>
-                                    {links.map(l => (
-                                        <button key={l.id} onClick={() => { setSelectedLinkId(l.id); fetchHistories(1, searchTerm, l.id); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl transition-all border", selectedLinkId === l.id ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
-                                            {l.linkName}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                            {activeMobileFilter === "pivot-type" && (
-                                <>
-                                    <button onClick={() => { setPivotTypeFilter(null); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", !pivotTypeFilter ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Semua Tipe
-                                    </button>
-                                    {LINK_TYPE_OPTIONS.map(opt => (
-                                        <button key={opt.value} onClick={() => { setPivotTypeFilter(opt.value); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl border", pivotTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                            {opt.label}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                            {activeMobileFilter === "pivot-year" && (
-                                availableYears().map(y => (
-                                    <button key={y} onClick={() => { setSelectedYear(y); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", selectedYear === y ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Tahun {y}
-                                    </button>
-                                ))
-                            )}
-                            {activeMobileFilter === "chart-year" && (
-                                availableYears().map(y => (
-                                    <button key={y} onClick={() => { setSelectedYear(y); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", selectedYear === y ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        <span>Tahun {y}</span>
-                                        {selectedYear === y && <Check className="w-5 h-5 shrink-0" />}
-                                    </button>
-                                ))
-                            )}
-                            {activeMobileFilter === "chart-month" && (
-                                ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"].map((m, i) => (
-                                    <button key={i} onClick={() => { setSelectedMonth(i + 1); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", selectedMonth === i + 1 ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        <span>{m}</span>
-                                        {selectedMonth === i + 1 && <Check className="w-5 h-5 shrink-0" />}
-                                    </button>
-                                ))
-                            )}
-                            {activeMobileFilter === "chart-type" && (
-                                <>
-                                    <button onClick={() => { setChartTypeFilter(null); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", !chartTypeFilter ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        <span>Semua Tipe</span>
-                                        {!chartTypeFilter && <Check className="w-5 h-5 shrink-0" />}
-                                    </button>
-                                    {LINK_TYPE_OPTIONS.map(opt => (
-                                        <button key={opt.value} onClick={() => { setChartTypeFilter(opt.value); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl border flex justify-between items-center", chartTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                            <span>{opt.label}</span>
-                                            {chartTypeFilter === opt.value && <Check className="w-5 h-5 shrink-0" />}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                            {activeMobileFilter === "links-group" && (
-                                <>
-                                    <button onClick={() => { setLinkGroupFilter("all"); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", linkGroupFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Semua Group
-                                    </button>
-                                    {Array.from(new Set(links.map(l => l.linkGroup).filter(g => g))).sort().map(g => (
-                                        <button key={g!} onClick={() => { setLinkGroupFilter(g!); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl border", linkGroupFilter === g ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                            {g}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                            {activeMobileFilter === "links-type" && (
-                                <>
-                                    <button onClick={() => { setLinkTypeFilter("all"); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", linkTypeFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Semua Tipe
-                                    </button>
-                                    {LINK_TYPE_OPTIONS.map(opt => (
-                                        <button key={opt.value} onClick={() => { setLinkTypeFilter(opt.value); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl border", linkTypeFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                            {opt.label}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                            {activeMobileFilter === "links-direction" && (
-                                <>
-                                    <button onClick={() => { setLinkDirectionFilter("all"); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", linkDirectionFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Semua Direction
-                                    </button>
-                                    {DIRECTION_OPTIONS.map(opt => (
-                                        <button key={opt.value} onClick={() => { setLinkDirectionFilter(opt.value); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl border", linkDirectionFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                            {opt.label}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                            {activeMobileFilter === "links-service" && (
-                                <>
-                                    <button onClick={() => { setLinkServiceFilter("all"); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", linkServiceFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Semua Service
-                                    </button>
-                                    {SERVICE_TYPE_OPTIONS.map(opt => {
-                                        const val = opt.value === "Internet" ? "0" : opt.value === "AudioCodesVoip" ? "1" : opt.value === "LocalLoop" ? "2" : opt.value === "CCTV" ? "3" : "4";
-                                        return (
-                                            <button key={opt.value} onClick={() => { setLinkServiceFilter(val); setActiveMobileFilter(null); }}
-                                                className={cn("w-full text-left p-4 rounded-xl border", linkServiceFilter === val ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                                {opt.label}
-                                            </button>
-                                        );
-                                    })}
-                                </>
-                            )}
-                            {activeMobileFilter === "links-status" && (
-                                <>
-                                    <button onClick={() => { setLinkStatusFilter("all"); setActiveMobileFilter(null); }}
-                                        className={cn("w-full text-left p-4 rounded-xl border", linkStatusFilter === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                        Semua Status
-                                    </button>
-                                    {STATUS_OPTIONS.map(opt => (
-                                        <button key={opt.value} onClick={() => { setLinkStatusFilter(opt.value); setActiveMobileFilter(null); }}
-                                            className={cn("w-full text-left p-4 rounded-xl border", linkStatusFilter === opt.value ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100")}>
-                                            {opt.label}
-                                        </button>
-                                    ))}
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
+            </ResponsiveModal>
         </div>
     );
 };

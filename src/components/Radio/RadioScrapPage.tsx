@@ -4,13 +4,8 @@ import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1375,7 +1370,7 @@ export default function RadioScrapPage() {
       )}
 
       {/* ── Create / Edit Modal ── */}
-      <Dialog
+      <ResponsiveModal
         open={isCreateOpen || isEditOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -1385,13 +1380,9 @@ export default function RadioScrapPage() {
             setFormError(null);
           }
         }}
+        title={isEditOpen ? "Edit Scrap Radio" : "Tambah Scrap Radio Manual"}
+        desktopClassName="max-w-2xl max-h-[90vh] overflow-y-auto"
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditOpen ? "Edit Scrap Radio" : "Tambah Scrap Radio Manual"}
-            </DialogTitle>
-          </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2 md:col-span-2">
               <label className="text-sm font-medium">Kategori Asal</label>
@@ -1459,14 +1450,13 @@ export default function RadioScrapPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-100">
             <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); resetForm(); setFormError(null); }}>Batal</Button>
             <Button onClick={isEditOpen ? handleUpdate : handleCreate} className="bg-red-600 hover:bg-red-700 text-white">
               {isEditOpen ? "Simpan Perubahan" : "Tambah Data"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* ── Import Modal ── */}
       <RadioImportModal

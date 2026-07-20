@@ -40,6 +40,7 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "@/hooks/use-toast";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { swrSignalApi } from "@/services/api";
 import {
   SwrYearlyPivotDto,
@@ -1953,90 +1954,83 @@ const SwrYearlyDashboard: React.FC = () => {
         }
       `}} />
       {/* MOBILE FILTER MODAL (Bottom Sheet) */}
-      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
-        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300 focus:outline-none">
-          <DialogHeader className="p-4 border-b bg-gray-50/80">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Filter className="w-5 h-5 text-blue-600" />
-              {activeMobileFilter === "year" ? "Pilih Tahun" : "Pilih Site"}
-            </DialogTitle>
-            <DialogDescription>
-              {activeMobileFilter === "year" ? "Pilih tahun untuk melihat data dashboard" : "Pilih site untuk filter data"}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
-            <div className="flex flex-col gap-2">
-              {activeMobileFilter === "year" && availableYears.map((year) => (
+      <ResponsiveModal
+        open={!!activeMobileFilter}
+        onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}
+        title={activeMobileFilter === "year" ? "Pilih Tahun" : "Pilih Site"}
+        description={activeMobileFilter === "year" ? "Pilih tahun untuk melihat data dashboard" : "Pilih site untuk filter data"}
+      >
+        <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
+          <div className="flex flex-col gap-2">
+            {activeMobileFilter === "year" && availableYears.map((year) => (
+              <button
+                key={year}
+                onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
+                className={cn(
+                  "w-full text-left p-4 rounded-xl border transition-all",
+                  selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                )}
+              >
+                <div className="flex items-center gap-3">
+                  <Calendar className="w-5 h-5" />
+                  <span className="text-base">Tahun {year}</span>
+                </div>
+              </button>
+            ))}
+            {activeMobileFilter === "site" && (
+              <>
                 <button
-                  key={year}
-                  onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
+                  onClick={() => { setSelectedSites([]); setActiveMobileFilter(null); fetchData(); }}
                   className={cn(
                     "w-full text-left p-4 rounded-xl border transition-all",
-                    selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                    selectedSites.length === 0 ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <Calendar className="w-5 h-5" />
-                    <span className="text-base">Tahun {year}</span>
-                  </div>
+                  Semua Site
                 </button>
-              ))}
-              {activeMobileFilter === "site" && (
-                <>
-                  <button
-                    onClick={() => { setSelectedSites([]); setActiveMobileFilter(null); fetchData(); }}
-                    className={cn(
-                      "w-full text-left p-4 rounded-xl border transition-all",
-                      selectedSites.length === 0 ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
-                    )}
-                  >
-                    Semua Site
-                  </button>
-                  {sites.map((site) => {
-                    const isSelected = selectedSites.includes(site.id.toString());
-                    return (
-                      <button
-                        key={site.id}
-                        onClick={() => {
-                          handleToggleSite(site.id.toString());
-                        }}
-                        className={cn(
-                          "w-full text-left p-4 rounded-xl border transition-all",
-                          isSelected ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
-                        )}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="font-medium">{site.name}</div>
-                            <div className="text-xs opacity-70">{site.type}{site.location ? ` • ${site.location}` : ''}</div>
-                          </div>
-                          <div className={cn(
-                            "w-5 h-5 border-2 rounded flex items-center justify-center",
-                            isSelected ? "bg-blue-500 border-blue-500" : "border-gray-300"
-                          )}>
-                            {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
-                          </div>
+                {sites.map((site) => {
+                  const isSelected = selectedSites.includes(site.id.toString());
+                  return (
+                    <button
+                      key={site.id}
+                      onClick={() => {
+                        handleToggleSite(site.id.toString());
+                      }}
+                      className={cn(
+                        "w-full text-left p-4 rounded-xl border transition-all",
+                        isSelected ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700"
+                      )}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <div className="font-medium">{site.name}</div>
+                          <div className="text-xs opacity-70">{site.type}{site.location ? ` • ${site.location}` : ''}</div>
                         </div>
-                      </button>
-                    );
-                  })}
-                  {selectedSites.length > 0 && (
-                    <div className="flex gap-2 mt-2 sticky bottom-0 bg-white py-2">
-                      <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedSites([])}>
-                        Clear
-                      </Button>
-                      <Button size="sm" className="flex-1" onClick={() => { setActiveMobileFilter(null); fetchData(); }}>
-                        Terapkan ({selectedSites.length})
-                      </Button>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
+                        <div className={cn(
+                          "w-5 h-5 border-2 rounded flex items-center justify-center",
+                          isSelected ? "bg-blue-500 border-blue-500" : "border-gray-300"
+                        )}>
+                          {isSelected && <CheckCircle className="w-4 h-4 text-white" />}
+                        </div>
+                      </div>
+                    </button>
+                  );
+                })}
+                {selectedSites.length > 0 && (
+                  <div className="flex gap-2 mt-2 sticky bottom-0 bg-white py-2">
+                    <Button variant="outline" size="sm" className="flex-1" onClick={() => setSelectedSites([])}>
+                      Clear
+                    </Button>
+                    <Button size="sm" className="flex-1" onClick={() => { setActiveMobileFilter(null); fetchData(); }}>
+                      Terapkan ({selectedSites.length})
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
           </div>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </ResponsiveModal>
     </div>
   );
 };

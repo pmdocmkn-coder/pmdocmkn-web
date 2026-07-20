@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Loader2 } from "lucide-react";
@@ -25,11 +25,11 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
   };
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Persetujuan Radio Scrap</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal 
+      open={open} 
+      onOpenChange={(o) => { if (!o) onClose(); }}
+      title="Persetujuan Radio Scrap"
+    >
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Tanggal Scrap <span className="text-red-500">*</span></label>
@@ -56,15 +56,14 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
               onChange={(e) => setRemarks(e.target.value)}
             />
           </div>
-          <DialogFooter>
+          <div className="flex gap-2 justify-end pt-4 border-t">
             <Button variant="outline" type="button" onClick={onClose} disabled={loading}>Batal</Button>
             <Button type="submit" disabled={!dateScrapped || loading} className="bg-orange-600 hover:bg-orange-700">
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               Setujui Scrap
             </Button>
-          </DialogFooter>
+          </div>
         </form>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

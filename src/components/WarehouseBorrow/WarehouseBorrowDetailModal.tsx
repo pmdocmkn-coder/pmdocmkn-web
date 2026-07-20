@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import { Loader2, Package, Calendar, User, FileText, CheckCircle2, RotateCcw, PenTool } from "lucide-react";
 import { warehouseBorrowApi } from "../../services/warehouseBorrowApi";
@@ -81,23 +81,27 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl bg-white p-0 rounded-xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
-        <DialogHeader className="p-6 pb-4 border-b border-gray-100 bg-gray-50/50">
-          <DialogTitle className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            Detail Peminjaman
-            {data && (
-              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getStatusColor(data.status)}`}>
-                {getStatusLabel(data.status)}
-              </span>
-            )}
-          </DialogTitle>
-          <DialogDescription>
-            {data?.borrowNumber || "Memuat..."}
-          </DialogDescription>
-        </DialogHeader>
-        
-        <div className="flex-1 overflow-y-auto p-6">
+    <ResponsiveModal
+      open={isOpen}
+      onOpenChange={(open) => !open && onClose()}
+      bottomSheetSize="xl"
+      desktopClassName="max-w-2xl bg-white p-0 overflow-hidden flex flex-col max-h-[90vh]"
+      title={
+        <div className="flex items-center gap-2">
+          Detail Peminjaman
+          {data && (
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${getStatusColor(data.status)}`}>
+              {getStatusLabel(data.status)}
+            </span>
+          )}
+        </div>
+      }
+      description={data?.borrowNumber || "Memuat..."}
+      footer={
+        <Button variant="outline" onClick={onClose} className="min-w-24 w-full sm:w-auto">Tutup</Button>
+      }
+    >
+      <div className="flex-1 overflow-y-auto px-6 py-4">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
               <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
@@ -385,12 +389,7 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
               </div>
             </div>
           )}
-        </div>
-        
-        <div className="p-4 border-t border-gray-100 bg-gray-50 flex justify-end">
-          <Button variant="outline" onClick={onClose} className="min-w-24">Tutup</Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+      </div>
+    </ResponsiveModal>
   );
 }

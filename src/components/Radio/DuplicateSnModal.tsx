@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { radioApi, DuplicateSnDto } from "../../services/radioApi";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { useToast } from "../../hooks/use-toast";
@@ -43,14 +43,13 @@ export function DuplicateSnModal({ isOpen, onClose }: DuplicateSnModalProps) {
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-500" />
-            Daftar Duplikat Serial Number (Lintas Kategori)
-          </DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal 
+      open={isOpen} 
+      onOpenChange={onClose}
+      title="Daftar Duplikat Serial Number"
+      desktopClassName="max-w-4xl max-h-[85vh] overflow-y-auto"
+      bottomSheetSize="xl"
+    >
 
         <div className="mt-4 space-y-4">
           <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
@@ -116,7 +115,6 @@ export function DuplicateSnModal({ isOpen, onClose }: DuplicateSnModalProps) {
             </div>
           )}
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

@@ -1,6 +1,15 @@
 import { api } from "./api";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
+export interface BhpPaymentChecklistItemDto {
+  id: number;
+  year: number;
+  isPaid: boolean;
+  invoiceNumber?: string;
+  paidAt?: string;
+  paidByUserName?: string;
+}
+
 export interface OperationalDocumentDto {
   id: number;
   name: string;
@@ -18,6 +27,9 @@ export interface OperationalDocumentDto {
   updatedAt?: string;
   daysRemaining: number;
   expiryStatus: "Aman" | "Warning" | "Expired";
+  bhpChecklist?: BhpPaymentChecklistItemDto[];
+  bhpPaidCount?: number;
+  bhpTotalCount?: number;
 }
 
 export interface OperationalDocumentSummaryDto {
@@ -109,6 +121,15 @@ export const operationalDocumentApi = {
 
   getGroups: () =>
     api.get<any>("/api/operational-documents", { params: { page: 1, pageSize: 9999 } }),
+
+  markBhpPayment: (id: number, year: number, invoiceNumber: string) =>
+    api.patch<any>(`/api/operational-documents/${id}/bhp-payment/${year}`, { invoiceNumber }),
+
+  unmarkBhpPayment: (id: number, year: number) =>
+    api.delete<any>(`/api/operational-documents/${id}/bhp-payment/${year}`),
+
+  backfillBhpChecklists: () =>
+    api.post<any>("/api/operational-documents/backfill-bhp"),
 };
 
 export const operationalDocumentTypeApi = {

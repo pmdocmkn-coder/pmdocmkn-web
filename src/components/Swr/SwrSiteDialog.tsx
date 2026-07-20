@@ -1,11 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -93,17 +87,15 @@ export default function SwrSiteDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-gradient-to-b from-purple-900/90 to-slate-900/90 border border-purple-500/30">
-        <DialogHeader>
-          <DialogTitle className="text-white">
-            {site ? "Edit Site" : "Create New Site"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
+    <ResponsiveModal 
+      open={open} 
+      onOpenChange={onOpenChange}
+      title={site ? "Edit Site" : "Create New Site"}
+      desktopClassName="max-w-md"
+    >
+        <div className="space-y-4 p-4 pb-0">
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-purple-200">
+            <Label htmlFor="name">
               Site Name *
             </Label>
             <Input
@@ -111,12 +103,11 @@ export default function SwrSiteDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Enter site name"
-              className="bg-purple-900/30 border-purple-500/30 text-white placeholder:text-purple-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="location" className="text-purple-200">
+            <Label htmlFor="location">
               Location
             </Label>
             <Input
@@ -124,23 +115,22 @@ export default function SwrSiteDialog({
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="Enter location (optional)"
-              className="bg-purple-900/30 border-purple-500/30 text-white placeholder:text-purple-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="type" className="text-purple-200">
+            <Label htmlFor="type">
               Site Type *
             </Label>
             <Select value={type} onValueChange={setType}>
-              <SelectTrigger className="bg-purple-900/30 border-purple-500/30 text-white">
+              <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="bg-purple-900/90 border-purple-500/30">
-                <SelectItem value="Trunking" className="text-white">
+              <SelectContent>
+                <SelectItem value="Trunking">
                   Trunking
                 </SelectItem>
-                <SelectItem value="Conventional" className="text-white">
+                <SelectItem value="Conventional">
                   Conventional
                 </SelectItem>
               </SelectContent>
@@ -148,23 +138,21 @@ export default function SwrSiteDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <div className="flex justify-end gap-2 p-4 pt-4 border-t mt-4">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
-            className="border-purple-500/30 text-purple-300"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            className="bg-blue-600 hover:bg-blue-700"
           >
             {loading ? "Saving..." : site ? "Update Site" : "Create Site"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </ResponsiveModal>
   );
 }

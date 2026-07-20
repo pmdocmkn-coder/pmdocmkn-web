@@ -38,6 +38,7 @@ import CctvKpcPage from "./components/CctvKpc/CctvKpcPage";
 import VerifyPage from "./components/VerifyPage";
 import KpiMonitoringPage from "./components/Kpi/KpiMonitoringPage";
 import PmSchedulePage from "./components/PmSchedule/PmSchedulePage";
+import PmHubPage from "./components/PmSchedule/PmHubPage";
 import ForgotPassword from "./components/ForgotPassword";
 import ResetPassword from "./components/ResetPassword";
 import RadioRepairDashboardPage from "./components/RadioRepair/RadioRepairDashboardPage";
@@ -248,6 +249,13 @@ function AppContent() {
           <Route path="/nec-management" element={<NecTowerLinkManagement />} />
 
           <Route path="/swr-signal" element={<SwrSignalPage />} />
+
+          {/* ✅ PM HUB (Mobile menu) */}
+          <Route path="/pm" element={
+            <PermissionGuard anyOf={["pmschedule.menu", "kpi.view", "inspeksi.menu", "nec.histori.menu", "internal.link.menu", "swr.signal.menu", "operationaldocument.menu"]}>
+              <PmHubPage />
+            </PermissionGuard>
+          } />
 
           {/* ✅ RADIO HUB (Mobile menu) */}
           <Route path="/radio" element={

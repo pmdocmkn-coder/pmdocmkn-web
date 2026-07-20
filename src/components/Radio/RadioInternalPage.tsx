@@ -13,14 +13,11 @@ import {
   TableRow,
 } from "../ui/table";
 import { Button } from "../ui/button";
+import { ResponsiveModal } from "../common/ResponsiveModal";
+import BottomSheet from "../common/BottomSheet";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../ui/dialog";
+import { cn } from "@/lib/utils";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -135,6 +132,7 @@ export default function RadioInternalPage() {
   const [filterDuplikat, setFilterDuplikat] = useState(false);
   const [filterNoGrafir, setFilterNoGrafir] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(true);
+  const [activeMobileFilter, setActiveMobileFilter] = useState<'divisi' | 'dept' | 'type' | 'jenis' | null>(null);
 
   // ── Options untuk combobox (dari data semua halaman — unpaged) ──────────────
   const [allOptions, setAllOptions] = useState<RadioDto[]>([]);
@@ -686,7 +684,7 @@ export default function RadioInternalPage() {
       <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
         <div className="flex items-start gap-4 p-4">
           <div className="w-12 h-12 rounded-[12px] bg-[#FFF0EB] flex items-center justify-center flex-shrink-0">
-            <RadioIcon className="w-5 h-5 text-[#D94F2B]" strokeWidth={2} />
+            <RadioIcon className="w-5 h-5 text-[#D94F2B] strokeWidth={2}" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-[10px] font-bold text-[#D94F2B] tracking-[0.1em] uppercase mb-0.5">Radio & Fleet</p>
@@ -871,30 +869,22 @@ export default function RadioInternalPage() {
           <Input placeholder="Cari nomor aset, SN, ID radio..." value={search} onChange={(e) => { const v = e.target.value; if (v && !search) setPageBeforeSearch(page); setSearch(v); setPage(v ? 1 : pageBeforeSearch); }} className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]" />
         </div>
         <div className="flex flex-wrap gap-2 relative z-30 pb-1">
-          <div className="relative shrink-0">
-            <button onClick={() => document.getElementById("mobile-dropdown-divisi")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
-              <span className="truncate max-w-[100px]">{filterDivisi || "Divisi"}</span>
-              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-            </button>
-          </div>
-          <div className="relative shrink-0">
-            <button onClick={() => document.getElementById("mobile-dropdown-dept")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
-              <span className="truncate max-w-[100px]">{filterDepartment || "Dept"}</span>
-              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-            </button>
-          </div>
-          <div className="relative shrink-0">
-            <button onClick={() => document.getElementById("mobile-dropdown-type")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
-              <span className="truncate max-w-[100px]">{filterType || "Type"}</span>
-              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-            </button>
-          </div>
-          <div className="relative shrink-0">
-            <button onClick={() => document.getElementById("mobile-dropdown-jenis")?.classList.remove("hidden")} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
-              <span className="truncate max-w-[100px]">{filterJenis || "Jenis"}</span>
-              <ChevronDown className="w-3.5 h-3.5 ml-1 opacity-70" />
-            </button>
-          </div>
+          <button onClick={() => setActiveMobileFilter('divisi')} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+            <span className="truncate max-w-[60px]">{filterDivisi || "Divisi"}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-500 ml-1 shrink-0" />
+          </button>
+          <button onClick={() => setActiveMobileFilter('dept')} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+            <span className="truncate max-w-[60px]">{filterDepartment || "Dept"}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-500 ml-1 shrink-0" />
+          </button>
+          <button onClick={() => setActiveMobileFilter('type')} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+            <span className="truncate max-w-[60px]">{filterType || "Type"}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-500 ml-1 shrink-0" />
+          </button>
+          <button onClick={() => setActiveMobileFilter('jenis')} className="flex items-center justify-between h-8 rounded-lg bg-[#f3e8ff] px-3 text-gray-800 text-xs font-medium select-none min-w-[90px]">
+            <span className="truncate max-w-[60px]">{filterJenis || "Jenis"}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-gray-500 ml-1 shrink-0" />
+          </button>
         </div>
         
         {/* Mobile Checkboxes */}
@@ -917,6 +907,25 @@ export default function RadioInternalPage() {
           </label>
         </div>
       </div>
+
+      {/* ── BottomSheet for Mobile Filters ── */}
+      <BottomSheet open={!!activeMobileFilter} onClose={() => setActiveMobileFilter(null)}>
+        <div className="p-4 space-y-4">
+          <h3 className="font-semibold text-gray-900">Pilih {activeMobileFilter ? activeMobileFilter.charAt(0).toUpperCase() + activeMobileFilter.slice(1) : ''}</h3>
+          {activeMobileFilter === 'divisi' && divisiOptions.map((o: string) => (
+            <button key={o} onClick={() => { setFilterDivisi(o); setActiveMobileFilter(null); }} className={`w-full text-left p-3 rounded-lg ${filterDivisi === o ? 'bg-purple-100 font-bold text-purple-900' : 'hover:bg-gray-50'}`}>{o}</button>
+          ))}
+          {activeMobileFilter === 'dept' && departmentOptions.map((o: string) => (
+            <button key={o} onClick={() => { setFilterDepartment(o); setActiveMobileFilter(null); }} className={`w-full text-left p-3 rounded-lg ${filterDepartment === o ? 'bg-purple-100 font-bold text-purple-900' : 'hover:bg-gray-50'}`}>{o}</button>
+          ))}
+          {activeMobileFilter === 'type' && typeOptions.map((o: string) => (
+            <button key={o} onClick={() => { setFilterType(o); setActiveMobileFilter(null); }} className={`w-full text-left p-3 rounded-lg ${filterType === o ? 'bg-purple-100 font-bold text-purple-900' : 'hover:bg-gray-50'}`}>{o}</button>
+          ))}
+          {activeMobileFilter === 'jenis' && ["Trunking", "Konvensional"].map((o: string) => (
+            <button key={o} onClick={() => { setFilterJenis(o); setActiveMobileFilter(null); }} className={`w-full text-left p-3 rounded-lg ${filterJenis === o ? 'bg-purple-100 font-bold text-purple-900' : 'hover:bg-gray-50'}`}>{o}</button>
+          ))}
+        </div>
+      </BottomSheet>
 
       {/* ── Filter Panel (Desktop) ── */}
       <motion.div variants={itemVariants} className="hidden md:block bg-white rounded-2xl border border-gray-200 shadow-sm">
@@ -1330,7 +1339,7 @@ export default function RadioInternalPage() {
       )}
 
       {/* ── Create / Edit Modal ── */}
-      <Dialog
+      <ResponsiveModal
         open={isCreateOpen || isEditOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -1340,13 +1349,9 @@ export default function RadioInternalPage() {
             setFormError(null);
           }
         }}
+        title={isEditOpen ? "Edit Radio KPC" : "Tambah Radio KPC"}
+        desktopClassName="max-w-2xl max-h-[90vh] overflow-y-auto"
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditOpen ? "Edit Radio KPC" : "Tambah Radio KPC"}
-            </DialogTitle>
-          </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nomor Aset</label>
@@ -1535,8 +1540,7 @@ export default function RadioInternalPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
 
       {/* ── Scrap Modal ── */}
       <ScrapRadioModal
@@ -1583,77 +1587,87 @@ export default function RadioInternalPage() {
       />
 
       {/* ========== MOBILE FILTER MODALS ========== */}
-      <div id="mobile-dropdown-divisi" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden")}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Divisi</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDivisi ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(""); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
-              Semua Divisi {!filterDivisi && <Check className="w-4 h-4" />}
-            </div>
-            {divisiOptions.map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDivisi === opt ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDivisi(opt); document.getElementById("mobile-dropdown-divisi")?.classList.add("hidden"); }}>
-                {opt} {filterDivisi === opt && <Check className="w-4 h-4" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+      <BottomSheet
+        open={!!activeMobileFilter}
+        onClose={() => setActiveMobileFilter(null)}
+        title={
+          activeMobileFilter === 'divisi' ? "Pilih Divisi"
+          : activeMobileFilter === 'dept' ? "Pilih Dept"
+          : activeMobileFilter === 'type' ? "Pilih Type"
+          : activeMobileFilter === 'jenis' ? "Pilih Jenis"
+          : ""
+        }
+      >
+        <div className="grid grid-cols-1 gap-2">
+          {activeMobileFilter === 'divisi' && (
+            <>
+              <button onClick={() => { setFilterDivisi(""); setActiveMobileFilter(null); }}
+                className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !filterDivisi ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                Semua Divisi
+                {!filterDivisi && <Check className="w-4 h-4" />}
+              </button>
+              {divisiOptions.map((opt) => (
+                <button key={opt} onClick={() => { setFilterDivisi(opt); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", filterDivisi === opt ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  {opt}
+                  {filterDivisi === opt && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              ))}
+            </>
+          )}
 
-      <div id="mobile-dropdown-dept" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-dept")?.classList.add("hidden")}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Dept</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterDepartment ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(""); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
-              Semua Dept {!filterDepartment && <Check className="w-4 h-4" />}
-            </div>
-            {departmentOptions.map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterDepartment === opt ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterDepartment(opt); document.getElementById("mobile-dropdown-dept")?.classList.add("hidden"); }}>
-                {opt} {filterDepartment === opt && <Check className="w-4 h-4" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+          {activeMobileFilter === 'dept' && (
+            <>
+              <button onClick={() => { setFilterDepartment(""); setActiveMobileFilter(null); }}
+                className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !filterDepartment ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                Semua Dept
+                {!filterDepartment && <Check className="w-4 h-4" />}
+              </button>
+              {departmentOptions.map((opt) => (
+                <button key={opt} onClick={() => { setFilterDepartment(opt); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", filterDepartment === opt ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  {opt}
+                  {filterDepartment === opt && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              ))}
+            </>
+          )}
 
-      <div id="mobile-dropdown-type" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-type")?.classList.add("hidden")}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Type</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterType ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(""); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
-              Semua Type {!filterType && <Check className="w-4 h-4" />}
-            </div>
-            {typeOptions.map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterType === opt ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterType(opt); document.getElementById("mobile-dropdown-type")?.classList.add("hidden"); }}>
-                {opt} {filterType === opt && <Check className="w-4 h-4" />}
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+          {activeMobileFilter === 'type' && (
+            <>
+              <button onClick={() => { setFilterType(""); setActiveMobileFilter(null); }}
+                className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !filterType ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                Semua Type
+                {!filterType && <Check className="w-4 h-4" />}
+              </button>
+              {typeOptions.map((opt) => (
+                <button key={opt} onClick={() => { setFilterType(opt); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", filterType === opt ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  {opt}
+                  {filterType === opt && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              ))}
+            </>
+          )}
 
-      <div id="mobile-dropdown-jenis" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden")}>
-        <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm sm:max-w-md overflow-hidden flex flex-col max-h-[70vh] animate-in slide-in-from-bottom-8 duration-200" onClick={(e) => e.stopPropagation()}>
-          <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/80">
-            <h3 className="font-bold text-gray-800">Pilih Jenis</h3>
-          </div>
-          <div className="overflow-y-auto p-2 space-y-1">
-            <div className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${!filterJenis ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(""); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
-              Semua Jenis {!filterJenis && <Check className="w-4 h-4" />}
-            </div>
-            {["Trunking", "Konvensional"].map((opt) => (
-              <div key={opt} className={`px-4 py-3.5 text-sm rounded-xl cursor-pointer flex justify-between items-center ${filterJenis === opt ? 'font-bold text-purple-700 bg-purple-50' : 'text-gray-700 hover:bg-gray-50'}`} onClick={() => { setFilterJenis(opt); document.getElementById("mobile-dropdown-jenis")?.classList.add("hidden"); }}>
-                {opt} {filterJenis === opt && <Check className="w-4 h-4" />}
-              </div>
-            ))}
-          </div>
+          {activeMobileFilter === 'jenis' && (
+            <>
+              <button onClick={() => { setFilterJenis(""); setActiveMobileFilter(null); }}
+                className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !filterJenis ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                Semua Jenis
+                {!filterJenis && <Check className="w-4 h-4" />}
+              </button>
+              {["Trunking", "Konvensional"].map((opt) => (
+                <button key={opt} onClick={() => { setFilterJenis(opt); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", filterJenis === opt ? "bg-purple-50 border-purple-200 text-purple-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  {opt}
+                  {filterJenis === opt && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              ))}
+            </>
+          )}
         </div>
-      </div>
+      </BottomSheet>
     </motion.div>
   );
 }

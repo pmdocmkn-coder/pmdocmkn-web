@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import type { RadioRepairJobDetail, RadioRepairJobList } from "../../types/radioRepair";
 import type { GreenTagFields } from "../../types/equipmentTag";
@@ -63,11 +63,13 @@ export default function RadioCompletionTagModal({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>Pilih Tag Radio & Kelengkapan Data</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal 
+      open={open} 
+      onOpenChange={onOpenChange}
+      desktopClassName="max-w-2xl max-h-[90vh] overflow-y-auto"
+      bottomSheetSize="xl"
+      title="Pilih Tag Radio & Kelengkapan Data"
+    >
         
         <div className="space-y-4">
           <p className="text-sm text-gray-600">
@@ -131,7 +133,6 @@ export default function RadioCompletionTagModal({
             </Button>
           </div>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

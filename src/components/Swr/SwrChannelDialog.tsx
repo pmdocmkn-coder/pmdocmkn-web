@@ -1,12 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { swrSignalApi } from "@/services/api";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -162,17 +156,15 @@ export default function SwrChannelDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-gradient-to-b from-purple-900/90 to-slate-900/90 border border-purple-500/30 max-w-md">
-        <DialogHeader>
-          <DialogTitle className="text-white text-xl">
-            {channel ? "Edit Channel" : "Create New Channel"}
-          </DialogTitle>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
+    <ResponsiveModal 
+      open={open} 
+      onOpenChange={onOpenChange}
+      title={channel ? "Edit Channel" : "Create New Channel"}
+      desktopClassName="max-w-md"
+    >
+        <div className="space-y-4 p-4 pb-0">
           <div className="space-y-2">
-            <Label htmlFor="channelName" className="text-purple-200">
+            <Label htmlFor="channelName">
               Channel Name *
             </Label>
             <Input
@@ -180,24 +172,22 @@ export default function SwrChannelDialog({
               value={channelName}
               onChange={(e) => setChannelName(e.target.value)}
               placeholder="e.g., Channel 001, C01 (FN)"
-              className="bg-purple-900/30 border-purple-500/30 text-white placeholder:text-purple-400"
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="site" className="text-purple-200">
+            <Label htmlFor="site">
               Site *
             </Label>
             <Select value={swrSiteId} onValueChange={setSwrSiteId}>
-              <SelectTrigger className="bg-purple-900/30 border-purple-500/30 text-white">
+              <SelectTrigger>
                 <SelectValue placeholder="Select a site" />
               </SelectTrigger>
-              <SelectContent className="bg-purple-900/90 border-purple-500/30">
+              <SelectContent>
                 {sites.map((site) => (
                   <SelectItem
                     key={site.id}
                     value={site.id.toString()}
-                    className="text-white hover:bg-purple-700"
                   >
                     {site.name} ({site.type})
                   </SelectItem>
@@ -207,7 +197,7 @@ export default function SwrChannelDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expectedSwrMax" className="text-purple-200">
+            <Label htmlFor="expectedSwrMax">
               Expected SWR Max (1.0 - 4.0) *
             </Label>
             <Input
@@ -218,15 +208,14 @@ export default function SwrChannelDialog({
               step="0.1"
               value={expectedSwrMax}
               onChange={(e) => setExpectedSwrMax(e.target.value)}
-              className="bg-purple-900/30 border-purple-500/30 text-white placeholder:text-purple-400"
             />
-            <p className="text-xs text-purple-300">
+            <p className="text-xs text-gray-500">
               Threshold: VSWR below this = Good, above = Bad
             </p>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="expectedPwrMax" className="text-purple-200">
+            <Label htmlFor="expectedPwrMax">
               Expected PWR Max (0 - 200 Watts) *
             </Label>
             <Input
@@ -237,43 +226,36 @@ export default function SwrChannelDialog({
               step="1"
               value={expectedPwrMax}
               onChange={(e) => setExpectedPwrMax(e.target.value)}
-              className="bg-purple-900/30 border-purple-500/30 text-white placeholder:text-purple-400"
             />
-            <p className="text-xs text-purple-300">
+            <p className="text-xs text-gray-500">
               Threshold: FPWR below this = Good, above = Bad
             </p>
           </div>
 
           {error && (
-            <div className="bg-red-900/30 border border-red-500/50 rounded-lg p-3 flex items-start gap-2">
-              <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-200">{error}</p>
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3 flex items-start gap-2">
+              <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-red-700">{error}</p>
             </div>
           )}
         </div>
 
-        <DialogFooter className="gap-2">
+        <div className="flex justify-end gap-2 p-4 pt-4 border-t mt-4">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={loading}
-            className="border-purple-500/30 text-purple-300 hover:bg-purple-500/10"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSave}
             disabled={loading}
-            className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+            className="bg-blue-600 hover:bg-blue-700"
           >
-            {loading
-              ? "Saving..."
-              : channel
-              ? "Update Channel"
-              : "Create Channel"}
+            {loading ? "Saving..." : channel ? "Update Channel" : "Create Channel"}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+    </ResponsiveModal>
   );
 }
