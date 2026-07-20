@@ -345,7 +345,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
         </header>
 
         {/* ── Mobile Top Bar ───────────────────────────────────────────────── */}
-        <header className="flex md:hidden items-center justify-between px-4 h-14 bg-white sticky top-0 z-30 border-b border-[#E2E8F0] flex-shrink-0">
+        <header
+          className="flex md:hidden items-center justify-between px-4 bg-white sticky top-0 z-30 border-b border-[#E2E8F0] flex-shrink-0"
+          style={{
+            paddingTop: "env(safe-area-inset-top, 0px)",
+            minHeight: "calc(3.5rem + env(safe-area-inset-top, 0px))",
+          }}
+        >
 
           {/* Left: hamburger + logo */}
           <div className="flex items-center gap-3">
