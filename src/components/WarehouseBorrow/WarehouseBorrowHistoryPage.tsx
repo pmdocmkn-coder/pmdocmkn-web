@@ -18,7 +18,7 @@ import PrintMaterialDialog from "./PrintMaterialDialog";
 import PrintMaterialTemplate from "./PrintMaterialTemplate";
 import { Input } from "../ui/input";
 import { Button } from "../ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { useToast } from "../../hooks/use-toast";
@@ -1367,123 +1367,120 @@ export default function WarehouseBorrowHistoryPage() {
       </div>
 
       {/* Modal Serahkan Part (Issue) + Signature */}
-      <Dialog open={actionType === "issue" && !!activeItem} onOpenChange={(open) => {
-        if (!open) {
-          closeDialog();
+      <ResponsiveModal
+        open={actionType === "issue" && !!activeItem}
+        onOpenChange={(open) => {
+          if (!open) closeDialog();
+        }}
+        title={
+          <div className="flex items-center gap-2">
+            <PenTool className="w-5 h-5 text-indigo-600" />
+            Penyerahan Part ke Penerima
+          </div>
         }
-      }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PenTool className="w-5 h-5 text-indigo-600" />
-              Penyerahan Part ke Penerima
-            </DialogTitle>
-            <DialogDescription>
-              Konfirmasi penyerahan dan tanda tangan kedua belah pihak.
-            </DialogDescription>
-          </DialogHeader>
-
-          {activeItem && (
-            <div className="space-y-4 my-2">
-              {/* Info ringkas */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
-                <div className="flex justify-between border-b border-gray-200 pb-2">
-                  <span className="text-gray-500">Nomor Transaksi</span>
-                  <span className="font-mono font-semibold">{activeItem.borrowNumber}</span>
-                </div>
-                <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
-                  <span className="text-gray-500">Penerima</span>
-                  <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
-                </div>
-                <div className="pt-1">
-                  {renderItemsList(activeItem)}
-                </div>
-              </div>
-
-              {/* Dual Signature */}
-              <div className="space-y-4">
-                <SignaturePadField label="TTD Penyerah" required value={issuerSigned} onChange={setIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
-                <SignaturePadField label="TTD Penerima (Opsional)" value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
-              </div>
-            </div>
-          )}
-
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Batal</Button>
+        description="Konfirmasi penyerahan dan tanda tangan kedua belah pihak."
+        bottomSheetSize="lg"
+        desktopClassName="max-w-lg"
+        footer={
+          <>
+            <Button variant="outline" onClick={closeDialog} className="flex-1 sm:flex-none">Batal</Button>
             <Button
-              className="bg-indigo-600 hover:bg-indigo-700 text-white"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white flex-1 sm:flex-none"
               onClick={handleIssue}
               disabled={submitting}
             >
               {submitting ? "Memproses..." : "Konfirmasi Penyerahan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        {activeItem && (
+          <div className="space-y-4 my-2">
+            {/* Info ringkas */}
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-gray-500">Nomor Transaksi</span>
+                <span className="font-mono font-semibold">{activeItem.borrowNumber}</span>
+              </div>
+              <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
+                <span className="text-gray-500">Penerima</span>
+                <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
+              </div>
+              <div className="pt-1">
+                {renderItemsList(activeItem)}
+              </div>
+            </div>
+
+            {/* Dual Signature */}
+            <div className="space-y-4">
+              <SignaturePadField label="TTD Penyerah" required value={issuerSigned} onChange={setIssuerSigned} signerName={user?.fullName || "Admin Warehouse"} />
+              <SignaturePadField label="TTD Penerima (Opsional)" value={receiverSigned} onChange={setReceiverSigned} signerName={activeItem.borrowerName || activeItem.borrowedByName} />
+            </div>
+          </div>
+        )}
+      </ResponsiveModal>
 
       {/* Modal Pengembalian Part (Return) + Signature */}
-      <Dialog open={actionType === "return" && !!activeItem} onOpenChange={(open) => {
+      <ResponsiveModal open={actionType === "return" && !!activeItem} onOpenChange={(open) => {
         if (!open) {
           closeDialog();
         }
-      }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <RotateCcw className="w-5 h-5 text-emerald-600" />
-              Terima Pengembalian Part
-            </DialogTitle>
-            <DialogDescription>
-              Catat penerimaan pengembalian part dari peminjam kembali ke warehouse.
-            </DialogDescription>
-          </DialogHeader>
+      }}
+        title={
+          <div className="flex items-center gap-2">
+            <RotateCcw className="w-5 h-5 text-emerald-600" />
+            Terima Pengembalian Part
+          </div>
+        }
+        description="Catat penerimaan pengembalian part dari peminjam kembali ke warehouse."
+        bottomSheetSize="xl"
+        desktopClassName="max-w-lg"
+        footer={
+          <>
+            <Button variant="outline" onClick={closeDialog} className="flex-1 sm:flex-none">Batal</Button>
+            <Button
+              className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none"
+              onClick={handleReturn}
+              disabled={submitting}
+            >
+              {submitting ? "Memproses..." : (isWarehouse ? "Terima Pengembalian" : "Kembalikan Part")}
+            </Button>
+          </>
+        }
+      >
+        {activeItem && (
+          <div className="space-y-5 my-2">
+            {/* ── Info Peminjaman ── */}
+            <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
+              {/* No. Transaksi */}
+              <div className="flex justify-between border-b border-gray-200 pb-2">
+                <span className="text-gray-500">No. Transaksi</span>
+                <span className="font-mono font-semibold text-gray-700">{activeItem.borrowNumber}</span>
+              </div>
 
-          {activeItem && (
-            <div className="space-y-5 my-2">
-              {/* ── Info Peminjaman ── */}
-              <div className="bg-gray-50 rounded-xl p-4 border border-gray-100 text-sm space-y-2">
-                {/* No. Transaksi */}
-                <div className="flex justify-between border-b border-gray-200 pb-2">
-                  <span className="text-gray-500">No. Transaksi</span>
-                  <span className="font-mono font-semibold text-gray-700">{activeItem.borrowNumber}</span>
-                </div>
+              {/* Peminjam */}
+              <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
+                <span className="text-gray-500">Peminjam Awal</span>
+                <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
+              </div>
 
-                {/* Peminjam */}
+              {/* No. Tiket / No. Job */}
+              {(activeItem.ticketNumber || activeItem.relatedJobNumber) && (
                 <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
-                  <span className="text-gray-500">Peminjam Awal</span>
-                  <span className="font-semibold">{activeItem.borrowerName || activeItem.borrowedByName}</span>
+                  <span className="text-gray-500">No. Tiket / Job</span>
+                  <span className="font-semibold text-indigo-600">{activeItem.ticketNumber || activeItem.relatedJobNumber}</span>
                 </div>
+              )}
 
-                {/* No. Tiket / No. Job */}
-                {(activeItem.ticketNumber || activeItem.relatedJobNumber) && (
-                  <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
-                    <span className="text-gray-500">
-                      {activeItem.relatedJobNumber ? "No. Job Terkait" : "No. Tiket"}
-                    </span>
-                    <span className="font-mono text-xs font-semibold text-blue-700 bg-blue-50 px-2 py-0.5 rounded border border-blue-100">
-                      {activeItem.relatedJobNumber || activeItem.ticketNumber}
-                    </span>
-                  </div>
-                )}
-
-                {/* Keperluan */}
-                {activeItem.purpose && (
-                  <div className="border-b border-gray-200 pb-2 pt-1">
-                    <span className="text-gray-500 block mb-0.5">Keperluan</span>
-                    <span className="text-gray-700 italic">"{activeItem.purpose}"</span>
-                  </div>
-                )}
-
-                {/* Durasi Peminjaman */}
-                <div className="flex justify-between pt-1">
-                  <span className="text-gray-500">Dipinjam sejak</span>
+              {/* Dipinjam sejak */}
+              {activeItem.issuedAt && (
+                <div className="flex justify-between border-b border-gray-200 pb-2 pt-1">
+                  <span className="text-gray-500">Waktu Pinjam</span>
                   <div className="text-right">
-                    <div className="font-medium text-gray-700">
-                      {format(new Date(activeItem.issuedAt ?? activeItem.requestedAt), "dd MMM yyyy, HH:mm", { locale: localeId })}
-                    </div>
-                    <div className="text-xs font-bold text-amber-600 mt-0.5">
+                    <p className="font-semibold">{new Date(activeItem.issuedAt).toLocaleString('id-ID')}</p>
+                    <div className="text-xs text-amber-600 font-medium mt-0.5">
                       {(() => {
-                        const from = new Date(activeItem.issuedAt ?? activeItem.requestedAt);
+                        const from = new Date(activeItem.issuedAt);
                         const now = new Date();
                         const diffMs = now.getTime() - from.getTime();
                         const diffH = Math.floor(diffMs / 3600000);
@@ -1497,8 +1494,9 @@ export default function WarehouseBorrowHistoryPage() {
                     </div>
                   </div>
                 </div>
+              )}
 
-                {/* Daftar Barang */}
+              {/* Daftar Barang */}
                 <div className="border-t border-gray-200 pt-3 mt-1">
                   {renderItemsList(activeItem)}
                 </div>
@@ -1634,33 +1632,12 @@ export default function WarehouseBorrowHistoryPage() {
             </div>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Batal</Button>
-            <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white"
-              onClick={handleReturn}
-              disabled={submitting}
-            >
-              {submitting ? "Memproses..." : (isWarehouse ? "Terima Pengembalian" : "Kembalikan Part")}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
 
       {/* Modal Tanda Tangan Penerima */}
-      <Dialog open={actionType === "sign" && !!activeItem} onOpenChange={(open) => {
+      <ResponsiveModal open={actionType === "sign" && !!activeItem} onOpenChange={(open) => {
         if (!open) closeDialog();
-      }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PenTool className="w-5 h-5 text-orange-600" />
-              Tanda Tangan Penerima
-            </DialogTitle>
-            <DialogDescription>
-              Silakan tanda tangan untuk mengonfirmasi bahwa Anda telah menerima barang ini.
-            </DialogDescription>
-          </DialogHeader>
+      }} title={<div className="flex items-center gap-2"><PenTool className="w-5 h-5 text-orange-600" />Tanda Tangan Penerima</div>} description="Silakan tanda tangan untuk mengonfirmasi bahwa Anda telah menerima barang ini." desktopClassName="max-w-2xl">
 
           {activeItem && (
             <div className="space-y-4 my-2">
@@ -1684,7 +1661,7 @@ export default function WarehouseBorrowHistoryPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <div className="flex flex-col-reverse sm:flex-row justify-end gap-2 mt-4 pt-4 border-t">
             <Button variant="outline" onClick={closeDialog}>Batal</Button>
             <Button
               className="bg-orange-600 hover:bg-orange-700 text-white"
@@ -1693,67 +1670,69 @@ export default function WarehouseBorrowHistoryPage() {
             >
               {submitting ? "Menyimpan..." : "Simpan Tanda Tangan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* Modal Inspeksi & TTD Penerima (Return) */}
-      <Dialog open={actionType === "return-sign" && !!activeItem} onOpenChange={(open) => {
-        if (!open) closeDialog();
-      }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <ClipboardCheck className="w-5 h-5 text-orange-600" />
-              Inspeksi & Tanda Tangan Penerima
-            </DialogTitle>
-            <DialogDescription>
-              Mohon inspeksi kondisi barang dan berikan tanda tangan sebagai Admin Warehouse.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Kondisi Barang Saat Dikembalikan <span className="text-red-500">*</span></label>
-              <Select value={returnCondition} onValueChange={setReturnCondition}>
-                <SelectTrigger className="w-full h-10 border-gray-300 focus:ring-emerald-500 focus:border-emerald-500">
-                  <SelectValue placeholder="Pilih kondisi" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Good">Good (Kondisi Baik)</SelectItem>
-                  <SelectItem value="Damaged">Damaged (Rusak / Bekas Pakai)</SelectItem>
-                  <SelectItem value="Incomplete">Incomplete (Tidak Lengkap)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">Catatan Pengembalian (Opsional)</label>
-              <Textarea
-                placeholder="Catatan tambahan..."
-                className="h-20 resize-none focus-visible:ring-emerald-500"
-                value={returnNote}
-                onChange={(e) => setReturnNote(e.target.value)}
-              />
-            </div>
-            <SignaturePadField
-              label="Tanda Tangan Penerima (Warehouse)"
-              required
-              value={returnReceiverSigned}
-              onChange={setReturnReceiverSigned}
-              signerName={user?.fullName || "Admin Warehouse"}
-            />
+      <ResponsiveModal
+        open={actionType === "return-sign" && !!activeItem}
+        onOpenChange={(open) => {
+          if (!open) closeDialog();
+        }}
+        title={
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="w-5 h-5 text-orange-600" />
+            Inspeksi & Tanda Tangan Penerima
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={closeDialog}>Batal</Button>
+        }
+        description="Mohon inspeksi kondisi barang dan berikan tanda tangan sebagai Admin Warehouse."
+        bottomSheetSize="xl"
+        desktopClassName="max-w-2xl"
+        footer={
+          <>
+            <Button variant="outline" onClick={closeDialog} className="flex-1 sm:flex-none">Batal</Button>
             <Button
-              className="bg-orange-600 hover:bg-orange-700 text-white"
+              className="bg-orange-600 hover:bg-orange-700 text-white flex-1 sm:flex-none"
               onClick={handleReturnSign}
               disabled={submitting || !returnReceiverSigned}
             >
               {submitting ? "Menyimpan..." : "Simpan & Selesai"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Kondisi Barang Saat Dikembalikan <span className="text-red-500">*</span></label>
+            <Select value={returnCondition} onValueChange={setReturnCondition}>
+              <SelectTrigger className="w-full h-10 border-gray-300 focus:ring-emerald-500 focus:border-emerald-500">
+                <SelectValue placeholder="Pilih kondisi" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Good">Good (Kondisi Baik)</SelectItem>
+                <SelectItem value="Damaged">Damaged (Rusak / Bekas Pakai)</SelectItem>
+                <SelectItem value="Incomplete">Incomplete (Tidak Lengkap)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <label className="text-sm font-semibold text-gray-700">Catatan Pengembalian (Opsional)</label>
+            <Textarea
+              placeholder="Catatan tambahan..."
+              className="h-20 resize-none focus-visible:ring-emerald-500"
+              value={returnNote}
+              onChange={(e) => setReturnNote(e.target.value)}
+            />
+          </div>
+          <SignaturePadField
+            label="Tanda Tangan Penerima (Warehouse)"
+            required
+            value={returnReceiverSigned}
+            onChange={setReturnReceiverSigned}
+            signerName={user?.fullName || "Admin Warehouse"}
+          />
+        </div>
+      </ResponsiveModal>
 
       {/* Modal Detail Peminjaman */}
       <WarehouseBorrowDetailModal
@@ -1778,32 +1757,33 @@ export default function WarehouseBorrowHistoryPage() {
       )}
 
       {/* Dialog Hapus Riwayat */}
-      <Dialog open={!!deleteTarget} onOpenChange={(open) => !open && setDeleteTarget(null)}>
-        <DialogContent className="max-w-sm bg-white p-6 rounded-xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">Hapus Riwayat</DialogTitle>
-            <DialogDescription>
-              Apakah Anda yakin ingin menghapus data riwayat peminjaman ini? Data yang dihapus tidak akan ditampilkan lagi.
-            </DialogDescription>
-          </DialogHeader>
-          {deleteTarget && (
-            <div className="bg-red-50 rounded-lg p-3 border border-red-100 mt-2">
-              <p className="text-sm font-semibold text-gray-900">{deleteTarget.borrowNumber}</p>
-              <p className="text-xs text-gray-500">{deleteTarget.borrowerName || deleteTarget.borrowedByName}</p>
-            </div>
-          )}
-          <DialogFooter className="mt-4 border-t border-gray-100 pt-4">
-            <Button variant="outline" onClick={() => setDeleteTarget(null)}>Batal</Button>
+      <ResponsiveModal
+        open={!!deleteTarget}
+        onOpenChange={(open) => !open && setDeleteTarget(null)}
+        title="Hapus Riwayat"
+        description="Apakah Anda yakin ingin menghapus data riwayat peminjaman ini? Data yang dihapus tidak akan ditampilkan lagi."
+        bottomSheetSize="md"
+        desktopClassName="max-w-sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setDeleteTarget(null)} className="flex-1 sm:flex-none">Batal</Button>
             <Button
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-red-600 hover:bg-red-700 text-white flex-1 sm:flex-none"
               onClick={handleDelete}
               disabled={deleting}
             >
               {deleting ? "Menghapus..." : "Ya, Hapus"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        {deleteTarget && (
+          <div className="bg-red-50 rounded-lg p-3 border border-red-100 mt-2">
+            <p className="text-sm font-semibold text-gray-900">{deleteTarget.borrowNumber}</p>
+            <p className="text-xs text-gray-500">{deleteTarget.borrowerName || deleteTarget.borrowedByName}</p>
+          </div>
+        )}
+      </ResponsiveModal>
     </div>
   );
 }

@@ -1,11 +1,6 @@
 
 import { useEffect, useState } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { radioApi, RadioHistoryDto, RadioDto } from "../../services/radioApi";
 import { userApi } from "../../services/api";
 import { format } from "date-fns";
@@ -212,20 +207,20 @@ export default function RadioHistoryModal({
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-2xl max-h-[85vh] flex flex-col">
-                <DialogHeader className="pb-3 border-b border-gray-100 flex-shrink-0">
-                    <DialogTitle className="flex items-center gap-2.5 text-base font-bold text-gray-900">
-                        <div className="p-1.5 bg-violet-100 rounded-lg">
-                            <Clock className="w-4 h-4 text-violet-600" />
-                        </div>
-                        Riwayat Perubahan Radio
-                        {history.length > 0 && (
-                            <span className="ml-auto text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
-                                {history.length} entri
-                            </span>
-                        )}
-                    </DialogTitle>
+        <ResponsiveModal 
+            open={isOpen} 
+            onOpenChange={onClose}
+            title="Riwayat Perubahan Radio"
+            desktopClassName="max-w-2xl max-h-[85vh] flex flex-col"
+            bottomSheetSize="xl"
+        >
+                {/* Radio info badges */}
+                <div className="pb-3 border-b border-gray-100 flex-shrink-0">
+                    {history.length > 0 && (
+                        <span className="text-xs font-normal text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                            {history.length} entri
+                        </span>
+                    )}
 
                     {/* Radio info card */}
                     {radioInfo && (
@@ -282,7 +277,7 @@ export default function RadioHistoryModal({
                             )}
                         </div>
                     )}
-                </DialogHeader>
+                </div>
 
                 <div className="overflow-y-auto flex-1 py-4">
                     {isLoading ? (
@@ -431,7 +426,6 @@ export default function RadioHistoryModal({
                         </div>
                     )}
                 </div>
-            </DialogContent>
-        </Dialog>
+        </ResponsiveModal>
     );
 }

@@ -1,11 +1,5 @@
 import React, { useState } from "react";
-import {
-    Dialog,
-    DialogContent,
-    DialogHeader,
-    DialogTitle,
-    DialogFooter,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { ScrapRadioDto, radioApi } from "../../services/radioApi";
@@ -53,11 +47,12 @@ const ScrapRadioModal: React.FC<ScrapRadioModalProps> = ({
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>Scrap Radio {radioIdentifier}</DialogTitle>
-                </DialogHeader>
+        <ResponsiveModal 
+            open={isOpen} 
+            onOpenChange={onClose}
+            title={`Scrap Radio ${radioIdentifier}`}
+            desktopClassName="max-w-md"
+        >
                 <div className="grid gap-4 py-4">
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Date Scrap *</label>
@@ -84,16 +79,15 @@ const ScrapRadioModal: React.FC<ScrapRadioModalProps> = ({
                         />
                     </div>
                 </div>
-                <DialogFooter>
+                <div className="flex gap-2 justify-end pt-4 border-t">
                     <Button variant="outline" onClick={onClose} disabled={loading}>
                         Cancel
                     </Button>
                     <Button onClick={handleSubmit} disabled={loading}>
                         {loading ? "Processing..." : "Confirm Scrap"}
                     </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
+                </div>
+        </ResponsiveModal>
     );
 };
 

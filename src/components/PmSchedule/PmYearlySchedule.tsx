@@ -23,14 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { exportPmScheduleToExcel } from "../../utils/exportExcel";
@@ -1009,14 +1002,7 @@ export default function PmYearlySchedule() {
       {selectedMonth === null ? renderYearlyOverview() : renderMonthlyDetail()}
 
       {/* ====== ADD PM DIALOG ====== */}
-      <Dialog open={isAddDeviceOpen} onOpenChange={setIsAddDeviceOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[#1B3A6B] text-lg font-bold">Tambah PM</DialogTitle>
-            <DialogDescription className="text-[#718096]">
-              Tambahkan item PM baru ke site <span className="font-semibold text-[#1A202C]">{addDeviceSiteName}</span>
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={isAddDeviceOpen} onOpenChange={setIsAddDeviceOpen} title="Tambah PM" description={<>Tambahkan item PM baru ke site <span className="font-semibold text-[#1A202C]">{addDeviceSiteName}</span></>} desktopClassName="sm:max-w-[425px] rounded-[14px]">
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="deviceName" className="font-bold text-[#1A202C]">Nama PM *</Label>
@@ -1035,9 +1021,9 @@ export default function PmYearlySchedule() {
               </p>
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0">
+          <div className="flex justify-end gap-2 sm:gap-0 sm:justify-between pt-4 mt-4 border-t">
             <Button variant="outline" onClick={() => setIsAddDeviceOpen(false)}
-              className="rounded-[10px] h-10 font-bold text-[#718096] border-[#E2E8F0]">
+              className="rounded-[10px] h-10 font-semibold text-[#718096] border-[#E2E8F0]">
               Batal
             </Button>
             <Button onClick={handleAddDevice} disabled={addingDevice}
@@ -1045,24 +1031,11 @@ export default function PmYearlySchedule() {
               {addingDevice ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
               Tambah PM
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* ====== COMPLETE PM DIALOG ====== */}
-      <Dialog open={completeDialogOpen} onOpenChange={setCompleteDialogOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[#059669] flex items-center gap-2 text-lg font-bold">
-              <div className="w-8 h-8 rounded-full bg-[#D1FAE5] flex items-center justify-center">
-                <Check className="w-5 h-5 text-[#059669]" />
-              </div>
-              Tandai Selesai
-            </DialogTitle>
-            <DialogDescription className="text-[#718096]">
-              Anda akan menandai PM ini sebagai selesai. Silakan tambahkan catatan jika diperlukan.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={completeDialogOpen} onOpenChange={setCompleteDialogOpen} title={<div className="flex items-center gap-2 text-[#059669]"><div className="w-8 h-8 rounded-full bg-[#D1FAE5] flex items-center justify-center"><Check className="w-5 h-5 text-[#059669]" /></div>Tandai Selesai</div>} description="Anda akan menandai PM ini sebagai selesai. Silakan tambahkan catatan jika diperlukan." desktopClassName="sm:max-w-[425px] rounded-[14px]">
           <div className="grid gap-4 py-2">
             {completingContext && (
               <div className="bg-[#F7F8FA] p-3 rounded-[10px] border border-[#E2E8F0] mb-2">
@@ -1099,9 +1072,9 @@ export default function PmYearlySchedule() {
               />
             </div>
           </div>
-          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+          <div className="flex justify-end gap-2 sm:gap-0 sm:justify-between pt-4 mt-4 border-t">
             <Button variant="outline" onClick={() => setCompleteDialogOpen(false)}
-              className="rounded-[10px] h-10 font-bold text-[#718096] border-[#E2E8F0]">
+              className="rounded-[10px] h-10 font-semibold text-[#718096] border-[#E2E8F0]">
               Batal
             </Button>
             <Button 
@@ -1111,24 +1084,11 @@ export default function PmYearlySchedule() {
               {completingSubmitting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check className="w-4 h-4 mr-2" />}
               Simpan PM
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* ====== VIEW COMPLETED PM DIALOG ====== */}
-      <Dialog open={viewDetailOpen} onOpenChange={setViewDetailOpen}>
-        <DialogContent className="sm:max-w-[425px] rounded-[14px]">
-          <DialogHeader>
-            <DialogTitle className="text-[#059669] flex items-center gap-2 text-lg font-bold">
-              <div className="w-8 h-8 rounded-full bg-[#D1FAE5] flex items-center justify-center">
-                <Check className="w-5 h-5 text-[#059669]" />
-              </div>
-              Detail Pelaksanaan PM
-            </DialogTitle>
-            <DialogDescription className="text-[#718096]">
-              Informasi detail jadwal PM yang sudah diselesaikan.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal open={viewDetailOpen} onOpenChange={setViewDetailOpen} title={<div className="flex items-center gap-2 text-[#059669]"><div className="w-8 h-8 rounded-full bg-[#D1FAE5] flex items-center justify-center"><Check className="w-5 h-5 text-[#059669]" /></div>Detail Pelaksanaan PM</div>} description="Informasi detail jadwal PM yang sudah diselesaikan." desktopClassName="sm:max-w-[425px] rounded-[14px]">
           <div className="grid gap-4 py-2">
             {viewDetailContext && viewDetailTask && (
               <>
@@ -1172,7 +1132,7 @@ export default function PmYearlySchedule() {
               </>
             )}
           </div>
-          <DialogFooter className="gap-2 sm:gap-0 mt-4 flex flex-col-reverse sm:flex-row justify-between items-center w-full">
+          <div className="flex flex-col-reverse sm:flex-row justify-between items-center w-full gap-2 sm:gap-0 mt-4 pt-4 border-t">
             {canUpdate && (
               <Button 
                 variant="outline" 
@@ -1193,9 +1153,8 @@ export default function PmYearlySchedule() {
               className="rounded-[10px] h-10 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-bold px-6 w-full sm:w-auto">
               Tutup
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
     </div>
   );
 }

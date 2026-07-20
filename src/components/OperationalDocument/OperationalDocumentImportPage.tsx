@@ -75,8 +75,14 @@ export default function OperationalDocumentImportPage() {
       }
 
       const rows: ImportRow[] = [];
+      let isHeaderSkipped = false;
+
       ws.eachRow({ includeEmpty: false }, (row, rowNum) => {
-        if (rowNum === 1) return; // skip header
+        if (!isHeaderSkipped) {
+            isHeaderSkipped = true;
+            return; // skip the first non-empty row (header)
+        }
+        
         const get = (col: number) => String(row.getCell(col).value ?? "").trim();
 
         const name      = get(1);
@@ -86,6 +92,9 @@ export default function OperationalDocumentImportPage() {
         const validFrom = get(5);
         const validUntil= get(6);
 
+        // Skip completely empty rows (sometimes Excel has trailing empty rows)
+        if (!name && !type && !referenceNumber && !groupName && !validFrom && !validUntil) return;
+
         let error: string | undefined;
         if (!name)       error = "Nama dokumen wajib diisi";
         else if (!type)  error = "Tipe dokumen wajib diisi";
@@ -93,7 +102,7 @@ export default function OperationalDocumentImportPage() {
         else if (!validUntil) error = "Tanggal berakhir wajib diisi";
 
         rows.push({
-          rowNum,
+          rowNum: rows.length + 1, // sequential data index (1, 2, 3, ...)
           name,
           type,
           groupName,

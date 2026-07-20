@@ -21,6 +21,7 @@ interface BottomSheetProps {
   size?: "md" | "lg" | "xl";
   /** Hide the drag handle */
   noDragHandle?: boolean;
+  contentClassName?: string;
 }
 
 const sizeMap = {
@@ -36,6 +37,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   children,
   size = "md",
   noDragHandle = false,
+  contentClassName = "px-5 py-4",
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
@@ -123,7 +125,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto overscroll-contain px-5 pb-safe py-4">
+            <div className={`flex-1 overflow-y-auto overscroll-contain pb-safe ${contentClassName}`}>
               {children}
             </div>
           </motion.div>

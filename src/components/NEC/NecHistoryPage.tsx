@@ -14,14 +14,8 @@ import {
   TableCell,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
+import BottomSheet from "../common/BottomSheet";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -1980,18 +1974,14 @@ const NecHistoryPage: React.FC = () => {
       </Tabs>
 
 
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-semibold">
-              {modalMode === "create"
-                ? "Tambah Data History"
-                : "Edit Data History"}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-gray-500">
-              Isi detail history recording jaringan NEC.
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        title={modalMode === "create" ? "Tambah Data History" : "Edit Data History"}
+        description="Isi detail history recording jaringan NEC."
+        desktopClassName="sm:max-w-lg"
+        bottomSheetSize="xl"
+      >
           <form onSubmit={handleSubmit}>
             <div className="space-y-5">
               {/* Link - full width */}
@@ -2139,7 +2129,7 @@ const NecHistoryPage: React.FC = () => {
                 )}
               </div>
             </div>
-            <DialogFooter className="mt-6 gap-2">
+            <div className="flex justify-end gap-2 mt-6 pt-4 border-t">
               <Button
                 type="button"
                 variant="outline"
@@ -2158,19 +2148,18 @@ const NecHistoryPage: React.FC = () => {
                   modalMode === "create" ? "Simpan" : "Simpan Perubahan"
                 )}
               </Button>
-            </DialogFooter>
+            </div>
           </form>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
 
-      <Dialog open={isImportModalOpen} onOpenChange={setIsImportModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Impor Data dari Excel</DialogTitle>
-            <DialogDescription>
-              Pilih format Excel yang sesuai dengan file Anda
-            </DialogDescription>
-          </DialogHeader>
+      <ResponsiveModal
+        open={isImportModalOpen}
+        onOpenChange={setIsImportModalOpen}
+        title="Impor Data dari Excel"
+        description="Pilih format Excel yang sesuai dengan file Anda"
+        desktopClassName="max-w-2xl"
+        bottomSheetSize="xl"
+      >
           <div className="space-y-4">
             <Alert>
               <AlertDescription className="space-y-2">
@@ -2252,7 +2241,7 @@ const NecHistoryPage: React.FC = () => {
               </Alert>
             )}
           </div>
-          <DialogFooter className="mt-4">
+          <div className="flex justify-end gap-2 mt-4 pt-4 border-t">
             <Button
               type="button"
               variant="outline"
@@ -2268,80 +2257,76 @@ const NecHistoryPage: React.FC = () => {
               <Upload className="mr-2 h-4 w-4" />
               Impor Pivot
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* ========== MOBILE FILTER MODALS (Unified Bottom Sheet) ========== */}
-      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
-        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300">
-          <DialogHeader className="p-4 border-b bg-gray-50/80">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              {activeMobileFilter === 'neclink' && "Pilih Link"}
-              {(activeMobileFilter === 'monthly-year' || activeMobileFilter === 'yearly-year') && "Pilih Tahun"}
-              {activeMobileFilter === 'monthly-month' && "Pilih Bulan"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
-            <div className="grid grid-cols-1 gap-2">
-              
-              {activeMobileFilter === 'neclink' && (
-                <>
-                  <button onClick={() => { setSelectedLink(null); setCurrentPage(1); fetchHistories(1, searchTerm, undefined); setActiveMobileFilter(null); }}
-                    className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !selectedLink ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
-                    Semua Link
-                    {!selectedLink && <Check className="w-4 h-4" />}
+      <BottomSheet
+        open={!!activeMobileFilter}
+        onClose={() => setActiveMobileFilter(null)}
+        title={
+          activeMobileFilter === 'neclink' ? "Pilih Link"
+          : (activeMobileFilter === 'monthly-year' || activeMobileFilter === 'yearly-year') ? "Pilih Tahun"
+          : activeMobileFilter === 'monthly-month' ? "Pilih Bulan"
+          : ""
+        }
+      >
+          <div className="grid grid-cols-1 gap-2">
+            
+            {activeMobileFilter === 'neclink' && (
+              <>
+                <button onClick={() => { setSelectedLink(null); setCurrentPage(1); fetchHistories(1, searchTerm, undefined); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", !selectedLink ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  Semua Link
+                  {!selectedLink && <Check className="w-4 h-4" />}
+                </button>
+                {links.map((l) => (
+                  <button key={l.id} onClick={() => { setSelectedLink(l.id); setCurrentPage(1); fetchHistories(1, searchTerm, l.id); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedLink === l.id ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                    <span className="truncate pr-2">{l.name}</span>
+                    {selectedLink === l.id && <Check className="w-4 h-4 shrink-0" />}
                   </button>
-                  {links.map((l) => (
-                    <button key={l.id} onClick={() => { setSelectedLink(l.id); setCurrentPage(1); fetchHistories(1, searchTerm, l.id); setActiveMobileFilter(null); }}
-                      className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedLink === l.id ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
-                      <span className="truncate pr-2">{l.name}</span>
-                      {selectedLink === l.id && <Check className="w-4 h-4 shrink-0" />}
-                    </button>
-                  ))}
-                </>
-              )}
+                ))}
+              </>
+            )}
 
-              {activeMobileFilter === 'monthly-year' && (
-                getAvailableYears(histories).map((year) => (
+            {activeMobileFilter === 'monthly-year' && (
+              getAvailableYears(histories).map((year) => (
+                <button key={year} onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  {year}
+                  {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              ))
+            )}
+
+            {activeMobileFilter === 'monthly-month' && (
+              Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
+                <button key={month} onClick={() => { setSelectedMonth(month); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedMonth === month ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
+                  <span className="truncate pr-2">
+                    {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
+                  </span>
+                  {selectedMonth === month && <Check className="w-4 h-4 shrink-0" />}
+                </button>
+              ))
+            )}
+
+            {activeMobileFilter === 'yearly-year' && (
+              [...Array(5)].map((_, i) => {
+                const year = new Date().getFullYear() - i;
+                return (
                   <button key={year} onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
                     className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
                     {year}
                     {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
                   </button>
-                ))
-              )}
+                );
+              })
+            )}
 
-              {activeMobileFilter === 'monthly-month' && (
-                Array.from({ length: 12 }, (_, i) => i + 1).map((month) => (
-                  <button key={month} onClick={() => { setSelectedMonth(month); setActiveMobileFilter(null); }}
-                    className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedMonth === month ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
-                    <span className="truncate pr-2">
-                      {new Date(0, month - 1).toLocaleString("id-ID", { month: "long" })}
-                    </span>
-                    {selectedMonth === month && <Check className="w-4 h-4 shrink-0" />}
-                  </button>
-                ))
-              )}
-
-              {activeMobileFilter === 'yearly-year' && (
-                [...Array(5)].map((_, i) => {
-                  const year = new Date().getFullYear() - i;
-                  return (
-                    <button key={year} onClick={() => { setSelectedYear(year); setActiveMobileFilter(null); }}
-                      className={cn("w-full text-left p-4 rounded-xl border transition-all flex justify-between items-center", selectedYear === year ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}>
-                      {year}
-                      {selectedYear === year && <Check className="w-4 h-4 shrink-0" />}
-                    </button>
-                  );
-                })
-              )}
-
-            </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </BottomSheet>
 
     </div >
   );

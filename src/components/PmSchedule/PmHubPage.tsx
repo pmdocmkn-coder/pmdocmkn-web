@@ -1,15 +1,15 @@
 import React from "react";
 import { useNavigate, Navigate, Link } from "react-router-dom";
 import {
-  Radio, Building2, Wifi, Trash2, Wrench,
-  Package, Warehouse, TrendingUp, ChevronRight, Home,
+  CalendarDays, ClipboardList, TrendingUp, Link2,
+  Radio, ShieldAlert, ChevronRight, Home,
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import { hasPermission } from "../../utils/permissionUtils";
 
 // ─── Sub-menu definitions ─────────────────────────────────────────────────────
 
-interface RadioMenuItem {
+interface PmMenuItem {
   id: string;
   name: string;
   description: string;
@@ -20,96 +20,85 @@ interface RadioMenuItem {
   permission: string;
 }
 
-const RADIO_MENUS: RadioMenuItem[] = [
+const PM_MENUS: PmMenuItem[] = [
   {
-    id: "radio-handover",
-    name: "Serah Terima Radio",
-    description: "Proses serah terima radio antar divisi",
-    path: "/radio-handover",
-    icon: Package,
-    iconBg: "bg-[#F0F4FF]",
-    iconColor: "text-[#1B3A6B]",
-    permission: "radio.handover.menu",
+    id: "pm-schedule",
+    name: "PM Schedule",
+    description: "Jadwal preventive maintenance tahunan",
+    path: "/pm-schedule",
+    icon: CalendarDays,
+    iconBg: "bg-[#EBF4FF]",
+    iconColor: "text-[#2B6CB0]",
+    permission: "pmschedule.menu",
   },
   {
-    id: "radio-repair",
-    name: "Dashboard Perbaikan",
-    description: "Kelola perbaikan dan workshop radio",
-    path: "/radio-repair-dashboard",
-    icon: Wrench,
-    iconBg: "bg-[#FFFBEB]",
-    iconColor: "text-[#F59E0B]",
-    permission: "radio.repair.menu",
-  },
-
-  {
-    id: "radio-warehouse",
-    name: "Radio Masuk WH",
-    description: "Radio yang masuk ke warehouse",
-    path: "/radio-handover/warehouse",
-    icon: Warehouse,
+    id: "kpi-tracking",
+    name: "KPI Tracking",
+    description: "Pantau pencapaian KPI divisi",
+    path: "/kpi-tracking",
+    icon: ClipboardList,
     iconBg: "bg-[#F0FFF4]",
     iconColor: "text-[#059669]",
-    permission: "radio.handover.view",
+    permission: "kpi.view",
   },
   {
-    id: "radio-kpc",
-    name: "Radio KPC",
-    description: "Kelola data dan status radio KPC",
-    path: "/radio-internal",
-    icon: Radio,
+    id: "inspeksi-kpc",
+    name: "Inspeksi KPC",
+    description: "Inspeksi dan monitoring KPC",
+    path: "/inspeksi-kpc",
+    icon: ClipboardList,
     iconBg: "bg-[#FFF0EC]",
     iconColor: "text-[#D94F2B]",
-    permission: "radio.kpc.menu",
+    permission: "inspeksi.menu",
   },
   {
-    id: "radio-contractor",
-    name: "Radio Contractor",
-    description: "Data radio kontraktor",
-    path: "/radio-contractor",
-    icon: Building2,
+    id: "nec-history",
+    name: "NEC History",
+    description: "Riwayat Network Equipment Check",
+    path: "/nec-history",
+    icon: TrendingUp,
+    iconBg: "bg-[#FFFBEB]",
+    iconColor: "text-[#F59E0B]",
+    permission: "nec.histori.menu",
+  },
+  {
+    id: "link-internal",
+    name: "Link Internal",
+    description: "Kelola link internal perusahaan",
+    path: "/link-internal",
+    icon: Link2,
     iconBg: "bg-[#EBF4FF]",
     iconColor: "text-[#2B6CB0]",
-    permission: "radio.view",
+    permission: "internal.link.menu",
   },
   {
-    id: "radio-unit",
-    name: "Radio Unit",
-    description: "Data radio per unit",
-    path: "/radio-unit",
-    icon: Wifi,
-    iconBg: "bg-[#F0FFF4]",
-    iconColor: "text-[#059669]",
-    permission: "radio.view",
+    id: "swr-signal",
+    name: "SWR Signal",
+    description: "Monitoring SWR & kualitas sinyal",
+    path: "/swr-signal",
+    icon: Radio,
+    iconBg: "bg-[#F0F4FF]",
+    iconColor: "text-[#1B3A6B]",
+    permission: "swr.signal.menu",
   },
   {
-    id: "radio-scrap",
-    name: "Radio Scrap",
-    description: "Radio yang di-scrap",
-    path: "/radio-scrap",
-    icon: Trash2,
+    id: "operational-documents",
+    name: "Monitoring Dokumen",
+    description: "Kelola dokumen operasional",
+    path: "/operational-documents",
+    icon: ShieldAlert,
     iconBg: "bg-[#FEF2F2]",
     iconColor: "text-[#DC2626]",
-    permission: "radio.scrap.view",
-  },
-  {
-    id: "fleet-statistics",
-    name: "Fleet Statistics",
-    description: "Statistik dan analisis data fleet",
-    path: "/fleet-statistics",
-    icon: TrendingUp,
-    iconBg: "bg-[#EBF4FF]",
-    iconColor: "text-[#2B6CB0]",
-    permission: "fleet.menu",
+    permission: "operationaldocument.menu",
   },
 ];
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function RadioHubPage() {
+export default function PmHubPage() {
   const navigate = useNavigate();
 
-  const visibleMenus = RADIO_MENUS.filter(m => hasPermission(m.permission));
+  const visibleMenus = PM_MENUS.filter(m => hasPermission(m.permission));
 
   // Jika hanya 1 menu visible, langsung redirect
   if (visibleMenus.length === 1) {
@@ -126,11 +115,11 @@ export default function RadioHubPage() {
 
       {/* ── Mobile: Header ── */}
       <MobilePageHeader
-        label="Radio & Fleet"
-        title="Radio Management"
-        subtitle="Kelola data radio dan fleet"
-        icon={<Radio className="w-5 h-5 text-[#D94F2B]" strokeWidth={2} />}
-        iconBg="bg-[#FFF0EC]"
+        label="PM Management"
+        title="PM & Monitoring"
+        subtitle="Kelola jadwal PM, inspeksi & monitoring"
+        icon={<CalendarDays className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />}
+        iconBg="bg-[#EBF4FF]"
         rightAction={
           <button
             onClick={() => navigate("/dashboard")}
@@ -151,7 +140,7 @@ export default function RadioHubPage() {
             <Link
               key={menu.id}
               to={menu.path}
-              className="w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm hover:border-[#D94F2B] hover:bg-[#FFFAF8] transition-colors text-left active:scale-[0.98]"
+              className="w-full flex items-center gap-4 px-4 py-3.5 bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm hover:border-[#2B6CB0] hover:bg-[#F0F7FF] transition-colors text-left active:scale-[0.98]"
             >
               <div className={`w-10 h-10 rounded-[10px] flex items-center justify-center flex-shrink-0 ${menu.iconBg}`}>
                 <Icon className={`w-5 h-5 ${menu.iconColor}`} />
@@ -168,16 +157,16 @@ export default function RadioHubPage() {
 
       {/* ── Desktop: Redirect info (desktop users use sidebar, not this page) ── */}
       <div className="hidden md:flex flex-col items-center justify-center py-16 text-center">
-        <div className="w-16 h-16 rounded-[14px] bg-[#FFF0EC] flex items-center justify-center mb-4">
-          <Radio className="w-8 h-8 text-[#D94F2B]" />
+        <div className="w-16 h-16 rounded-[14px] bg-[#EBF4FF] flex items-center justify-center mb-4">
+          <CalendarDays className="w-8 h-8 text-[#2B6CB0]" />
         </div>
-        <h2 className="text-lg font-bold text-[#1A202C] mb-2">Radio & Fleet</h2>
-        <p className="text-[13px] text-[#718096] mb-4">Gunakan sidebar untuk navigasi menu Radio pada desktop.</p>
+        <h2 className="text-lg font-bold text-[#1A202C] mb-2">PM Management</h2>
+        <p className="text-[13px] text-[#718096] mb-4">Gunakan sidebar untuk navigasi menu PM pada desktop.</p>
         <button
-          onClick={() => navigate("/radio-internal")}
+          onClick={() => navigate("/pm-schedule")}
           className="px-4 py-2 bg-[#1B3A6B] text-white rounded-[10px] text-sm font-semibold hover:bg-[#2B6CB0] transition-colors"
         >
-          Buka Radio KPC
+          Buka PM Schedule
         </button>
       </div>
     </div>

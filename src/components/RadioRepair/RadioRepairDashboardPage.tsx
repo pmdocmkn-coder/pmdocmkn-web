@@ -25,9 +25,15 @@ import ImageGalleryModal from "../common/ImageGalleryModal";
 import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
 import RadioCompletionTagModal from "./RadioCompletionTagModal";
 import RadioWarrantyCheckModal from "./RadioWarrantyCheckModal";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { FilterSelect } from "../Radio/FilterSelect";
 import { FormMobileSelect } from "../Radio/FormMobileSelect";
 import { FormMobileDatePicker } from "../Radio/FormMobileDatePicker";
@@ -892,10 +898,10 @@ export default function RadioRepairDashboardPage() {
         onIndexChange={setGalleryIndex}
       />
 
-      <Dialog open={!!detail} onOpenChange={(open) => { if (!open) setDetail(null); }}>
+      <Dialog open={!!detail} onOpenChange={(open: boolean) => { if (!open) setDetail(null); }}>
         <DialogContent
           className="max-w-3xl"
-          onInteractOutside={(e) => {
+          onInteractOutside={(e: Event) => {
             if (galleryOpen) e.preventDefault();
           }}
         >
@@ -941,7 +947,7 @@ export default function RadioRepairDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!editJob} onOpenChange={() => setEditJob(null)}>
+      <Dialog open={!!editJob} onOpenChange={(open: boolean) => setEditJob(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Edit pekerjaan</DialogTitle>
@@ -952,7 +958,7 @@ export default function RadioRepairDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!whJob} onOpenChange={(open) => { if (!open) setWhJob(null); }}>
+      <Dialog open={!!whJob} onOpenChange={(open: boolean) => { if (!open) setWhJob(null); }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
             <DialogTitle>Teknisi → Warehouse</DialogTitle>
@@ -972,7 +978,7 @@ export default function RadioRepairDashboardPage() {
 
       <RadioWarrantyCheckModal
         open={warrantyCheckOpen}
-        onOpenChange={(open) => {
+        onOpenChange={(open: boolean) => {
           if (!open) {
             setWarrantyCheckOpen(false);
             setPendingAction(null);
@@ -987,7 +993,7 @@ export default function RadioRepairDashboardPage() {
       />
 
       {/* Technician Picker Dialog */}
-      <Dialog open={techPickerOpen} onOpenChange={(open) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}>
+      <Dialog open={techPickerOpen} onOpenChange={(open: boolean) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}>
         <DialogContent className="w-[95vw] sm:max-w-2xl rounded-xl">
           <DialogHeader>
             <DialogTitle>Pilih Teknisi Workshop</DialogTitle>

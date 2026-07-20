@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -125,11 +125,13 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
     const firstDoc = documents[0];
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-md rounded-2xl">
-                <DialogHeader>
-                    <DialogTitle className="text-xl"> Update Progres {isMultiple ? `Massal (${documents.length})` : "Dokumen"} </DialogTitle>
-                </DialogHeader>
+        <ResponsiveModal 
+            open={isOpen} 
+            onOpenChange={(open) => !open && onClose()}
+            title={`Update Progres ${isMultiple ? `Massal (${documents.length})` : "Dokumen"}`}
+            desktopClassName="max-w-md rounded-2xl"
+            bottomSheetSize="xl"
+        >
                 <div className="bg-gray-50 -mx-6 px-6 py-3 border-y mb-4">
                     <p className="text-sm text-gray-500 font-medium">Dokumen</p>
                     <p className="font-semibold text-gray-900">{isMultiple ? `Grup Data Terpilih (${documents.length} dokumen)` : firstDoc.documentName}</p>
@@ -240,12 +242,11 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
                         </div>
                     </div>
 
-                    <DialogFooter className="mt-6 border-t pt-4">
+                    <div className="flex gap-2 justify-end mt-6 border-t pt-4">
                         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Batal</Button>
                         <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">Simpan Progres</Button>
-                    </DialogFooter>
+                    </div>
                 </form>
-            </DialogContent>
-        </Dialog>
+        </ResponsiveModal>
     );
 }

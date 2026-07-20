@@ -4,9 +4,7 @@ import { motion, AnimatePresence, cubicBezier, Variants } from "framer-motion";
 import { hasPermission } from "../../utils/permissionUtils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
@@ -920,13 +918,9 @@ export default function CctvKpcPage() {
       )}
 
       {/* ── Create / Edit Modal ── */}
-      <Dialog open={isCreateOpen || isEditOpen} onOpenChange={(open) => {
+      <ResponsiveModal open={isCreateOpen || isEditOpen} onOpenChange={(open) => {
         if (!open) { setIsCreateOpen(false); setIsEditOpen(false); setFormData(defaultForm()); setFormError(null); }
-      }}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{isEditOpen ? "Edit CCTV" : "Tambah CCTV"}</DialogTitle>
-          </DialogHeader>
+      }} title={isEditOpen ? "Edit CCTV" : "Tambah CCTV"} desktopClassName="max-w-2xl max-h-[90vh] overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             {/* Severity */}
             <div className="space-y-2 md:col-span-2">
@@ -1008,21 +1002,16 @@ export default function CctvKpcPage() {
               <button onClick={() => setFormError(null)} className="ml-auto text-red-400 hover:text-red-600"><X className="h-4 w-4" /></button>
             </div>
           )}
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-100">
             <Button variant="outline" onClick={() => { setIsCreateOpen(false); setIsEditOpen(false); setFormData(defaultForm()); setFormError(null); }}>Batal</Button>
             <Button onClick={isEditOpen ? handleUpdate : handleCreate} className="bg-slate-700 hover:bg-slate-800 text-white">
               {isEditOpen ? "Simpan Perubahan" : "Tambah CCTV"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* ── Import Modal ── */}
-      <Dialog open={isImportOpen} onOpenChange={(open) => { if (!open) { setIsImportOpen(false); setImportFile(null); setImportStatus("idle"); setIsDragging(false); } }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>Import CCTV KPC dari Excel</DialogTitle>
-          </DialogHeader>
+      <ResponsiveModal open={isImportOpen} onOpenChange={(open) => { if (!open) { setIsImportOpen(false); setImportFile(null); setImportStatus("idle"); setIsDragging(false); } }} title="Import CCTV KPC dari Excel" desktopClassName="max-w-md">
           <div className="py-4 space-y-4">
             {importStatus === "idle" && (
               <>
@@ -1105,7 +1094,7 @@ export default function CctvKpcPage() {
               </div>
             )}
           </div>
-          <DialogFooter>
+          <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-gray-100">
             {importStatus === "idle" && (
               <>
                 <Button variant="outline" onClick={() => setIsImportOpen(false)}>Batal</Button>
@@ -1117,9 +1106,8 @@ export default function CctvKpcPage() {
             {(importStatus === "done" || importStatus === "error") && (
               <Button onClick={() => { setIsImportOpen(false); setImportFile(null); setImportStatus("idle"); }}>Tutup</Button>
             )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </div>
+      </ResponsiveModal>
 
       {/* ========== MOBILE FILTER MODALS ========== */}
       <div id="mobile-dropdown-severity" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity" onClick={() => document.getElementById("mobile-dropdown-severity")?.classList.add("hidden")}>

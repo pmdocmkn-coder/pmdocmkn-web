@@ -12,13 +12,8 @@ import {
 } from "../ui/table";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1328,7 +1323,7 @@ export default function RadioUnitPage() {
       )}
 
       {/* ── Create / Edit Modal ── */}
-      <Dialog
+      <ResponsiveModal
         open={isCreateOpen || isEditOpen}
         onOpenChange={(open) => {
           if (!open) {
@@ -1338,13 +1333,9 @@ export default function RadioUnitPage() {
             setFormError(null);
           }
         }}
+        title={isEditOpen ? "Edit Radio Unit" : "Tambah Radio Unit"}
+        desktopClassName="max-w-2xl max-h-[90vh] overflow-y-auto"
       >
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {isEditOpen ? "Edit Radio Unit" : "Tambah Radio Unit"}
-            </DialogTitle>
-          </DialogHeader>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Nomor Aset</label>
@@ -1440,8 +1431,7 @@ export default function RadioUnitPage() {
               </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
 
       {/* ── Scrap Modal ── */}
       <ScrapRadioModal

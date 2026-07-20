@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Label } from "../ui/label";
@@ -106,11 +106,12 @@ export default function KpiFormModal({ isOpen, onClose, document, periodMonth, e
     };
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-md rounded-2xl">
-                <DialogHeader>
-                    <DialogTitle className="text-xl">{isEdit ? "Edit Informasi Dokumen" : "Tambah Dokumen KPI Baru"}</DialogTitle>
-                </DialogHeader>
+        <ResponsiveModal 
+            open={isOpen} 
+            onOpenChange={(open) => !open && onClose()}
+            title={isEdit ? "Edit Informasi Dokumen" : "Tambah Dokumen KPI Baru"}
+            desktopClassName="max-w-md rounded-2xl"
+        >
 
                 <form onSubmit={handleSubmit} className="space-y-4 mt-2">
                     <div className="space-y-1.5">
@@ -179,14 +180,13 @@ export default function KpiFormModal({ isOpen, onClose, document, periodMonth, e
                         </div>
                     </div>
 
-                    <DialogFooter className="mt-8 border-t pt-4">
+                    <div className="flex gap-2 justify-end mt-8 border-t pt-4">
                         <Button type="button" variant="outline" onClick={onClose} disabled={loading}>Batal</Button>
                         <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700">
                             {isEdit ? "Simpan Perubahan" : "Buat Dokumen"}
                         </Button>
-                    </DialogFooter>
+                    </div>
                 </form>
-            </DialogContent>
-        </Dialog>
+        </ResponsiveModal>
     );
 }

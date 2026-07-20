@@ -3,13 +3,7 @@ import { swrSignalApi } from "@/services/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -21,6 +15,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { format, parse } from "date-fns";
 import {
   ChevronsLeft,
@@ -1065,15 +1060,13 @@ export default function SwrHistoryTab() {
       </Card>
 
       {/* Create/Edit Modal */}
-      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">
-              {modalMode === "create" ? "Add SWR History" : "Edit SWR History"}
-            </DialogTitle>
-          </DialogHeader>
-
-          <div className="space-y-6 py-4">
+      <ResponsiveModal 
+        open={isModalOpen} 
+        onOpenChange={setIsModalOpen}
+        title={modalMode === "create" ? "Add SWR History" : "Edit SWR History"}
+        desktopClassName="max-w-2xl"
+      >
+          <div className="space-y-6 py-4 p-4">
             {/* Channel Selection */}
             <div className="space-y-2">
               <Label htmlFor="channel" className="text-sm font-semibold">
@@ -1220,105 +1213,99 @@ export default function SwrHistoryTab() {
                 </p>
               )}
             </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={closeModal}
-              disabled={isLoading}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              {isLoading
-                ? "Saving..."
-                : modalMode === "create"
-                  ? "Create Record"
-                  : "Update Record"
-              }
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-      {/* Mobile Filter Modal (Bottom Sheet) */}
-      <Dialog open={!!activeMobileFilter} onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}>
-        <DialogContent className="fixed bottom-0 top-auto translate-y-0 sm:bottom-0 sm:top-auto sm:translate-y-0 max-w-full sm:max-w-[500px] rounded-t-2xl rounded-b-none p-0 overflow-hidden border-x-0 border-b-0 animate-in slide-in-from-bottom duration-300 focus:outline-none">
-          <DialogHeader className="p-4 border-b bg-gray-50/80">
-            <div className="w-12 h-1.5 bg-gray-300 rounded-full mx-auto mb-4" />
-            <DialogTitle className="text-lg font-bold flex items-center gap-2">
-              <Filter className="w-5 h-5 text-blue-600" />
-              {activeMobileFilter === "site" ? "Pilih Site" : activeMobileFilter === "type" ? "Pilih Tipe" : "Pilih Channel"}
-            </DialogTitle>
-          </DialogHeader>
-          <div className="max-h-[60vh] overflow-y-auto p-4 pb-12">
-            <div className="flex flex-col gap-2">
-              {activeMobileFilter === "site" && (
-                <>
-                  <button
-                    onClick={() => { setSelectedSite("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
-                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedSite === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
-                  >
-                    All Sites
-                  </button>
-                  {sites.map((site) => (
-                    <button
-                      key={site.id}
-                      onClick={() => { setSelectedSite(site.id.toString()); setCurrentPage(1); setActiveMobileFilter(null); }}
-                      className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedSite === site.id.toString() ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
-                    >
-                      {site.name}
-                    </button>
-                  ))}
-                </>
-              )}
-              {activeMobileFilter === "type" && (
-                <>
-                  <button
-                    onClick={() => { setSelectedType("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
-                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedType === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
-                  >
-                    All Types
-                  </button>
-                  {["Trunking", "Conventional"].map((type) => (
-                    <button
-                      key={type}
-                      onClick={() => { setSelectedType(type); setCurrentPage(1); setActiveMobileFilter(null); }}
-                      className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedType === type ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </>
-              )}
-              {activeMobileFilter === "channel" && (
-                <>
-                  <button
-                    onClick={() => { setSelectedChannel("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
-                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedChannel === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
-                  >
-                    All Channels
-                  </button>
-                  {channels.map((ch) => (
-                    <button
-                      key={ch.id}
-                      onClick={() => { setSelectedChannel(ch.id.toString()); setCurrentPage(1); setActiveMobileFilter(null); }}
-                      className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedChannel === ch.id.toString() ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
-                    >
-                      <div className="font-bold">{ch.channelName}</div>
-                      <div className="text-xs opacity-70">{ch.swrSiteName} • {ch.swrSiteType}</div>
-                    </button>
-                  ))}
-                </>
-              )}
+            
+            <div className="flex justify-end gap-2 pt-4 border-t">
+                <Button
+                  variant="outline"
+                  onClick={closeModal}
+                  disabled={isLoading}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  {isLoading
+                    ? "Saving..."
+                    : modalMode === "create"
+                      ? "Create Record"
+                      : "Update Record"
+                  }
+                </Button>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
+      {/* Mobile Filter Modal (Bottom Sheet) */}
+      <ResponsiveModal
+        open={!!activeMobileFilter}
+        onOpenChange={(open) => { if (!open) setActiveMobileFilter(null); }}
+        title={activeMobileFilter === "site" ? "Pilih Site" : activeMobileFilter === "type" ? "Pilih Tipe" : "Pilih Channel"}
+      >
+        <div className="p-4 pb-12">
+          <div className="flex flex-col gap-2">
+            {activeMobileFilter === "site" && (
+              <>
+                <button
+                  onClick={() => { setSelectedSite("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedSite === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                >
+                  All Sites
+                </button>
+                {sites.map((site) => (
+                  <button
+                    key={site.id}
+                    onClick={() => { setSelectedSite(site.id.toString()); setCurrentPage(1); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedSite === site.id.toString() ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                  >
+                    {site.name}
+                  </button>
+                ))}
+              </>
+            )}
+            {activeMobileFilter === "type" && (
+              <>
+                <button
+                  onClick={() => { setSelectedType("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedType === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                >
+                  All Types
+                </button>
+                {["Trunking", "Conventional"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => { setSelectedType(type); setCurrentPage(1); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedType === type ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                  >
+                    {type}
+                  </button>
+                ))}
+              </>
+            )}
+            {activeMobileFilter === "channel" && (
+              <>
+                <button
+                  onClick={() => { setSelectedChannel("all"); setCurrentPage(1); setActiveMobileFilter(null); }}
+                  className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedChannel === "all" ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                >
+                  All Channels
+                </button>
+                {channels.map((ch) => (
+                  <button
+                    key={ch.id}
+                    onClick={() => { setSelectedChannel(ch.id.toString()); setCurrentPage(1); setActiveMobileFilter(null); }}
+                    className={cn("w-full text-left p-4 rounded-xl border transition-all", selectedChannel === ch.id.toString() ? "bg-blue-50 border-blue-200 text-blue-700 font-bold" : "bg-white border-gray-100 text-gray-700")}
+                  >
+                    <div className="font-bold">{ch.channelName}</div>
+                    <div className="text-xs opacity-70">{ch.swrSiteName} • {ch.swrSiteType}</div>
+                  </button>
+                ))}
+              </>
+            )}
+          </div>
+        </div>
+      </ResponsiveModal>
     </div >
   );
 }

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 
 import { Printer, Loader2 } from "lucide-react";
@@ -88,18 +88,29 @@ export default function PrintMaterialDialog({
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Printer className="w-5 h-5 text-blue-600" />
-            Cetak Bukti Material
-          </DialogTitle>
-          <DialogDescription>
-            Pilih peminjaman mana saja yang ingin disertakan dalam cetakan.
-          </DialogDescription>
-        </DialogHeader>
-
+    <ResponsiveModal 
+      open={open} 
+      onOpenChange={onOpenChange}
+      title="Cetak Form Peminjaman"
+      description="Pilih peminjaman yang ingin dicetak."
+      bottomSheetSize="md"
+      desktopClassName="max-w-md"
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={fetchingDetails} className="flex-1 sm:flex-none">
+            Batal
+          </Button>
+          <Button onClick={handlePrint} disabled={fetchingDetails || selectedIds.length === 0} className="bg-blue-600 hover:bg-blue-700 flex-1 sm:flex-none">
+            {fetchingDetails ? (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            ) : (
+              <Printer className="w-4 h-4 mr-2" />
+            )}
+            Proses Cetak
+          </Button>
+        </>
+      }
+    >
         <div className="py-4">
           {loading ? (
             <div className="flex justify-center py-8">
@@ -140,20 +151,6 @@ export default function PrintMaterialDialog({
           )}
         </div>
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={fetchingDetails}>
-            Batal
-          </Button>
-          <Button onClick={handlePrint} disabled={fetchingDetails || selectedIds.length === 0} className="bg-blue-600 hover:bg-blue-700">
-            {fetchingDetails ? (
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-            ) : (
-              <Printer className="w-4 h-4 mr-2" />
-            )}
-            Proses Cetak
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

@@ -6,7 +6,7 @@ import type { EquipmentTagType, GreenTagFields } from "../../types/equipmentTag"
 import { EMPTY_GREEN_TAG } from "../../types/equipmentTag";
 import { useToast } from "../../hooks/use-toast";
 import { isValidSignature } from "../../utils/signatureUtils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import HandoverAccessoryList from "./HandoverAccessoryList";
 import MultiPhotoUpload from "./MultiPhotoUpload";
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
@@ -227,11 +227,13 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   };
 
   return (
-    <Dialog open={true} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Edit Serah Terima: {detail.handoverNumber}</DialogTitle>
-        </DialogHeader>
+    <ResponsiveModal
+      open={true}
+      onOpenChange={onClose}
+      bottomSheetSize="xl"
+      desktopClassName="max-w-2xl"
+      title={`Edit Serah Terima: ${detail.handoverNumber}`}
+    >
 
         <div className="space-y-4">
           {/* Tiket & Serial - Responsive Grid */}
@@ -429,7 +431,6 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
             {submitting ? "Menyimpan..." : "Simpan Perubahan"}
           </button>
         </div>
-      </DialogContent>
-    </Dialog>
+    </ResponsiveModal>
   );
 }

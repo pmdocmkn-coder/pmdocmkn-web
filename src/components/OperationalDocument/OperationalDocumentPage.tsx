@@ -1,12 +1,12 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import ExcelJS from "exceljs";
 import { saveAs } from "file-saver";
 import {
   FileText, Plus, Search, ExternalLink, Edit2, Trash2,
   CheckCircle, Clock, AlertTriangle, ChevronDown, Filter, X,
-  Calendar, ChevronRight, TrendingUp, RotateCw, CalendarX, Loader2,
-  MoreHorizontal, Download, Upload, FileSpreadsheet, Info, Bell, Eye
+  Calendar, ChevronRight, RotateCw, CalendarX, Loader2,
+  Download, Upload, FileSpreadsheet, Info, Eye
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import BottomSheet from "../common/BottomSheet";
@@ -19,6 +19,7 @@ import { Check } from "lucide-react";
 import { cn } from "../../lib/utils";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
+import { Progress } from "../ui/progress";
 import { useToast } from "../../hooks/use-toast";
 import { hasPermission } from "../../utils/permissionUtils";
 import {
@@ -216,16 +217,29 @@ export default function OperationalDocumentPage() {
   const [form, setForm] = useState<CreateOperationalDocumentDto>(defaultForm());
   const [validFromDate, setValidFromDate] = useState<Date | undefined>();
   const [validUntilDate, setValidUntilDate] = useState<Date | undefined>();
+  // Multi-PIC entries — setiap entry punya nama dan telegramId
+  const [picEntries, setPicEntries] = useState<{ name: string; telegramId: string }[]>([{ name: "", telegramId: "" }]);
   const [deleteConfirm, setDeleteConfirm] = useState<OperationalDocumentDto | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isSendingNotif, setIsSendingNotif] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isDownloadingTemplate, setIsDownloadingTemplate] = useState(false);
+  
+  // BHP State
+  const [bhpInvoiceNumbers, setBhpInvoiceNumbers] = useState<Record<number, string>>({});
+  const [isUpdatingBhp, setIsUpdatingBhp] = useState<Record<number, boolean>>({});
+  const [expandedRows, setExpandedRows] = useState<Record<number, boolean>>({});
+  const [editingBhpYear, setEditingBhpYear] = useState<Record<number, boolean>>({}); // key = year
+
+  const toggleRow = (id: number) => {
+    setExpandedRows(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const canCreate = hasPermission("operationaldocument.create");
   const canUpdate = hasPermission("operationaldocument.update");
   const canDelete = hasPermission("operationaldocument.delete");
   const canSendNotification = hasPermission("operationaldocument.sendnotification");
+  const canUpdateBhp = hasPermission("operationaldocument.updatebhp");
 
   // ── Fetching ──
   const loadSummary = useCallback(async () => {
@@ -301,7 +315,14 @@ export default function OperationalDocumentPage() {
   }, [searchInput, search]);
 
   // ── Actions ──
-  const openCreate = () => { setEditId(null); setForm(defaultForm()); setValidFromDate(undefined); setValidUntilDate(undefined); setFormOpen(true); };
+  const openCreate = () => {
+    setEditId(null);
+    setForm(defaultForm());
+    setValidFromDate(undefined);
+    setValidUntilDate(undefined);
+    setPicEntries([{ name: "", telegramId: "" }]);
+    setFormOpen(true);
+  };
   
   const openDetail = (doc: OperationalDocumentDto) => {
     setSelectedDetailDoc(doc);
@@ -310,23 +331,52 @@ export default function OperationalDocumentPage() {
 
   const openEdit = (doc: OperationalDocumentDto) => {
     setEditId(doc.id);
-    setForm({      name: doc.name,
+    setForm({
+      name: doc.name,
       type: doc.type,
       referenceNumber: doc.referenceNumber ?? "",
       groupName: doc.groupName ?? "",
       validFrom: doc.validFrom,
-      validUntil: doc.validUntil, picName: doc.picName ?? "", picTelegramId: doc.picTelegramId ?? "", fileLink: doc.fileLink ?? "" });
+      validUntil: doc.validUntil,
+      picName: doc.picName ?? "",
+      picTelegramId: doc.picTelegramId ?? "",
+      fileLink: doc.fileLink ?? ""
+    });
     setValidFromDate(parseISO(doc.validFrom));
     setValidUntilDate(parseISO(doc.validUntil));
+
+    // Parse picEntries dari data — split nama & telegram ID per koma
+    const names = (doc.picName ?? "").split(",").map(n => n.trim()).filter(Boolean);
+    const tids = (doc.picTelegramId ?? "").split(",").map(t => t.trim()).filter(Boolean);
+    const maxLen = Math.max(names.length, tids.length, 1);
+    setPicEntries(
+      Array.from({ length: maxLen }, (_, i) => ({
+        name: names[i] ?? "",
+        telegramId: tids[i] ?? "",
+      }))
+    );
+
     setFormOpen(true);
   };
-  const closeForm = () => { setFormOpen(false); setEditId(null); setForm(defaultForm()); };
+  const closeForm = () => {
+    setFormOpen(false);
+    setEditId(null);
+    setForm(defaultForm());
+    setPicEntries([{ name: "", telegramId: "" }]);
+  };
   
   const handleSubmit = async () => {
+    // Serialize picEntries → picName & picTelegramId (koma-separated, skip yang kosong)
+    const validPicEntries = picEntries.filter(p => p.name.trim() || p.telegramId.trim());
+    const picName = validPicEntries.map(p => p.name.trim()).join(",");
+    const picTelegramId = [...new Set(validPicEntries.map(p => p.telegramId.trim()).filter(Boolean))].join(",");
+
     const dto: CreateOperationalDocumentDto = {
       ...form,
       validFrom: validFromDate ? validFromDate.toISOString() : form.validFrom,
       validUntil: validUntilDate ? validUntilDate.toISOString() : form.validUntil,
+      picName: picName || undefined as any,
+      picTelegramId: picTelegramId || undefined as any,
     };
     if (!dto.name.trim() || !dto.type || !dto.validFrom || !dto.validUntil) {
       toast({ title: "Nama, Tipe, dan Tanggal wajib diisi", variant: "destructive" }); return;
@@ -391,6 +441,69 @@ export default function OperationalDocumentPage() {
   const applySearch = () => { setSearch(searchInput); setPage(1); };
   const clearFilters = () => { setFilterType(""); setFilterStatus(""); setFilterFollowUp(""); setFilterGroup(""); setSearch(""); setSearchInput(""); setPage(1); };
   const hasActiveFilter = filterType || filterStatus || filterFollowUp || filterGroup || search;
+
+  const handleToggleBhp = async (docId: number, year: number, currentIsPaid: boolean) => {
+    setIsUpdatingBhp(prev => ({ ...prev, [year]: true }));
+    try {
+      if (currentIsPaid) {
+        // Unmark
+        const res = await operationalDocumentApi.unmarkBhpPayment(docId, year);
+        toast({ title: "BHP Dibatalkan", description: res.data?.message });
+        // Keluar dari mode edit jika sedang edit
+        setEditingBhpYear(prev => ({ ...prev, [year]: false }));
+      } else {
+        // Mark (requires invoice number)
+        const inv = bhpInvoiceNumbers[year];
+        if (!inv || !inv.trim()) {
+          toast({ title: "Gagal", description: "Nomor Invoice harus diisi", variant: "destructive" });
+          setIsUpdatingBhp(prev => ({ ...prev, [year]: false }));
+          return;
+        }
+        const res = await operationalDocumentApi.markBhpPayment(docId, year, inv);
+        toast({ title: "BHP Disimpan", description: res.data?.message });
+        setBhpInvoiceNumbers(prev => ({ ...prev, [year]: "" }));
+        setEditingBhpYear(prev => ({ ...prev, [year]: false }));
+      }
+      
+      // Reload document detail if modal is open
+      if (selectedDetailDoc && selectedDetailDoc.id === docId) {
+        const res = await operationalDocumentApi.getById(docId);
+        setSelectedDetailDoc(res.data.data);
+      }
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Gagal", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+    } finally {
+      setIsUpdatingBhp(prev => ({ ...prev, [year]: false }));
+    }
+  };
+
+  // Masuk mode edit invoice untuk item yang sudah paid
+  const startEditBhpInvoice = (year: number, currentInvoice: string) => {
+    setBhpInvoiceNumbers(prev => ({ ...prev, [year]: currentInvoice }));
+    setEditingBhpYear(prev => ({ ...prev, [year]: true }));
+  };
+
+  // Simpan invoice yang diedit (re-mark dengan invoice baru)
+  const handleSaveEditBhp = async (docId: number, year: number) => {
+    const inv = bhpInvoiceNumbers[year];
+    if (!inv || !inv.trim()) {
+      toast({ title: "Gagal", description: "Nomor Invoice tidak boleh kosong", variant: "destructive" });
+      return;
+    }
+    setIsUpdatingBhp(prev => ({ ...prev, [year]: true }));
+    try {
+      const res = await operationalDocumentApi.markBhpPayment(docId, year, inv);
+      toast({ title: "Invoice Diperbarui", description: res.data?.message });
+      setEditingBhpYear(prev => ({ ...prev, [year]: false }));
+      setBhpInvoiceNumbers(prev => ({ ...prev, [year]: "" }));
+      loadData();
+    } catch (e: any) {
+      toast({ title: "Gagal", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+    } finally {
+      setIsUpdatingBhp(prev => ({ ...prev, [year]: false }));
+    }
+  };
 
   const handleTriggerNotification = async () => {
     if (isSendingNotif) return;
@@ -682,37 +795,38 @@ export default function OperationalDocumentPage() {
       </div>
 
       {/* ── Summary Cards (Mockup Style) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-5">
-        {/* Card 1 */}
-        <div className="bg-white border border-[#E2E8F0] md:border-[#E2E8F0] md:shadow-sm rounded-[12px] md:rounded-[14px] p-4 md:p-5 flex items-center gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[10px] md:rounded-[12px] bg-[#1A2744] flex items-center justify-center flex-shrink-0">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+        {/* Card 1 - Total */}
+        <div className="bg-white border border-[#E2E8F0] rounded-[14px] p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[12px] bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] flex items-center justify-center flex-shrink-0 shadow-sm shadow-[#1B3A6B]/20">
             <FileText className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
             <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Total Dokumen</p>
-            <p className="text-[24px] md:text-[28px] font-bold text-[#1A202C] leading-none mt-1.5 mb-1.5">{summary.totalDocuments.toLocaleString()}</p>
+            <p className="text-[26px] md:text-[30px] font-bold text-[#1A202C] leading-none mt-1.5">{summary.totalDocuments.toLocaleString()}</p>
+            <p className="text-[11px] text-[#718096] mt-1">dokumen aktif terpantau</p>
           </div>
         </div>
-        {/* Card 2 */}
-        <div className="bg-white border border-[#E2E8F0] md:border-[#E2E8F0] md:shadow-sm rounded-[12px] md:rounded-[14px] p-4 md:p-5 flex items-center gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[10px] md:rounded-[12px] bg-amber-50 flex items-center justify-center flex-shrink-0 border border-amber-100">
-            <RotateCw className="w-5 h-5 md:w-6 md:h-6 text-[#F59E0B]" />
+        {/* Card 2 - Expiring */}
+        <div className="bg-white border border-amber-100 rounded-[14px] p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[12px] bg-gradient-to-br from-[#F59E0B] to-[#FBBF24] flex items-center justify-center flex-shrink-0 shadow-sm shadow-amber-200">
+            <RotateCw className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
-            <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Akan Berakhir (&lt; 30 Hari)</p>
-            <p className="text-[24px] md:text-[28px] font-bold text-[#F59E0B] leading-none mt-1.5 mb-1.5">{summary.expiringSoon}</p>
-            <p className="text-[11px] md:text-[12px] text-[#718096] italic">Segera perbarui dokumen ini</p>
+            <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Akan Berakhir &lt; 30 Hari</p>
+            <p className="text-[26px] md:text-[30px] font-bold text-[#F59E0B] leading-none mt-1.5">{summary.expiringSoon}</p>
+            <p className="text-[11px] text-[#718096] mt-1">segera perbarui dokumen ini</p>
           </div>
         </div>
-        {/* Card 3 */}
-        <div className="bg-white border border-[#E2E8F0] md:border-[#E2E8F0] md:shadow-sm rounded-[12px] md:rounded-[14px] p-4 md:p-5 flex items-center gap-4">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[10px] md:rounded-[12px] bg-red-50 flex items-center justify-center flex-shrink-0 border border-red-100">
-            <CalendarX className="w-5 h-5 md:w-6 md:h-6 text-[#DC2626]" />
+        {/* Card 3 - Expired */}
+        <div className="bg-white border border-red-100 rounded-[14px] p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[12px] bg-gradient-to-br from-[#DC2626] to-[#EF4444] flex items-center justify-center flex-shrink-0 shadow-sm shadow-red-200">
+            <CalendarX className="w-5 h-5 md:w-6 md:h-6 text-white" />
           </div>
           <div>
             <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Sudah Expired</p>
-            <p className="text-[24px] md:text-[28px] font-bold text-[#DC2626] leading-none mt-1.5 mb-1.5">{summary.expired}</p>
-            <p className="text-[11px] md:text-[12px] text-[#718096] italic">Tindakan segera diperlukan</p>
+            <p className="text-[26px] md:text-[30px] font-bold text-[#DC2626] leading-none mt-1.5">{summary.expired}</p>
+            <p className="text-[11px] text-[#718096] mt-1">tindakan segera diperlukan</p>
           </div>
         </div>
       </div>
@@ -843,6 +957,7 @@ export default function OperationalDocumentPage() {
         <table className="w-full">
           <thead className="bg-[#F8FAFC]">
             <tr>
+              <th className="px-5 py-4 w-10"></th>
               {["No", "Nama Dokumen", "Tipe", "Grup", "Tanggal Berakhir", "Sisa Hari", "Status", "Tindak Lanjut", "Aksi"].map(h => (
                 <th key={h} className="px-5 py-4 text-left text-[11px] font-bold text-[#718096] uppercase tracking-wider">{h}</th>
               ))}
@@ -850,93 +965,317 @@ export default function OperationalDocumentPage() {
           </thead>
           <tbody className="divide-y divide-[#E2E8F0]">
             {loading && items.length === 0 ? (
-              <tr><td colSpan={9} className="py-16 text-center text-[#718096] text-[14px]">Memuat data...</td></tr>
+              <tr><td colSpan={10} className="py-16 text-center text-[#718096] text-[14px]">Memuat data...</td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={9} className="py-16 text-center text-[#718096] text-[14px]">Tidak ada dokumen yang ditemukan.</td></tr>
+              <tr><td colSpan={10} className="py-16 text-center text-[#718096] text-[14px]">Tidak ada dokumen yang ditemukan.</td></tr>
             ) : items.map((doc, idx) => {
               const daysColor = doc.daysRemaining < 0 ? "text-[#DC2626]" : (doc.daysRemaining < 30 ? "text-[#F59E0B]" : "text-[#059669]");
+              const isExpanded = expandedRows[doc.id];
+              const isIsr = doc.type?.toLowerCase().includes("isr");
               return (
-                <tr key={doc.id} className="hover:bg-[#F7F8FA] transition-colors">
-                  <td className="px-5 py-4 text-[13px] text-[#718096] font-mono">{(page - 1) * PAGE_SIZE + idx + 1 < 10 ? `0${(page - 1) * PAGE_SIZE + idx + 1}` : (page - 1) * PAGE_SIZE + idx + 1}</td>
-                  <td className="px-5 py-4">
-                    <p className="text-[14px] font-bold text-[#1A202C] leading-snug">{doc.name}</p>
-                    {doc.referenceNumber && <p className="text-[11px] text-[#718096] uppercase mt-1 tracking-wide">REF: {doc.referenceNumber}</p>}
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className="text-[13px] text-[#4A5568]">{doc.type}</span>
-                  </td>
-                  <td className="px-5 py-4">
-                    {doc.groupName ? <span className="text-[11px] text-[#2B6CB0] bg-[#EBF4FF] px-2 py-1 rounded-[6px] font-medium">{doc.groupName}</span> : <span className="text-[13px] text-[#A0AEC0]">-</span>}
-                  </td>
-                  <td className="px-5 py-4 text-[13px] font-semibold text-[#1A202C]">
-                    {fmtDate(doc.validUntil)}
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex flex-col">
-                      <span className={`text-[14px] font-bold ${daysColor}`}>
-                        {Math.abs(doc.daysRemaining)}
-                      </span>
-                      <span className={`text-[11px] ${daysColor} font-medium`}>{doc.daysRemaining < 0 ? "Hari lalu" : "Hari"}</span>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <TableExpiryBadge status={doc.expiryStatus} />
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="relative">
-                      <Select
-                        value={doc.followUpStatus}
-                        onValueChange={(v) => handleFollowUpChange(doc, v)}
-                        disabled={!canUpdate}
-                      >
-                        <SelectTrigger className="h-8 min-w-[120px] text-[12px] font-medium border-[#E2E8F0] rounded-[6px] bg-white focus:ring-1 focus:ring-[#2B6CB0]/20 text-[#4A5568]">
-                          <SelectValue placeholder="Pilih status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "SedangDiproses" ? "Sedang Diproses" : s}</SelectItem>)}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-1">
-                      <button onClick={() => openDetail(doc)}
-                        title="Lihat Detail"
-                        className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
-                        <Eye className="w-4 h-4" />
-                      </button>
-                      {doc.fileLink && (
-                        <a href={doc.fileLink} target="_blank" rel="noopener noreferrer"
+                <React.Fragment key={doc.id}>
+                  <tr className={`hover:bg-[#F7F8FA] transition-colors ${isExpanded ? 'bg-[#F0F5FF]' : ''}`}>
+                    <td className="px-2 py-4 text-center">
+                      {isIsr && (
+                        <button
+                          onClick={() => toggleRow(doc.id)}
+                          className={`w-7 h-7 flex items-center justify-center rounded-[6px] transition-all ${
+                            isExpanded
+                              ? 'bg-[#1B3A6B] text-white shadow-sm'
+                              : 'text-[#718096] hover:bg-[#E2E8F0] hover:text-[#1A202C]'
+                          }`}
+                          title={isExpanded ? 'Tutup Checklist BHP' : 'Lihat Checklist BHP'}
+                        >
+                          <ChevronRight className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                        </button>
+                      )}
+                    </td>
+                    <td className="px-5 py-4 text-[13px] text-[#718096] font-mono">{(page - 1) * PAGE_SIZE + idx + 1 < 10 ? `0${(page - 1) * PAGE_SIZE + idx + 1}` : (page - 1) * PAGE_SIZE + idx + 1}</td>
+                    <td className="px-5 py-4">
+                      <p className="text-[14px] font-bold text-[#1A202C] leading-snug">{doc.name}</p>
+                      {doc.referenceNumber && <p className="text-[11px] text-[#718096] uppercase mt-1 tracking-wide">REF: {doc.referenceNumber}</p>}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span className="text-[13px] text-[#4A5568] block">{doc.type}</span>
+                      {isIsr && (
+                        <div className="mt-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] font-semibold text-[#718096] uppercase tracking-wide">BHP</span>
+                            <span className={`text-[10px] font-bold ${
+                              (doc.bhpPaidCount || 0) === (doc.bhpTotalCount || 0) ? 'text-[#059669]' : 'text-[#F59E0B]'
+                            }`}>
+                              {doc.bhpPaidCount || 0}/{doc.bhpTotalCount || 0}
+                            </span>
+                          </div>
+                          <Progress
+                            value={((doc.bhpPaidCount || 0) / (doc.bhpTotalCount || 1)) * 100}
+                            className={`h-2 w-20 bg-[#E2E8F0] ${
+                              (doc.bhpPaidCount || 0) === (doc.bhpTotalCount || 0)
+                                ? '[&>div]:bg-[#059669]'
+                                : '[&>div]:bg-[#F59E0B]'
+                            }`}
+                          />
+                        </div>
+                      )}
+                    </td>
+                    <td className="px-5 py-4">
+                      {doc.groupName ? <span className="text-[11px] text-[#2B6CB0] bg-[#EBF4FF] px-2 py-1 rounded-[6px] font-medium">{doc.groupName}</span> : <span className="text-[13px] text-[#A0AEC0]">-</span>}
+                    </td>
+                    <td className="px-5 py-4 text-[13px] font-semibold text-[#1A202C]">
+                      {fmtDate(doc.validUntil)}
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex flex-col">
+                        <span className={`text-[14px] font-bold ${daysColor}`}>
+                          {Math.abs(doc.daysRemaining)}
+                        </span>
+                        <span className={`text-[11px] ${daysColor} font-medium`}>{doc.daysRemaining < 0 ? "Hari lalu" : "Hari"}</span>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <TableExpiryBadge status={doc.expiryStatus} />
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="relative">
+                        <Select
+                          value={doc.followUpStatus}
+                          onValueChange={(v) => handleFollowUpChange(doc, v)}
+                          disabled={!canUpdate}
+                        >
+                          <SelectTrigger className="h-8 min-w-[120px] text-[12px] font-medium border-[#E2E8F0] rounded-[6px] bg-white focus:ring-1 focus:ring-[#2B6CB0]/20 text-[#4A5568]">
+                            <SelectValue placeholder="Pilih status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "SedangDiproses" ? "Sedang Diproses" : s}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => openDetail(doc)}
+                          title="Lihat Detail"
                           className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
-                          <ExternalLink className="w-4 h-4" />
-                        </a>
-                      )}
-                      {canSendNotification && (
-                        <button onClick={() => handleSendNotification(doc)} disabled={sendingNotifId === doc.id}
-                          title="Kirim Notifikasi Telegram (Manual)"
-                          className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#229ED9] hover:bg-[#E8F4FD] transition-colors disabled:opacity-50">
-                          {sendingNotifId === doc.id ? <RotateCw className="w-4 h-4 animate-spin" /> : (
-                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                              <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                            </svg>
-                          )}
+                          <Eye className="w-4 h-4" />
                         </button>
-                      )}
-                      {canUpdate && (
-                        <button onClick={() => openEdit(doc)}
-                          className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
-                          <Edit2 className="w-4 h-4" />
-                        </button>
-                      )}
-                      {canDelete && (
-                        <button onClick={() => setDeleteConfirm(doc)}
-                          className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-red-50 hover:text-[#DC2626] transition-colors">
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                  </td>
-                </tr>
+                        {doc.fileLink && (
+                          <a href={doc.fileLink} target="_blank" rel="noopener noreferrer"
+                            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
+                            <ExternalLink className="w-4 h-4" />
+                          </a>
+                        )}
+                        {canSendNotification && (
+                          <button onClick={() => handleSendNotification(doc)} disabled={sendingNotifId === doc.id}
+                            title="Kirim Notifikasi Telegram (Manual)"
+                            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#229ED9] hover:bg-[#E8F4FD] transition-colors disabled:opacity-50">
+                            {sendingNotifId === doc.id ? <RotateCw className="w-4 h-4 animate-spin" /> : (
+                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                              </svg>
+                            )}
+                          </button>
+                        )}
+                        {canUpdate && (
+                          <button onClick={() => openEdit(doc)}
+                            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors">
+                            <Edit2 className="w-4 h-4" />
+                          </button>
+                        )}
+                        {canDelete && (
+                          <button onClick={() => setDeleteConfirm(doc)}
+                            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-red-50 hover:text-[#DC2626] transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                  
+                  {isExpanded && doc.bhpChecklist && (
+                    <tr className="bg-gradient-to-b from-[#F0F5FF] to-[#F8FAFC] border-b border-[#E2E8F0]">
+                      <td colSpan={10} className="p-0">
+                        <div className="px-8 py-6">
+                          {/* Header */}
+                          <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-[8px] bg-[#1B3A6B] flex items-center justify-center">
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              </div>
+                              <div>
+                                <h4 className="text-[13px] font-bold text-[#1B3A6B]">Checklist Pembayaran BHP Tahunan</h4>
+                                <p className="text-[11px] text-[#718096]">
+                                  {doc.bhpPaidCount || 0} dari {doc.bhpTotalCount || 0} tahun telah lunas
+                                </p>
+                              </div>
+                            </div>
+                            {/* Overall Progress */}
+                            <div className="flex items-center gap-3 bg-white rounded-[10px] border border-[#E2E8F0] px-4 py-2 shadow-sm">
+                              <div className="w-28">
+                                <Progress
+                                  value={((doc.bhpPaidCount || 0) / (doc.bhpTotalCount || 1)) * 100}
+                                  className="h-2 bg-[#E2E8F0] [&>div]:bg-[#059669] [&>div]:transition-all [&>div]:duration-700"
+                                />
+                              </div>
+                              <span className="text-[13px] font-bold text-[#059669]">
+                                {Math.round(((doc.bhpPaidCount || 0) / (doc.bhpTotalCount || 1)) * 100)}%
+                              </span>
+                            </div>
+                          </div>
+
+                          {/* Timeline vertikal */}
+                          <div className="relative">
+                            {/* Garis koneksi vertikal */}
+                            <div className="absolute left-[19px] top-5 bottom-5 w-0.5 bg-[#E2E8F0]" />
+
+                            <div className="space-y-3">
+                              {doc.bhpChecklist.map((chk, chkIdx) => (
+                                <div key={chk.id} className="relative flex items-start gap-4">
+                                  {/* Timeline dot */}
+                                  <div className={`relative z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
+                                    chk.isPaid
+                                      ? 'bg-[#059669] border-[#059669] shadow-sm shadow-[#059669]/30'
+                                      : 'bg-white border-[#E2E8F0]'
+                                  }`}>
+                                    {isUpdatingBhp[chk.year] ? (
+                                      <Loader2 className="w-4 h-4 animate-spin text-[#718096]" />
+                                    ) : chk.isPaid ? (
+                                      <CheckCircle className="w-5 h-5 text-white" />
+                                    ) : (
+                                      <span className="text-[11px] font-bold text-[#A0AEC0]">{String(chkIdx + 1).padStart(2, '0')}</span>
+                                    )}
+                                  </div>
+
+                                  {/* Card konten */}
+                                  <div className={`flex-1 rounded-[10px] border transition-all duration-200 ${
+                                    chk.isPaid
+                                      ? 'bg-white border-emerald-200 shadow-sm shadow-emerald-100/50'
+                                      : 'bg-white border-[#E2E8F0] hover:border-[#CBD5E1] hover:shadow-sm'
+                                  }`}>
+                                    {chk.isPaid && !editingBhpYear[chk.year] ? (
+                                      /* ── LUNAS STATE (tampilan) ── */
+                                      <div className="flex items-center justify-between px-4 py-3">
+                                        <div>
+                                          <p className="text-[13px] font-bold text-[#1A202C]">Tahun {chk.year}</p>
+                                          <div className="flex items-center gap-2 mt-0.5">
+                                            <span className="text-[11px] text-[#059669] font-semibold flex items-center gap-1">
+                                              <CheckCircle className="w-3 h-3" /> Lunas
+                                            </span>
+                                            <span className="text-[#E2E8F0]">•</span>
+                                            <span className="text-[11px] text-[#4A5568] font-mono">INV: {chk.invoiceNumber}</span>
+                                          </div>
+                                          {chk.paidAt && (
+                                            <p className="text-[10px] text-[#A0AEC0] mt-0.5">
+                                              {chk.paidByUserName} · {format(parseISO(chk.paidAt), "dd MMM yyyy")}
+                                            </p>
+                                          )}
+                                        </div>
+                                        {canUpdateBhp && (
+                                          <div className="flex items-center gap-1.5">
+                                            <button
+                                              onClick={() => startEditBhpInvoice(chk.year, chk.invoiceNumber || "")}
+                                              className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+                                              title="Edit nomor invoice"
+                                            >
+                                              <Edit2 className="w-3.5 h-3.5" />
+                                            </button>
+                                            <button
+                                              onClick={() => handleToggleBhp(doc.id, chk.year, true)}
+                                              disabled={isUpdatingBhp[chk.year]}
+                                              className="w-7 h-7 flex items-center justify-center rounded-[6px] text-[#A0AEC0] hover:bg-red-50 hover:text-[#DC2626] transition-colors"
+                                              title="Batalkan lunas"
+                                            >
+                                              <X className="w-3.5 h-3.5" />
+                                            </button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    ) : chk.isPaid && editingBhpYear[chk.year] ? (
+                                      /* ── EDIT INVOICE STATE ── */
+                                      <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <div>
+                                            <p className="text-[13px] font-bold text-[#1A202C]">Tahun {chk.year}</p>
+                                            <p className="text-[11px] text-[#2B6CB0] font-medium">Edit nomor invoice</p>
+                                          </div>
+                                          <button
+                                            onClick={() => setEditingBhpYear(prev => ({ ...prev, [chk.year]: false }))}
+                                            className="text-[11px] text-[#718096] hover:text-[#1A202C]"
+                                          >
+                                            Batal
+                                          </button>
+                                        </div>
+                                        <div className="flex gap-2">
+                                          <Input
+                                            placeholder="No. Invoice baru..."
+                                            value={bhpInvoiceNumbers[chk.year] || ""}
+                                            onChange={(e) => setBhpInvoiceNumbers(prev => ({ ...prev, [chk.year]: e.target.value }))}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' && (bhpInvoiceNumbers[chk.year] || "").trim()) {
+                                                handleSaveEditBhp(doc.id, chk.year);
+                                              }
+                                              if (e.key === 'Escape') setEditingBhpYear(prev => ({ ...prev, [chk.year]: false }));
+                                            }}
+                                            autoFocus
+                                            className="h-9 text-[12px] bg-[#F7F8FA] border-[#2B6CB0] focus:bg-white flex-1 rounded-[8px]"
+                                          />
+                                          <Button
+                                            onClick={() => handleSaveEditBhp(doc.id, chk.year)}
+                                            disabled={isUpdatingBhp[chk.year] || !(bhpInvoiceNumbers[chk.year] || "").trim()}
+                                            className="h-9 px-4 text-[12px] font-semibold bg-[#2B6CB0] hover:bg-[#1B3A6B] text-white rounded-[8px] whitespace-nowrap flex items-center gap-1.5 disabled:opacity-50"
+                                          >
+                                            {isUpdatingBhp[chk.year] ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Simpan"}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      /* ── BELUM BAYAR STATE ── */
+                                      <div className="px-4 py-3">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <div>
+                                            <p className="text-[13px] font-bold text-[#1A202C]">Tahun {chk.year}</p>
+                                            <p className="text-[11px] text-[#F59E0B] font-medium flex items-center gap-1">
+                                              <Clock className="w-3 h-3" /> Belum dibayar
+                                            </p>
+                                          </div>
+                                        </div>
+                                        {canUpdateBhp && (
+                                          <div className="flex gap-2">
+                                            <Input
+                                              placeholder="Masukkan No. Invoice / Bukti Bayar..."
+                                              value={bhpInvoiceNumbers[chk.year] || ""}
+                                              onChange={(e) => setBhpInvoiceNumbers(prev => ({ ...prev, [chk.year]: e.target.value }))}
+                                              onKeyDown={(e) => {
+                                                if (e.key === 'Enter' && (bhpInvoiceNumbers[chk.year] || "").trim()) {
+                                                  handleToggleBhp(doc.id, chk.year, false);
+                                                }
+                                              }}
+                                              className="h-9 text-[12px] bg-[#F7F8FA] border-[#E2E8F0] focus:bg-white flex-1 rounded-[8px]"
+                                            />
+                                            <Button
+                                              onClick={() => handleToggleBhp(doc.id, chk.year, false)}
+                                              disabled={isUpdatingBhp[chk.year] || !(bhpInvoiceNumbers[chk.year] || "").trim()}
+                                              className="h-9 px-4 text-[12px] font-semibold bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white rounded-[8px] whitespace-nowrap flex items-center gap-1.5 disabled:opacity-50"
+                                            >
+                                              {isUpdatingBhp[chk.year] ? (
+                                                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                                              ) : (
+                                                <><CheckCircle className="w-3.5 h-3.5" /> Tandai Lunas</>
+                                              )}
+                                            </Button>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               );
             })}
           </tbody>
@@ -958,12 +1297,178 @@ export default function OperationalDocumentPage() {
                 <div className="flex flex-wrap gap-2 mt-1.5">
                   <span className="text-[12px] text-[#4A5568] bg-[#F7F8FA] px-2 py-0.5 rounded-[4px]">{doc.type}</span>
                   {doc.groupName && <span className="text-[11px] text-[#2B6CB0] bg-[#EBF4FF] px-2 py-0.5 rounded-[4px] font-medium">{doc.groupName}</span>}
+                  {doc.type?.toLowerCase().includes("isr") && (
+                    <div className="flex items-center gap-2 mt-1">
+                      <div className="flex items-center gap-1.5">
+                        <Progress
+                          value={((doc.bhpPaidCount || 0) / (doc.bhpTotalCount || 1)) * 100}
+                          className={`h-1.5 w-12 bg-[#E2E8F0] ${
+                            (doc.bhpPaidCount || 0) === (doc.bhpTotalCount || 0)
+                              ? '[&>div]:bg-[#059669]'
+                              : '[&>div]:bg-[#F59E0B]'
+                          }`}
+                        />
+                        <span className={`text-[11px] font-bold ${
+                          (doc.bhpPaidCount || 0) === (doc.bhpTotalCount || 0) ? 'text-[#059669]' : 'text-[#F59E0B]'
+                        }`}>
+                          BHP {doc.bhpPaidCount || 0}/{doc.bhpTotalCount || 0}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => toggleRow(doc.id)}
+                        className={`flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-[5px] transition-colors ${
+                          expandedRows[doc.id]
+                            ? 'bg-[#1B3A6B] text-white'
+                            : 'text-[#2B6CB0] bg-[#EBF4FF]'
+                        }`}
+                      >
+                        {expandedRows[doc.id] ? 'Tutup' : 'Bayar'} <ChevronDown className={`w-3 h-3 transition-transform ${expandedRows[doc.id] ? 'rotate-180' : ''}`} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="flex gap-1 flex-shrink-0">
                 <MobileExpiryBadge status={doc.expiryStatus} />
               </div>
             </div>
+
+            {/* Mobile Expanded BHP */}
+            {expandedRows[doc.id] && doc.type?.toLowerCase().includes("isr") && doc.bhpChecklist && (
+              <div className="bg-gradient-to-b from-[#F0F5FF] to-[#F8FAFC] border border-[#DBEAFE] rounded-[10px] p-3 mt-1">
+                {/* Header summary */}
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-[7px] bg-[#1B3A6B] flex items-center justify-center">
+                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-bold text-[#1B3A6B]">Checklist BHP Tahunan</p>
+                      <p className="text-[10px] text-[#718096]">{doc.bhpPaidCount || 0}/{doc.bhpTotalCount || 0} tahun lunas</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Progress
+                      value={((doc.bhpPaidCount || 0) / (doc.bhpTotalCount || 1)) * 100}
+                      className="h-1.5 w-16 bg-[#E2E8F0] [&>div]:bg-[#059669]"
+                    />
+                    <span className="text-[11px] font-bold text-[#059669]">
+                      {Math.round(((doc.bhpPaidCount || 0) / (doc.bhpTotalCount || 1)) * 100)}%
+                    </span>
+                  </div>
+                </div>
+
+                {/* Timeline items */}
+                <div className="relative">
+                  <div className="absolute left-[15px] top-5 bottom-5 w-0.5 bg-[#E2E8F0]" />
+                  <div className="space-y-2">
+                    {doc.bhpChecklist.map((chk, chkIdx) => (
+                      <div key={chk.id} className="relative flex items-start gap-3">
+                        {/* Dot */}
+                        <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
+                          chk.isPaid ? 'bg-[#059669] border-[#059669]' : 'bg-white border-[#E2E8F0]'
+                        }`}>
+                          {isUpdatingBhp[chk.year] ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-[#718096]" />
+                          ) : chk.isPaid ? (
+                            <CheckCircle className="w-4 h-4 text-white" />
+                          ) : (
+                            <span className="text-[10px] font-bold text-[#A0AEC0]">{chkIdx + 1}</span>
+                          )}
+                        </div>
+
+                        {/* Card */}
+                        <div className={`flex-1 rounded-[8px] border text-left ${
+                          chk.isPaid ? 'bg-white border-emerald-200' : 'bg-white border-[#E2E8F0]'
+                        }`}>
+                          {chk.isPaid && !editingBhpYear[chk.year] ? (
+                            <div className="px-3 py-2.5 flex items-start justify-between">
+                              <div>
+                                <p className="text-[12px] font-bold text-[#1A202C]">Tahun {chk.year}</p>
+                                <p className="text-[10px] text-[#059669] font-semibold flex items-center gap-1 mt-0.5">
+                                  <CheckCircle className="w-3 h-3" /> Lunas
+                                </p>
+                                <p className="text-[10px] text-[#4A5568] mt-0.5 font-mono">INV: {chk.invoiceNumber}</p>
+                                {chk.paidAt && <p className="text-[10px] text-[#A0AEC0] mt-0.5">{format(parseISO(chk.paidAt), "dd/MM/yy")} · {chk.paidByUserName}</p>}
+                              </div>
+                              {canUpdateBhp && (
+                                <div className="flex gap-1 ml-2 flex-shrink-0">
+                                  <button
+                                    onClick={() => startEditBhpInvoice(chk.year, chk.invoiceNumber || "")}
+                                    className="w-6 h-6 flex items-center justify-center rounded-[5px] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors"
+                                    title="Edit invoice"
+                                  >
+                                    <Edit2 className="w-3 h-3" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleToggleBhp(doc.id, chk.year, true)}
+                                    disabled={isUpdatingBhp[chk.year]}
+                                    className="w-6 h-6 flex items-center justify-center rounded-[5px] text-[#A0AEC0] hover:text-[#DC2626] hover:bg-red-50 transition-colors ml-2 flex-shrink-0"
+                                    title="Batalkan"
+                                  >
+                                    <X className="w-3 h-3" />
+                                  </button>
+                                </div>
+                              )}
+                            </div>
+                          ) : chk.isPaid && editingBhpYear[chk.year] ? (
+                            /* Edit mode mobile */
+                            <div className="px-3 py-2.5">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-[12px] font-bold text-[#2B6CB0]">Edit Invoice {chk.year}</p>
+                                <button onClick={() => setEditingBhpYear(prev => ({ ...prev, [chk.year]: false }))} className="text-[10px] text-[#718096]">Batal</button>
+                              </div>
+                              <div className="flex gap-1.5">
+                                <Input
+                                  placeholder="No. Invoice baru..."
+                                  value={bhpInvoiceNumbers[chk.year] || ""}
+                                  onChange={(e) => setBhpInvoiceNumbers(prev => ({ ...prev, [chk.year]: e.target.value }))}
+                                  autoFocus
+                                  className="h-8 text-[11px] bg-[#F7F8FA] border-[#2B6CB0] focus:bg-white flex-1 rounded-[6px]"
+                                />
+                                <Button
+                                  onClick={() => handleSaveEditBhp(doc.id, chk.year)}
+                                  disabled={isUpdatingBhp[chk.year] || !(bhpInvoiceNumbers[chk.year] || "").trim()}
+                                  className="h-8 px-2.5 text-[11px] font-semibold bg-[#2B6CB0] hover:bg-[#1B3A6B] text-white rounded-[6px] whitespace-nowrap disabled:opacity-50"
+                                >
+                                  {isUpdatingBhp[chk.year] ? <Loader2 className="w-3 h-3 animate-spin" /> : "Simpan"}
+                                </Button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="px-3 py-2.5">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-[12px] font-bold text-[#1A202C]">Tahun {chk.year}</p>
+                                <span className="text-[10px] text-[#F59E0B] font-medium flex items-center gap-0.5">
+                                  <Clock className="w-3 h-3" /> Belum bayar
+                                </span>
+                              </div>
+                              {canUpdateBhp && (
+                                <div className="flex gap-2">
+                                  <Input
+                                    placeholder="No. Invoice..."
+                                    value={bhpInvoiceNumbers[chk.year] || ""}
+                                    onChange={(e) => setBhpInvoiceNumbers(prev => ({ ...prev, [chk.year]: e.target.value }))}
+                                    className="h-8 text-[11px] bg-[#F7F8FA] border-[#E2E8F0] focus:bg-white flex-1 rounded-[6px]"
+                                  />
+                                  <Button
+                                    onClick={() => handleToggleBhp(doc.id, chk.year, false)}
+                                    disabled={isUpdatingBhp[chk.year] || !(bhpInvoiceNumbers[chk.year] || "").trim()}
+                                    className="h-8 px-3 text-[11px] font-semibold bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white rounded-[6px] whitespace-nowrap disabled:opacity-50"
+                                  >
+                                    {isUpdatingBhp[chk.year] ? <Loader2 className="w-3 h-3 animate-spin" /> : "Simpan"}
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="flex items-center gap-2 text-[12px] text-[#718096] bg-[#F7F8FA] p-2 rounded-[8px]">
               <Calendar className="w-3.5 h-3.5" />
@@ -1175,13 +1680,50 @@ export default function OperationalDocumentPage() {
               </div>
             </div>
             <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Nama PIC</label>
-              <Input value={form.picName} onChange={(e) => setForm(f => ({ ...f, picName: e.target.value }))} placeholder="Nama penanggung jawab" className="h-11 rounded-[10px]" />
-            </div>
-            <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Telegram Chat ID PIC</label>
-              <Input value={form.picTelegramId} onChange={(e) => setForm(f => ({ ...f, picTelegramId: e.target.value }))} placeholder="Chat ID Telegram (cth: 123456789)" type="text" className="h-11 rounded-[10px]" />
-              <p className="text-[11px] text-[#718096] mt-1.5">Chat ID dari Telegram (buka bot @userinfobot untuk cek ID Anda). Pisahkan dengan koma jika lebih dari 1.</p>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-[12px] font-semibold text-[#4A5568]">Penanggung Jawab (PIC)</label>
+                <button
+                  type="button"
+                  onClick={() => setPicEntries(prev => [...prev, { name: "", telegramId: "" }])}
+                  className="flex items-center gap-1 text-[11px] font-semibold text-[#2B6CB0] hover:text-[#1B3A6B] transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Tambah PIC
+                </button>
+              </div>
+              <div className="space-y-2">
+                {picEntries.map((entry, idx) => (
+                  <div key={idx} className="flex gap-2 items-start">
+                    {/* Avatar nomor */}
+                    <div className="w-8 h-8 rounded-full bg-[#EBF4FF] border border-[#2B6CB0]/20 flex items-center justify-center flex-shrink-0 mt-1.5">
+                      <span className="text-[11px] font-bold text-[#2B6CB0]">{idx + 1}</span>
+                    </div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <Input
+                        value={entry.name}
+                        onChange={e => setPicEntries(prev => prev.map((p, i) => i === idx ? { ...p, name: e.target.value } : p))}
+                        placeholder="Nama PIC"
+                        className="h-9 rounded-[8px] text-[13px]"
+                      />
+                      <Input
+                        value={entry.telegramId}
+                        onChange={e => setPicEntries(prev => prev.map((p, i) => i === idx ? { ...p, telegramId: e.target.value } : p))}
+                        placeholder="Telegram Chat ID"
+                        className="h-9 rounded-[8px] text-[13px] font-mono"
+                      />
+                    </div>
+                    {picEntries.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => setPicEntries(prev => prev.filter((_, i) => i !== idx))}
+                        className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-red-50 hover:text-[#DC2626] transition-colors mt-1.5 flex-shrink-0"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-[11px] text-[#718096] mt-2">Telegram Chat ID: buka bot @userinfobot untuk cek ID Anda.</p>
             </div>
             <div>
               <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Link Dokumen (OneDrive/SharePoint)</label>
@@ -1249,62 +1791,221 @@ export default function OperationalDocumentPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Detail Modal */}
-      <Dialog open={detailModalOpen} onOpenChange={setDetailModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-[16px]">
-          <DialogHeader className="mb-2">
-            <DialogTitle className="text-[20px] font-bold text-[#1A202C]">Detail Dokumen</DialogTitle>
-          </DialogHeader>
-          {selectedDetailDoc && (
-            <div className="space-y-4">
-              <div>
-                <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Nama Dokumen</p>
-                <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.name}</p>
-                {selectedDetailDoc.referenceNumber && (
-                  <p className="text-[13px] text-[#718096] mt-0.5">REF: {selectedDetailDoc.referenceNumber}</p>
+      {/* Detail Modal — Desktop: Dialog, Mobile: BottomSheet dengan swipe */}
+      {selectedDetailDoc && (() => {
+        const isIsr = selectedDetailDoc.type?.toLowerCase().includes("isr");
+        const daysRemaining = selectedDetailDoc.daysRemaining;
+        const expiryStatus = selectedDetailDoc.expiryStatus;
+        const bhpPct = isIsr ? Math.round(((selectedDetailDoc.bhpPaidCount || 0) / (selectedDetailDoc.bhpTotalCount || 1)) * 100) : 0;
+        const allLunas = isIsr && (selectedDetailDoc.bhpPaidCount || 0) === (selectedDetailDoc.bhpTotalCount || 0) && (selectedDetailDoc.bhpTotalCount || 0) > 0;
+
+        // Split nama & Telegram IDs — independent, tidak dipasangkan
+        const picNames = selectedDetailDoc.picName
+          ? selectedDetailDoc.picName.split(",").map(n => n.trim()).filter(Boolean)
+          : [];
+        const telegramIds = selectedDetailDoc.picTelegramId
+          ? [...new Set(selectedDetailDoc.picTelegramId.split(",").map(id => id.trim()).filter(Boolean))]
+          : [];
+
+        const TelegramIcon = () => (
+          <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+          </svg>
+        );
+        // Shared detail body (reused in both mobile & desktop)
+        const DetailBody = (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-[#F7F8FA] rounded-[12px] p-3.5 border border-[#E2E8F0]">
+                <p className="text-[10px] font-bold text-[#718096] uppercase tracking-wider mb-1">Mulai Berlaku</p>
+                <p className="text-[13px] font-bold text-[#1A202C]">{format(parseISO(selectedDetailDoc.validFrom), "dd MMM yyyy", { locale: localeId })}</p>
+              </div>
+              <div className="bg-[#F7F8FA] rounded-[12px] p-3.5 border border-[#E2E8F0]">
+                <p className="text-[10px] font-bold text-[#718096] uppercase tracking-wider mb-1">Berakhir</p>
+                <p className={`text-[13px] font-bold ${expiryStatus === "Expired" ? "text-[#DC2626]" : expiryStatus === "Warning" ? "text-[#F59E0B]" : "text-[#1A202C]"}`}>
+                  {format(parseISO(selectedDetailDoc.validUntil), "dd MMM yyyy", { locale: localeId })}
+                </p>
+              </div>
+            </div>
+
+            {(selectedDetailDoc.picName || selectedDetailDoc.picTelegramId) && (
+              <div className="bg-[#F7F8FA] rounded-[12px] p-4 border border-[#E2E8F0]">
+                <p className="text-[10px] font-bold text-[#718096] uppercase tracking-wider mb-3">Penanggung Jawab (PIC)</p>
+
+                {/* Nama PIC — bisa multiple */}
+                {picNames.length > 0 && (
+                  <div className="mb-3">
+                    <p className="text-[10px] text-[#A0AEC0] font-semibold uppercase tracking-wide mb-2">Nama</p>
+                    <div className="space-y-1.5">
+                      {picNames.map((name, i) => (
+                        <div key={i} className="flex items-center gap-2.5">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] flex items-center justify-center flex-shrink-0 shadow-sm">
+                            <span className="text-white text-[11px] font-bold">
+                              {name.split(" ").slice(0, 2).map(w => w[0]).join("").toUpperCase()}
+                            </span>
+                          </div>
+                          <p className="text-[13px] font-bold text-[#1A202C]">{name}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider jika keduanya ada */}
+                {picNames.length > 0 && telegramIds.length > 0 && (
+                  <div className="border-t border-[#E2E8F0] my-3" />
+                )}
+
+                {/* Telegram IDs — bisa multiple, tampil terpisah */}
+                {telegramIds.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-[#A0AEC0] font-semibold uppercase tracking-wide mb-2">Telegram Notifikasi</p>
+                    <div className="flex flex-wrap gap-2">
+                      {telegramIds.map((tid, i) => (
+                        <a
+                          key={i}
+                          href={`https://t.me/${tid}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#229ED9]/10 border border-[#229ED9]/20 text-[#229ED9] text-[12px] font-semibold hover:bg-[#229ED9]/20 transition-colors"
+                        >
+                          <TelegramIcon /> {tid}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
                 )}
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Tipe</p>
-                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.type}</p>
+            )}
+
+            <div className="flex items-center justify-between bg-[#F7F8FA] rounded-[12px] px-4 py-3 border border-[#E2E8F0]">
+              <p className="text-[12px] font-bold text-[#718096] uppercase tracking-wider">Tindak Lanjut</p>
+              <FollowUpBadge status={selectedDetailDoc.followUpStatus} />
+            </div>
+
+            {selectedDetailDoc.followUpRemark && (
+              <div className="bg-[#FFFBEB] border border-amber-200 rounded-[12px] px-4 py-3">
+                <p className="text-[10px] font-bold text-[#F59E0B] uppercase tracking-wider mb-1.5">Catatan</p>
+                <p className="text-[13px] text-[#1A202C] leading-relaxed whitespace-pre-line">{selectedDetailDoc.followUpRemark}</p>
+              </div>
+            )}
+
+            {isIsr && (selectedDetailDoc.bhpTotalCount ?? 0) > 0 && (
+              <div className={`rounded-[12px] p-4 border ${allLunas ? 'bg-emerald-50 border-emerald-200' : 'bg-[#F0F5FF] border-[#DBEAFE]'}`}>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-7 h-7 rounded-[7px] flex items-center justify-center ${allLunas ? 'bg-[#059669]' : 'bg-[#1B3A6B]'}`}>
+                      <CheckCircle className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-[12px] font-bold text-[#1B3A6B]">Checklist BHP Tahunan</p>
+                      <p className="text-[10px] text-[#718096]">{selectedDetailDoc.bhpPaidCount || 0} dari {selectedDetailDoc.bhpTotalCount || 0} tahun lunas</p>
+                    </div>
+                  </div>
+                  <span className={`text-[20px] font-black ${allLunas ? 'text-[#059669]' : 'text-[#1B3A6B]'}`}>{bhpPct}%</span>
                 </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Grup</p>
-                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.groupName || "-"}</p>
+                <div className="w-full bg-white/60 rounded-full h-2.5 overflow-hidden border border-white">
+                  <div className={`h-full rounded-full transition-all duration-700 ${allLunas ? 'bg-[#059669]' : bhpPct >= 60 ? 'bg-[#2B6CB0]' : 'bg-[#F59E0B]'}`} style={{ width: `${bhpPct}%` }} />
                 </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Mulai Berlaku</p>
-                  <p className="text-[14px] font-medium text-[#1A202C]">{format(parseISO(selectedDetailDoc.validFrom), "dd MMM yyyy", { locale: localeId })}</p>
+                {selectedDetailDoc.bhpChecklist && selectedDetailDoc.bhpChecklist.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5 mt-3">
+                    {selectedDetailDoc.bhpChecklist.map(chk => (
+                      <div key={chk.id} title={chk.isPaid ? `INV: ${chk.invoiceNumber}` : 'Belum dibayar'}
+                        className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${chk.isPaid ? 'bg-emerald-100 border-emerald-300 text-[#059669]' : 'bg-white border-[#E2E8F0] text-[#718096]'}`}>
+                        {chk.isPaid ? <CheckCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
+                        {chk.year}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {selectedDetailDoc.fileLink && (
+              <a href={selectedDetailDoc.fileLink} target="_blank" rel="noopener noreferrer"
+                className="flex items-center justify-between bg-[#F7F8FA] hover:bg-[#EBF4FF] border border-[#E2E8F0] hover:border-[#2B6CB0]/30 rounded-[12px] px-4 py-3 transition-colors group">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-[8px] bg-[#EBF4FF] flex items-center justify-center">
+                    <ExternalLink className="w-4 h-4 text-[#2B6CB0]" />
+                  </div>
+                  <div>
+                    <p className="text-[12px] font-bold text-[#2B6CB0]">Lihat Dokumen</p>
+                    <p className="text-[10px] text-[#718096] truncate max-w-[220px]">{selectedDetailDoc.fileLink}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Berakhir</p>
-                  <p className="text-[14px] font-medium text-[#1A202C]">{format(parseISO(selectedDetailDoc.validUntil), "dd MMM yyyy", { locale: localeId })}</p>
+                <ChevronRight className="w-4 h-4 text-[#2B6CB0] opacity-0 group-hover:opacity-100 transition-opacity" />
+              </a>
+            )}
+          </div>
+        );        // ── Render mobile (BottomSheet) & desktop (Dialog) ──
+        return (
+          <>
+            {/* MOBILE: BottomSheet dengan swipe dismiss */}
+            <BottomSheet open={detailModalOpen && isMobile} onClose={() => setDetailModalOpen(false)} size="xl" contentClassName="px-4 py-4 pb-8"
+              title={
+                <div className="flex items-center gap-2 min-w-0">
+                  <div className={`w-7 h-7 rounded-[7px] flex items-center justify-center flex-shrink-0 ${expiryStatus === "Expired" ? "bg-red-100" : expiryStatus === "Warning" ? "bg-amber-100" : "bg-[#EBF4FF]"}`}>
+                    <FileText className={`w-3.5 h-3.5 ${expiryStatus === "Expired" ? "text-[#DC2626]" : expiryStatus === "Warning" ? "text-[#F59E0B]" : "text-[#2B6CB0]"}`} />
+                  </div>
+                  <span className="truncate text-[14px] font-bold text-[#1A202C]">{selectedDetailDoc.name}</span>
                 </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Nama PIC</p>
-                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.picName || "-"}</p>
+              }
+            >
+              <div className="bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] rounded-[12px] px-4 py-3.5 mb-4">
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className="px-2 py-0.5 rounded-full bg-white/15 text-white/90 text-[10px] font-semibold">{selectedDetailDoc.type}</span>
+                  {selectedDetailDoc.groupName && <span className="px-2 py-0.5 rounded-full bg-[#D94F2B]/30 text-white/90 text-[10px] font-semibold">{selectedDetailDoc.groupName}</span>}
                 </div>
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Telegram Chat ID</p>
-                  <p className="text-[14px] font-medium text-[#1A202C]">{selectedDetailDoc.picTelegramId || "-"}</p>
+                {selectedDetailDoc.referenceNumber && <p className="text-[11px] text-white/50 font-mono">REF: {selectedDetailDoc.referenceNumber}</p>}
+                <div className="flex items-center gap-2 mt-2">
+                  {expiryStatus === "Expired" && <span className="text-[11px] text-red-300 font-bold flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Expired</span>}
+                  {expiryStatus === "Warning" && <span className="text-[11px] text-amber-300 font-bold flex items-center gap-1"><Clock className="w-3 h-3" /> Segera Berakhir</span>}
+                  {expiryStatus === "Aman" && <span className="text-[11px] text-emerald-300 font-bold flex items-center gap-1"><CheckCircle className="w-3 h-3" /> Aman</span>}
+                  <span className="text-white/40 text-[10px]">· {daysRemaining < 0 ? `${Math.abs(daysRemaining)}h lalu` : `${daysRemaining}h lagi`}</span>
                 </div>
               </div>
-              {selectedDetailDoc.followUpRemark && (
-                <div>
-                  <p className="text-[12px] font-semibold text-[#718096] uppercase tracking-wider mb-1">Catatan Tindak Lanjut</p>
-                  <p className="text-[14px] font-medium text-[#1A202C] whitespace-pre-line">{selectedDetailDoc.followUpRemark}</p>
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter className="mt-4 pt-4 border-t border-[#E2E8F0]">
-            <Button onClick={() => setDetailModalOpen(false)} className="w-full h-10 rounded-[10px] font-semibold bg-[#1A202C] hover:bg-[#2D3748] text-white">
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              {DetailBody}
+              <button onClick={() => setDetailModalOpen(false)} className="w-full mt-4 h-11 rounded-[12px] font-bold text-[14px] bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white transition-colors active:scale-[0.98]">
+                Tutup
+              </button>
+            </BottomSheet>
+
+            {/* DESKTOP: Dialog */}
+            <Dialog open={detailModalOpen && !isMobile} onOpenChange={setDetailModalOpen}>
+              <DialogContent hideCloseButton className="max-w-lg p-0 bg-white rounded-[20px] overflow-hidden border-0 shadow-2xl shadow-black/20 [&>div:first-child]:hidden [&>div:nth-child(2)]:p-0">
+                <>
+                  <div className="relative bg-gradient-to-br from-[#1B3A6B] via-[#1E4080] to-[#2B6CB0] px-6 pt-6 pb-8 overflow-hidden">
+                    <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/5" />
+                    <div className="absolute -bottom-6 -left-6 w-24 h-24 rounded-full bg-white/5" />
+                    <button onClick={() => setDetailModalOpen(false)} className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/70 hover:text-white transition-all">
+                      <X className="w-4 h-4" />
+                    </button>
+                    <div className="flex items-center gap-3 mb-3">
+                      <div className="w-10 h-10 rounded-[10px] bg-white/10 border border-white/20 flex items-center justify-center"><FileText className="w-5 h-5 text-white" /></div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="px-2.5 py-0.5 rounded-full bg-white/15 border border-white/20 text-white/90 text-[11px] font-semibold">{selectedDetailDoc.type}</span>
+                        {selectedDetailDoc.groupName && <span className="px-2.5 py-0.5 rounded-full bg-[#D94F2B]/30 border border-[#D94F2B]/40 text-white/90 text-[11px] font-semibold">{selectedDetailDoc.groupName}</span>}
+                      </div>
+                    </div>
+                    <h2 className="text-[18px] font-bold text-white leading-snug pr-8">{selectedDetailDoc.name}</h2>
+                    {selectedDetailDoc.referenceNumber && <p className="text-[12px] text-white/50 mt-1 font-mono tracking-wide">REF: {selectedDetailDoc.referenceNumber}</p>}
+                    <div className="flex items-center gap-2 mt-3">
+                      {expiryStatus === "Expired" && <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-red-500/20 border border-red-400/30 text-red-300 text-[11px] font-bold"><AlertTriangle className="w-3 h-3" /> Expired</span>}
+                      {expiryStatus === "Warning" && <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 text-amber-300 text-[11px] font-bold"><Clock className="w-3 h-3" /> Segera Berakhir</span>}
+                      {expiryStatus === "Aman" && <span className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-500/20 border border-emerald-400/30 text-emerald-300 text-[11px] font-bold"><CheckCircle className="w-3 h-3" /> Aman</span>}
+                      <span className="text-white/40 text-[11px]">{daysRemaining < 0 ? `${Math.abs(daysRemaining)} hari lalu` : `${daysRemaining} hari lagi`}</span>
+                    </div>
+                  </div>
+                  <div className="px-6 py-5 space-y-4 max-h-[55vh] overflow-y-auto">{DetailBody}</div>
+                  <div className="px-6 pb-5 pt-1">
+                    <button onClick={() => setDetailModalOpen(false)} className="w-full h-11 rounded-[12px] font-bold text-[14px] bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white transition-colors active:scale-[0.98]">Tutup</button>
+                  </div>
+                </>
+              </DialogContent>
+            </Dialog>
+          </>
+        );
+      })()}
 
       {/* Follow Up Modal */}
       <Dialog open={followUpModalOpen} onOpenChange={setFollowUpModalOpen}>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import {
     UploadCloud,
@@ -341,13 +341,14 @@ export default function RadioImportModal({
     );
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && handleClose()}>
-            <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl border-0 shadow-2xl">
-                <DialogHeader className="px-6 py-5 border-b sticky top-0 bg-white/95 backdrop-blur-sm z-10">
-                    <DialogTitle className="text-xl font-bold text-gray-800">{title}</DialogTitle>
-                </DialogHeader>
-
-                <div className="px-6 pb-6">
+    <ResponsiveModal 
+        open={isOpen} 
+        onOpenChange={(open) => !open && handleClose()}
+        title={title}
+        desktopClassName="sm:max-w-md max-h-[90vh] overflow-y-auto p-0 gap-0 rounded-2xl border-0 shadow-2xl"
+        contentClassName="p-0"
+    >
+        <div className="px-6 pt-4 pb-6">
                     {/* Status Content */}
                     <AnimatePresence mode="wait">
                         {(status === 'idle' || (status === 'error' && !result)) && renderDropzone()}
@@ -407,7 +408,6 @@ export default function RadioImportModal({
                         )}
                     </div>
                 </div>
-            </DialogContent>
-        </Dialog>
+        </ResponsiveModal>
     );
 }

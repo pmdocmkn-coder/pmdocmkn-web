@@ -16,6 +16,7 @@ import {
 
 interface MobileBottomNavProps {
   onMoreClick: () => void;
+  onTabClick?: (id: string, navigatePath: string) => void;
 }
 
 interface NavTab {
@@ -50,8 +51,8 @@ const fixedTabs: NavTab[] = [
     id: "pm",
     label: "PM",
     icon: CalendarDays,
-    paths: ["/pm-schedule", "/kpi-tracking", "/inspeksi-kpc", "/nec-history", "/link-internal", "/swr-signal", "/operational-documents"],
-    navigate: "/pm-schedule",
+    paths: ["/pm", "/pm-schedule", "/kpi-tracking", "/inspeksi-kpc", "/nec-history", "/link-internal", "/swr-signal", "/operational-documents"],
+    navigate: "/pm",
   },
   {
     id: "radio",
@@ -78,7 +79,7 @@ const warehouseTab: NavTab = {
   navigate: "/warehouse",
 };
 
-const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
+const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick, onTabClick }) => {
   const location = useLocation();
   const nav = useNavigate();
 
@@ -118,7 +119,13 @@ const MobileBottomNav: React.FC<MobileBottomNavProps> = ({ onMoreClick }) => {
           return (
             <button
               key={tab.id}
-              onClick={() => nav(tab.navigate)}
+              onClick={() => {
+                if (onTabClick) {
+                  onTabClick(tab.id, tab.navigate);
+                } else {
+                  nav(tab.navigate);
+                }
+              }}
               aria-label={tab.label}
               aria-current={active ? "page" : undefined}
               className="flex-1 flex flex-col items-center justify-center gap-1 relative transition-all duration-200 pt-1"

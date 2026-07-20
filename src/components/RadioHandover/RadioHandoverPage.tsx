@@ -21,7 +21,7 @@ import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
 import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHandover";
 import type { RadioRepairJobDetail } from "../../types/radioRepair";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import ImageGalleryModal from "../common/ImageGalleryModal";
@@ -735,23 +735,26 @@ export default function RadioHandoverPage() {
 
       {/* HD -> Tek create dialog */}
       {showCreate && (
-        <Dialog open={showCreate} onOpenChange={setShowCreate}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <ArrowUpRight className="w-5 h-5 text-blue-600" />
-                Serah Terima Helpdesk → Teknisi
-              </DialogTitle>
-            </DialogHeader>
-            <HelpdeskToTechnicianForm
-              onSuccess={() => {
-                setShowCreate(false);
-                load();
-              }}
-              onCancel={() => setShowCreate(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <ResponsiveModal
+          open={showCreate}
+          onOpenChange={setShowCreate}
+          bottomSheetSize="xl"
+          desktopClassName="max-w-2xl"
+          title={
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="w-5 h-5 text-blue-600" />
+              Serah Terima Helpdesk → Teknisi
+            </div>
+          }
+        >
+          <HelpdeskToTechnicianForm
+            onSuccess={() => {
+              setShowCreate(false);
+              load();
+            }}
+            onCancel={() => setShowCreate(false)}
+          />
+        </ResponsiveModal>
       )}
 
       {/* Edit dialog */}
@@ -770,236 +773,235 @@ export default function RadioHandoverPage() {
       )}
 
       {/* Sign Row dialog */}
-      <Dialog open={!!signRow} onOpenChange={() => { setSignRow(null); setSignRowDetail(null); setSigRowReceiver(null); }}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>TTD Penerima — {signRow?.handoverNumber}</DialogTitle>
-          </DialogHeader>
-          {signRow && (
-            <div className="space-y-3 text-sm w-full min-w-0">
-              <p className="text-gray-600">
-                Tiket {signRow.helpdeskTicketNumber ?? "—"} · SN {signRow.radioSerialNumber}
-              </p>
-              <p className="text-amber-950 text-sm bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
-                Helpdesk sudah menyerahkan. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.workshopTechnicianName || signRow.receivedByName}</span>.
-              </p>
+      <ResponsiveModal
+        open={!!signRow}
+        onOpenChange={() => { setSignRow(null); setSignRowDetail(null); setSigRowReceiver(null); }}
+        bottomSheetSize="xl"
+        desktopClassName="sm:max-w-2xl"
+        title={`TTD Penerima — ${signRow?.handoverNumber}`}
+      >
+        {signRow && (
+          <div className="space-y-3 text-sm w-full min-w-0">
+            <p className="text-gray-600">
+              Tiket {signRow.helpdeskTicketNumber ?? "—"} · SN {signRow.radioSerialNumber}
+            </p>
+            <p className="text-amber-950 text-sm bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
+              Helpdesk sudah menyerahkan. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRow.workshopTechnicianName || signRow.receivedByName}</span>.
+            </p>
 
-              {/* Tag Preview */}
-              {signRowDetail && (
-                <div className="rounded-lg border bg-white p-3">
-                  <HandoverTagPreview detail={signRowDetail} />
-                </div>
-              )}
-              {!signRowDetail && (
-                <div className="text-center py-4 text-gray-400 text-xs">
-                  <Loader2 className="w-4 h-4 animate-spin inline-block mr-1" />
-                  Memuat detail tag...
-                </div>
-              )}
-
-              {relatedPendingHandovers.length > 1 && (
-                <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 text-sm shadow-sm mt-3">
-                  <span className="font-semibold block mb-1">Tanda Tangan Massal</span>
-                  Terdapat <strong>{relatedPendingHandovers.length} radio</strong> dari tiket <strong>{signRow.helpdeskTicketNumber}</strong> yang menunggu Tanda Tangan Anda. Tanda tangan ini akan otomatis diterapkan ke semuanya sekaligus.
-                  <ul className="list-disc pl-5 mt-1.5 text-xs opacity-80 max-h-24 overflow-y-auto no-scrollbar">
-                    {relatedPendingHandovers.map(h => (
-                      <li key={h.id}>SN: <span className="font-medium">{h.radioSerialNumber}</span> ({h.handoverNumber})</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              {signRow.handoverType === "WarehouseToHelpdesk" && (
-                <div className="space-y-2 mt-4">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium text-gray-900">Nama PIC Penerima (opsional)</label>
-                    <button
-                      type="button"
-                      className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
-                      onClick={() => setSigRowPicReceiverName(signRow.radioOwnerLabel || "")}
-                    >
-                      Gunakan data Pemilik
-                    </button>
-                  </div>
-                  <input
-                    type="text"
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
-                    placeholder="Nama pengambil radio..."
-                    value={sigRowPicReceiverName}
-                    onChange={(e) => setSigRowPicReceiverName(e.target.value)}
-                  />
-                </div>
-              )}
-
-              <SignaturePadField
-                ref={sigTekRowRef}
-                label={`TTD Penerima (${signRow.workshopTechnicianName || signRow.receivedByName})`}
-                required
-                value={sigRowReceiver}
-                onChange={setSigRowReceiver}
-              />
-              <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRow(null)}>
-                  Batal
-                </button>
-                <button
-                  type="button"
-                  disabled={completing}
-                  className="w-full px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                  onClick={completeReceiverFromRow}
-                >
-                  {completing ? "Menyimpan..." : "Simpan TTD & Done"}
-                </button>
+            {/* Tag Preview */}
+            {signRowDetail && (
+              <div className="rounded-lg border bg-white p-3">
+                <HandoverTagPreview detail={signRowDetail} />
               </div>
+            )}
+            {!signRowDetail && (
+              <div className="text-center py-4 text-gray-400 text-xs">
+                <Loader2 className="w-4 h-4 animate-spin inline-block mr-1" />
+                Memuat detail tag...
+              </div>
+            )}
+
+            {relatedPendingHandovers.length > 1 && (
+              <div className="bg-blue-50 border border-blue-200 text-blue-800 rounded-lg p-3 text-sm shadow-sm mt-3">
+                <span className="font-semibold block mb-1">Tanda Tangan Massal</span>
+                Terdapat <strong>{relatedPendingHandovers.length} radio</strong> dari tiket <strong>{signRow.helpdeskTicketNumber}</strong> yang menunggu Tanda Tangan Anda. Tanda tangan ini akan otomatis diterapkan ke semuanya sekaligus.
+                <ul className="list-disc pl-5 mt-1.5 text-xs opacity-80 max-h-24 overflow-y-auto no-scrollbar">
+                  {relatedPendingHandovers.map(h => (
+                    <li key={h.id}>SN: <span className="font-medium">{h.radioSerialNumber}</span> ({h.handoverNumber})</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {signRow.handoverType === "WarehouseToHelpdesk" && (
+              <div className="space-y-2 mt-4">
+                <div className="flex justify-between items-center">
+                  <label className="text-sm font-medium text-gray-900">Nama PIC Penerima (opsional)</label>
+                  <button
+                    type="button"
+                    className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
+                    onClick={() => setSigRowPicReceiverName(signRow.radioOwnerLabel || "")}
+                  >
+                    Gunakan data Pemilik
+                  </button>
+                </div>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                  placeholder="Nama pengambil radio..."
+                  value={sigRowPicReceiverName}
+                  onChange={(e) => setSigRowPicReceiverName(e.target.value)}
+                />
+              </div>
+            )}
+
+            <SignaturePadField
+              ref={sigTekRowRef}
+              label={`TTD Penerima (${signRow.workshopTechnicianName || signRow.receivedByName})`}
+              required
+              value={sigRowReceiver}
+              onChange={setSigRowReceiver}
+            />
+            <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
+              <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRow(null)}>
+                Batal
+              </button>
+              <button
+                type="button"
+                disabled={completing}
+                className="w-full px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                onClick={completeReceiverFromRow}
+              >
+                {completing ? "Menyimpan..." : "Simpan TTD & Done"}
+              </button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      </ResponsiveModal>
 
       {/* Detail dialog */}
-      <Dialog open={!!detail || detailLoading} onOpenChange={(open) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent
-          className="max-w-3xl"
-          onInteractOutside={(e) => {
-            if (galleryOpen) e.preventDefault();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex flex-wrap items-center gap-2 pr-8">
-              {detailLoading ? (
-                <span className="flex items-center gap-2 text-gray-500">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Memuat detail...
-                </span>
-              ) : (
-                <>
-                  <span>Detail {detail?.handoverNumber}</span>
-                  {detail && (
-                    <>
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium border ${handoverTypeBadgeClass(detail.handoverType)}`}
-                      >
-                        {handoverTypeLabel(detail.handoverType)}
-                      </span>
-                      <HandoverStatusBadge status={detail.status} />
-                    </>
-                  )}
-                </>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          {detail && !detailLoading && (
-            <div className="space-y-5 text-sm">
-              {detailJob?.handovers && detailJob.handovers.length > 0 && (
-                <HandoverTimeline handovers={detailJob.handovers} />
-              )}
-              <HandoverTagPreview detail={detail} />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border bg-gray-50/80 p-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status job</p>
-                  <p className="mt-0.5 font-medium text-gray-900">{detail.jobStatus}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Waktu serah</p>
-                  <p className="mt-0.5 font-medium text-gray-900">
-                    {format(new Date(detail.handoverAt), "dd MMMM yyyy, HH:mm", { locale: localeId })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penyerah</p>
-                  <p className="mt-0.5 text-gray-900">{detail.handedOverByWorkshopTechnicianName || detail.handedOverByName}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penerima</p>
-                  <p className="mt-0.5 text-gray-900">{detail.workshopTechnicianName || detail.receivedByName}</p>
-                </div>
-              </div>
-
-              {detail.remarks && (
-                <p className="text-gray-600 rounded-lg border bg-white px-3 py-2">
-                  <span className="font-medium text-gray-700">Catatan: </span>
-                  {detail.remarks}
-                </p>
-              )}
-
-              {(() => {
-                const imgs = resolveHandoverPhotos(detail);
-                if (imgs.length === 0) return null;
-                return (
-                  <div>
-                    <p className="font-medium text-gray-800 mb-2">Foto radio</p>
-                    <div className="flex flex-wrap gap-2">
-                      {imgs.map((src, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => openGalleryFromDetail(imgs, i)}
-                          className="relative w-24 h-24 rounded-lg border overflow-hidden hover:ring-2 ring-blue-400 transition-shadow"
-                        >
-                          <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Klik foto untuk memperbesar</p>
-                  </div>
-                );
-              })()}
-
-              {(detail.accessories?.length ?? 0) > 0 && (
-                <div>
-                  <p className="font-medium text-gray-800 mb-2">Aksesoris</p>
-                  <table className="w-full text-xs border rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left px-3 py-2">Barang</th>
-                        <th className="text-left px-3 py-2">Qty</th>
-                        <th className="text-left px-3 py-2">Unit</th>
-                        <th className="text-left px-3 py-2">SN</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.accessories.map((a, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="px-3 py-2">{a.itemName}</td>
-                          <td className="px-3 py-2">{a.quantity}</td>
-                          <td className="px-3 py-2">{a.unit}</td>
-                          <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByWorkshopTechnicianName || detail.handedOverByName} />
-                {detail.hasReceiverSignature ? (
-                  <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.workshopTechnicianName || detail.receivedByName} />
-                ) : currentUserId() === detail.receivedByUserId ? (
-                  <div className="space-y-2 border border-amber-200 bg-amber-50/50 rounded-lg p-3">
-                    <p className="text-amber-800 font-medium">Lengkapi TTD sebagai teknisi penerima</p>
-                    <SignaturePadField label="TTD Penerima" readOnly />
-                    <p className="text-xs text-amber-700">Tutup detail dan gunakan tombol (Pen) di baris tabel untuk tanda tangan.</p>
-                  </div>
-                ) : (
-                  <p className="text-amber-700 text-xs mt-2">Menunggu tanda tangan penerima.</p>
+      <ResponsiveModal
+        open={!!detail || detailLoading}
+        onOpenChange={(open: boolean) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-3xl"
+        title={
+          <div className="flex flex-wrap items-center gap-2 pr-8">
+            {detailLoading ? (
+              <span className="flex items-center gap-2 text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Memuat detail...
+              </span>
+            ) : (
+              <>
+                <span>Detail {detail?.handoverNumber}</span>
+                {detail && (
+                  <>
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium border ${handoverTypeBadgeClass(detail.handoverType)}`}
+                    >
+                      {handoverTypeLabel(detail.handoverType)}
+                    </span>
+                    <HandoverStatusBadge status={detail.status} />
+                  </>
                 )}
-              </div>
+              </>
+            )}
+          </div>
+        }
+      >
+        {detail && !detailLoading && (
+          <div className="space-y-5 text-sm">
+            {detailJob?.handovers && detailJob.handovers.length > 0 && (
+              <HandoverTimeline handovers={detailJob.handovers} />
+            )}
+            <HandoverTagPreview detail={detail} />
 
-              <div className="flex justify-end pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setDetail(null)}
-                  className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Tutup
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border bg-gray-50/80 p-4">
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status job</p>
+                <p className="mt-0.5 font-medium text-gray-900">{detail.jobStatus}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Waktu serah</p>
+                <p className="mt-0.5 font-medium text-gray-900">
+                  {format(new Date(detail.handoverAt), "dd MMMM yyyy, HH:mm", { locale: localeId })}
+                </p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penyerah</p>
+                <p className="mt-0.5 text-gray-900">{detail.handedOverByWorkshopTechnicianName || detail.handedOverByName}</p>
+              </div>
+              <div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penerima</p>
+                <p className="mt-0.5 text-gray-900">{detail.workshopTechnicianName || detail.receivedByName}</p>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {detail.remarks && (
+              <p className="text-gray-600 rounded-lg border bg-white px-3 py-2">
+                <span className="font-medium text-gray-700">Catatan: </span>
+                {detail.remarks}
+              </p>
+            )}
+
+            {(() => {
+              const imgs = resolveHandoverPhotos(detail);
+              if (imgs.length === 0) return null;
+              return (
+                <div>
+                  <p className="font-medium text-gray-800 mb-2">Foto radio</p>
+                  <div className="flex flex-wrap gap-2">
+                    {imgs.map((src, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => openGalleryFromDetail(imgs, i)}
+                        className="relative w-24 h-24 rounded-lg border overflow-hidden hover:ring-2 ring-blue-400 transition-shadow"
+                      >
+                        <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Klik foto untuk memperbesar</p>
+                </div>
+              );
+            })()}
+
+            {(detail.accessories?.length ?? 0) > 0 && (
+              <div>
+                <p className="font-medium text-gray-800 mb-2">Aksesoris</p>
+                <table className="w-full text-xs border rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-3 py-2">Barang</th>
+                      <th className="text-left px-3 py-2">Qty</th>
+                      <th className="text-left px-3 py-2">Unit</th>
+                      <th className="text-left px-3 py-2">SN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.accessories.map((a, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-3 py-2">{a.itemName}</td>
+                        <td className="px-3 py-2">{a.quantity}</td>
+                        <td className="px-3 py-2">{a.unit}</td>
+                        <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByWorkshopTechnicianName || detail.handedOverByName} />
+              {detail.hasReceiverSignature ? (
+                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.workshopTechnicianName || detail.receivedByName} />
+              ) : currentUserId() === detail.receivedByUserId ? (
+                <div className="space-y-2 border border-amber-200 bg-amber-50/50 rounded-lg p-3">
+                  <p className="text-amber-800 font-medium">Lengkapi TTD sebagai teknisi penerima</p>
+                  <SignaturePadField label="TTD Penerima" readOnly />
+                  <p className="text-xs text-amber-700">Tutup detail dan gunakan tombol (Pen) di baris tabel untuk tanda tangan.</p>
+                </div>
+              ) : (
+                <p className="text-amber-700 text-xs mt-2">Menunggu tanda tangan penerima.</p>
+              )}
+            </div>
+
+            <div className="flex justify-end pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setDetail(null)}
+                className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        )}
+      </ResponsiveModal>
 
       <ImageGalleryModal
         images={galleryImages}

@@ -1,23 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import {
-  Warehouse,
-  ArrowRight,
-  ArrowDownLeft,
-  ArrowUpRight,
-  Eye,
-  Edit,
-  Inbox,
-  PackageCheck,
-  ClipboardList,
-  Loader2,
-  Home,
-  Search,
-  ArrowLeft,
-  ChevronLeft,
-  ChevronRight,
-} from "lucide-react";
+import { Search, Filter, Warehouse, PackageCheck, Image as ImageIcon, Loader2, ArrowRight, User, FileText, MessageSquare, ArrowDownLeft, ArrowUpRight, Home, ChevronRight, ChevronLeft, Inbox, ClipboardList, Edit, Eye, ArrowLeft } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
@@ -25,7 +9,7 @@ import type { RadioHandoverList, RadioHandoverDetail } from "../../types/radioHa
 import type { RadioRepairJobList, RadioRepairJobDetail } from "../../types/radioRepair";
 import RadioRepairJobDetailPanel from "../RadioRepair/RadioRepairJobDetailPanel";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import SignaturePadField from "../common/SignaturePadField";
@@ -889,326 +873,358 @@ export default function RadioHandoverWarehousePage() {
 
       {/* WH → HD form dialog */}
       {canCreateHandoverWhHd() && returnJob && (
-        <Dialog open={!!returnJob} onOpenChange={() => setReturnJob(null)}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader className="pr-10 sm:pr-12">
-              <DialogTitle className="flex items-center gap-2">
-                <ArrowUpRight className="w-5 h-5 text-indigo-600" />
-                Serah Terima Warehouse → Helpdesk
-              </DialogTitle>
-            </DialogHeader>
-            <div className="rounded-lg bg-gray-50 border px-3 py-2 text-sm text-gray-600 mb-2">
-              Tiket <span className="font-mono font-medium text-gray-900">{returnJob.helpdeskTicketNumber ?? "—"}</span>
-              {" · "}
-              SN <span className="font-medium text-gray-900">{returnJob.radioSerialNumber}</span>
+        <ResponsiveModal
+          open={!!returnJob}
+          onOpenChange={() => setReturnJob(null)}
+          bottomSheetSize="xl"
+          desktopClassName="max-w-2xl"
+          title={
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="w-5 h-5 text-indigo-600" />
+              Serah Terima Warehouse → Helpdesk
             </div>
-            <WarehouseToHelpdeskForm
-              job={returnJob}
-              onSuccess={() => {
-                setReturnJob(null);
-                load();
-                setActiveTab("outgoing");
-              }}
-              onCancel={() => setReturnJob(null)}
-            />
-          </DialogContent>
-        </Dialog>
+          }
+        >
+          <div className="rounded-lg bg-gray-50 border px-3 py-2 text-sm text-gray-600 mb-2">
+            Tiket <span className="font-mono font-medium text-gray-900">{returnJob.helpdeskTicketNumber ?? "—"}</span>
+            {" · "}
+            SN <span className="font-medium text-gray-900">{returnJob.radioSerialNumber}</span>
+          </div>
+          <WarehouseToHelpdeskForm
+            job={returnJob}
+            onSuccess={() => {
+              setReturnJob(null);
+              load();
+              setActiveTab("outgoing");
+            }}
+            onCancel={() => setReturnJob(null)}
+          />
+        </ResponsiveModal>
       )}
 
       {/* Detail dialog */}
-      <Dialog open={!!detail || detailLoading} onOpenChange={(open) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}>
-        <DialogContent 
-          className="max-w-3xl"
-          onInteractOutside={(e) => {
-            if (galleryOpen) e.preventDefault();
-          }}
-        >
-          <DialogHeader className="pr-8 sm:pr-10">
-            <DialogTitle className="flex flex-wrap items-center gap-2">
-              {detailLoading ? (
-                <span className="flex items-center gap-2 text-gray-500">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  Memuat detail...
-                </span>
-              ) : (
-                <>
-                  <span>Detail {detail?.handoverNumber}</span>
-                  {detail && (
-                    <>
-                      <span
-                        className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium border ${handoverTypeBadgeClass(detail.handoverType)}`}
-                      >
-                        {handoverTypeLabel(detail.handoverType)}
-                      </span>
-                      <HandoverStatusBadge status={detail.status} />
-                    </>
-                  )}
-                </>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-          {detail && !detailLoading && (
-            <div className="space-y-5 text-sm">
-              {detailJob?.handovers && detailJob.handovers.length > 0 && (
-                <HandoverTimeline handovers={detailJob.handovers} />
-              )}
-              <HandoverTagPreview detail={detail} />
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border bg-gray-50/80 p-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status job</p>
-                  <p className="mt-0.5 font-medium text-gray-900">{detail.jobStatus}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Waktu serah</p>
-                  <p className="mt-0.5 font-medium text-gray-900">
-                    {format(new Date(detail.handoverAt), "dd MMMM yyyy, HH:mm", { locale: localeId })}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penyerah</p>
-                  <p className="mt-0.5 text-gray-900">{detail.handedOverByName}</p>
-                </div>
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Penerima</p>
-                  <p className="mt-0.5 text-gray-900">
-                    {detail.receivedByName}
-                    {detail.picReceiverName && <span className="text-gray-500 block text-xs">PIC: {detail.picReceiverName}</span>}
-                  </p>
-                </div>
+      <ResponsiveModal
+        open={!!detail || detailLoading}
+        onOpenChange={(open: boolean) => { if (!open && !detailLoading) { setDetail(null); setDetailJob(null); } }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-3xl"
+        title={
+          <div className="flex flex-wrap items-center gap-2">
+            {detailLoading ? (
+              <span className="flex items-center gap-2 text-gray-500">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Memuat detail...
+              </span>
+            ) : (
+              <>
+                <span>Detail {detail?.handoverNumber}</span>
+                {detail && (
+                  <>
+                    <span
+                      className={`inline-flex px-2 py-0.5 rounded-md text-xs font-medium border ${handoverTypeBadgeClass(detail.handoverType)}`}
+                    >
+                      {handoverTypeLabel(detail.handoverType)}
+                    </span>
+                    <HandoverStatusBadge status={detail.status} />
+                  </>
+                )}
+              </>
+            )}
+          </div>
+        }
+      >
+        {detail && !detailLoading && (
+          <div className="space-y-6 pt-2 w-full min-w-0">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 rounded-xl p-4 border">
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">Tgl Serah Terima</p>
+                <p className="font-medium text-gray-900 mt-1">{format(new Date(detail.handoverAt), "dd MMM yyyy HH:mm", { locale: localeId })}</p>
               </div>
-
-              {detail.remarks && (
-                <p className="text-gray-600 rounded-lg border bg-white px-3 py-2">
-                  <span className="font-medium text-gray-700">Catatan: </span>
-                  {detail.remarks}
-                </p>
-              )}
-
-              {(() => {
-                const imgs = resolveHandoverPhotos(detail);
-                if (imgs.length === 0) return null;
-                return (
-                  <div>
-                    <p className="font-medium text-gray-800 mb-2">Foto radio</p>
-                    <div className="flex flex-wrap gap-2">
-                      {imgs.map((src, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => openGalleryFromDetail(imgs, i)}
-                          className="relative w-24 h-24 rounded-lg border overflow-hidden hover:ring-2 ring-violet-400 transition-shadow"
-                        >
-                          <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-xs text-gray-400 mt-1">Klik foto untuk memperbesar</p>
-                  </div>
-                );
-              })()}
-
-              {(detail.accessories?.length ?? 0) > 0 && (
-                <div>
-                  <p className="font-medium text-gray-800 mb-2">Aksesoris</p>
-                  <table className="w-full text-xs border rounded-lg overflow-hidden">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="text-left px-3 py-2">Barang</th>
-                        <th className="text-left px-3 py-2">Qty</th>
-                        <th className="text-left px-3 py-2">Unit</th>
-                        <th className="text-left px-3 py-2">SN</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.accessories.map((a, i) => (
-                        <tr key={i} className="border-t">
-                          <td className="px-3 py-2">{a.itemName}</td>
-                          <td className="px-3 py-2">{a.quantity}</td>
-                          <td className="px-3 py-2">{a.unit}</td>
-                          <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
-                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
+              <div>
+                <p className="text-xs text-gray-500 uppercase font-semibold">SN Radio</p>
+                <p className="font-mono font-bold text-indigo-700 mt-1">{detail.radioSerialNumber}</p>
               </div>
-
-              <div className="flex justify-end pt-2 border-t">
-                <button
-                  type="button"
-                  onClick={() => setDetail(null)}
-                  className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
-                >
-                  Tutup
-                </button>
+              <div className="col-span-2">
+                <p className="text-xs text-gray-500 uppercase font-semibold">Label Kepemilikan</p>
+                <p className="font-medium text-gray-900 mt-1">{detail.radioOwnerLabel || "—"}</p>
               </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+
+            {detailJob && (
+              <div className="flex items-start gap-3 p-3 border border-indigo-100 bg-indigo-50/50 rounded-lg">
+                <FileText className="w-5 h-5 text-indigo-500 mt-0.5" />
+                <div>
+                  <div className="text-sm font-semibold text-gray-900">
+                    Tiket: {detailJob.helpdeskTicketNumber || "—"}
+                  </div>
+                  <div className="text-xs text-gray-600 mt-1">
+                    {detailJob.unitNumber && <span className="font-mono bg-white px-1 py-0.5 rounded border border-gray-200 mr-2">{detailJob.unitNumber}</span>}
+                    {detailJob.equipmentName && <span className="text-gray-700 font-medium mr-2">{detailJob.equipmentName}</span>}
+                    Keluhan: <span className="italic">"{detailJob.damageDescription}"</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 border rounded-xl bg-white shadow-sm">
+                <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> Diserahkan Oleh</h4>
+                <p className="font-semibold text-gray-900">{detail.handedOverByName}</p>
+              </div>
+              <div className="p-4 border rounded-xl bg-white shadow-sm">
+                <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> Diterima Oleh</h4>
+                <p className="font-semibold text-gray-900">{detail.receivedByName}</p>
+                {detail.picReceiverName && (
+                  <p className="text-xs font-medium text-violet-700 bg-violet-50 px-2 py-1 rounded mt-2 inline-block">
+                    PIC Fisik: {detail.picReceiverName}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-4 border rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-700">Kondisi Diserahkan</p>
+                  <p className="text-sm text-gray-600 mt-1">{detail.physicalCondition || detail.damageDescription || "—"}</p>
+                </div>
+              </div>
+              {detail.remarks && (
+                <div className="flex items-start gap-3 pt-3 border-t">
+                  <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">Catatan Penerima</p>
+                    <p className="text-sm text-gray-600 mt-1 italic">"{detail.remarks}"</p>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {(() => {
+              const b64Images = detail.radioPhotos || (detail.radioPhotoBase64 ? [detail.radioPhotoBase64] : []);
+              if (b64Images.length === 0) return null;
+              return (
+                <div>
+                  <p className="font-medium text-gray-800 mb-2">Foto Fisik ({b64Images.length})</p>
+                  <div className="flex flex-wrap gap-3">
+                    {b64Images.map((src, i) => (
+                      <button
+                        key={i}
+                        type="button"
+                        onClick={() => openGallery(detail)}
+                        className="relative w-24 h-24 rounded-lg border overflow-hidden hover:ring-2 ring-violet-400 transition-shadow"
+                      >
+                        <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">Klik foto untuk memperbesar</p>
+                </div>
+              );
+            })()}
+
+            {(detail.accessories?.length ?? 0) > 0 && (
+              <div>
+                <p className="font-medium text-gray-800 mb-2">Aksesoris</p>
+                <table className="w-full text-xs border rounded-lg overflow-hidden">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="text-left px-3 py-2">Barang</th>
+                      <th className="text-left px-3 py-2">Qty</th>
+                      <th className="text-left px-3 py-2">Unit</th>
+                      <th className="text-left px-3 py-2">SN</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {detail.accessories.map((a, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="px-3 py-2">{a.itemName}</td>
+                        <td className="px-3 py-2">{a.quantity}</td>
+                        <td className="px-3 py-2">{a.unit}</td>
+                        <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
+              <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
+            </div>
+
+            <div className="flex justify-end pt-2 border-t">
+              <button
+                type="button"
+                onClick={() => setDetail(null)}
+                className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+              >
+                Tutup
+              </button>
+            </div>
+          </div>
+        )}
+      </ResponsiveModal>
 
       {/* Sign Row dialog */}
-      <Dialog open={!!signRows} onOpenChange={() => { setSignRows(null); setSignRowDetails([]); setActiveTagIndex(0); setSigRowReceiver(""); }}>
-        <DialogContent className="sm:max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>TTD Penerima — {signRows?.[0]?.helpdeskTicketNumber ? `Tiket ${signRows[0].helpdeskTicketNumber}` : "Tanda Tangan"}</DialogTitle>
-          </DialogHeader>
-          {(signRows && signRows.length > 0) && (
-            <div className="space-y-4 w-full min-w-0">
-              <div className="rounded-lg bg-gray-50 border px-3 py-2 text-sm text-gray-600 mb-2">
-                Tiket {signRows[0].helpdeskTicketNumber ?? "—"} · SN {signRows.map(r => r.radioSerialNumber).join(", ")}
-              </div>
-              <p className="text-sm text-amber-950 bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
-                {signRows[0].handoverType === "WarehouseToHelpdesk"
-                  ? <>Warehouse sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRows[0].receivedByName}</span>.</>
-                  : <>Teknisi sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRows[0].receivedByName}</span>.</>
-                }
-              </p>
+      <ResponsiveModal
+        open={!!signRows}
+        onOpenChange={() => { setSignRows(null); setSignRowDetails([]); setActiveTagIndex(0); setSigRowReceiver(""); }}
+        bottomSheetSize="xl"
+        desktopClassName="sm:max-w-2xl"
+        title={`TTD Penerima — ${signRows?.[0]?.helpdeskTicketNumber ? `Tiket ${signRows[0].helpdeskTicketNumber}` : "Tanda Tangan"}`}
+      >
+        {(signRows && signRows.length > 0) && (
+          <div className="space-y-4 w-full min-w-0">
+            <div className="rounded-lg bg-gray-50 border px-3 py-2 text-sm text-gray-600 mb-2">
+              Tiket {signRows[0].helpdeskTicketNumber ?? "—"} · SN {signRows.map(r => r.radioSerialNumber).join(", ")}
+            </div>
+            <p className="text-sm text-amber-950 bg-amber-100 border-l-4 border-amber-600 rounded-r-lg px-4 py-3 font-semibold shadow-sm">
+              {signRows[0].handoverType === "WarehouseToHelpdesk"
+                ? <>Warehouse sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRows[0].receivedByName}</span>.</>
+                : <>Teknisi sudah menyerahkan radio. Lengkapi tanda tangan sebagai penerima: <span className="font-bold">{signRows[0].receivedByName}</span>.</>
+              }
+            </p>
 
-              {/* Tag Preview */}
-              <div className="mb-2 text-sm font-medium text-gray-700">Pratinjau tag (per SN)</div>
-              {signRowDetails.length > 0 ? (
-                <div className="rounded-lg border bg-white p-3">
-                  {signRowDetails.length > 1 && (
-                    <div className="flex flex-col gap-3 mb-3 border-b border-gray-100 pb-4">
-                      <div className="flex items-center justify-between bg-gray-50/80 p-2 rounded-lg border border-gray-200">
-                        <button 
-                          type="button" 
-                          disabled={activeTagIndex === 0}
-                          onClick={() => setActiveTagIndex(prev => prev - 1)}
-                          className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
-                        >
-                          <ChevronLeft className="w-3.5 h-3.5" /> Tag sebelumnya
-                        </button>
-                        <div className="text-center">
-                          <div className="text-xs font-bold text-gray-800">Tag {activeTagIndex + 1} / {signRowDetails.length}</div>
-                          <div className="text-[10px] text-gray-500 font-mono mt-0.5">SN {signRowDetails[activeTagIndex]?.radioSerialNumber}</div>
-                        </div>
-                        <button 
-                          type="button" 
-                          disabled={activeTagIndex === signRowDetails.length - 1}
-                          onClick={() => setActiveTagIndex(prev => prev + 1)}
-                          className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
-                        >
-                          Tag berikutnya <ChevronRight className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                      <div className="flex flex-wrap gap-2 justify-start">
-                        {signRowDetails.map((det, idx) => (
-                          <button
-                            key={det.id}
-                            type="button"
-                            onClick={() => setActiveTagIndex(idx)}
-                            className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                              activeTagIndex === idx 
-                                ? 'bg-[#1B3A6B] text-white border-[#1B3A6B] shadow-sm' 
-                                : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                            }`}
-                          >
-                            {det.radioSerialNumber}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                  {signRowDetails[activeTagIndex] && (
-                    <HandoverTagPreview detail={signRowDetails[activeTagIndex]} />
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-6 text-gray-400 text-xs border border-dashed rounded-lg bg-gray-50">
-                  <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
-                  Memuat detail tag...
-                </div>
-              )}
-
-              {signRows[0]?.handoverType === "WarehouseToHelpdesk" && (
-                <div className="space-y-4 mt-4 bg-gray-50 border border-gray-100 p-4 rounded-xl">
-                  <div className="space-y-2">
-                    <div className="flex justify-between items-center">
-                      <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
-                      <button
-                        type="button"
-                        className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
-                        onClick={() => setSigRowPicReceiverName(signRowDetails[0]?.radioOwnerLabel || signRows[0].radioOwnerLabel || "")}
+            {/* Tag Preview */}
+            <div className="mb-2 text-sm font-medium text-gray-700">Pratinjau tag (per SN)</div>
+            {signRowDetails.length > 0 ? (
+              <div className="rounded-lg border bg-white p-3">
+                {signRowDetails.length > 1 && (
+                  <div className="flex flex-col gap-3 mb-3 border-b border-gray-100 pb-4">
+                    <div className="flex items-center justify-between bg-gray-50/80 p-2 rounded-lg border border-gray-200">
+                      <button 
+                        type="button" 
+                        disabled={activeTagIndex === 0}
+                        onClick={() => setActiveTagIndex(prev => prev - 1)}
+                        className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
                       >
-                        Gunakan data Pemilik
+                        <ChevronLeft className="w-3.5 h-3.5" /> Tag sebelumnya
+                      </button>
+                      <div className="text-center">
+                        <div className="text-xs font-bold text-gray-800">Tag {activeTagIndex + 1} / {signRowDetails.length}</div>
+                        <div className="text-[10px] text-gray-500 font-mono mt-0.5">SN {signRowDetails[activeTagIndex]?.radioSerialNumber}</div>
+                      </div>
+                      <button 
+                        type="button" 
+                        disabled={activeTagIndex === signRowDetails.length - 1}
+                        onClick={() => setActiveTagIndex(prev => prev + 1)}
+                        className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
+                      >
+                        Tag berikutnya <ChevronRight className="w-3.5 h-3.5" />
                       </button>
                     </div>
-                    <input
-                      type="text"
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
-                      placeholder="Nama pengambil radio (opsional)"
-                      value={sigRowPicReceiverName}
-                      onChange={(e) => setSigRowPicReceiverName(e.target.value)}
-                    />
+                    <div className="flex flex-wrap gap-2 justify-start">
+                      {signRowDetails.map((det, idx) => (
+                        <button
+                          key={det.id}
+                          type="button"
+                          onClick={() => setActiveTagIndex(idx)}
+                          className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
+                            activeTagIndex === idx 
+                              ? 'bg-[#1B3A6B] text-white border-[#1B3A6B] shadow-sm' 
+                              : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                          }`}
+                        >
+                          {det.radioSerialNumber}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-
-                  <div className="space-y-2">
-                    <label className="text-sm font-medium text-gray-900">Catatan</label>
-                    <input
-                      className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
-                      value={sigRowRemarks}
-                      onChange={(e) => setSigRowRemarks(e.target.value)}
-                      placeholder="Catatan tambahan (opsional)"
-                    />
-                  </div>
-                </div>
-              )}
-
-              <SignaturePadField
-                ref={sigWhRowRef}
-                label={`TTD Penerima (${signRows[0].receivedByName})`}
-                required
-                value={sigRowReceiver}
-                onChange={(val) => setSigRowReceiver(val ?? "")}
-              />
-              <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
-                <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRows(null)}>Batal</button>
-                <button
-                  type="button"
-                  className="w-full px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors flex items-center justify-center"
-                  onClick={async () => {
-                    const finalSig = (await sigWhRowRef.current?.exportNow()) ?? sigRowReceiver;
-                    if (!finalSig) {
-                      toast({ title: "Tanda tangan wajib diisi", variant: "destructive" });
-                      return;
-                    }
-                    try {
-                      await Promise.all(
-                        signRows.map((row) => radioHandoverApi.completeReceiverSignature(row.id, finalSig, sigRowPicReceiverName || undefined, sigRowRemarks || undefined))
-                      );
-                      toast({ title: `Tanda tangan berhasil disimpan untuk ${signRows.length} radio` });
-                      setSignRows(null);
-                      setSignRowDetails([]);
-                      setActiveTagIndex(0);
-                      setSigRowReceiver("");
-                      setSigRowPicReceiverName("");
-                      setSigRowRemarks("");
-                      if (detail && signRows.some(r => r.id === detail.id)) setDetail(null);
-                      load();
-                    } catch (err: any) {
-                      toast({
-                        title: "Gagal menyimpan TTD",
-                        description: err.response?.data?.message,
-                        variant: "destructive"
-                      });
-                    }
-                  }}
-                >
-                  Simpan TTD
-                </button>
+                )}
+                {signRowDetails[activeTagIndex] && (
+                  <HandoverTagPreview detail={signRowDetails[activeTagIndex]} />
+                )}
               </div>
+            ) : (
+              <div className="text-center py-6 text-gray-400 text-xs border border-dashed rounded-lg bg-gray-50">
+                <Loader2 className="w-5 h-5 animate-spin inline-block mr-2" />
+                Memuat detail tag...
+              </div>
+            )}
+
+            {signRows[0]?.handoverType === "WarehouseToHelpdesk" && (
+              <div className="space-y-4 mt-4 bg-gray-50 border border-gray-100 p-4 rounded-xl">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
+                    <button
+                      type="button"
+                      className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
+                      onClick={() => setSigRowPicReceiverName(signRowDetails[0]?.radioOwnerLabel || signRows[0].radioOwnerLabel || "")}
+                    >
+                      Gunakan data Pemilik
+                    </button>
+                  </div>
+                  <input
+                    type="text"
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                    placeholder="Nama pengambil radio (opsional)"
+                    value={sigRowPicReceiverName}
+                    onChange={(e) => setSigRowPicReceiverName(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-900">Catatan</label>
+                  <input
+                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                    value={sigRowRemarks}
+                    onChange={(e) => setSigRowRemarks(e.target.value)}
+                    placeholder="Catatan tambahan (opsional)"
+                  />
+                </div>
+              </div>
+            )}
+
+            <SignaturePadField
+              ref={sigWhRowRef}
+              label={`TTD Penerima (${signRows[0].receivedByName})`}
+              required
+              value={sigRowReceiver}
+              onChange={(val) => setSigRowReceiver(val ?? "")}
+            />
+            <div className="flex flex-col-reverse sm:grid sm:grid-cols-2 gap-3 pt-4 border-t border-gray-100">
+              <button type="button" className="w-full px-4 py-2.5 border rounded-lg hover:bg-gray-50 text-gray-700 font-medium transition-colors" onClick={() => setSignRows(null)}>Batal</button>
+              <button
+                type="button"
+                className="w-full px-4 py-2.5 bg-violet-600 text-white rounded-lg hover:bg-violet-700 font-medium transition-colors flex items-center justify-center"
+                onClick={async () => {
+                  const finalSig = (await sigWhRowRef.current?.exportNow()) ?? sigRowReceiver;
+                  if (!finalSig) {
+                    toast({ title: "Tanda tangan wajib diisi", variant: "destructive" });
+                    return;
+                  }
+                  try {
+                    await Promise.all(
+                      signRows.map((row) => radioHandoverApi.completeReceiverSignature(row.id, finalSig, sigRowPicReceiverName || undefined, sigRowRemarks || undefined))
+                    );
+                    toast({ title: `Tanda tangan berhasil disimpan untuk ${signRows.length} radio` });
+                    setSignRows(null);
+                    setSignRowDetails([]);
+                    setActiveTagIndex(0);
+                    setSigRowReceiver("");
+                    setSigRowPicReceiverName("");
+                    setSigRowRemarks("");
+                    if (detail && signRows.some(r => r.id === detail.id)) setDetail(null);
+                    load();
+                  } catch (err: any) {
+                    toast({
+                      title: "Gagal menyimpan TTD",
+                      description: err.response?.data?.message,
+                      variant: "destructive"
+                    });
+                  }
+                }}
+              >
+                Simpan TTD
+              </button>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          </div>
+        )}
+      </ResponsiveModal>
 
       <ImageGalleryModal
         images={galleryImages}
