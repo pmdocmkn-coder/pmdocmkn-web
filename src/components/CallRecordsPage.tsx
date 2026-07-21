@@ -34,7 +34,7 @@ import {
 import HourlyChart from "./HourlyChart";
 import HourlySummaryTable from "./HourlySummaryTable";
 import { MobilePageHeader } from "./ui/MobilePageHeader";
-import { DatePicker } from "./ui/date-picker";
+import { FormMobileDatePicker } from "./Radio/FormMobileDatePicker";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 
@@ -480,10 +480,9 @@ const CallRecordsPage: React.FC = () => {
           <div className="flex flex-col gap-1.5">
             <label className="text-[10px] font-bold text-[#718096] ml-1 uppercase tracking-wider">Pilih Tanggal</label>
             <div className="bg-white rounded-[10px] border border-[#E2E8F0] shadow-sm overflow-hidden">
-              <DatePicker
+              <FormMobileDatePicker
                 date={selectedDate ? new Date(selectedDate) : undefined}
                 onSelect={(d) => setSelectedDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                className="w-full border-none shadow-none text-[13px] font-semibold text-[#1A202C] h-10"
               />
             </div>
           </div>

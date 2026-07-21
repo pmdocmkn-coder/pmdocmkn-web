@@ -159,7 +159,7 @@ export function FormMobileDatePicker({
   const [picker, setPicker]       = useState<"month" | "year" | null>(null);
 
   const thisYear  = new Date().getFullYear();
-  const years     = Array.from({ length: thisYear - 1999 + 3 }, (_, i) => 2000 + i);
+  const years     = Array.from({ length: 2100 - 1999 }, (_, i) => 2000 + i);
   const monthItems = MONTHS_ID.map((label, i) => ({ label, value: i }));
   const yearItems  = years.map(y => ({ label: String(y), value: y }));
 

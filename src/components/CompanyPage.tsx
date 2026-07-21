@@ -7,14 +7,7 @@ import { useNavigate } from "react-router-dom";
 import { Building2, Plus, Search, Edit, Trash2, CheckCircle, XCircle, Home, ChevronLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "./ui/dialog";
+import { ResponsiveModal } from "./common/ResponsiveModal";
 import { Label } from "./ui/label";
 import { Switch } from "@/components/ui/switch";
 
@@ -325,117 +318,73 @@ export default function CompanyPage() {
             </div>
 
             {/* Create Dialog */}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] rounded-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-[#9311d4] text-xl font-bold">Add New Company</DialogTitle>
-                        <DialogDescription className="text-slate-500">
-                            Create a new company to be used in letter numbering.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-5 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="code" className="font-bold text-slate-700">Company Code *</Label>
-                            <Input
-                                id="code"
-                                value={formData.code}
-                                onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                                placeholder="e.g., KPC"
-                                maxLength={50}
-                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="name" className="font-bold text-slate-700">Company Name *</Label>
-                            <Input
-                                id="name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                placeholder="e.g., PT. Kaltim Prima Coal"
-                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="address" className="font-bold text-slate-700">Address (Optional)</Label>
-                            <Input
-                                id="address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                placeholder="Company address"
-                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
-                            />
-                        </div>
+            <ResponsiveModal
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[500px]"
+                title="Tambah Perusahaan"
+                description="Buat perusahaan baru untuk penomoran surat."
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-[10px] h-11 font-semibold">Batal</Button>
+                        <Button onClick={handleCreate} className="rounded-[10px] h-11 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-semibold px-6">Buat Perusahaan</Button>
+                    </>
+                }
+            >
+                <div className="grid gap-5">
+                    <div className="space-y-2">
+                        <Label htmlFor="code" className="font-semibold text-[#1A202C]">Kode Perusahaan *</Label>
+                        <Input id="code" value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })} placeholder="cth: KPC" maxLength={50} className="h-11 rounded-[10px] border-[#E2E8F0]" />
                     </div>
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
-                            Cancel
-                        </Button>
-                        <Button onClick={handleCreate} className="rounded-xl h-11 bg-[#9311d4] hover:bg-[#9311d4]/90 text-white font-bold px-6">
-                            Create Company
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    <div className="space-y-2">
+                        <Label htmlFor="name" className="font-semibold text-[#1A202C]">Nama Perusahaan *</Label>
+                        <Input id="name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="cth: PT. Kaltim Prima Coal" className="h-11 rounded-[10px] border-[#E2E8F0]" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="address" className="font-semibold text-[#1A202C]">Alamat (Opsional)</Label>
+                        <Input id="address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="Alamat perusahaan" className="h-11 rounded-[10px] border-[#E2E8F0]" />
+                    </div>
+                </div>
+            </ResponsiveModal>
 
             {/* Edit Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] rounded-2xl">
-                    <DialogHeader>
-                        <DialogTitle className="text-[#9311d4] text-xl font-bold">Edit Company</DialogTitle>
-                        <DialogDescription className="text-slate-500">
-                            Update existing company information.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-5 py-4">
-                        <div className="space-y-2">
-                            <Label className="font-bold text-slate-700">Company Code</Label>
-                            <Input value={formData.code} disabled className="bg-slate-100 h-11 rounded-xl opacity-70 font-semibold" />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-name" className="font-bold text-slate-700">Company Name *</Label>
-                            <Input
-                                id="edit-name"
-                                value={formData.name}
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
-                            />
-                        </div>
-
-                        <div className="space-y-2">
-                            <Label htmlFor="edit-address" className="font-bold text-slate-700">Address</Label>
-                            <Input
-                                id="edit-address"
-                                value={formData.address}
-                                onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                                className="h-11 rounded-xl border-slate-200 focus-visible:ring-[#9311d4]"
-                            />
-                        </div>
-
-                        <div className="flex items-center justify-between mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
-                            <div className="flex flex-col">
-                                <Label className="font-bold text-slate-900 text-sm">Active Status</Label>
-                                <span className="text-xs text-slate-500">Toggle whether this company can be used</span>
-                            </div>
-                            <Switch
-                                checked={formData.isActive}
-                                onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })}
-                                className="data-[state=checked]:bg-[#9311d4]"
-                            />
-                        </div>
+            <ResponsiveModal
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[500px]"
+                title="Edit Perusahaan"
+                description="Perbarui informasi perusahaan."
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-[10px] h-11 font-semibold">Batal</Button>
+                        <Button onClick={handleUpdate} className="rounded-[10px] h-11 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-semibold px-6">Simpan Perubahan</Button>
+                    </>
+                }
+            >
+                <div className="grid gap-5">
+                    <div className="space-y-2">
+                        <Label className="font-semibold text-[#1A202C]">Kode Perusahaan</Label>
+                        <Input value={formData.code} disabled className="bg-[#F7F8FA] h-11 rounded-[10px] opacity-70 font-semibold" />
                     </div>
-                    <DialogFooter className="gap-2 sm:gap-0">
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)} className="rounded-xl h-11 font-bold text-slate-600 border-slate-200">
-                            Cancel
-                        </Button>
-                        <Button onClick={handleUpdate} className="rounded-xl h-11 bg-[#9311d4] hover:bg-[#9311d4]/90 text-white font-bold px-6">
-                            Save Changes
-                        </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-name" className="font-semibold text-[#1A202C]">Nama Perusahaan *</Label>
+                        <Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="h-11 rounded-[10px] border-[#E2E8F0]" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label htmlFor="edit-address" className="font-semibold text-[#1A202C]">Alamat</Label>
+                        <Input id="edit-address" value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} className="h-11 rounded-[10px] border-[#E2E8F0]" />
+                    </div>
+                    <div className="flex items-center justify-between p-3 bg-[#F7F8FA] rounded-[10px] border border-[#E2E8F0]">
+                        <div className="flex flex-col">
+                            <Label className="font-semibold text-[#1A202C] text-sm">Status Aktif</Label>
+                            <span className="text-xs text-[#718096]">Toggle apakah perusahaan dapat digunakan</span>
+                        </div>
+                        <Switch checked={formData.isActive} onCheckedChange={(checked) => setFormData({ ...formData, isActive: checked })} />
+                    </div>
+                </div>
+            </ResponsiveModal>
         </div>
     );
 }

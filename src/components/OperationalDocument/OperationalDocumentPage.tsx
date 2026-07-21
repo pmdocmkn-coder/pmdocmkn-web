@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import BottomSheet from "../common/BottomSheet";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { PageWrapper } from "../common/PageWrapper";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
@@ -1754,42 +1755,44 @@ export default function OperationalDocumentPage() {
         }
 
         return (
-          <Dialog open={formOpen} onOpenChange={(o) => !o && closeForm()}>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-[16px]">
-              <DialogHeader className="mb-2">
-                <DialogTitle className="text-[20px] font-bold text-[#1A202C]">{editId ? "Edit Dokumen" : "Tambah Dokumen Baru"}</DialogTitle>
-              </DialogHeader>
-              {FormContent}
-              <DialogFooter className="mt-4 pt-4 border-t border-[#E2E8F0]">
-                {FormActions}
-              </DialogFooter>
-            </DialogContent>
-          </Dialog>
+          <ResponsiveModal
+            open={formOpen}
+            onOpenChange={(o) => !o && closeForm()}
+            bottomSheetSize="xl"
+            desktopClassName="max-w-lg"
+            title={editId ? "Edit Dokumen" : "Tambah Dokumen Baru"}
+            footer={<>{FormActions}</>}
+          >
+            {FormContent}
+          </ResponsiveModal>
         );
       })()}
 
       {/* ── Delete Confirm ── */}
-      <Dialog open={!!deleteConfirm} onOpenChange={(o) => !o && setDeleteConfirm(null)}>
-        <DialogContent className="max-w-sm bg-white rounded-[16px]">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-[#DC2626]"><AlertTriangle className="w-5 h-5" /> Hapus Dokumen</DialogTitle>
-          </DialogHeader>
-          <div className="py-2">
-            <p className="text-[14px] text-[#4A5568] leading-relaxed">
-              Yakin ingin menghapus dokumen <br/><span className="font-bold text-[#1A202C]">{deleteConfirm?.name}</span>?
-            </p>
-            <p className="text-[13px] text-[#718096] mt-2 italic">Tindakan ini tidak dapat dibatalkan.</p>
-          </div>
-          <DialogFooter className="mt-2 pt-4 border-t border-[#E2E8F0] gap-2 sm:gap-0">
+      <ResponsiveModal
+        open={!!deleteConfirm}
+        onOpenChange={(o) => !o && setDeleteConfirm(null)}
+        bottomSheetSize="md"
+        desktopClassName="max-w-sm"
+        title={<span className="flex items-center gap-2 text-[#DC2626]"><AlertTriangle className="w-5 h-5" /> Hapus Dokumen</span>}
+        footer={
+          <>
             <Button variant="outline" onClick={() => setDeleteConfirm(null)} className="h-10 rounded-[10px] font-semibold">Batal</Button>
             <Button onClick={() => deleteConfirm && handleDelete(deleteConfirm.id)}
               disabled={isBusy}
               className="h-10 rounded-[10px] bg-[#DC2626] hover:bg-red-700 text-white font-semibold">
               {isBusy ? "Menghapus..." : "Ya, Hapus"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="py-2">
+          <p className="text-[14px] text-[#4A5568] leading-relaxed">
+            Yakin ingin menghapus dokumen <br/><span className="font-bold text-[#1A202C]">{deleteConfirm?.name}</span>?
+          </p>
+          <p className="text-[13px] text-[#718096] mt-2 italic">Tindakan ini tidak dapat dibatalkan.</p>
+        </div>
+      </ResponsiveModal>
 
       {/* Detail Modal — Desktop: Dialog, Mobile: BottomSheet dengan swipe */}
       {selectedDetailDoc && (() => {
@@ -2008,41 +2011,44 @@ export default function OperationalDocumentPage() {
       })()}
 
       {/* Follow Up Modal */}
-      <Dialog open={followUpModalOpen} onOpenChange={setFollowUpModalOpen}>
-        <DialogContent className="max-w-md bg-white rounded-[16px]">
-          <DialogHeader className="mb-2">
-            <DialogTitle className="text-[20px] font-bold text-[#1A202C]">Tindak Lanjut</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-[13px] font-semibold text-[#4A5568] mb-1">Status</label>
-              <Select value={followUpFormStatus} onValueChange={setFollowUpFormStatus}>
-                <SelectTrigger className="w-full h-10 rounded-[8px] bg-white border-[#E2E8F0]">
-                  <SelectValue placeholder="Pilih status" />
-                </SelectTrigger>
-                <SelectContent>
-                  {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "SedangDiproses" ? "Sedang Diproses" : s}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="block text-[13px] font-semibold text-[#4A5568] mb-1">Catatan</label>
-              <textarea
-                value={followUpFormRemark}
-                onChange={(e) => setFollowUpFormRemark(e.target.value)}
-                placeholder="Tambahkan catatan tindak lanjut..."
-                className="w-full h-24 text-[14px] border border-[#E2E8F0] rounded-[8px] p-3 focus:outline-none focus:ring-2 focus:ring-[#2B6CB0] focus:border-transparent resize-none"
-              />
-            </div>
-          </div>
-          <DialogFooter className="mt-4 pt-4 border-t border-[#E2E8F0] flex gap-2 justify-end">
+      <ResponsiveModal
+        open={followUpModalOpen}
+        onOpenChange={setFollowUpModalOpen}
+        bottomSheetSize="lg"
+        desktopClassName="max-w-md"
+        title="Tindak Lanjut"
+        footer={
+          <>
             <Button variant="outline" onClick={() => setFollowUpModalOpen(false)} className="h-10 rounded-[10px] font-semibold">Batal</Button>
             <Button onClick={submitFollowUpStatus} disabled={isUpdatingFollowUp} className="h-10 rounded-[10px] font-semibold bg-[#2B6CB0] hover:bg-[#1A365D] text-white">
               {isUpdatingFollowUp ? "Menyimpan..." : "Simpan"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-[13px] font-semibold text-[#4A5568] mb-1">Status</label>
+            <Select value={followUpFormStatus} onValueChange={setFollowUpFormStatus}>
+              <SelectTrigger className="w-full h-10 rounded-[8px] bg-white border-[#E2E8F0]">
+                <SelectValue placeholder="Pilih status" />
+              </SelectTrigger>
+              <SelectContent>
+                {FOLLOW_UP_STATUS_OPTIONS.map(s => <SelectItem key={s} value={s}>{s === "SedangDiproses" ? "Sedang Diproses" : s}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-[13px] font-semibold text-[#4A5568] mb-1">Catatan</label>
+            <textarea
+              value={followUpFormRemark}
+              onChange={(e) => setFollowUpFormRemark(e.target.value)}
+              placeholder="Tambahkan catatan tindak lanjut..."
+              className="w-full h-24 text-[14px] border border-[#E2E8F0] rounded-[8px] p-3 focus:outline-none focus:ring-2 focus:ring-[#2B6CB0] focus:border-transparent resize-none"
+            />
+          </div>
+        </div>
+      </ResponsiveModal>
     </PageWrapper>
   );
 }

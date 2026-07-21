@@ -11,7 +11,8 @@ import {
   statusActionLabel,
   isJobStatusLocked,
 } from "../../utils/radioRepairStatusUtils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
+import BottomSheet from "../common/BottomSheet";
 import { Button } from "../ui/button";
 import {
   formatActiveWorkshopDuration,
@@ -401,100 +402,91 @@ function MobileQuickActionDropdown({
         Aksi <ChevronDown className="w-3 h-3 ml-1" />
       </button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="sm:max-w-md p-0 overflow-hidden gap-0">
-          <DialogHeader className="p-4 pb-2 text-left border-b border-gray-100">
-            <DialogTitle className="text-base font-bold text-gray-900">Aksi Pekerjaan</DialogTitle>
-          </DialogHeader>
-          <div className="py-2 max-h-[70vh] overflow-y-auto">
-            {nextList.length > 0 && (
-              <>
-                <p className="px-4 py-1.5 text-xs text-gray-400 font-medium">
-                  Status sistem:
-                </p>
-                {nextList.map((ns) => (
+      <BottomSheet open={open} onClose={() => setOpen(false)} title="Aksi Pekerjaan" size="md">
+        <div className="space-y-1">
+          {nextList.length > 0 && (
+            <>
+              <p className="text-xs text-[#718096] font-medium px-1 pb-1">Status sistem:</p>
+              {nextList.map((ns) => (
+                <button
+                  key={ns}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setOpen(false);
+                    onQuickStatus(job, ns, null);
+                  }}
+                  className="w-full text-left px-3 py-3 text-[14px] text-[#1A202C] hover:bg-[#F7F8FA] rounded-[10px] transition-colors font-medium"
+                >
+                  {statusActionLabel(job.status, ns)}
+                </button>
+              ))}
+            </>
+          )}
+
+          {showBackToProgress && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onQuickStatus(job, "InProgress", null);
+              }}
+              className="w-full text-left px-3 py-3 text-[14px] font-medium text-[#F59E0B] hover:bg-[#FFFBEB] rounded-[10px] transition-colors border-t border-[#E2E8F0] mt-1 pt-3"
+            >
+              Kembali ke Progress
+            </button>
+          )}
+
+          {canShowCustom && (
+            <>
+              <p className="text-xs text-[#718096] font-medium px-1 pt-3 pb-1 border-t border-[#E2E8F0] mt-1">Status tambahan:</p>
+              {customStatuses
+                .filter((cs) => cs.id !== job.customStatusId)
+                .map((cs) => (
                   <button
-                    key={ns}
+                    key={cs.id}
                     onClick={(e) => {
                       e.stopPropagation();
                       setOpen(false);
-                      onQuickStatus(job, ns, null);
+                      onQuickStatus(job, "InProgress", cs.id);
                     }}
-                    className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-violet-50 hover:text-violet-700 transition-colors"
+                    className="w-full text-left px-3 py-3 text-[14px] text-[#1A202C] hover:bg-[#F7F8FA] rounded-[10px] transition-colors flex items-center gap-2"
                   >
-                    {statusActionLabel(job.status, ns)}
+                    <span className={`w-2.5 h-2.5 rounded-full ${cs.color}`} />
+                    {cs.label}
                   </button>
                 ))}
-              </>
-            )}
+            </>
+          )}
 
-            {showBackToProgress && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  onQuickStatus(job, "InProgress", null);
-                }}
-                className="w-full text-left px-4 py-3 text-sm font-medium text-amber-700 hover:bg-amber-50 transition-colors border-t border-gray-100 mt-1"
-              >
-                Kembali ke Progress
-              </button>
-            )}
+          {(job.status === "RepairCompleted" || job.status === "Scrapped") && canHandoverWh && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onQuickHandoverWh(job);
+              }}
+              className="w-full text-left px-3 py-3 text-[14px] font-medium text-[#2B6CB0] hover:bg-[#EBF4FF] rounded-[10px] transition-colors flex items-center gap-2 border-t border-[#E2E8F0] mt-1 pt-3"
+            >
+              <Warehouse className="w-4 h-4" />
+              Serah ke WH
+            </button>
+          )}
 
-            {canShowCustom && (
-              <>
-                <p className="px-4 py-1.5 text-xs text-gray-400 border-t border-gray-100 mt-1 pt-3 font-medium">
-                  Status tambahan:
-                </p>
-                {customStatuses
-                  .filter((cs) => cs.id !== job.customStatusId)
-                  .map((cs) => (
-                    <button
-                      key={cs.id}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpen(false);
-                        onQuickStatus(job, "InProgress", cs.id);
-                      }}
-                      className="w-full text-left px-4 py-3 text-sm text-gray-700 hover:bg-violet-50 transition-colors flex items-center gap-2"
-                    >
-                      <span className={`w-2.5 h-2.5 rounded-full ${cs.color}`} />
-                      {cs.label}
-                    </button>
-                  ))}
-              </>
-            )}
-
-            {(job.status === "RepairCompleted" || job.status === "Scrapped") && canHandoverWh && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  onQuickHandoverWh(job);
-                }}
-                className="w-full text-left px-4 py-3 text-sm hover:bg-violet-50 text-violet-700 flex items-center font-medium border-t border-gray-100 mt-1"
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Serah ke WH
-              </button>
-            )}
-
-            {canBorrow && (
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setOpen(false);
-                  onOpenBorrowRequest(job);
-                }}
-                className="w-full text-left px-4 py-3 text-sm hover:bg-amber-50 text-amber-700 flex items-center font-medium border-t border-gray-100 mt-1"
-              >
-                <Warehouse className="w-4 h-4 mr-2" />
-                Pinjam Tools
-              </button>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          {canBorrow && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpen(false);
+                onOpenBorrowRequest(job);
+              }}
+              className="w-full text-left px-3 py-3 text-[14px] font-medium text-[#F59E0B] hover:bg-[#FFFBEB] rounded-[10px] transition-colors flex items-center gap-2 border-t border-[#E2E8F0] mt-1 pt-3"
+            >
+              <Warehouse className="w-4 h-4" />
+              Pinjam Tools
+            </button>
+          )}
+        </div>
+      </BottomSheet>
     </>
   );
 }

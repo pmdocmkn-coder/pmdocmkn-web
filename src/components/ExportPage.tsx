@@ -4,7 +4,7 @@ import { motion, Variants } from "framer-motion";
 import { callRecordApi } from "../services/api";
 import { useNavigate } from "react-router-dom";
 import { MobilePageHeader } from "./ui/MobilePageHeader";
-import { DatePicker } from "./ui/date-picker";
+import { FormMobileDatePicker } from "./Radio/FormMobileDatePicker";
 import { format, eachDayOfInterval } from "date-fns";
 import { id as dateFnsLocale } from "date-fns/locale";
 import { id as localeId } from "react-day-picker/locale";
@@ -148,11 +148,10 @@ const ExportPage: React.FC<ExportPageProps> = ({ onBack, setActiveTab }) => {
 
             <div className="mb-3">
               <label className="text-[10px] font-extrabold text-slate-500 ml-1 uppercase tracking-wider">Pilih Tanggal</label>
-              <div className="mt-1 bg-slate-50 rounded-xl border border-purple-100/60 overflow-hidden">
-                <DatePicker
+              <div className="mt-1 bg-slate-50 rounded-xl border border-[#E2E8F0] overflow-hidden">
+                <FormMobileDatePicker
                   date={selectedDate ? new Date(selectedDate) : undefined}
                   onSelect={(d) => setSelectedDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                  className="w-full border-none shadow-none text-[12px] font-bold text-slate-700 h-10"
                 />
               </div>
             </div>
@@ -343,10 +342,9 @@ const ExportPage: React.FC<ExportPageProps> = ({ onBack, setActiveTab }) => {
                 <label className="block text-xs font-extrabold text-slate-500 uppercase tracking-wider mb-2">
                   Pilih Tanggal
                 </label>
-                <DatePicker
+                <FormMobileDatePicker
                   date={selectedDate ? new Date(selectedDate) : undefined}
                   onSelect={(d) => setSelectedDate(d ? format(d, 'yyyy-MM-dd') : '')}
-                  className="w-full"
                 />
               </div>
 

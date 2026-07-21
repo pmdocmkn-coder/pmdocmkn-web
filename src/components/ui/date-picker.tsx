@@ -24,8 +24,8 @@ function CustomCaption({ calendarMonth }: { calendarMonth: CalendarMonth }) {
     const currentMonthIdx = getMonth(displayMonth)
 
     const thisYear = new Date().getFullYear()
-    // 2000 → 2 years forward so historical radio data (2019 etc.) is reachable
-    const years = Array.from({ length: thisYear - 1999 + 2 }, (_, i) => 2000 + i)
+    // 2000 → 2100: range luas agar user bisa pilih tahun berapapun
+    const years = Array.from({ length: 101 }, (_, i) => 2000 + i)
 
     return (
         <div className="flex items-center justify-between gap-1 px-1 pb-1">
