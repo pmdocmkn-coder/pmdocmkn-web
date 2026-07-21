@@ -8,7 +8,7 @@ import { KpiDocument, UpdateKpiDocumentDatesDto } from "../../types/kpi";
 import { kpiApi } from "../../services/kpiApi";
 import { useToast } from "../../hooks/use-toast";
 import { format, parseISO } from "date-fns";
-import { DatePicker } from "../ui/date-picker";
+import { FormMobileDatePicker } from "../Radio/FormMobileDatePicker";
 
 interface KpiDatesModalProps {
     isOpen: boolean;
@@ -146,10 +146,9 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
                                     <Label className="text-xs font-semibold text-gray-500 uppercase">1. Date Received (Terima Laporan)</Label>
                                     <button type="button" onClick={() => setToday('dateReceived')} className="text-xs text-indigo-600 font-medium hover:underline">Hari Ini</button>
                                 </div>
-                                <DatePicker
+                                <FormMobileDatePicker
                                     date={parseDateString(dates.dateReceived)}
                                     onSelect={(d) => handleDateChange("dateReceived", d)}
-                                    className={dates.dateReceived ? "border-indigo-200 bg-indigo-50" : ""}
                                 />
                             </div>
                         )}
@@ -160,10 +159,9 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
                                 <button type="button" onClick={() => setToday('dateSubmittedToReviewer')} className="text-xs text-indigo-600 font-medium hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors">Hari Ini</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <DatePicker
+                                <FormMobileDatePicker
                                     date={parseDateString(dates.dateSubmittedToReviewer)}
                                     onSelect={(d) => handleDateChange("dateSubmittedToReviewer", d)}
-                                    className={`w-full ${dates.dateSubmittedToReviewer ? "border-indigo-200 bg-indigo-50" : ""}`}
                                 />
                                 <Input
                                     placeholder="Catatan pengiriman..."
@@ -180,10 +178,9 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
                                 <button type="button" onClick={() => setToday('dateApproved')} className="text-xs text-indigo-600 font-medium hover:bg-indigo-50 px-2 py-0.5 rounded transition-colors">Hari Ini</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <DatePicker
+                                <FormMobileDatePicker
                                     date={parseDateString(dates.dateApproved)}
                                     onSelect={(d) => handleDateChange("dateApproved", d)}
-                                    className={`w-full ${dates.dateApproved ? "border-indigo-200 bg-indigo-50" : ""}`}
                                 />
                                 <Input
                                     placeholder="Catatan approval..."
@@ -200,10 +197,9 @@ export default function KpiDatesModal({ isOpen, onClose, documents, onSuccess }:
                                 <button type="button" onClick={() => setToday('dateSubmittedToRqm')} className="text-xs text-indigo-600 font-medium hover:bg-green-50 text-green-700 px-2 py-0.5 rounded transition-colors">Hari Ini</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-                                <DatePicker
+                                <FormMobileDatePicker
                                     date={parseDateString(dates.dateSubmittedToRqm)}
                                     onSelect={(d) => handleDateChange("dateSubmittedToRqm", d)}
-                                    className={`w-full ${dates.dateSubmittedToRqm ? "border-green-200 bg-green-50" : ""}`}
                                 />
                                 <Input
                                     placeholder="Catatan RQM..."

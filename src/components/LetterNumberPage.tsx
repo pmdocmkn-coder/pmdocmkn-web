@@ -45,21 +45,14 @@ import {
     Home,
     Download
 } from "lucide-react";
-import { DatePicker } from "./ui/date-picker";
+import { FormMobileDatePicker } from "./Radio/FormMobileDatePicker";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "./ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { cn } from "../lib/utils";
 import RepairDateRangeFilter from "./RadioRepair/RepairDateRangeFilter";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import {
-    Dialog,
-    DialogContent,
-    DialogDescription,
-    DialogFooter,
-    DialogHeader,
-    DialogTitle,
-} from "./ui/dialog";
+import { ResponsiveModal } from "./common/ResponsiveModal";
 import { Label } from "./ui/label";
 import {
     Select,
@@ -502,189 +495,147 @@ function LetterTab() {
             )}
 
             {/* Create Dialog */}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Buat Nomor Surat Baru</DialogTitle>
-                        <DialogDescription>Isi data untuk generate nomor surat baru.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Company *</Label>
-                                <Popover open={openCompanyBox} onOpenChange={setOpenCompanyBox} modal={true}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={openCompanyBox}
-                                            className="w-full justify-between font-normal"
-                                        >
-                                            <span className="truncate text-left flex-1 min-w-0">
-                                                {formData.companyId
-                                                    ? companies.find((c) => c.id === formData.companyId)?.name
-                                                    : "Pilih company"}
-                                            </span>
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
-                                        <Command>
-                                            <CommandInput placeholder="Cari company..." />
-                                            <CommandList className="max-h-[180px]">
-                                                <CommandEmpty>Company tidak ditemukan.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {companies.map((c) => (
-                                                        <CommandItem
-                                                            key={c.id}
-                                                            value={c.name}
-                                                            onSelect={() => {
-                                                                setFormData({ ...formData, companyId: c.id });
-                                                                setOpenCompanyBox(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4",
-                                                                    formData.companyId === c.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            {c.name}
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Tipe Dokumen *</Label>
-                                <Select value={formData.documentTypeId.toString()} onValueChange={(v) => setFormData({ ...formData, documentTypeId: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger>
-                                    <SelectContent>
-                                        {documentTypes.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Tanggal Surat *</Label>
-                            <DatePicker
-                                date={formData.letterDate ? new Date(formData.letterDate) : undefined}
-                                onSelect={(d) => setFormData({ ...formData, letterDate: d ? format(d, "yyyy-MM-dd") : "" })}
-                                className="w-full"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Subject *</Label>
-                            <Input value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} placeholder="Masukkan subject surat" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Penerima</Label>
-                            <Input value={formData.recipient} onChange={(e) => setFormData({ ...formData, recipient: e.target.value })} placeholder="Masukkan nama penerima" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="0">Draft</SelectItem>
-                                    <SelectItem value="1">Sent</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                    </div>
-                    <DialogFooter>
+            <ResponsiveModal
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[600px]"
+                title="Buat Nomor Surat Baru"
+                description="Isi data untuk generate nomor surat baru."
+                footer={
+                    <>
                         <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleCreate} className="bg-indigo-600 hover:bg-indigo-700" disabled={isCreating}>
+                        <Button onClick={handleCreate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]" disabled={isCreating}>
                             {isCreating ? "Membuat..." : "Buat Surat"}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Edit Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Edit Surat</DialogTitle>
-                        <DialogDescription>Update detail surat di bawah.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+                    </>
+                }
+            >
+                <div className="grid gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
-                            <Label>Subject *</Label>
-                            <Input value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} />
+                            <Label>Company *</Label>
+                            <Popover open={openCompanyBox} onOpenChange={setOpenCompanyBox} modal={true}>
+                                <PopoverTrigger asChild>
+                                    <Button variant="outline" role="combobox" aria-expanded={openCompanyBox} className="w-full justify-between font-normal">
+                                        <span className="truncate text-left flex-1 min-w-0">
+                                            {formData.companyId ? companies.find((c) => c.id === formData.companyId)?.name : "Pilih company"}
+                                        </span>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Cari company..." />
+                                        <CommandList className="max-h-[180px]">
+                                            <CommandEmpty>Company tidak ditemukan.</CommandEmpty>
+                                            <CommandGroup>
+                                                {companies.map((c) => (
+                                                    <CommandItem key={c.id} value={c.name} onSelect={() => { setFormData({ ...formData, companyId: c.id }); setOpenCompanyBox(false); }}>
+                                                        <Check className={cn("mr-2 h-4 w-4", formData.companyId === c.id ? "opacity-100" : "opacity-0")} />
+                                                        {c.name}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
                         </div>
                         <div className="space-y-2">
-                            <Label>Penerima</Label>
-                            <Input value={formData.recipient} onChange={(e) => setFormData({ ...formData, recipient: e.target.value })} />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Status</Label>
-                            <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
+                            <Label>Tipe Dokumen *</Label>
+                            <Select value={formData.documentTypeId.toString()} onValueChange={(v) => setFormData({ ...formData, documentTypeId: parseInt(v) })}>
+                                <SelectTrigger><SelectValue placeholder="Pilih tipe" /></SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="0">Draft</SelectItem>
-                                    <SelectItem value="1">Sent</SelectItem>
+                                    {documentTypes.map((t) => <SelectItem key={t.id} value={t.id.toString()}>{t.name}</SelectItem>)}
                                 </SelectContent>
                             </Select>
                         </div>
                     </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleUpdate} className="bg-indigo-600 hover:bg-indigo-700">Update</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    <div className="space-y-2">
+                        <Label>Tanggal Surat *</Label>
+                        <FormMobileDatePicker date={formData.letterDate ? new Date(formData.letterDate) : undefined} onSelect={(d) => setFormData({ ...formData, letterDate: d ? format(d, "yyyy-MM-dd") : "" })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Subject *</Label>
+                        <Input value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} placeholder="Masukkan subject surat" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Penerima</Label>
+                        <Input value={formData.recipient} onChange={(e) => setFormData({ ...formData, recipient: e.target.value })} placeholder="Masukkan nama penerima" />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="0">Draft</SelectItem>
+                                <SelectItem value="1">Sent</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </ResponsiveModal>
 
-            {/* Detail Surat Mobile Dialog */}
-            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-xl max-h-[85vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Detail Surat Umum</DialogTitle>
-                    </DialogHeader>
-                    {selectedDetailLetter && (
-                        <div className="grid gap-3 py-4 text-sm">
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Nomor Surat</span>
-                                <span className="font-bold text-gray-900">{selectedDetailLetter.formattedNumber}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Tanggal</span>
-                                <span className="text-gray-900">{new Date(selectedDetailLetter.letterDate).toLocaleDateString('id-ID')}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Status</span>
-                                <span><StatusBadge status={selectedDetailLetter.status} /></span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Perusahaan</span>
-                                <span className="text-gray-900">{selectedDetailLetter.companyCode}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Tipe Dokumen</span>
-                                <span className="text-gray-900">{selectedDetailLetter.documentTypeCode}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Pembuat</span>
-                                <span className="text-gray-900">{selectedDetailLetter.createdByName || "-"}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 border-b pb-2">
-                                <span className="text-gray-500">Subjek</span>
-                                <span className="text-gray-900">{selectedDetailLetter.subject}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 border-b pb-2">
-                                <span className="text-gray-500">Penerima</span>
-                                <span className="text-gray-900">{selectedDetailLetter.recipient || "-"}</span>
-                            </div>
-                        </div>
-                    )}
-                    <DialogFooter>
-                        <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+            {/* Edit Dialog */}
+            <ResponsiveModal
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[600px]"
+                title="Edit Surat"
+                description="Update detail surat di bawah."
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                        <Button onClick={handleUpdate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">Update</Button>
+                    </>
+                }
+            >
+                <div className="grid gap-4">
+                    <div className="space-y-2">
+                        <Label>Subject *</Label>
+                        <Input value={formData.subject} onChange={(e) => setFormData({ ...formData, subject: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Penerima</Label>
+                        <Input value={formData.recipient} onChange={(e) => setFormData({ ...formData, recipient: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                        <Label>Status</Label>
+                        <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="0">Draft</SelectItem>
+                                <SelectItem value="1">Sent</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </div>
+            </ResponsiveModal>
+
+            {/* Detail Surat */}
+            <ResponsiveModal
+                open={isDetailDialogOpen}
+                onOpenChange={setIsDetailDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[500px]"
+                title="Detail Surat Umum"
+                footer={<Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>}
+            >
+                {selectedDetailLetter && (
+                    <div className="grid gap-3 text-sm">
+                        <div className="flex justify-between border-b pb-2"><span className="text-[#718096]">Nomor Surat</span><span className="font-bold text-[#1A202C]">{selectedDetailLetter.formattedNumber}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[#718096]">Tanggal</span><span className="text-[#1A202C]">{new Date(selectedDetailLetter.letterDate).toLocaleDateString('id-ID')}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[#718096]">Status</span><span><StatusBadge status={selectedDetailLetter.status} /></span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[#718096]">Perusahaan</span><span className="text-[#1A202C]">{selectedDetailLetter.companyCode}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[#718096]">Tipe Dokumen</span><span className="text-[#1A202C]">{selectedDetailLetter.documentTypeCode}</span></div>
+                        <div className="flex justify-between border-b pb-2"><span className="text-[#718096]">Pembuat</span><span className="text-[#1A202C]">{selectedDetailLetter.createdByName || "-"}</span></div>
+                        <div className="flex flex-col gap-1 border-b pb-2"><span className="text-[#718096]">Subjek</span><span className="text-[#1A202C]">{selectedDetailLetter.subject}</span></div>
+                        <div className="flex flex-col gap-1 border-b pb-2"><span className="text-[#718096]">Penerima</span><span className="text-[#1A202C]">{selectedDetailLetter.recipient || "-"}</span></div>
+                    </div>
+                )}
+            </ResponsiveModal>
 
             {/* ========== MOBILE FILTER MODALS ========== */}
             <div id="mobile-dropdown-company" className="hidden fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4 sm:p-0 bg-black/40 backdrop-blur-sm transition-opacity"
@@ -1151,280 +1102,287 @@ function GatepassTab() {
             )}
 
             {/* Create Gatepass Dialog */}
-            <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-                <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Buat Gatepass Baru</DialogTitle>
-                        <DialogDescription>Isi data untuk membuat gatepass baru.</DialogDescription>
-                    </DialogHeader>
-                    {/* Datalist for autocomplete */}
-                    <datalist id="gp-destination-list">
-                        {destinationSuggestions.map((s, i) => <option key={i} value={s} />)}
-                    </datalist>
-                    <datalist id="gp-pic-list">
-                        {picSuggestions.map((s, i) => <option key={i} value={s} />)}
-                    </datalist>
-                    <datalist id="gp-driver-list">
-                        {driverSuggestions.map((s, i) => <option key={i} value={s} />)}
-                    </datalist>
-
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Tujuan *</Label>
-                                <Input
-                                    list="gp-destination-list"
-                                    value={formData.destination}
-                                    onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
-                                    placeholder="Tujuan pengiriman"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Tanggal *</Label>
-                                <DatePicker
-                                    date={formData.gatepassDate ? new Date(formData.gatepassDate) : undefined}
-                                    onSelect={(d) => setFormData({ ...formData, gatepassDate: d ? format(d, "yyyy-MM-dd") : "" })}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Nama PIC *</Label>
-                                <Input
-                                    list="gp-pic-list"
-                                    value={formData.picName}
-                                    onChange={(e) => setFormData({ ...formData, picName: e.target.value })}
-                                    placeholder="Nama PIC"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Nama Driver / Pembawa Gatepass</Label>
-                                <Input
-                                    list="gp-driver-list"
-                                    value={formData.picContact || ""}
-                                    onChange={(e) => setFormData({ ...formData, picContact: e.target.value })}
-                                    placeholder="Masukkan nama driver / pembawa"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Catatan</Label>
-                                <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Status</Label>
-                                <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">Draft</SelectItem>
-                                        <SelectItem value="1">Sent</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        {/* Items */}
-                        <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-base font-semibold">Daftar Barang</Label>
-                                <Button type="button" variant="outline" size="sm" onClick={addItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
-                            </div>
-                            {formData.items.map((item, index) => (
-                                <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex gap-2">
-                                        <div className="flex-1">
-                                            <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateItem(index, "itemName", e.target.value)} />
-                                        </div>
-                                        <div className="w-16">
-                                            <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)} />
-                                        </div>
-                                        <div className="w-16">
-                                            <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateItem(index, "unit", e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 items-center">
-                                        <div className="flex-1">
-                                            <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateItem(index, "serialNumber", e.target.value)} />
-                                        </div>
-                                        {formData.items.length > 1 && (
-                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-                    <DialogFooter>
+            <ResponsiveModal
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[700px]"
+                title="Buat Gatepass Baru"
+                description="Isi data untuk membuat gatepass baru."
+                footer={
+                    <>
                         <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleCreate} className="bg-emerald-600 hover:bg-emerald-700" disabled={isCreating}>
+                        <Button onClick={handleCreate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]" disabled={isCreating}>
                             {isCreating ? "Membuat..." : "Buat Gatepass"}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                    </>
+                }
+            >
+                {/* Datalist for autocomplete */}
+                <datalist id="gp-destination-list">
+                    {destinationSuggestions.map((s, i) => <option key={i} value={s} />)}
+                </datalist>
+                <datalist id="gp-pic-list">
+                    {picSuggestions.map((s, i) => <option key={i} value={s} />)}
+                </datalist>
+                <datalist id="gp-driver-list">
+                    {driverSuggestions.map((s, i) => <option key={i} value={s} />)}
+                </datalist>
 
-            {/* Edit Gatepass Dialog */}
-            <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-                <DialogContent className="sm:max-w-[700px] max-h-[85vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Edit Gatepass</DialogTitle>
-                        <DialogDescription>Update detail gatepass.</DialogDescription>
-                    </DialogHeader>
-                    {/* Datalist for autocomplete */}
-                    <datalist id="gp-edit-destination-list">
-                        {destinationSuggestions.map((s, i) => <option key={i} value={s} />)}
-                    </datalist>
-                    <datalist id="gp-edit-pic-list">
-                        {picSuggestions.map((s, i) => <option key={i} value={s} />)}
-                    </datalist>
-                    <datalist id="gp-edit-driver-list">
-                        {driverSuggestions.map((s, i) => <option key={i} value={s} />)}
-                    </datalist>
-
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Tujuan *</Label>
-                                <Input
-                                    list="gp-edit-destination-list"
-                                    value={editFormData.destination}
-                                    onChange={(e) => setEditFormData({ ...editFormData, destination: e.target.value })}
-                                    placeholder="Tujuan pengiriman"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Tanggal *</Label>
-                                <DatePicker
-                                    date={editFormData.gatepassDate ? new Date(editFormData.gatepassDate) : undefined}
-                                    onSelect={(d) => setEditFormData({ ...editFormData, gatepassDate: d ? format(d, "yyyy-MM-dd") : "" })}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Nama PIC *</Label>
-                                <Input
-                                    list="gp-edit-pic-list"
-                                    value={editFormData.picName}
-                                    onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })}
-                                    placeholder="Nama PIC"
-                                />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Nama Driver / Pembawa Gatepass</Label>
-                                <Input
-                                    list="gp-edit-driver-list"
-                                    value={editFormData.picContact || ""}
-                                    onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })}
-                                    placeholder="Masukkan nama driver / pembawa"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
-                            <div className="space-y-2">
-                                <Label>Catatan</Label>
-                                <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} placeholder="Catatan tambahan" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Status</Label>
-                                <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">Draft</SelectItem>
-                                        <SelectItem value="1">Sent</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                        </div>
-
-                        {/* Items */}
+                <div className="grid gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                         <div className="space-y-2">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-base font-semibold">Daftar Barang</Label>
-                                <Button type="button" variant="outline" size="sm" onClick={addEditItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
-                            </div>
-                            {(editFormData.items || []).map((item, index) => (
-                                <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
-                                    <div className="flex gap-2">
-                                        <div className="flex-1">
-                                            <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateEditItem(index, "itemName", e.target.value)} />
-                                        </div>
-                                        <div className="w-16">
-                                            <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateEditItem(index, "quantity", parseInt(e.target.value) || 1)} />
-                                        </div>
-                                        <div className="w-16">
-                                            <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateEditItem(index, "unit", e.target.value)} />
-                                        </div>
-                                    </div>
-                                    <div className="flex gap-2 items-center">
-                                        <div className="flex-1">
-                                            <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateEditItem(index, "serialNumber", e.target.value)} />
-                                        </div>
-                                        {(editFormData.items || []).length > 1 && (
-                                            <Button type="button" variant="ghost" size="sm" onClick={() => removeEditItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                            <Label>Tujuan *</Label>
+                            <Input
+                                list="gp-destination-list"
+                                value={formData.destination}
+                                onChange={(e) => setFormData({ ...formData, destination: e.target.value })}
+                                placeholder="Tujuan pengiriman"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tanggal *</Label>
+                            <FormMobileDatePicker
+                                date={formData.gatepassDate ? new Date(formData.gatepassDate) : undefined}
+                                onSelect={(d) => setFormData({ ...formData, gatepassDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                className="w-full"
+                            />
                         </div>
                     </div>
-                    <DialogFooter>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label>Nama PIC *</Label>
+                            <Input
+                                list="gp-pic-list"
+                                value={formData.picName}
+                                onChange={(e) => setFormData({ ...formData, picName: e.target.value })}
+                                placeholder="Nama PIC"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Nama Driver / Pembawa Gatepass</Label>
+                            <Input
+                                list="gp-driver-list"
+                                value={formData.picContact || ""}
+                                onChange={(e) => setFormData({ ...formData, picContact: e.target.value })}
+                                placeholder="Masukkan nama driver / pembawa"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label>Catatan</Label>
+                            <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">Draft</SelectItem>
+                                    <SelectItem value="1">Sent</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* Items */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-base font-semibold">Daftar Barang</Label>
+                            <Button type="button" variant="outline" size="sm" onClick={addItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
+                        </div>
+                        {formData.items.map((item, index) => (
+                            <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateItem(index, "itemName", e.target.value)} />
+                                    </div>
+                                    <div className="w-16">
+                                        <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateItem(index, "quantity", parseInt(e.target.value) || 1)} />
+                                    </div>
+                                    <div className="w-16">
+                                        <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateItem(index, "unit", e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                    <div className="flex-1">
+                                        <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateItem(index, "serialNumber", e.target.value)} />
+                                    </div>
+                                    {formData.items.length > 1 && (
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => removeItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </ResponsiveModal>
+
+            {/* Edit Gatepass Dialog */}
+            <ResponsiveModal
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[700px]"
+                title="Edit Gatepass"
+                description="Update detail gatepass."
+                footer={
+                    <>
                         <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleUpdate} className="bg-emerald-600 hover:bg-emerald-700">Update</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <Button onClick={handleUpdate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">Update</Button>
+                    </>
+                }
+            >
+                {/* Datalist for autocomplete */}
+                <datalist id="gp-edit-destination-list">
+                    {destinationSuggestions.map((s, i) => <option key={i} value={s} />)}
+                </datalist>
+                <datalist id="gp-edit-pic-list">
+                    {picSuggestions.map((s, i) => <option key={i} value={s} />)}
+                </datalist>
+                <datalist id="gp-edit-driver-list">
+                    {driverSuggestions.map((s, i) => <option key={i} value={s} />)}
+                </datalist>
+
+                <div className="grid gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label>Tujuan *</Label>
+                            <Input
+                                list="gp-edit-destination-list"
+                                value={editFormData.destination}
+                                onChange={(e) => setEditFormData({ ...editFormData, destination: e.target.value })}
+                                placeholder="Tujuan pengiriman"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tanggal *</Label>
+                            <FormMobileDatePicker
+                                date={editFormData.gatepassDate ? new Date(editFormData.gatepassDate) : undefined}
+                                onSelect={(d) => setEditFormData({ ...editFormData, gatepassDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label>Nama PIC *</Label>
+                            <Input
+                                list="gp-edit-pic-list"
+                                value={editFormData.picName}
+                                onChange={(e) => setEditFormData({ ...editFormData, picName: e.target.value })}
+                                placeholder="Nama PIC"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Nama Driver / Pembawa Gatepass</Label>
+                            <Input
+                                list="gp-edit-driver-list"
+                                value={editFormData.picContact || ""}
+                                onChange={(e) => setEditFormData({ ...editFormData, picContact: e.target.value })}
+                                placeholder="Masukkan nama driver / pembawa"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label>Catatan</Label>
+                            <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select value={editFormData.status.toString()} onValueChange={(v) => setEditFormData({ ...editFormData, status: parseInt(v) })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">Draft</SelectItem>
+                                    <SelectItem value="1">Sent</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    </div>
+
+                    {/* Items */}
+                    <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <Label className="text-base font-semibold">Daftar Barang</Label>
+                            <Button type="button" variant="outline" size="sm" onClick={addEditItem}><Plus className="h-3 w-3 mr-1" />Tambah</Button>
+                        </div>
+                        {(editFormData.items || []).map((item, index) => (
+                            <div key={index} className="flex flex-col gap-2 p-3 bg-gray-50 rounded-lg">
+                                <div className="flex gap-2">
+                                    <div className="flex-1">
+                                        <Input placeholder="Nama barang *" value={item.itemName} onChange={(e) => updateEditItem(index, "itemName", e.target.value)} />
+                                    </div>
+                                    <div className="w-16">
+                                        <Input type="number" placeholder="Qty" value={item.quantity} onChange={(e) => updateEditItem(index, "quantity", parseInt(e.target.value) || 1)} />
+                                    </div>
+                                    <div className="w-16">
+                                        <Input placeholder="Unit" value={item.unit || ""} onChange={(e) => updateEditItem(index, "unit", e.target.value)} />
+                                    </div>
+                                </div>
+                                <div className="flex gap-2 items-center">
+                                    <div className="flex-1">
+                                        <Input placeholder="Serial Number" value={item.serialNumber || ""} onChange={(e) => updateEditItem(index, "serialNumber", e.target.value)} />
+                                    </div>
+                                    {(editFormData.items || []).length > 1 && (
+                                        <Button type="button" variant="ghost" size="sm" onClick={() => removeEditItem(index)} className="text-red-500"><Trash2 className="h-3 w-3" /></Button>
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </ResponsiveModal>
 
             {/* Detail Gatepass Mobile Dialog */}
-            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-xl max-h-[85vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Detail Gatepass</DialogTitle>
-                    </DialogHeader>
-                    {selectedDetailItem && (
-                        <div className="grid gap-3 py-4 text-sm">
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Nomor Gatepass</span>
-                                <span className="font-bold text-gray-900">{selectedDetailItem.formattedNumber}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Tanggal</span>
-                                <span className="text-gray-900">{new Date(selectedDetailItem.gatepassDate).toLocaleDateString('id-ID')}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Status</span>
-                                <span><StatusBadge status={selectedDetailItem.status} /></span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Tujuan</span>
-                                <span className="text-gray-900">{selectedDetailItem.destination}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Nama PIC</span>
-                                <span className="text-gray-900">{selectedDetailItem.picName}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Driver</span>
-                                <span className="text-gray-900">{selectedDetailItem.picContact || "-"}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Total Item</span>
-                                <span className="text-gray-900 font-bold">{selectedDetailItem.itemCount}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Pembuat</span>
-                                <span className="text-gray-900">{selectedDetailItem.createdByName || "-"}</span>
-                            </div>
+            <ResponsiveModal
+                open={isDetailDialogOpen}
+                onOpenChange={setIsDetailDialogOpen}
+                bottomSheetSize="lg"
+                desktopClassName="max-w-[500px]"
+                title="Detail Gatepass"
+                footer={
+                    <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
+                }
+            >
+                {selectedDetailItem && (
+                    <div className="grid gap-3 text-sm">
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Nomor Gatepass</span>
+                            <span className="font-bold text-gray-900">{selectedDetailItem.formattedNumber}</span>
                         </div>
-                    )}
-                    <DialogFooter>
-                        <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Tanggal</span>
+                            <span className="text-gray-900">{new Date(selectedDetailItem.gatepassDate).toLocaleDateString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Status</span>
+                            <span><StatusBadge status={selectedDetailItem.status} /></span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Tujuan</span>
+                            <span className="text-gray-900">{selectedDetailItem.destination}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Nama PIC</span>
+                            <span className="text-gray-900">{selectedDetailItem.picName}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Driver</span>
+                            <span className="text-gray-900">{selectedDetailItem.picContact || "-"}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Total Item</span>
+                            <span className="text-gray-900 font-bold">{selectedDetailItem.itemCount}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-gray-500">Pembuat</span>
+                            <span className="text-gray-900">{selectedDetailItem.createdByName || "-"}</span>
+                        </div>
+                    </div>
+                )}
+            </ResponsiveModal>
         </>
     );
 }
@@ -1799,138 +1757,142 @@ function QuotationTab() {
             )}
 
             {/* Create Quotation Dialog */}
-            < Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen} >
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Buat Quotation Baru</DialogTitle>
-                        <DialogDescription>Isi data untuk membuat quotation baru.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Customer *</Label>
-                                <Popover open={openCreateCompanyBox} onOpenChange={setOpenCreateCompanyBox} modal={true}>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={openCreateCompanyBox}
-                                            className="w-full justify-between font-normal truncate"
-                                        >
-                                            <span className="truncate text-left flex-1 min-w-0">
-                                                {formData.customerId
-                                                    ? companies.find((c) => c.id === formData.customerId)?.name
-                                                    : "Pilih customer"}
-                                            </span>
-                                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
-                                        <Command>
-                                            <CommandInput placeholder="Cari customer..." />
-                                            <CommandList className="max-h-[180px]">
-                                                <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
-                                                <CommandGroup>
-                                                    {companies.map((c) => (
-                                                        <CommandItem
-                                                            key={c.id}
-                                                            value={c.name}
-                                                            onSelect={() => {
-                                                                setFormData({ ...formData, customerId: c.id });
-                                                                setOpenCreateCompanyBox(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4 flex-shrink-0",
-                                                                    formData.customerId === c.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
-                                                            <span className="truncate">{c.name}</span>
-                                                        </CommandItem>
-                                                    ))}
-                                                </CommandGroup>
-                                            </CommandList>
-                                        </Command>
-                                    </PopoverContent>
-                                </Popover>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Tanggal Quotation *</Label>
-                                <DatePicker
-                                    date={formData.quotationDate ? new Date(formData.quotationDate) : undefined}
-                                    onSelect={(d) => setFormData({ ...formData, quotationDate: d ? format(d, "yyyy-MM-dd") : "" })}
-                                    className="w-full"
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Deskripsi *</Label>
-                                <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Deskripsi quotation" />
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Value (Rp)</Label>
-                                <Input 
-                                    type="text" 
-                                    value={formData.nominal !== undefined && formData.nominal !== null ? new Intl.NumberFormat('id-ID').format(formData.nominal) : ""} 
-                                    onChange={(e) => {
-                                        const rawValue = e.target.value.replace(/\D/g, '');
-                                        setFormData({ ...formData, nominal: rawValue ? parseFloat(rawValue) : undefined });
-                                    }} 
-                                    placeholder="Contoh: 1.500.000" 
-                                />
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Status</Label>
-                                <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
-                                    <SelectTrigger><SelectValue /></SelectTrigger>
-                                    <SelectContent>
-                                        <SelectItem value="0">Draft</SelectItem>
-                                        <SelectItem value="1">Sent</SelectItem>
-                                    </SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Catatan</Label>
-                                <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
-                            </div>
-                        </div>
-                    </div>
-                    <DialogFooter>
+            <ResponsiveModal
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[700px]"
+                title="Buat Quotation Baru"
+                description="Isi data untuk membuat quotation baru."
+                footer={
+                    <>
                         <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>Batal</Button>
                         <Button onClick={handleCreate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]" disabled={isCreating}>
                             {isCreating ? "Membuat..." : "Buat Quotation"}
                         </Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog >
+                    </>
+                }
+            >
+                <div className="grid gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Customer *</Label>
+                            <Popover open={openCreateCompanyBox} onOpenChange={setOpenCreateCompanyBox} modal={true}>
+                                <PopoverTrigger asChild>
+                                    <Button
+                                        variant="outline"
+                                        role="combobox"
+                                        aria-expanded={openCreateCompanyBox}
+                                        className="w-full justify-between font-normal truncate"
+                                    >
+                                        <span className="truncate text-left flex-1 min-w-0">
+                                            {formData.customerId
+                                                ? companies.find((c) => c.id === formData.customerId)?.name
+                                                : "Pilih customer"}
+                                        </span>
+                                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-[var(--radix-popover-trigger-width)] min-w-[240px] p-0 pointer-events-auto" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Cari customer..." />
+                                        <CommandList className="max-h-[180px]">
+                                            <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
+                                            <CommandGroup>
+                                                {companies.map((c) => (
+                                                    <CommandItem
+                                                        key={c.id}
+                                                        value={c.name}
+                                                        onSelect={() => {
+                                                            setFormData({ ...formData, customerId: c.id });
+                                                            setOpenCreateCompanyBox(false);
+                                                        }}
+                                                    >
+                                                        <Check
+                                                            className={cn(
+                                                                "mr-2 h-4 w-4 flex-shrink-0",
+                                                                formData.customerId === c.id ? "opacity-100" : "opacity-0"
+                                                            )}
+                                                        />
+                                                        <span className="truncate">{c.name}</span>
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Tanggal Quotation *</Label>
+                            <FormMobileDatePicker
+                                date={formData.quotationDate ? new Date(formData.quotationDate) : undefined}
+                                onSelect={(d) => setFormData({ ...formData, quotationDate: d ? format(d, "yyyy-MM-dd") : "" })}
+                                className="w-full"
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Deskripsi *</Label>
+                            <Input value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Deskripsi quotation" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Value (Rp)</Label>
+                            <Input 
+                                type="text" 
+                                value={formData.nominal !== undefined && formData.nominal !== null ? new Intl.NumberFormat('id-ID').format(formData.nominal) : ""} 
+                                onChange={(e) => {
+                                    const rawValue = e.target.value.replace(/\D/g, '');
+                                    setFormData({ ...formData, nominal: rawValue ? parseFloat(rawValue) : undefined });
+                                }} 
+                                placeholder="Contoh: 1.500.000" 
+                            />
+                        </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <Label>Status</Label>
+                            <Select value={formData.status.toString()} onValueChange={(v) => setFormData({ ...formData, status: parseInt(v) })}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="0">Draft</SelectItem>
+                                    <SelectItem value="1">Sent</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Catatan</Label>
+                            <Input value={formData.notes || ""} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Catatan tambahan" />
+                        </div>
+                    </div>
+                </div>
+            </ResponsiveModal>
 
             {/* Edit Quotation Dialog */}
-            < Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen} >
-                <DialogContent className="sm:max-w-[600px]">
-                    <DialogHeader>
-                        <DialogTitle>Edit Quotation</DialogTitle>
-                        <DialogDescription>Update detail quotation.</DialogDescription>
-                    </DialogHeader>
-                    <div className="grid gap-4 py-4">
+            <ResponsiveModal
+                open={isEditDialogOpen}
+                onOpenChange={setIsEditDialogOpen}
+                bottomSheetSize="xl"
+                desktopClassName="max-w-[600px]"
+                title="Edit Quotation"
+                description="Update detail quotation."
+                footer={
+                    <>
+                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
+                        <Button onClick={handleUpdate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">Update</Button>
+                    </>
+                }
+            >
+                <div className="grid gap-4">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Customer</Label>
                                 <Popover open={openEditCompanyBox} onOpenChange={setOpenEditCompanyBox} modal={true}>
                                     <PopoverTrigger asChild>
-                                        <Button
-                                            variant="outline"
-                                            role="combobox"
-                                            aria-expanded={openEditCompanyBox}
-                                            className="w-full justify-between font-normal"
-                                        >
+                                        <Button variant="outline" role="combobox" aria-expanded={openEditCompanyBox} className="w-full justify-between font-normal">
                                             <span className="truncate text-left flex-1 min-w-0">
-                                                {editFormData.customerId
-                                                    ? companies.find((c) => c.id === editFormData.customerId)?.name
-                                                    : "Pilih customer"}
+                                                {editFormData.customerId ? companies.find((c) => c.id === editFormData.customerId)?.name : "Pilih customer"}
                                             </span>
                                             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50 flex-shrink-0" />
                                         </Button>
@@ -1942,20 +1904,8 @@ function QuotationTab() {
                                                 <CommandEmpty>Customer tidak ditemukan.</CommandEmpty>
                                                 <CommandGroup>
                                                     {companies.map((c) => (
-                                                        <CommandItem
-                                                            key={c.id}
-                                                            value={c.name}
-                                                            onSelect={() => {
-                                                                setEditFormData({ ...editFormData, customerId: c.id });
-                                                                setOpenEditCompanyBox(false);
-                                                            }}
-                                                        >
-                                                            <Check
-                                                                className={cn(
-                                                                    "mr-2 h-4 w-4 flex-shrink-0",
-                                                                    editFormData.customerId === c.id ? "opacity-100" : "opacity-0"
-                                                                )}
-                                                            />
+                                                        <CommandItem key={c.id} value={c.name} onSelect={() => { setEditFormData({ ...editFormData, customerId: c.id }); setOpenEditCompanyBox(false); }}>
+                                                            <Check className={cn("mr-2 h-4 w-4 flex-shrink-0", editFormData.customerId === c.id ? "opacity-100" : "opacity-0")} />
                                                             <span className="truncate">{c.name}</span>
                                                         </CommandItem>
                                                     ))}
@@ -1968,11 +1918,7 @@ function QuotationTab() {
                             {isAdmin && (
                                 <div className="space-y-2">
                                     <Label>Tanggal</Label>
-                                    <DatePicker
-                                        date={editFormData.quotationDate ? new Date(editFormData.quotationDate) : undefined}
-                                        onSelect={(d) => setEditFormData({ ...editFormData, quotationDate: d ? format(d, "yyyy-MM-dd") : "" })}
-                                        className="w-full"
-                                    />
+                                    <FormMobileDatePicker date={editFormData.quotationDate ? new Date(editFormData.quotationDate) : undefined} onSelect={(d) => setEditFormData({ ...editFormData, quotationDate: d ? format(d, "yyyy-MM-dd") : "" })} />
                                 </div>
                             )}
                         </div>
@@ -1983,15 +1929,9 @@ function QuotationTab() {
                             </div>
                             <div className="space-y-2">
                                 <Label>Value (Rp)</Label>
-                                <Input 
-                                    type="text" 
-                                    value={editFormData.nominal !== undefined && editFormData.nominal !== null ? new Intl.NumberFormat('id-ID').format(editFormData.nominal) : ""} 
-                                    onChange={(e) => {
-                                        const rawValue = e.target.value.replace(/\D/g, '');
-                                        setEditFormData({ ...editFormData, nominal: rawValue ? parseFloat(rawValue) : undefined });
-                                    }} 
-                                    placeholder="Contoh: 1.500.000" 
-                                />
+                                <Input type="text" value={editFormData.nominal !== undefined && editFormData.nominal !== null ? new Intl.NumberFormat('id-ID').format(editFormData.nominal) : ""}
+                                    onChange={(e) => { const rawValue = e.target.value.replace(/\D/g, ''); setEditFormData({ ...editFormData, nominal: rawValue ? parseFloat(rawValue) : undefined }); }}
+                                    placeholder="Contoh: 1.500.000" />
                             </div>
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2010,67 +1950,61 @@ function QuotationTab() {
                                 <Input value={editFormData.notes || ""} onChange={(e) => setEditFormData({ ...editFormData, notes: e.target.value })} />
                             </div>
                         </div>
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setIsEditDialogOpen(false)}>Batal</Button>
-                        <Button onClick={handleUpdate} className="bg-[#1B3A6B] hover:bg-[#2B6CB0]">Update</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
+                </div>
+            </ResponsiveModal>
 
-            {/* Detail Quotation Mobile Dialog */}
-            <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-                <DialogContent className="sm:max-w-[500px] w-[95vw] rounded-xl max-h-[85vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle>Detail Quotation</DialogTitle>
-                    </DialogHeader>
-                    {selectedDetailItem && (
-                        <div className="grid gap-3 py-4 text-sm">
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Nomor Quotation</span>
-                                <span className="font-bold text-gray-900">{selectedDetailItem.formattedNumber}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Tanggal</span>
-                                <span className="text-gray-900">{new Date(selectedDetailItem.quotationDate).toLocaleDateString('id-ID')}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Status</span>
-                                <span><StatusBadge status={selectedDetailItem.status} /></span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Customer</span>
-                                <span className="text-gray-900 text-right">{selectedDetailItem.customerName}</span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Nilai</span>
-                                <span className="font-semibold text-[#1B3A6B]">
-                                    {selectedDetailItem.nominal != null
-                                        ? `Rp ${new Intl.NumberFormat('id-ID').format(selectedDetailItem.nominal)}`
-                                        : "-"}
-                                </span>
-                            </div>
-                            <div className="flex justify-between border-b pb-2">
-                                <span className="text-gray-500">Pembuat</span>
-                                <span className="text-gray-900">{selectedDetailItem.createdByName || "-"}</span>
-                            </div>
-                            <div className="flex flex-col gap-1 border-b pb-2">
-                                <span className="text-gray-500">Deskripsi</span>
-                                <span className="text-gray-900">{selectedDetailItem.description}</span>
-                            </div>
-                            {selectedDetailItem.notes && (
-                                <div className="flex flex-col gap-1 pb-2">
-                                    <span className="text-gray-500">Catatan</span>
-                                    <span className="text-gray-900">{selectedDetailItem.notes}</span>
-                                </div>
-                            )}
+            {/* Detail Quotation */}
+            <ResponsiveModal
+                open={isDetailDialogOpen}
+                onOpenChange={setIsDetailDialogOpen}
+                bottomSheetSize="lg"
+                desktopClassName="max-w-[500px]"
+                title="Detail Quotation"
+                footer={<Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>}
+            >
+                {selectedDetailItem && (
+                    <div className="grid gap-3 text-sm">
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-[#718096]">Nomor Quotation</span>
+                            <span className="font-bold text-[#1A202C]">{selectedDetailItem.formattedNumber}</span>
                         </div>
-                    )}
-                    <DialogFooter>
-                        <Button onClick={() => setIsDetailDialogOpen(false)}>Tutup</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog >
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-[#718096]">Tanggal</span>
+                            <span className="text-[#1A202C]">{new Date(selectedDetailItem.quotationDate).toLocaleDateString('id-ID')}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-[#718096]">Status</span>
+                            <span><StatusBadge status={selectedDetailItem.status} /></span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-[#718096]">Customer</span>
+                            <span className="text-[#1A202C] text-right">{selectedDetailItem.customerName}</span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-[#718096]">Nilai</span>
+                            <span className="font-semibold text-[#1B3A6B]">
+                                {selectedDetailItem.nominal != null
+                                    ? `Rp ${new Intl.NumberFormat('id-ID').format(selectedDetailItem.nominal)}`
+                                    : "-"}
+                            </span>
+                        </div>
+                        <div className="flex justify-between border-b pb-2">
+                            <span className="text-[#718096]">Pembuat</span>
+                            <span className="text-[#1A202C]">{selectedDetailItem.createdByName || "-"}</span>
+                        </div>
+                        <div className="flex flex-col gap-1 border-b pb-2">
+                            <span className="text-[#718096]">Deskripsi</span>
+                            <span className="text-[#1A202C]">{selectedDetailItem.description}</span>
+                        </div>
+                        {selectedDetailItem.notes && (
+                            <div className="flex flex-col gap-1 pb-2">
+                                <span className="text-[#718096]">Catatan</span>
+                                <span className="text-[#1A202C]">{selectedDetailItem.notes}</span>
+                            </div>
+                        )}
+                    </div>
+                )}
+            </ResponsiveModal>
         </>
     );
 }

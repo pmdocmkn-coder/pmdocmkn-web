@@ -147,11 +147,12 @@ interface FormMobileDatePickerProps {
   date?: Date;
   onSelect: (date: Date | undefined) => void;
   placeholder?: string;
+  className?: string;
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export function FormMobileDatePicker({
-  date, onSelect, placeholder = "Pilih tanggal",
+  date, onSelect, placeholder = "Pilih tanggal", className,
 }: FormMobileDatePickerProps) {
   const [open, setOpen]           = useState(false);
   const [tempDate, setTempDate]   = useState<Date | undefined>(date);
@@ -159,7 +160,7 @@ export function FormMobileDatePicker({
   const [picker, setPicker]       = useState<"month" | "year" | null>(null);
 
   const thisYear  = new Date().getFullYear();
-  const years     = Array.from({ length: thisYear - 1999 + 3 }, (_, i) => 2000 + i);
+  const years     = Array.from({ length: 2100 - 1999 }, (_, i) => 2000 + i);
   const monthItems = MONTHS_ID.map((label, i) => ({ label, value: i }));
   const yearItems  = years.map(y => ({ label: String(y), value: y }));
 
@@ -179,7 +180,7 @@ export function FormMobileDatePicker({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="w-full h-11 flex items-center gap-2 px-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[13px] shadow-sm hover:border-[#2B6CB0] focus:ring-2 focus:ring-[#2B6CB0]/20 transition-all cursor-pointer select-none"
+        className={`w-full h-11 flex items-center gap-2 px-3 rounded-[10px] border border-[#E2E8F0] bg-white text-[13px] shadow-sm hover:border-[#2B6CB0] focus:ring-2 focus:ring-[#2B6CB0]/20 transition-all cursor-pointer select-none${className ? " " + className : ""}`}
       >
         <CalendarIcon className="w-4 h-4 text-[#718096] shrink-0" />
         <span className={`truncate text-left ${date ? "text-[#1A202C] font-medium" : "text-gray-400"}`}>

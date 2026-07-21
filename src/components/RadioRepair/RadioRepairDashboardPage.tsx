@@ -28,12 +28,7 @@ import RadioWarrantyCheckModal from "./RadioWarrantyCheckModal";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { ResponsiveModal } from "../common/ResponsiveModal";
 import { FilterSelect } from "../Radio/FilterSelect";
 import { FormMobileSelect } from "../Radio/FormMobileSelect";
 import { FormMobileDatePicker } from "../Radio/FormMobileDatePicker";
@@ -898,27 +893,20 @@ export default function RadioRepairDashboardPage() {
         onIndexChange={setGalleryIndex}
       />
 
-      <Dialog open={!!detail} onOpenChange={(open: boolean) => { if (!open) setDetail(null); }}>
-        <DialogContent
-          className="max-w-3xl"
-          onInteractOutside={(e: Event) => {
-            if (galleryOpen) e.preventDefault();
-          }}
-        >
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 flex-wrap">
-              {detail?.helpdeskTicketNumber} — SN {detail?.radioSerialNumber}
-              {detail && <RadioRepairStatusBadge status={detail.status} customStatusLabel={detail.customStatusLabel} customStatusColor={detail.customStatusColor} pendingHandoverType={detail.pendingHandoverType} isWarranty={detail.isWarranty} />}
-            </DialogTitle>
-            {detail && (
-              <p className="text-sm text-gray-600">
-                Teknisi: <strong>{detail.workshopTechnicianName || detail.assignedTechnicianName}</strong>
-                {detail.workshopTechnicianName && detail.assignedTechnicianName && detail.workshopTechnicianName !== detail.assignedTechnicianName && (
-                  <span className="ml-2 text-gray-500">· Akun: {detail.assignedTechnicianName}</span>
-                )}
-              </p>
-            )}
-          </DialogHeader>
+      <ResponsiveModal
+        open={!!detail}
+        onOpenChange={(open) => { if (!open) setDetail(null); }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-3xl"
+        title={
+          detail ? (
+            <span className="flex items-center gap-2 flex-wrap text-base font-bold">
+              {detail.helpdeskTicketNumber} — SN {detail.radioSerialNumber}
+              <RadioRepairStatusBadge status={detail.status} customStatusLabel={detail.customStatusLabel} customStatusColor={detail.customStatusColor} pendingHandoverType={detail.pendingHandoverType} isWarranty={detail.isWarranty} />
+            </span>
+          ) : undefined
+        }
+      >
           {detail && (
             <RadioRepairJobDetailPanel
               job={detail}
@@ -944,37 +932,38 @@ export default function RadioRepairDashboardPage() {
               onClearDefaultEditingTag={() => setAutoOpenTag(null)}
             />
           )}
-        </DialogContent>
-      </Dialog>
+      </ResponsiveModal>
 
-      <Dialog open={!!editJob} onOpenChange={(open: boolean) => setEditJob(null)}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Edit pekerjaan</DialogTitle>
-          </DialogHeader>
-          {editJob && (
-            <RadioRepairJobEditForm job={editJob} technicians={technicians} workshopTechs={workshopTechs} saving={savingEdit} onSave={saveEdit} />
-          )}
-        </DialogContent>
-      </Dialog>
+      <ResponsiveModal
+        open={!!editJob}
+        onOpenChange={(open) => { if (!open) setEditJob(null); }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-lg"
+        title="Edit pekerjaan"
+      >
+        {editJob && (
+          <RadioRepairJobEditForm job={editJob} technicians={technicians} workshopTechs={workshopTechs} saving={savingEdit} onSave={saveEdit} />
+        )}
+      </ResponsiveModal>
 
-      <Dialog open={!!whJob} onOpenChange={(open: boolean) => { if (!open) setWhJob(null); }}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Teknisi → Warehouse</DialogTitle>
-          </DialogHeader>
-          {whJob && (
-            <TechnicianToWarehouseForm
-              job={whJob}
-              onSuccess={() => {
-                setWhJob(null);
-                load();
-              }}
-              onCancel={() => setWhJob(null)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
+      <ResponsiveModal
+        open={!!whJob}
+        onOpenChange={(open) => { if (!open) setWhJob(null); }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-lg"
+        title="Teknisi → Warehouse"
+      >
+        {whJob && (
+          <TechnicianToWarehouseForm
+            job={whJob}
+            onSuccess={() => {
+              setWhJob(null);
+              load();
+            }}
+            onCancel={() => setWhJob(null)}
+          />
+        )}
+      </ResponsiveModal>
 
       <RadioWarrantyCheckModal
         open={warrantyCheckOpen}
@@ -993,37 +982,38 @@ export default function RadioRepairDashboardPage() {
       />
 
       {/* Technician Picker Dialog */}
-      <Dialog open={techPickerOpen} onOpenChange={(open: boolean) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}>
-        <DialogContent className="w-[95vw] sm:max-w-2xl rounded-xl">
-          <DialogHeader>
-            <DialogTitle>Pilih Teknisi Workshop</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-2">
-            <p className="text-sm text-gray-600">
-              Pilih teknisi workshop yang akan mengerjakan radio ini.
+      <ResponsiveModal
+        open={techPickerOpen}
+        onOpenChange={(open) => { if (!open) { setTechPickerOpen(false); setPendingAction(null); } }}
+        bottomSheetSize="lg"
+        desktopClassName="sm:max-w-2xl"
+        title="Pilih Teknisi Workshop"
+      >
+        <div className="space-y-3">
+          <p className="text-[14px] text-[#718096]">
+            Pilih teknisi workshop yang akan mengerjakan radio ini.
+          </p>
+          {workshopTechs.length === 0 ? (
+            <p className="text-[14px] text-[#F59E0B] p-3 bg-[#FFFBEB] rounded-[10px]">
+              Belum ada data teknisi workshop. Tambahkan melalui menu pengaturan teknisi.
             </p>
-            {workshopTechs.length === 0 ? (
-              <p className="text-sm text-amber-600 p-3 bg-amber-50 rounded-lg">
-                Belum ada data teknisi workshop. Tambahkan melalui menu pengaturan teknisi.
-              </p>
-            ) : (
-              <div className="space-y-1.5 max-h-[300px] overflow-y-auto">
-                {workshopTechs.map((t) => (
-                  <button
-                    key={t.id}
-                    type="button"
-                    onClick={() => handleTechnicianPicked(t.id)}
-                    className="w-full text-left px-4 py-3 rounded-lg border border-gray-200 hover:border-violet-400 hover:bg-violet-50 transition-colors flex items-center justify-between group"
-                  >
-                    <span className="font-medium text-sm text-gray-900 group-hover:text-violet-700">{t.name}</span>
-                    <span className="text-xs text-gray-400 group-hover:text-violet-500">Pilih →</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+          ) : (
+            <div className="space-y-2">
+              {workshopTechs.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleTechnicianPicked(t.id)}
+                  className="w-full text-left px-4 py-3 rounded-[10px] border border-[#E2E8F0] hover:border-[#2B6CB0] hover:bg-[#EBF4FF] transition-colors flex items-center justify-between"
+                >
+                  <span className="font-medium text-[14px] text-[#1A202C]">{t.name}</span>
+                  <span className="text-xs text-[#718096]">Pilih →</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </ResponsiveModal>
 
       <RadioCompletionTagModal
         open={tagPickerOpen}

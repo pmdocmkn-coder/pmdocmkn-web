@@ -3,7 +3,7 @@ import { ResponsiveModal } from "../common/ResponsiveModal";
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
 import { Loader2 } from "lucide-react";
-import { DatePicker } from "../ui/date-picker";
+import { FormMobileDatePicker } from "../Radio/FormMobileDatePicker";
 import { format } from "date-fns";
 
 type Props = {
@@ -33,9 +33,9 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Tanggal Scrap <span className="text-red-500">*</span></label>
-            <DatePicker 
-              date={dateScrapped} 
-              onSelect={setDateScrapped} 
+            <FormMobileDatePicker
+              date={dateScrapped}
+              onSelect={setDateScrapped}
             />
           </div>
           <div className="space-y-1">
