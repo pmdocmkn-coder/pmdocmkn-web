@@ -22,6 +22,11 @@
   }
 }
 
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.92); }
+  to { opacity: 1; transform: scale(1); }
+}
+
 /* Target SVG path for highlighted LINE - GARIS DENGAN GRADIENT MENGALIR */
 .recharts-line.highlighted-line .recharts-line-curve {
   stroke-width: 7;

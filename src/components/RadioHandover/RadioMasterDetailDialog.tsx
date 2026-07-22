@@ -58,7 +58,7 @@ function Row({ label, value, highlight }: { label: string; value: string; highli
   return (
     <div className="flex gap-2 py-1 border-b border-gray-50 last:border-0">
       <dt className="w-32 shrink-0 text-gray-500">{label}</dt>
-      <dd className={`flex-1 font-medium ${highlight ? "text-violet-800" : "text-gray-800"}`}>{value}</dd>
+      <dd className={`flex-1 font-medium ${highlight ? "text-[#2B6CB0] font-semibold" : "text-gray-800"}`}>{value}</dd>
     </div>
   );
 }

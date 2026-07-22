@@ -30,9 +30,10 @@ import HandoverStatusBadge from "./HandoverStatusBadge";
 import HandoverTagPreview from "./HandoverTagPreview";
 import HandoverTimeline from "./HandoverTimeline";
 import EditHandoverDialog from "./EditHandoverDialog";
-import { HandoverPhotoThumb } from "./HandoverPhotoThumbnails";
+import { LazyPhotoThumb } from "./LazyPhotoThumb";
 import { canCreateHandoverHd } from "../../utils/handoverPermissions";
 import { isValidSignature } from "../../utils/signatureUtils";
+import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtils";
 import { hasPermission } from "../../utils/permissionUtils";
 import { useToast } from "../../hooks/use-toast";
 
@@ -46,15 +47,6 @@ function handoverTypeLabel(t: string) {
 function handoverTypeBadgeClass(t: string) {
   if (t === "HelpdeskToTechnician") return "bg-blue-100 text-blue-800 border-blue-200";
   return "bg-gray-100 text-gray-700 border-gray-200";
-}
-
-function resolveHandoverPhotos(d: {
-  radioPhotos?: string[];
-  radioPhotoBase64?: string | null;
-}): string[] {
-  if (d.radioPhotos && d.radioPhotos.length > 0) return d.radioPhotos;
-  if (d.radioPhotoBase64) return [d.radioPhotoBase64];
-  return [];
 }
 
 function EmptyState({ message }: { message: string }) {
@@ -155,7 +147,7 @@ function HandoverHistoryTable({
             <thead className="bg-gray-50/80 text-left border-b">
               <tr>
                 <th className="px-4 py-3 font-semibold text-gray-600">STR</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Tiket Helpdesk</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">No. Job ERP</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">SN Radio</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">{flowLabel}</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Foto</th>
@@ -189,7 +181,7 @@ function HandoverHistoryTable({
                           {handoverTypeLabel(group.flowLabel)}
                         </span>
                         <span className="font-semibold text-gray-800">
-                          Tiket HD: <span className="font-mono text-blue-700">{group.ticketNumber || "—"}</span>
+                          No. Job ERP: <span className="font-mono text-blue-700">{group.ticketNumber || "—"}</span>
                         </span>
                         <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
                           {group.items.length} Radio
@@ -246,18 +238,14 @@ function HandoverHistoryTable({
                         </div>
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        {h.previewPhotoBase64 || h.photoCount > 0 ? (
-                          <div className="relative inline-block">
-                            <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
-                            {h.photoCount > 1 && (
-                              <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
-                                {h.photoCount}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-gray-300 text-xs">—</span>
-                        )}
+                        <div className="relative inline-block">
+                          <LazyPhotoThumb handoverId={h.id} photoCount={h.photoCount} onClick={() => onOpenGallery(h)} />
+                          {h.photoCount > 1 && (
+                            <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center">
+                              {h.photoCount}
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                         {format(new Date(h.handoverAt), "dd MMM yyyy", { locale: localeId })}
@@ -331,7 +319,7 @@ function HandoverHistoryTable({
                     </span>
                   </div>
                   <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                    Tiket HD: <span className="font-mono text-blue-700">{group.ticketNumber || "—"}</span>
+                    No. Job ERP: <span className="font-mono text-blue-700">{group.ticketNumber || "—"}</span>
                   </h3>
                   <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1 font-medium">
                     <span className="truncate max-w-[120px]">{group.handedOverByName}</span>
@@ -360,9 +348,9 @@ function HandoverHistoryTable({
                         <span className="font-mono text-[10px] text-gray-500 bg-gray-100/80 px-1.5 py-0.5 rounded border border-gray-200">
                           {h.handoverNumber}
                         </span>
-                        {h.previewPhotoBase64 || h.photoCount > 0 ? (
+                        {h.photoCount > 0 ? (
                           <div className="relative mr-1" onClick={(e) => e.stopPropagation()}>
-                            <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
+                            <LazyPhotoThumb handoverId={h.id} photoCount={h.photoCount} onClick={() => onOpenGallery(h)} />
                             {h.photoCount > 1 && (
                               <span className="absolute -top-1 -right-1 bg-blue-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                                 {h.photoCount}
@@ -900,8 +888,8 @@ export default function RadioHandoverPage() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 rounded-lg border bg-gray-50/80 p-4">
               <div>
-                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Status job</p>
-                <p className="mt-0.5 font-medium text-gray-900">{detail.jobStatus}</p>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">No. Job ERP</p>
+                <p className="mt-0.5 font-mono font-bold text-[#1B3A6B]">{detail.noJobErp || detail.helpdeskTicketNumber || "—"}</p>
               </div>
               <div>
                 <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Waktu serah</p>

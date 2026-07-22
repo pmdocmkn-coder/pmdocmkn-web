@@ -161,7 +161,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       <div className="space-y-2">
         <label className="text-sm font-medium text-gray-900">Penerima Helpdesk *</label>
         <Select value={hdId} onValueChange={setHdId}>
-          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0]">
             <SelectValue placeholder="Pilih staff helpdesk" />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -226,14 +226,14 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
           <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
           <button
             type="button"
-            className="text-xs text-violet-600 hover:text-violet-700 font-medium bg-violet-50 hover:bg-violet-100 px-2 py-1 rounded transition-colors"
+            className="text-xs text-[#2B6CB0] hover:text-[#1B3A6B] font-medium bg-[#EBF4FF] hover:bg-[#EBF4FF]/80 px-2 py-1 rounded transition-colors"
             onClick={() => setPicReceiverName(job.radioOwnerLabel || "")}
           >
             Gunakan data Pemilik
           </button>
         </div>
         <input
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+          className="w-full border border-gray-300 rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] transition-colors"
           value={picReceiverName}
           onChange={(e) => setPicReceiverName(e.target.value)}
           placeholder="Nama pengambil radio (opsional)"
@@ -244,7 +244,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       <div className="space-y-2 pb-4">
         <label className="text-sm font-medium text-gray-900">Catatan</label>
         <input
-          className="w-full border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+          className="w-full border border-gray-300 rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] transition-colors"
           value={remarks}
           onChange={(e) => setRemarks(e.target.value)}
           placeholder="Catatan tambahan (opsional)"
@@ -261,7 +261,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         </button>
         <button
           type="button"
-          className="px-4 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-violet-700 transition-colors min-w-[140px]"
+          className="px-4 py-2.5 bg-[#1B3A6B] text-white rounded-[10px] text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed hover:bg-[#2B6CB0] transition-colors min-w-[140px]"
           disabled={submitting}
           onClick={submit}
         >

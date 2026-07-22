@@ -90,7 +90,7 @@ export default function RadioSerialLookupField({
           <button
             type="button"
             title="Lihat detail master radio"
-            className="flex items-center gap-1 text-xs text-violet-700 hover:bg-violet-50 px-2 py-1 rounded-lg border border-violet-200"
+            className="flex items-center gap-1 text-xs text-[#2B6CB0] hover:bg-[#EBF4FF]/50 px-2 py-1 rounded-[10px] border border-[#2B6CB0]/20"
             onClick={() => setMasterOpen(true)}
           >
             <Eye className="w-3.5 h-3.5" /> Detail radio
@@ -102,7 +102,7 @@ export default function RadioSerialLookupField({
           <button
             type="button"
             disabled={disabled}
-            className={`w-full h-10 flex items-center justify-between gap-2 px-3 mt-1 rounded-lg border text-sm shadow-sm ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-80 text-gray-500' : 'bg-white hover:border-violet-300'}`}
+            className={`w-full h-10 flex items-center justify-between gap-2 px-3 mt-1 rounded-[10px] border text-sm shadow-sm ${disabled ? 'bg-gray-100 cursor-not-allowed opacity-80 text-gray-500' : 'bg-white hover:border-[#2B6CB0]'}`}
           >
             <span className={`truncate text-left ${display ? "text-gray-800 font-medium" : "text-gray-400"}`}>
               {display || "Cari SN di master radio..."}
@@ -136,13 +136,13 @@ export default function RadioSerialLookupField({
                   }}
                   placeholder="Cari atau ketik SN manual..."
                   autoFocus
-                  className="w-full pl-10 pr-20 py-3 text-sm bg-gray-50 border rounded-2xl focus:ring-2 focus:ring-violet-300 outline-none"
+                  className="w-full pl-10 pr-20 py-3 text-sm bg-gray-50 border rounded-[10px] focus:ring-2 focus:ring-[#2B6CB0]/20 outline-none"
                 />
                 {search.trim() && (
                   <button
                     type="button"
                     onClick={() => void pick(search.trim(), null)}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-violet-100 text-violet-700 rounded-xl text-xs font-bold"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 px-3 py-1 bg-[#EBF4FF] text-[#2B6CB0] rounded-[10px] text-xs font-bold"
                   >
                     Pakai
                   </button>
@@ -160,8 +160,8 @@ export default function RadioSerialLookupField({
                     key={l.id}
                     type="button"
                     onClick={() => pick(l.serialNumber ?? l.label, l.id, l)}
-                    className={`w-full flex flex-col items-start px-4 py-3.5 rounded-2xl mb-0.5 text-left text-sm hover:bg-violet-50 ${
-                      radioId === l.id ? "bg-violet-50 text-violet-700 font-bold" : "text-gray-700"
+                    className={`w-full flex flex-col items-start px-4 py-3.5 rounded-[10px] mb-0.5 text-left text-sm hover:bg-[#EBF4FF]/50 ${
+                      radioId === l.id ? "bg-[#EBF4FF] text-[#1B3A6B] font-bold" : "text-gray-700"
                     }`}
                   >
                     <span className="flex w-full justify-between items-center">
@@ -184,7 +184,7 @@ export default function RadioSerialLookupField({
         <p className="text-xs text-amber-600 mt-1">SN manual — isi tipe/nama alat di bawah</p>
       )}
       {activeLookup && radioId && (
-        <p className="text-xs text-violet-700 mt-1 truncate">
+        <p className="text-xs text-[#2B6CB0] mt-1 truncate">
           {formatRadioOwnerLabel(activeLookup)}
           {activeLookup.division && ` · Div: ${activeLookup.division}`}
           {activeLookup.department && ` · Dept: ${activeLookup.department}`}

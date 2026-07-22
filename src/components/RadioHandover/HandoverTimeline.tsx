@@ -65,23 +65,23 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
             <div key={step.type} className="relative group">
               {/* Active Line Segment */}
               {done && index < STEPS.length - 1 && (
-                <div className="absolute -left-[17px] top-6 bottom-[-20px] w-[2px] bg-violet-500 z-10" />
+                <div className="absolute -left-[17px] top-6 bottom-[-20px] w-[2px] bg-[#2B6CB0] z-10" />
               )}
 
               {/* Icon/Circle */}
               <div 
                 className={`absolute -left-[28px] top-0.5 z-20 flex items-center justify-center w-8 h-8 rounded-full border-2 bg-white transition-all duration-300 ${
                   done 
-                    ? "border-violet-500 text-violet-600 shadow-sm" 
+                    ? "border-[#2B6CB0] text-[#2B6CB0] shadow-sm" 
                     : isNext
-                      ? "border-violet-300 text-violet-500 shadow-[0_0_0_4px_rgba(139,92,246,0.1)]"
+                      ? "border-[#2B6CB0]/40 text-[#2B6CB0] shadow-[0_0_0_4px_rgba(43,108,176,0.1)]"
                       : "border-slate-200 text-slate-300"
                 }`}
               >
                 {done ? (
                   <CheckCircle2 className="w-4 h-4" strokeWidth={2.5} />
                 ) : isNext ? (
-                  <Circle className="w-2.5 h-2.5 fill-violet-500" strokeWidth={0} />
+                  <Circle className="w-2.5 h-2.5 fill-[#2B6CB0]" strokeWidth={0} />
                 ) : (
                   <Circle className="w-2 h-2 fill-slate-200" strokeWidth={0} />
                 )}
@@ -91,9 +91,9 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
               <div 
                 className={`rounded-xl border transition-all duration-300 ${
                   done 
-                    ? "bg-white border-violet-100 shadow-sm hover:shadow-md" 
+                    ? "bg-white border-[#2B6CB0]/20 shadow-sm hover:shadow-md" 
                     : isNext
-                      ? "bg-white border-slate-200 shadow-sm hover:border-violet-200"
+                      ? "bg-white border-slate-200 shadow-sm hover:border-[#2B6CB0]/40"
                       : "bg-slate-50/50 border-slate-100 opacity-80"
                 }`}
               >
@@ -110,7 +110,7 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
                       <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
                         <div>
                           <span className="block text-slate-500 mb-0.5">No Referensi</span>
-                          <span className="font-mono font-bold text-violet-700">{h.handoverNumber}</span>
+                          <span className="font-mono font-bold text-[#2B6CB0]">{h.handoverNumber}</span>
                         </div>
                         <div>
                           <span className="block text-slate-500 mb-0.5">Waktu Serah Terima</span>
@@ -126,7 +126,7 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
                         </div>
                         <span className="font-medium text-slate-700">{h.handedOverByName}</span>
                         <span className="text-slate-400 mx-0.5">→</span>
-                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-violet-100 text-violet-700 font-bold text-[10px]">
+                        <div className="flex items-center justify-center w-5 h-5 rounded-full bg-[#EBF4FF] text-[#2B6CB0] font-bold text-[10px]">
                           {h.receivedByName.charAt(0).toUpperCase()}
                         </div>
                         <span className="font-bold text-slate-800">{h.receivedByName}</span>
@@ -158,7 +158,7 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
                     </div>
                   ) : (
                     <div className="mt-2 text-xs text-slate-400 flex items-center gap-1.5">
-                      <div className={`w-1.5 h-1.5 rounded-full ${isNext ? "bg-violet-400 animate-pulse" : "bg-slate-300"}`} />
+                      <div className={`w-1.5 h-1.5 rounded-full ${isNext ? "bg-[#2B6CB0] animate-pulse" : "bg-slate-300"}`} />
                       <span className="font-medium">{isNext ? "Langkah selanjutnya" : "Belum dilakukan"}</span>
                     </div>
                   )}

@@ -112,7 +112,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
   const validateStep = (s: number): string[] => {
     const missing: string[] = [];
     if (s === 1) {
-      if (!ticket.trim()) missing.push("No tiket helpdesk");
+      if (!ticket.trim()) missing.push("No. Job ERP");
       const filled = radioLines.filter((r) => r.serial.trim());
       if (filled.length === 0) missing.push("Minimal satu SN");
     }
@@ -266,17 +266,15 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
         {STEPS.map((label, i) => (
           <span
             key={label}
-            className={`text-[11px] sm:text-xs px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 border ${
-              i === step 
-                ? "bg-[#1B3A6B] text-white font-semibold border-[#1B3A6B]" 
-                : i < step 
-                  ? "bg-[#EBF4FF] text-[#2B6CB0] font-medium border-[#2B6CB0]/20" 
+            className={`text-[11px] sm:text-xs px-3 py-1.5 rounded-full whitespace-nowrap shrink-0 transition-colors flex items-center gap-1.5 border ${i === step
+                ? "bg-[#1B3A6B] text-white font-semibold border-[#1B3A6B]"
+                : i < step
+                  ? "bg-[#EBF4FF] text-[#2B6CB0] font-medium border-[#2B6CB0]/20"
                   : "bg-white text-[#718096] border-[#E2E8F0]"
-            }`}
+              }`}
           >
-            <span className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] ${
-              i === step ? "bg-white text-[#1B3A6B]" : i < step ? "bg-[#2B6CB0] text-white" : "bg-[#F7F8FA] text-[#718096]"
-            }`}>
+            <span className={`flex items-center justify-center w-4 h-4 rounded-full text-[9px] ${i === step ? "bg-white text-[#1B3A6B]" : i < step ? "bg-[#2B6CB0] text-white" : "bg-[#F7F8FA] text-[#718096]"
+              }`}>
               {i + 1}
             </span>
             {label}
@@ -292,27 +290,25 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
             <p className="text-sm text-gray-700 leading-relaxed">
               Pilih jenis tag fisik untuk serah terima ke teknisi/workshop.
             </p>
-            
+
             {/* Tag selection cards - mobile optimized */}
             <div className="space-y-3">
               {/* Yellow Tag */}
               <button
                 type="button"
                 onClick={() => setTagType("Damaged")}
-                className={`relative w-full p-4 rounded-xl border-2 text-left transition-colors ${
-                  tagType === "Damaged" 
-                    ? "border-amber-500 bg-amber-50" 
+                className={`relative w-full p-4 rounded-xl border-2 text-left transition-colors ${tagType === "Damaged"
+                    ? "border-amber-500 bg-amber-50"
                     : "border-gray-200 bg-white hover:border-amber-300 hover:bg-amber-50/30"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   {/* Icon/Indicator */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    tagType === "Damaged" ? "bg-amber-400" : "bg-gray-200"
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tagType === "Damaged" ? "bg-amber-400" : "bg-gray-200"
+                    }`}>
                     <div className="w-6 h-6 rounded-full border-2 border-gray-900" />
                   </div>
-                  
+
                   {/* Content */}
                   <div className="flex-1 min-w-0 pr-8">
                     <p className="font-bold text-base text-amber-900 mb-1">Tag kuning</p>
@@ -320,7 +316,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                       PERALATAN RUSAK — radio masuk perbaikan
                     </p>
                   </div>
-                  
+
                   {/* Checkmark */}
                   <div className="flex items-center self-center shrink-0 w-6 h-6">
                     {tagType === "Damaged" ? (
@@ -340,20 +336,18 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
               <button
                 type="button"
                 onClick={() => setTagType("Good")}
-                className={`relative w-full p-4 rounded-xl border-2 text-left transition-colors ${
-                  tagType === "Good" 
-                    ? "border-emerald-500 bg-emerald-50" 
+                className={`relative w-full p-4 rounded-xl border-2 text-left transition-colors ${tagType === "Good"
+                    ? "border-emerald-500 bg-emerald-50"
                     : "border-gray-200 bg-white hover:border-emerald-300 hover:bg-emerald-50/30"
-                }`}
+                  }`}
               >
                 <div className="flex items-start gap-3">
                   {/* Icon/Indicator */}
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    tagType === "Good" ? "bg-emerald-400" : "bg-gray-200"
-                  }`}>
+                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${tagType === "Good" ? "bg-emerald-400" : "bg-gray-200"
+                    }`}>
                     <div className="w-6 h-6 rounded-full border-2 border-gray-900" />
                   </div>
-                  
+
                   {/* Content */}
                   <div className="flex-1 min-w-0 pr-8">
                     <p className="font-bold text-base text-emerald-900 mb-1">Tag hijau</p>
@@ -361,7 +355,7 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
                       PERALATAN BAIK — kondisi baik / inspeksi
                     </p>
                   </div>
-                  
+
                   {/* Checkmark */}
                   <div className="flex items-center self-center shrink-0 w-6 h-6">
                     {tagType === "Good" ? (
@@ -613,9 +607,9 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
 
       {/* Footer buttons - Outside scrollable area */}
       <div className="flex justify-between gap-3 pt-4 border-t border-[#E2E8F0] bg-white shrink-0 -mx-4 px-4 sm:-mx-6 sm:px-6 pb-4 sm:pb-0">
-        <button 
-          type="button" 
-          className="px-4 py-2.5 border border-[#E2E8F0] rounded-[10px] text-[#718096] text-sm font-semibold hover:bg-[#F7F8FA] hover:text-[#1A202C] transition-colors min-w-[100px]" 
+        <button
+          type="button"
+          className="px-4 py-2.5 border border-[#E2E8F0] rounded-[10px] text-[#718096] text-sm font-semibold hover:bg-[#F7F8FA] hover:text-[#1A202C] transition-colors min-w-[100px]"
           onClick={step === 0 ? onCancel : () => setStep((s) => s - 1)}
         >
           {step === 0 ? "Batal" : (
@@ -625,9 +619,9 @@ export default function HelpdeskToTechnicianWizard({ onSuccess, onCancel }: Prop
           )}
         </button>
         {step < STEPS.length - 1 ? (
-          <button 
-            type="button" 
-            className="px-5 py-2.5 bg-[#1B3A6B] text-white rounded-[10px] text-sm font-semibold hover:bg-[#2B6CB0] transition-colors flex items-center gap-1.5 min-w-[100px] justify-center shadow-sm" 
+          <button
+            type="button"
+            className="px-5 py-2.5 bg-[#1B3A6B] text-white rounded-[10px] text-sm font-semibold hover:bg-[#2B6CB0] transition-colors flex items-center gap-1.5 min-w-[100px] justify-center shadow-sm"
             onClick={next}
           >
             Lanjut <ChevronRight className="w-4 h-4" />

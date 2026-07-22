@@ -160,7 +160,7 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
 
   const validate = (): string[] => {
     const missing: string[] = [];
-    if (!ticket.trim()) missing.push("No tiket helpdesk");
+    if (!ticket.trim()) missing.push("No. Job ERP");
     if (!serial.trim()) missing.push("Serial Number");
     if (tagType === "Damaged" && !damage.trim()) missing.push("Keterangan kerusakan");
     if (tagType === "Good" && !greenFields.repairDataDescription?.trim()) missing.push("Data perbaikan (Tag Hijau)");
