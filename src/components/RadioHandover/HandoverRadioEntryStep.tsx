@@ -161,7 +161,7 @@ export default function HandoverRadioEntryStep({
   return (
     <div className="space-y-4">
       <div>
-        <label className="text-sm font-medium">No Tiket Helpdesk *</label>
+        <label className="text-sm font-medium">No. Job ERP *</label>
         <input
           className="w-full border border-[#E2E8F0] rounded-[10px] px-3 py-2 mt-1 focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
           placeholder="#MKN/0526/0669"
@@ -176,11 +176,10 @@ export default function HandoverRadioEntryStep({
           <button
             type="button"
             onClick={() => switchMode("single")}
-            className={`flex items-center gap-2 p-3 rounded-[10px] border-2 text-left text-sm transition-colors ${
-              entryMode === "single"
+            className={`flex items-center gap-2 p-3 rounded-[10px] border-2 text-left text-sm transition-colors ${entryMode === "single"
                 ? "border-[#2B6CB0] bg-[#EBF4FF] text-[#1B3A6B]"
                 : "border-[#E2E8F0] hover:border-[#2B6CB0]/40"
-            }`}
+              }`}
           >
             <Radio className="w-5 h-5 shrink-0" />
             <span>
@@ -191,11 +190,10 @@ export default function HandoverRadioEntryStep({
           <button
             type="button"
             onClick={() => switchMode("multiple")}
-            className={`flex items-center gap-2 p-3 rounded-[10px] border-2 text-left text-sm transition-colors ${
-              entryMode === "multiple"
+            className={`flex items-center gap-2 p-3 rounded-[10px] border-2 text-left text-sm transition-colors ${entryMode === "multiple"
                 ? "border-[#2B6CB0] bg-[#EBF4FF] text-[#1B3A6B]"
                 : "border-[#E2E8F0] hover:border-[#2B6CB0]/40"
-            }`}
+              }`}
           >
             <Layers className="w-5 h-5 shrink-0" />
             <span>
@@ -216,9 +214,9 @@ export default function HandoverRadioEntryStep({
             required
             onSelect={onSingleSelect}
           />
-          <RadioMasterSummaryCard 
-            line={singleLine} 
-            onEditManual={() => setShowManualForLine(singleLine.id === showManualForLine ? null : singleLine.id)} 
+          <RadioMasterSummaryCard
+            line={singleLine}
+            onEditManual={() => setShowManualForLine(singleLine.id === showManualForLine ? null : singleLine.id)}
           />
 
           {(!singleLine.radioId || showManualForLine === singleLine.id) && (
@@ -298,26 +296,26 @@ export default function HandoverRadioEntryStep({
           />
 
           <div className="my-6 border-t border-dashed border-gray-200 pt-5">
-              <label className="text-xs font-medium text-gray-600">Atau tempel banyak SN sekaligus (baris / koma)</label>
-              <div className="flex gap-2 mt-1">
-                <textarea
-                  className="flex-1 border border-[#E2E8F0] rounded-[10px] px-3 py-2 text-sm min-h-[72px] focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
-                  placeholder={"19988858\n21221231\n11101710"}
-                  value={bulkSnText}
-                  onChange={(e) => setBulkSnText(e.target.value)}
-                  disabled={resolvingBulk}
-                />
-                <button
-                  type="button"
-                  onClick={applyBulkSn}
-                  disabled={resolvingBulk}
-                  className="px-3 py-2 text-xs font-semibold border border-[#E2E8F0] rounded-[10px] hover:bg-[#EBF4FF] text-[#2B6CB0] shrink-0 self-end disabled:opacity-50 flex items-center gap-1 transition-colors"
-                >
-                  {resolvingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
-                  {resolvingBulk ? "Mencari..." : "Tambah & isi"}
-                </button>
-              </div>
+            <label className="text-xs font-medium text-gray-600">Atau tempel banyak SN sekaligus (baris / koma)</label>
+            <div className="flex gap-2 mt-1">
+              <textarea
+                className="flex-1 border border-[#E2E8F0] rounded-[10px] px-3 py-2 text-sm min-h-[72px] focus:ring-2 focus:ring-[#2B6CB0] focus:border-[#2B6CB0] transition-colors"
+                placeholder={"19988858\n21221231\n11101710"}
+                value={bulkSnText}
+                onChange={(e) => setBulkSnText(e.target.value)}
+                disabled={resolvingBulk}
+              />
+              <button
+                type="button"
+                onClick={applyBulkSn}
+                disabled={resolvingBulk}
+                className="px-3 py-2 text-xs font-semibold border border-[#E2E8F0] rounded-[10px] hover:bg-[#EBF4FF] text-[#2B6CB0] shrink-0 self-end disabled:opacity-50 flex items-center gap-1 transition-colors"
+              >
+                {resolvingBulk ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Plus className="w-3.5 h-3.5" />}
+                {resolvingBulk ? "Mencari..." : "Tambah & isi"}
+              </button>
             </div>
+          </div>
 
           {filledCount > 0 && (
             <p className="text-xs text-gray-500">

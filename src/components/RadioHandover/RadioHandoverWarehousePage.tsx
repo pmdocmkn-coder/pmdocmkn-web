@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Search, Filter, Warehouse, PackageCheck, Image as ImageIcon, Loader2, ArrowRight, User, FileText, MessageSquare, ArrowDownLeft, ArrowUpRight, Home, ChevronRight, ChevronLeft, Inbox, ClipboardList, Edit, Eye, ArrowLeft } from "lucide-react";
+import { Search, Filter, Warehouse, PackageCheck, Image as ImageIcon, Loader2, ArrowRight, User, FileText, MessageSquare, ArrowDownLeft, ArrowUpRight, Home, ChevronRight, ChevronLeft, Inbox, ClipboardList, Edit, Eye, ArrowLeft, Undo2 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
 import { radioRepairApi } from "../../services/radioRepairApi";
@@ -18,7 +18,8 @@ import WarehouseToHelpdeskForm from "./WarehouseToHelpdeskForm";
 import HandoverStatusBadge from "./HandoverStatusBadge";
 import HandoverTagPreview from "./HandoverTagPreview";
 import HandoverTimeline from "./HandoverTimeline";
-import { HandoverPhotoThumb } from "./HandoverPhotoThumbnails";
+import { LazyPhotoThumb } from "./LazyPhotoThumb";
+import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtils";
 import { canCreateHandoverWhHd } from "../../utils/handoverPermissions";
 import { useToast } from "../../hooks/use-toast";
 import EditHandoverDialog from "./EditHandoverDialog";
@@ -31,18 +32,9 @@ function handoverTypeLabel(t: string) {
 }
 
 function handoverTypeBadgeClass(t: string) {
-  if (t === "TechnicianToWarehouse") return "bg-violet-100 text-violet-800 border-violet-200";
-  if (t === "WarehouseToHelpdesk") return "bg-indigo-100 text-indigo-800 border-indigo-200";
-  return "bg-gray-100 text-gray-700 border-gray-200";
-}
-
-function resolveHandoverPhotos(d: {
-  radioPhotos?: string[];
-  radioPhotoBase64?: string | null;
-}): string[] {
-  if (d.radioPhotos && d.radioPhotos.length > 0) return d.radioPhotos;
-  if (d.radioPhotoBase64) return [d.radioPhotoBase64];
-  return [];
+  if (t === "TechnicianToWarehouse") return "bg-[#EBF4FF] text-[#2B6CB0] border-[#2B6CB0]/20";
+  if (t === "WarehouseToHelpdesk") return "bg-[#FFF0EC] text-[#D94F2B] border-[#D94F2B]/20";
+  return "bg-[#F7F8FA] text-[#718096] border-[#E2E8F0]";
 }
 
 function EmptyState({ message }: { message: string }) {
@@ -117,7 +109,7 @@ function HandoverHistoryTable({
   const canWarehouseEdit = (_h: RadioHandoverList) => {
     const role = currentUserRole();
     if (role === "helpdesk") return false;
-    
+
     // Semua warehouse boleh edit (misal foto salah, dll)
     // Pembatasan penerima hanya di dalam form edit (field disabled)
     return true;
@@ -161,7 +153,7 @@ function HandoverHistoryTable({
             <thead className="bg-gray-50/80 text-left border-b">
               <tr>
                 <th className="px-4 py-3 font-semibold text-gray-600">STR</th>
-                <th className="px-4 py-3 font-semibold text-gray-600">Tiket Helpdesk</th>
+                <th className="px-4 py-3 font-semibold text-gray-600">No. Job ERP</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">SN Radio</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">{flowLabel}</th>
                 <th className="px-4 py-3 font-semibold text-gray-600">Foto</th>
@@ -201,7 +193,7 @@ function HandoverHistoryTable({
                             {handoverTypeLabel(group.flowLabel)}
                           </span>
                           <span className="font-semibold text-gray-800">
-                            Tiket HD: <span className="font-mono text-violet-700">{group.ticketNumber || "—"}</span>
+                            No. Job ERP: <span className="font-mono text-[#2B6CB0]">{group.ticketNumber || "—"}</span>
                           </span>
                           <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
                             {group.items.length} Radio
@@ -212,7 +204,7 @@ function HandoverHistoryTable({
                         {group.hasPendingSignature && onSignRow && (
                           <button
                             type="button"
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white rounded-lg text-xs font-medium hover:bg-violet-700 transition-colors shadow-sm whitespace-nowrap"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1B3A6B] text-white rounded-[10px] text-xs font-medium hover:bg-[#2B6CB0] transition-colors shadow-sm whitespace-nowrap"
                             title="Tanda Tangan Massal"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -229,9 +221,8 @@ function HandoverHistoryTable({
                     {group.items.map((h, idx) => (
                       <tr
                         key={h.id}
-                        className={`cursor-pointer transition-colors hover:bg-violet-50/60 ${
-                          idx !== group.items.length - 1 ? "border-b border-gray-100/60" : ""
-                        }`}
+                        className={`cursor-pointer transition-colors hover:bg-[#EBF4FF]/30 ${idx !== group.items.length - 1 ? "border-b border-gray-100/60" : ""
+                          }`}
                         onClick={() => onOpenDetail(h.id)}
                       >
                         <td className="px-4 py-3 pl-8">
@@ -252,7 +243,7 @@ function HandoverHistoryTable({
                             >
                               {h.handedOverByWorkshopTechnicianName || h.handedOverByName}
                             </span>
-                            <ArrowRight className="w-3.5 h-3.5 text-violet-500 shrink-0" />
+                            <ArrowRight className="w-3.5 h-3.5 text-[#2B6CB0] shrink-0" />
                             <span
                               className="truncate max-w-[100px]"
                               title={h.handoverType === "TechnicianToWarehouse"
@@ -269,18 +260,14 @@ function HandoverHistoryTable({
                           </div>
                         </td>
                         <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                          {h.previewPhotoBase64 || h.photoCount > 0 ? (
-                            <div className="relative inline-block">
-                              <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
-                              {h.photoCount > 1 && (
-                                <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
-                                  {h.photoCount}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-gray-300 text-xs">—</span>
-                          )}
+                          <div className="relative inline-block">
+                            <LazyPhotoThumb handoverId={h.id} photoCount={h.photoCount} onClick={() => onOpenGallery(h)} />
+                            {h.photoCount > 1 && (
+                              <span className="absolute -top-1 -right-1 bg-[#D94F2B] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                                {h.photoCount}
+                              </span>
+                            )}
+                          </div>
                         </td>
                         <td className="px-4 py-3 text-gray-600 whitespace-nowrap">
                           {format(new Date(h.handoverAt), "dd MMM yyyy", { locale: localeId })}
@@ -289,7 +276,7 @@ function HandoverHistoryTable({
                           </div>
                         </td>
                         <td
-                          className="px-4 py-3 text-right sticky right-0 bg-white group-hover/tr:bg-violet-50/60 transition-colors z-10 border-l border-gray-100/60"
+                          className="px-4 py-3 text-right sticky right-0 bg-white group-hover/tr:bg-[#EBF4FF]/30 transition-colors z-10 border-l border-gray-100/60"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex justify-end gap-1.5 pr-1">
@@ -305,7 +292,7 @@ function HandoverHistoryTable({
                             )}
                             <button
                               type="button"
-                              className="inline-flex items-center justify-center w-8 h-8 border border-violet-200 rounded-lg text-violet-700 hover:bg-violet-50 transition-colors bg-white shadow-sm"
+                              className="inline-flex items-center justify-center w-8 h-8 border border-[#E2E8F0] rounded-[10px] text-[#2B6CB0] hover:bg-[#EBF4FF]/50 transition-colors bg-white shadow-sm"
                               title="Lihat detail"
                               onClick={() => onOpenDetail(h.id)}
                             >
@@ -351,11 +338,11 @@ function HandoverHistoryTable({
                     </span>
                   </div>
                   <h3 className="font-bold text-gray-900 text-sm flex items-center gap-1.5">
-                    Tiket HD: <span className="font-mono text-violet-700">{group.ticketNumber || "—"}</span>
+                    No. Job ERP: <span className="font-mono text-[#2B6CB0]">{group.ticketNumber || "—"}</span>
                   </h3>
                   <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1 font-medium">
                     <span className="truncate max-w-[120px]">{group.handedOverByName}</span>
-                    <ArrowRight className="w-3 h-3 text-violet-400 shrink-0" />
+                    <ArrowRight className="w-3.5 h-3.5 text-[#718096] shrink-0" />
                     <span className="truncate max-w-[120px] text-gray-700">{group.receivedByName}</span>
                   </div>
                 </div>
@@ -383,11 +370,11 @@ function HandoverHistoryTable({
                         <span className="font-mono text-[10px] text-gray-500 bg-gray-100/80 px-1.5 py-0.5 rounded border border-gray-200">
                           {h.handoverNumber}
                         </span>
-                        {h.previewPhotoBase64 || h.photoCount > 0 ? (
+                        {h.photoCount > 0 ? (
                           <div className="relative mr-1" onClick={(e) => e.stopPropagation()}>
-                            <HandoverPhotoThumb photo={h.previewPhotoBase64} onClick={() => onOpenGallery(h)} />
+                            <LazyPhotoThumb handoverId={h.id} photoCount={h.photoCount} onClick={() => onOpenGallery(h)} />
                             {h.photoCount > 1 && (
-                              <span className="absolute -top-1 -right-1 bg-violet-600 text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
+                              <span className="absolute -top-1 -right-1 bg-[#D94F2B] text-white text-[9px] font-bold w-4 h-4 rounded-full flex items-center justify-center">
                                 {h.photoCount}
                               </span>
                             )}
@@ -422,7 +409,7 @@ function HandoverHistoryTable({
                 <div className="p-3 bg-gray-50 border-t border-gray-100">
                   <button
                     type="button"
-                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-violet-600 text-white rounded-lg text-sm font-bold shadow-sm"
+                    className="w-full flex items-center justify-center gap-1.5 py-2.5 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white rounded-[10px] text-sm font-bold shadow-sm"
                     onClick={() => onSignRow(group.items.filter(canWarehouseSign))}
                   >
                     Tanda Tangan ({group.items.filter(canWarehouseSign).length})
@@ -465,6 +452,8 @@ export default function RadioHandoverWarehousePage() {
   const [sigRowRemarks, setSigRowRemarks] = useState("");
   const sigWhRowRef = useRef<any>(null);
   const [editHandover, setEditHandover] = useState<RadioHandoverDetail | null>(null);
+  const [resettingSignature, setResettingSignature] = useState(false);
+  const [confirmResetOpen, setConfirmResetOpen] = useState(false);
 
   useEffect(() => {
     if (searchParams.get("tab")) {
@@ -474,10 +463,10 @@ export default function RadioHandoverWarehousePage() {
 
   // Fetch full detail when sign dialog opens for tag preview
   useEffect(() => {
-    if (!signRows || signRows.length === 0) { 
-      setSignRowDetails([]); 
+    if (!signRows || signRows.length === 0) {
+      setSignRowDetails([]);
       setActiveTagIndex(0);
-      return; 
+      return;
     }
     Promise.all(signRows.map(row => radioHandoverApi.getById(row.id)))
       .then(details => {
@@ -492,14 +481,14 @@ export default function RadioHandoverWarehousePage() {
     setSearchParams({ tab: val });
   };
 
-  const filteredIncoming = incoming.filter((h) => 
+  const filteredIncoming = incoming.filter((h) =>
     h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.helpdeskTicketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.handoverNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.handedOverByName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredOutgoing = outgoing.filter((h) => 
+  const filteredOutgoing = outgoing.filter((h) =>
     h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.helpdeskTicketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.handoverNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -621,6 +610,30 @@ export default function RadioHandoverWarehousePage() {
     load(); // Refresh data
   };
 
+  const handleResetReceiverSignature = async () => {
+    if (!detail) return;
+    setResettingSignature(true);
+    try {
+      await radioHandoverApi.resetReceiverSignature(detail.id);
+      toast({
+        title: "Berhasil",
+        description: "TTD penerima berhasil direset. Helpdesk dapat menandatangani ulang.",
+      });
+      setDetail(null);
+      setConfirmResetOpen(false);
+      load();
+    } catch (err: unknown) {
+      const ax = err as { response?: { data?: { message?: string } } };
+      toast({
+        title: "Gagal reset TTD",
+        description: ax.response?.data?.message || "Terjadi kesalahan.",
+        variant: "destructive",
+      });
+    } finally {
+      setResettingSignature(false);
+    }
+  };
+
   return (
     <div className="p-4 md:p-6 space-y-6 max-w-7xl mx-auto">
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
@@ -647,7 +660,7 @@ export default function RadioHandoverWarehousePage() {
       <div className="hidden md:flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <Warehouse className="w-7 h-7 text-violet-600 shrink-0" />
+            <Warehouse className="w-7 h-7 text-[#1B3A6B] shrink-0" />
             Radio Masuk Warehouse
           </h1>
           <p className="text-sm text-gray-500 mt-1 max-w-xl">
@@ -675,7 +688,7 @@ export default function RadioHandoverWarehousePage() {
         <Card>
           <CardHeader className="pb-1 md:pb-2 pt-3 md:pt-4 px-3 md:px-4">
             <CardDescription className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-sm">
-              <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-violet-600" />
+              <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#2B6CB0]" />
               <span className="hidden sm:inline">Masuk dari Teknisi</span>
               <span className="sm:hidden">Masuk</span>
             </CardDescription>
@@ -688,7 +701,7 @@ export default function RadioHandoverWarehousePage() {
         <Card>
           <CardHeader className="pb-1 md:pb-2 pt-3 md:pt-4 px-3 md:px-4">
             <CardDescription className="flex items-center gap-1 md:gap-1.5 text-[10px] md:text-sm">
-              <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-600" />
+              <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#D94F2B]" />
               <span className="hidden sm:inline">Serah ke Helpdesk</span>
               <span className="sm:hidden">Keluar</span>
             </CardDescription>
@@ -744,7 +757,7 @@ export default function RadioHandoverWarehousePage() {
                           <button
                             type="button"
                             onClick={() => setReturnJob(j)}
-                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-xs font-medium rounded-lg hover:bg-violet-700 shadow-sm transition-colors"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 bg-[#1B3A6B] text-white text-xs font-medium rounded-[10px] hover:bg-[#2B6CB0] shadow-sm transition-colors"
                           >
                             <ArrowRight className="w-3.5 h-3.5" />
                             WH → Helpdesk
@@ -784,7 +797,7 @@ export default function RadioHandoverWarehousePage() {
                       <button
                         type="button"
                         onClick={() => setReturnJob(j)}
-                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-violet-600 text-white text-xs font-semibold rounded-xl hover:bg-violet-700 shadow-sm transition-colors"
+                        className="w-full inline-flex items-center justify-center gap-1.5 px-3 py-2.5 bg-[#1B3A6B] text-white text-xs font-semibold rounded-[10px] hover:bg-[#2B6CB0] shadow-sm transition-colors"
                       >
                         <ArrowRight className="w-3.5 h-3.5" />
                         Serah ke Helpdesk
@@ -804,12 +817,12 @@ export default function RadioHandoverWarehousePage() {
           <h2 className="text-base md:text-lg font-semibold text-gray-900">Histori serah terima</h2>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input 
+            <input
               type="text"
               placeholder="Cari SN, Tiket, atau Nama..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-violet-500 focus:border-violet-500 bg-white"
+              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-[10px] focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] bg-white"
             />
           </div>
         </div>
@@ -820,7 +833,7 @@ export default function RadioHandoverWarehousePage() {
               <span className="hidden sm:inline">Masuk dari Teknisi</span>
               <span className="sm:hidden">Masuk</span>
               {!loadingIncoming && incoming.length > 0 && (
-                <span className="ml-1 bg-violet-100 text-violet-700 text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
+                <span className="ml-1 bg-[#EBF4FF] text-[#2B6CB0] text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
                   {incoming.length}
                 </span>
               )}
@@ -830,7 +843,7 @@ export default function RadioHandoverWarehousePage() {
               <span className="hidden sm:inline">Serah ke Helpdesk</span>
               <span className="sm:hidden">Keluar</span>
               {!loadingOutgoing && outgoing.length > 0 && (
-                <span className="ml-1 bg-indigo-100 text-indigo-700 text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
+                <span className="ml-1 bg-[#FFF0EC] text-[#D94F2B] text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
                   {outgoing.length}
                 </span>
               )}
@@ -880,7 +893,7 @@ export default function RadioHandoverWarehousePage() {
           desktopClassName="max-w-2xl"
           title={
             <div className="flex items-center gap-2">
-              <ArrowUpRight className="w-5 h-5 text-indigo-600" />
+              <ArrowUpRight className="w-5 h-5 text-[#D94F2B]" />
               Serah Terima Warehouse → Helpdesk
             </div>
           }
@@ -934,132 +947,197 @@ export default function RadioHandoverWarehousePage() {
         }
       >
         {detail && !detailLoading && (
-          <div className="space-y-6 pt-2 w-full min-w-0">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 bg-gray-50 rounded-xl p-4 border">
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">Tgl Serah Terima</p>
-                <p className="font-medium text-gray-900 mt-1">{format(new Date(detail.handoverAt), "dd MMM yyyy HH:mm", { locale: localeId })}</p>
+          <div className="space-y-6 pt-2 w-full min-w-0 text-sm">
+
+            {/* Timeline Serah Terima (History steps) */}
+            {detailJob?.handovers && detailJob.handovers.length > 0 && (
+              <div className="bg-[#F7F8FA] border border-[#E2E8F0] rounded-[10px] p-4">
+                <HandoverTimeline handovers={detailJob.handovers} />
               </div>
-              <div>
-                <p className="text-xs text-gray-500 uppercase font-semibold">SN Radio</p>
-                <p className="font-mono font-bold text-indigo-700 mt-1">{detail.radioSerialNumber}</p>
+            )}
+
+            {/* Official MKN Tag Preview Card (Peralatan Baik / Peralatan Rusak) */}
+            <div className="flex justify-center">
+              <HandoverTagPreview detail={detail} />
+            </div>
+
+            {/* Row 1: Informasi Dasar Serah Terima (No. Job ERP & Waktu) */}
+            {(() => {
+              const rawTicket = detail.helpdeskTicketNumber?.trim();
+              const erpJob = detail.noJobErp?.trim() || rawTicket || "—";
+
+              return (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-[#F7F8FA] border border-[#E2E8F0] rounded-[10px] p-4">
+                  <div>
+                    <span className="text-[10px] text-[#718096] uppercase font-bold tracking-wider block">Waktu Serah Terima</span>
+                    <span className="text-gray-900 font-medium mt-1 block">
+                      {format(new Date(detail.handoverAt), "dd MMM yyyy HH:mm", { locale: localeId })}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-[#718096] uppercase font-bold tracking-wider block">No. Job ERP</span>
+                    <span className="font-mono text-[#1B3A6B] font-bold mt-1 block">
+                      {erpJob}
+                    </span>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Pihak Terlibat & Catatan */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="border border-[#E2E8F0] rounded-[10px] p-4 bg-white shadow-sm space-y-3">
+                <h4 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
+                  <User className="w-4 h-4 text-[#2B6CB0]" /> Pihak yang Terlibat
+                </h4>
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <span className="text-[11px] text-[#718096] font-medium block">Diserahkan Oleh</span>
+                    <span className="font-semibold text-gray-900 block mt-0.5">{detail.handedOverByName}</span>
+                  </div>
+                  <div>
+                    <span className="text-[11px] text-[#718096] font-medium block">Diterima Oleh</span>
+                    <span className="font-semibold text-gray-900 block mt-0.5">{detail.receivedByName}</span>
+                    {detail.picReceiverName && (
+                      <span className="text-[11px] font-medium text-[#1B3A6B] bg-[#EBF4FF] px-2 py-0.5 rounded-[6px] mt-1.5 inline-block">
+                        PIC Fisik: {detail.picReceiverName}
+                      </span>
+                    )}
+                  </div>
+                </div>
               </div>
-              <div className="col-span-2">
-                <p className="text-xs text-gray-500 uppercase font-semibold">Label Kepemilikan</p>
-                <p className="font-medium text-gray-900 mt-1">{detail.radioOwnerLabel || "—"}</p>
+
+              <div className="border border-[#E2E8F0] rounded-[10px] p-4 bg-white shadow-sm space-y-2">
+                <h4 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider border-b border-[#E2E8F0] pb-2">
+                  💬 Catatan Penerima (Warehouse)
+                </h4>
+                <p className="text-gray-700 italic bg-[#F7F8FA] p-3 rounded-[10px] border border-[#E2E8F0]/60 min-h-[60px]">
+                  {detail.remarks ? `"${detail.remarks}"` : "Tidak ada catatan penerima"}
+                </p>
               </div>
             </div>
 
-            {detailJob && (
-              <div className="flex items-start gap-3 p-3 border border-indigo-100 bg-indigo-50/50 rounded-lg">
-                <FileText className="w-5 h-5 text-indigo-500 mt-0.5" />
-                <div>
-                  <div className="text-sm font-semibold text-gray-900">
-                    Tiket: {detailJob.helpdeskTicketNumber || "—"}
-                  </div>
-                  <div className="text-xs text-gray-600 mt-1">
-                    {detailJob.unitNumber && <span className="font-mono bg-white px-1 py-0.5 rounded border border-gray-200 mr-2">{detailJob.unitNumber}</span>}
-                    {detailJob.equipmentName && <span className="text-gray-700 font-medium mr-2">{detailJob.equipmentName}</span>}
-                    Keluhan: <span className="italic">"{detailJob.damageDescription}"</span>
-                  </div>
+            {/* Aksesoris */}
+            {(detail.accessories?.length ?? 0) > 0 && (
+              <div className="border border-[#E2E8F0] rounded-[10px] p-4 bg-white shadow-sm space-y-2">
+                <h4 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider border-b border-[#E2E8F0] pb-2">
+                  Daftar Aksesoris yang Disertakan
+                </h4>
+                <div className="overflow-hidden border border-[#E2E8F0] rounded-[10px]">
+                  <table className="w-full text-xs">
+                    <thead className="bg-[#F7F8FA] border-b border-[#E2E8F0]">
+                      <tr>
+                        <th className="text-left px-3 py-2 text-[#1A202C] font-semibold">Nama Barang</th>
+                        <th className="text-left px-3 py-2 text-[#1A202C] font-semibold w-16">Qty</th>
+                        <th className="text-left px-3 py-2 text-[#1A202C] font-semibold w-20">Unit</th>
+                        <th className="text-left px-3 py-2 text-[#1A202C] font-semibold">Serial Number (SN)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-[#E2E8F0]">
+                      {detail.accessories.map((a, i) => (
+                        <tr key={i} className="hover:bg-gray-50/50">
+                          <td className="px-3 py-2 text-gray-800 font-medium">{a.itemName}</td>
+                          <td className="px-3 py-2 text-gray-800">{a.quantity}</td>
+                          <td className="px-3 py-2 text-gray-800">{a.unit || "—"}</td>
+                          <td className="px-3 py-2 text-[#718096] font-mono">{a.serialNumber || "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               </div>
             )}
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 border rounded-xl bg-white shadow-sm">
-                <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> Diserahkan Oleh</h4>
-                <p className="font-semibold text-gray-900">{detail.handedOverByName}</p>
-              </div>
-              <div className="p-4 border rounded-xl bg-white shadow-sm">
-                <h4 className="text-xs font-bold text-gray-400 uppercase mb-3 flex items-center gap-1.5"><User className="w-3.5 h-3.5" /> Diterima Oleh</h4>
-                <p className="font-semibold text-gray-900">{detail.receivedByName}</p>
-                {detail.picReceiverName && (
-                  <p className="text-xs font-medium text-violet-700 bg-violet-50 px-2 py-1 rounded mt-2 inline-block">
-                    PIC Fisik: {detail.picReceiverName}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="space-y-4 border rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-sm font-semibold text-gray-700">Kondisi Diserahkan</p>
-                  <p className="text-sm text-gray-600 mt-1">{detail.physicalCondition || detail.damageDescription || "—"}</p>
-                </div>
-              </div>
-              {detail.remarks && (
-                <div className="flex items-start gap-3 pt-3 border-t">
-                  <MessageSquare className="w-4 h-4 text-gray-400 mt-0.5 shrink-0" />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-700">Catatan Penerima</p>
-                    <p className="text-sm text-gray-600 mt-1 italic">"{detail.remarks}"</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
+            {/* Foto Fisik */}
             {(() => {
               const b64Images = detail.radioPhotos || (detail.radioPhotoBase64 ? [detail.radioPhotoBase64] : []);
               if (b64Images.length === 0) return null;
               return (
-                <div>
-                  <p className="font-medium text-gray-800 mb-2">Foto Fisik ({b64Images.length})</p>
+                <div className="border border-[#E2E8F0] rounded-[10px] p-4 bg-white shadow-sm space-y-3">
+                  <h4 className="text-xs font-bold text-[#1B3A6B] uppercase tracking-wider border-b border-[#E2E8F0] pb-2 flex items-center gap-1.5">
+                    <ImageIcon className="w-4 h-4 text-[#2B6CB0]" /> Dokumentasi Foto Fisik ({b64Images.length})
+                  </h4>
                   <div className="flex flex-wrap gap-3">
                     {b64Images.map((src, i) => (
                       <button
                         key={i}
                         type="button"
                         onClick={() => openGallery(detail)}
-                        className="relative w-24 h-24 rounded-lg border overflow-hidden hover:ring-2 ring-violet-400 transition-shadow"
+                        className="relative w-24 h-24 rounded-[10px] border border-[#E2E8F0] overflow-hidden hover:ring-2 ring-[#2B6CB0]/50 transition-all shadow-sm active:scale-95"
                       >
                         <img src={src} alt={`Foto ${i + 1}`} className="w-full h-full object-cover" />
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-gray-400 mt-1">Klik foto untuk memperbesar</p>
+                  <p className="text-[11px] text-[#718096]">Klik foto untuk memperbesar pratinjau galeri.</p>
                 </div>
               );
             })()}
 
-            {(detail.accessories?.length ?? 0) > 0 && (
-              <div>
-                <p className="font-medium text-gray-800 mb-2">Aksesoris</p>
-                <table className="w-full text-xs border rounded-lg overflow-hidden">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="text-left px-3 py-2">Barang</th>
-                      <th className="text-left px-3 py-2">Qty</th>
-                      <th className="text-left px-3 py-2">Unit</th>
-                      <th className="text-left px-3 py-2">SN</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.accessories.map((a, i) => (
-                      <tr key={i} className="border-t">
-                        <td className="px-3 py-2">{a.itemName}</td>
-                        <td className="px-3 py-2">{a.quantity}</td>
-                        <td className="px-3 py-2">{a.unit}</td>
-                        <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-
+            {/* Row 8: Tanda Tangan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
-              <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
+              <div className="border border-[#E2E8F0] rounded-[10px] p-3 bg-[#F7F8FA]">
+                <SignaturePadField label="TTD Penyerah" readOnly value={detail.handedOverSignatureBase64} signerName={detail.handedOverByName} />
+              </div>
+              <div className="border border-[#E2E8F0] rounded-[10px] p-3 bg-[#F7F8FA]">
+                <SignaturePadField label="TTD Penerima" readOnly value={detail.receiverSignatureBase64} signerName={detail.receivedByName} />
+              </div>
             </div>
 
-            <div className="flex justify-end pt-2 border-t">
+            {/* Action Buttons */}
+            <div className="flex justify-between items-center pt-3 border-t border-[#E2E8F0]">
+              <div>
+                {detail.handoverType === "WarehouseToHelpdesk" && detail.status === "Completed" && currentUserRole() === "warehouse" && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setConfirmResetOpen(true)}
+                      className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 rounded-[10px] text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+                    >
+                      <Undo2 className="w-4 h-4" />
+                      Reset TTD Penerima
+                    </button>
+
+                    {/* Confirmation Dialog */}
+                    {confirmResetOpen && (
+                      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40">
+                        <div className="bg-white rounded-xl shadow-xl p-6 max-w-sm mx-4 space-y-4">
+                          <h3 className="font-bold text-gray-900">Konfirmasi Reset TTD</h3>
+                          <p className="text-sm text-gray-600">
+                            Apakah Anda yakin ingin mereset tanda tangan penerima untuk <strong>{detail.handoverNumber}</strong>?
+                          </p>
+                          <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-3">
+                            Status serah terima akan kembali ke <strong>"Menunggu TTD Penerima"</strong> dan status perbaikan radio akan kembali ke <strong>"Diserahkan ke Warehouse"</strong>.
+                          </p>
+                          <div className="flex justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setConfirmResetOpen(false)}
+                              disabled={resettingSignature}
+                              className="px-4 py-2 border border-gray-200 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                            >
+                              Batal
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleResetReceiverSignature}
+                              disabled={resettingSignature}
+                              className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors disabled:opacity-50"
+                            >
+                              {resettingSignature && <Loader2 className="w-4 h-4 animate-spin" />}
+                              Ya, Reset TTD
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={() => setDetail(null)}
-                className="px-4 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 border border-[#E2E8F0] rounded-[10px] text-sm font-medium hover:bg-gray-50 transition-colors"
               >
                 Tutup
               </button>
@@ -1095,8 +1173,8 @@ export default function RadioHandoverWarehousePage() {
                 {signRowDetails.length > 1 && (
                   <div className="flex flex-col gap-3 mb-3 border-b border-gray-100 pb-4">
                     <div className="flex items-center justify-between bg-gray-50/80 p-2 rounded-lg border border-gray-200">
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         disabled={activeTagIndex === 0}
                         onClick={() => setActiveTagIndex(prev => prev - 1)}
                         className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
@@ -1107,8 +1185,8 @@ export default function RadioHandoverWarehousePage() {
                         <div className="text-xs font-bold text-gray-800">Tag {activeTagIndex + 1} / {signRowDetails.length}</div>
                         <div className="text-[10px] text-gray-500 font-mono mt-0.5">SN {signRowDetails[activeTagIndex]?.radioSerialNumber}</div>
                       </div>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         disabled={activeTagIndex === signRowDetails.length - 1}
                         onClick={() => setActiveTagIndex(prev => prev + 1)}
                         className="px-3 py-1.5 text-xs font-medium border border-gray-200 bg-white rounded-md hover:bg-gray-50 disabled:opacity-40 flex items-center gap-1.5 text-gray-700 shadow-sm transition-colors"
@@ -1122,11 +1200,10 @@ export default function RadioHandoverWarehousePage() {
                           key={det.id}
                           type="button"
                           onClick={() => setActiveTagIndex(idx)}
-                          className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${
-                            activeTagIndex === idx 
-                              ? 'bg-[#1B3A6B] text-white border-[#1B3A6B] shadow-sm' 
+                          className={`px-3.5 py-1.5 rounded-full text-[11px] font-medium border transition-all ${activeTagIndex === idx
+                              ? 'bg-[#1B3A6B] text-white border-[#1B3A6B] shadow-sm'
                               : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
-                          }`}
+                            }`}
                         >
                           {det.radioSerialNumber}
                         </button>
@@ -1145,8 +1222,8 @@ export default function RadioHandoverWarehousePage() {
               </div>
             )}
 
-            {signRows[0]?.handoverType === "WarehouseToHelpdesk" && (
-              <div className="space-y-4 mt-4 bg-gray-50 border border-gray-100 p-4 rounded-xl">
+            <div className="space-y-4 mt-4 bg-gray-50 border border-gray-100 p-4 rounded-xl">
+              {signRows[0]?.handoverType === "WarehouseToHelpdesk" && (
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
@@ -1166,18 +1243,18 @@ export default function RadioHandoverWarehousePage() {
                     onChange={(e) => setSigRowPicReceiverName(e.target.value)}
                   />
                 </div>
+              )}
 
-                <div className="space-y-2">
-                  <label className="text-sm font-medium text-gray-900">Catatan</label>
-                  <input
-                    className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
-                    value={sigRowRemarks}
-                    onChange={(e) => setSigRowRemarks(e.target.value)}
-                    placeholder="Catatan tambahan (opsional)"
-                  />
-                </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-gray-900">Catatan Penerima</label>
+                <input
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                  value={sigRowRemarks}
+                  onChange={(e) => setSigRowRemarks(e.target.value)}
+                  placeholder="Catatan tambahan (opsional)"
+                />
               </div>
-            )}
+            </div>
 
             <SignaturePadField
               ref={sigWhRowRef}

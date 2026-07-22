@@ -132,7 +132,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Teknisi Workshop Penyerah (Fisik) *</label>
         <Select value={workshopTechId} onValueChange={setWorkshopTechId}>
-          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0]">
             <SelectValue placeholder="Pilih teknisi" />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -148,7 +148,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
       <div className="space-y-1">
         <label className="text-sm font-medium text-gray-700">Akun Sistem Penerima (Warehouse) *</label>
         <Select value={whId} onValueChange={setWhId}>
-          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500">
+          <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0]">
             <SelectValue placeholder="Pilih staff warehouse" />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
@@ -182,7 +182,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         </button>
         <button
           type="button"
-          className="px-4 py-2 bg-violet-600 text-white rounded-lg disabled:opacity-50"
+          className="px-4 py-2 bg-[#1B3A6B] text-white rounded-[10px] disabled:opacity-50 hover:bg-[#2B6CB0] transition-colors"
           disabled={submitting}
           onClick={submit}
         >

@@ -41,8 +41,18 @@ export const radioHandoverApi = {
       .get("/api/radios/lookup-by-serial", { params: { serialNumber } })
       .then((r) => unwrapList<RadioLookup>(r)),
 
+  getThumbnails: (ids: number[]) =>
+    ids.length === 0
+      ? Promise.resolve({} as Record<number, string>)
+      : api
+          .get("/api/radio-handovers/thumbnails", { params: { ids: ids.join(",") } })
+          .then((r) => unwrapData<Record<number, string>>(r) ?? {}),
+
   update: (id: number, payload: Partial<CreateRadioHandoverPayload> & { remarks?: string | null }) =>
     api.patch(`/api/radio-handovers/${id}`, payload).then((r) => unwrapData<RadioHandoverDetail>(r)!),
+
+  resetReceiverSignature: (id: number) =>
+    api.patch(`/api/radio-handovers/${id}/reset-receiver-signature`).then((r) => unwrapData<RadioHandoverDetail>(r)!),
 
   softDelete: (id: number) => api.delete(`/api/radio-handovers/${id}`),
 

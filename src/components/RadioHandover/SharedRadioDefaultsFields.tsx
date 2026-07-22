@@ -17,11 +17,11 @@ type Props = {
 
 export default function SharedRadioDefaultsFields({ defaults, onChange, onApplyToAll, lineCount }: Props) {
   return (
-    <div className="rounded-xl border border-violet-200 bg-violet-50/40 p-4 space-y-3">
+    <div className="rounded-[10px] border border-[#2B6CB0]/20 bg-[#EBF4FF]/30 p-4 space-y-3">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold text-violet-900">Data bersama (semua radio di tiket ini)</p>
-          <p className="text-xs text-violet-700/80 mt-0.5">
+          <p className="text-sm font-semibold text-[#1B3A6B]">Data bersama (semua radio di tiket ini)</p>
+          <p className="text-xs text-[#2B6CB0] mt-0.5">
             Isi sekali untuk pemilik/tipe yang sama — lalu terapkan ke semua SN
           </p>
         </div>
@@ -29,7 +29,7 @@ export default function SharedRadioDefaultsFields({ defaults, onChange, onApplyT
           <button
             type="button"
             onClick={onApplyToAll}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700"
+            className="text-xs font-medium px-3 py-1.5 rounded-[10px] bg-[#1B3A6B] text-white hover:bg-[#2B6CB0] transition-colors"
           >
             Terapkan ke {lineCount} SN
           </button>

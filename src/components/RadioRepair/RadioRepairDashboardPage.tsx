@@ -40,7 +40,7 @@ import {
   canCreateTekToWarehouseHandover,
   canUpdateRepairJobStatus,
 } from "../../utils/repairDashboardPermissions";
-import { asImageSrc } from "../../utils/handoverPhotoUtils";
+import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtils";
 import { format } from "date-fns";
 import { id as dateFnsLocale } from "date-fns/locale";
 import { DayPicker, type DateRange } from "react-day-picker";
@@ -261,8 +261,21 @@ export default function RadioRepairDashboardPage() {
   };
 
   const openRowPhoto = (j: RadioRepairJobList) => {
-    if (!j.previewPhotoBase64) return;
-    openPhotos([j.previewPhotoBase64], 0);
+    if (!j.photoHandoverId && !j.previewPhotoBase64) return;
+    
+    // Fallback if we somehow have preview
+    if (j.previewPhotoBase64) {
+      openPhotos([j.previewPhotoBase64], 0);
+    }
+    
+    if (j.photoHandoverId) {
+      radioHandoverApi.getById(j.photoHandoverId).then((d) => {
+        const imgs = resolveHandoverPhotos(d);
+        if (imgs.length > 0) {
+          openPhotos(imgs, 0);
+        }
+      });
+    }
   };
 
   const openDetail = async (id: number) => {
@@ -303,7 +316,7 @@ export default function RadioRepairDashboardPage() {
       if (detail?.id === editJob.id) {
         setDetail(await radioRepairApi.getById(editJob.id, showArchive));
       }
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal menyimpan", description: apiMessage(err), variant: "destructive" });
     } finally {
@@ -317,7 +330,7 @@ export default function RadioRepairDashboardPage() {
       await radioRepairApi.softDelete(job.id);
       toast({ title: "Dipindah ke arsip" });
       if (detail?.id === job.id) setDetail(null);
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal menghapus", description: apiMessage(err), variant: "destructive" });
     }
@@ -327,7 +340,7 @@ export default function RadioRepairDashboardPage() {
     try {
       await radioRepairApi.restore(id);
       toast({ title: "Dipulihkan" });
-      load();
+      load(true);
     } catch {
       toast({ title: "Gagal memulihkan", variant: "destructive" });
     }
@@ -340,7 +353,7 @@ export default function RadioRepairDashboardPage() {
       await radioRepairApi.deletePermanent(job.id);
       toast({ title: "Dihapus permanen" });
       if (detail?.id === job.id) setDetail(null);
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal hapus permanen", description: apiMessage(err), variant: "destructive" });
     }
@@ -382,7 +395,7 @@ export default function RadioRepairDashboardPage() {
       const updated = await radioRepairApi.updateStatus(jobId, status, undefined, customStatusId, workshopTechnicianId);
       if (detail?.id === jobId) setDetail(updated);
       toast({ title: "Status diperbarui" });
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal update status", description: apiMessage(err), variant: "destructive" });
     } finally {
@@ -404,7 +417,7 @@ export default function RadioRepairDashboardPage() {
     try {
       setDetail(await radioRepairApi.approveMaterial(detail.id, resume, undefined, workshopTechnicianId));
       toast({ title: "Material disetujui" });
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal approve", description: apiMessage(err), variant: "destructive" });
     } finally {
@@ -458,7 +471,7 @@ export default function RadioRepairDashboardPage() {
         const current = await radioRepairApi.getById(jobId);
         setDetail(current);
       } else {
-        load();
+        load(true);
       }
     } catch (err: unknown) {
       toast({ title: "Gagal update radio", description: apiMessage(err), variant: "destructive" });
@@ -475,7 +488,7 @@ export default function RadioRepairDashboardPage() {
       setDetail(await radioRepairApi.approveScrap(detail.id, payload));
       setShowScrapApproval(false);
       toast({ title: "Radio berhasil di-scrap" });
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal menyetujui scrap", description: apiMessage(err), variant: "destructive" });
     } finally {
@@ -493,7 +506,7 @@ export default function RadioRepairDashboardPage() {
     try {
       setDetail(await radioRepairApi.cancelScrap(detail.id));
       toast({ title: "Scrap dibatalkan" });
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal membatalkan scrap", description: apiMessage(err), variant: "destructive" });
     } finally {
@@ -524,7 +537,7 @@ export default function RadioRepairDashboardPage() {
       await radioRepairApi.purgeJob(job.id);
       toast({ title: "Job beserta seluruh serah terimanya berhasil dihapus tuntas." });
       setDetail(null);
-      load();
+      load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal hapus tuntas", description: apiMessage(err), variant: "destructive" });
     }
@@ -608,7 +621,7 @@ export default function RadioRepairDashboardPage() {
             className="pl-10 pr-4 py-2.5 h-10 border-none rounded-xl focus:ring-2 focus:ring-purple-500 text-sm bg-[#f3e8ff] text-gray-900 placeholder-[#c084fc]"
           />
         </div>
-        <div className="flex flex-wrap gap-2 relative z-30 pb-1">
+        <div className="flex flex-wrap gap-2 relative z-20 pb-1">
           <div className="relative shrink-0 flex-1 min-w-[120px]">
             <FormMobileSelect
               value={statusLabel}

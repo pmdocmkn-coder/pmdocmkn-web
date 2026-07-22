@@ -4,7 +4,7 @@ import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
 import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse, Wrench } from "lucide-react";
 import type { RadioRepairJobList, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
-import { HandoverPhotoThumb } from "../RadioHandover/HandoverPhotoThumbnails";
+import { LazyPhotoThumb } from "../RadioHandover/LazyPhotoThumb";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
 import {
   allowedNextStatuses,
@@ -214,11 +214,27 @@ export default function RadioRepairGroupedTable({
                       </div>
 
                       {/* Row 2: SN + Unit/Alat */}
-                      <div>
-                        <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Unit: {j.unitNumber || "-"} • Alat: {j.equipmentName || "-"}
-                        </p>
+                      <div className="flex items-center gap-3">
+                        {j.photoHandoverId ? (
+                          <div className="relative inline-block shrink-0">
+                            <LazyPhotoThumb handoverId={j.photoHandoverId} photoCount={j.photoCount} onClick={() => onOpenPhoto(j)} />
+                            {j.photoCount > 1 && (
+                              <span className="absolute -top-1 -right-1 bg-[#D94F2B] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                                {j.photoCount}
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="w-12 h-12 rounded-lg border border-dashed border-gray-200 bg-gray-50 flex items-center justify-center text-gray-300 shrink-0">
+                            <span className="text-[10px]">No Pic</span>
+                          </div>
+                        )}
+                        <div>
+                          <p className="text-sm font-bold text-gray-900">{j.radioSerialNumber}</p>
+                          <p className="text-xs text-gray-500 mt-0.5">
+                            Unit: {j.unitNumber || "-"} • Alat: {j.equipmentName || "-"}
+                          </p>
+                        </div>
                       </div>
 
                       {/* Row 3: Detail Grid Box */}
@@ -552,7 +568,18 @@ function RadioRepairRow({
   return (
     <tr className={`border-t border-gray-100 hover:bg-violet-50/40 ${j.isDeleted ? "opacity-60" : ""}`}>
       <td className="px-3 py-2.5 w-14">
-        <HandoverPhotoThumb photo={j.previewPhotoBase64} onClick={() => onOpenPhoto(j)} />
+        {j.photoHandoverId ? (
+          <div className="relative inline-block">
+            <LazyPhotoThumb handoverId={j.photoHandoverId} photoCount={j.photoCount} onClick={() => onOpenPhoto(j)} />
+            {j.photoCount > 1 && (
+              <span className="absolute -top-1 -right-1 bg-[#D94F2B] text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center shadow-sm border-2 border-white">
+                {j.photoCount}
+              </span>
+            )}
+          </div>
+        ) : (
+          <span className="text-gray-300 text-xs">—</span>
+        )}
       </td>
       <td className="px-3 py-2.5 font-mono text-xs font-medium">{j.radioSerialNumber}</td>
       <td className="px-3 py-2.5 max-w-[110px] truncate text-xs" title={j.equipmentName ?? ""}>
