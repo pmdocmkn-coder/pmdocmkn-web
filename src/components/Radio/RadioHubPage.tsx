@@ -111,11 +111,6 @@ export default function RadioHubPage() {
 
   const visibleMenus = RADIO_MENUS.filter(m => hasPermission(m.permission));
 
-  // Jika hanya 1 menu visible, langsung redirect
-  if (visibleMenus.length === 1) {
-    return <Navigate to={visibleMenus[0].path} replace />;
-  }
-
   // Jika tidak ada menu visible, kembali ke dashboard
   if (visibleMenus.length === 0) {
     return <Navigate to="/dashboard" replace />;

@@ -648,7 +648,12 @@ export default function WarehouseBorrowHistoryPage() {
       {b.items.map((item, idx) => (
         <div key={idx} className="flex justify-between items-center bg-white rounded-lg px-3 py-2 border border-gray-100">
           <div>
-            <div className="font-semibold text-gray-900 text-sm">{item.partDescription}</div>
+            <div className="font-semibold text-gray-900 text-sm flex items-center gap-2">
+              {item.partDescription}
+              {item.isAlatKerja && (
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Alat Kerja</span>
+              )}
+            </div>
             {item.partCode && <div className="text-xs text-gray-500 font-mono">{item.partCode}</div>}
           </div>
           <span className="font-bold text-indigo-700 text-sm ml-3 shrink-0">
@@ -1167,7 +1172,7 @@ export default function WarehouseBorrowHistoryPage() {
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Serahkan
                   </Button>
                 )}
-                {b.status === "Issued" && (
+                {b.status === "Issued" && (isWarehouse || b.borrowedByUserId === user?.userId) && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -1228,7 +1233,12 @@ export default function WarehouseBorrowHistoryPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3 min-w-[200px]">
-                      <div className="font-medium text-gray-900">{getItemsSummary(b)}</div>
+                      <div className="font-medium text-gray-900 flex items-center gap-2">
+                        {getItemsSummary(b)}
+                        {b.items?.[0]?.isAlatKerja && (
+                          <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Alat Kerja</span>
+                        )}
+                      </div>
                       {b.items && b.items.length > 1 && (
                         <div className="text-xs text-violet-600 mt-0.5">{b.items.length} barang dipinjam</div>
                       )}
@@ -1321,10 +1331,10 @@ export default function WarehouseBorrowHistoryPage() {
                             <CheckCircle2 className="w-4 h-4" />
                           </button>
                         )}
-                        {b.status === "Issued" && (
+                        {b.status === "Issued" && (isWarehouse || b.borrowedByUserId === user?.userId) && (
                           <>
                             <button
-                              title="Terima Pengembalian"
+                              title={isWarehouse ? "Terima Pengembalian" : "Kembalikan Part"}
                               className="w-8 h-8 inline-flex items-center justify-center rounded-lg text-emerald-600 hover:text-white hover:bg-emerald-600 border border-emerald-200 transition-colors"
                               onClick={() => openReturn(b)}
                             >

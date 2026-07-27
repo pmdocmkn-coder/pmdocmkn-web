@@ -29,7 +29,12 @@ import {
   Building2,
   BadgeCheck,
 } from "lucide-react";
-import { formatDetailDate, convertUTCtoWITA } from "../utils/dateUtils";
+import { formatDateTimeIndonesian, convertUTCtoWITA } from "../utils/dateUtils";
+import ImageViewerModal from "./common/ImageViewerModal";
+import { ProfileHero } from "./profile/ProfileHero";
+import { ProfilePersonalDetails } from "./profile/ProfilePersonalDetails";
+import { ProfileSecurity } from "./profile/ProfileSecurity";
+import { ProfileInsights } from "./profile/ProfileInsights";
 
 // Password validation utility functions
 const validatePassword = (password: string) => {
@@ -84,6 +89,7 @@ const getStrengthText = (strength: number) => {
 export default function ProfilePage() {
   const { user: contextUser, logout, refreshUser } = useAuth();
   const [currentUser, setCurrentUser] = useState(contextUser);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [photoError, setPhotoError] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isChangingPassword, setIsChangingPassword] = useState(false);
@@ -441,7 +447,7 @@ export default function ProfilePage() {
     );
   }
 
-  const hasPhoto = currentUser.photoUrl && !photoError;
+  const hasPhoto = !!(currentUser.photoUrl && !photoError);
 
   const formatRelativeTime = (dateString: string | null | undefined) => {
     if (!dateString) return "-";
@@ -495,7 +501,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <div className="bg-background-light dark:bg-slate-900 font-display text-slate-900 dark:text-slate-100 min-h-[calc(100vh-5rem)]">
+    <div className="bg-[#F7F8FA] dark:bg-slate-900 font-display text-slate-900 dark:text-slate-100 min-h-[calc(100vh-5rem)]">
       <div className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* ✅ Modal Konfirmasi Logout */}
         <AnimatePresence>
@@ -594,357 +600,72 @@ export default function ProfilePage() {
           )}
         </AnimatePresence>
 
-        {/* Hero Section */}
-        <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-blue-600 to-purple-600 mb-8 shadow-xl">
-          <div className="absolute inset-0 opacity-20 bg-[url('https://lh3.googleusercontent.com/aida-public/AB6AXuDqEYSTfD4ZdypubQ46NN0wPrlBdYPP0bDA3xfwNgbPeVXw8akVk72LJuwrzlgHwuCrsx0Ng495GOXxUPNoUD18ROhfAdtPV7EnAE1T6lhIa_0KyM1l67hUmVqgwACSzXAZeneeG85yoBATbXP4xVZzpK2twvRL1nK3PN0AMIE0x8mPd1F2ZYYHXpSrXVfhKNY5XffyZE93_re76Az3S2SydmnKmE1sneYb0byv9-q5c1kb2q-kjKeD9ZWuOvek6KLk722pGsU')]"></div>
+        {/* Main Content Layout */}
+        <div className="max-w-7xl mx-auto space-y-10 mt-6">
+          <ProfileHero
+            fullName={currentUser.fullName || ""}
+            roleName={currentUser.roleName || ""}
+            email={currentUser.email || ""}
+            employeeId={currentUser.employeeId || ""}
+            photoUrl={currentUser.photoUrl}
+            getInitials={getInitials}
+            hasPhoto={hasPhoto}
+            isEditing={isEditing}
+            onAvatarClick={handleAvatarClick}
+            onPreviewClick={() => setPreviewImage(currentUser.photoUrl!)}
+            onCancelEdit={() => setIsEditing(false)}
+            onStartEdit={() => setIsEditing(true)}
+            onSaveProfile={handleSubmit}
+          />
 
-          <div className="relative p-8 md:p-12 flex flex-col md:flex-row items-center gap-8">
-            <div className="relative group">
-              {hasPhoto ? (
-                <div className="size-32 rounded-full border-4 border-white/30 shadow-2xl overflow-hidden cursor-pointer relative" onClick={handleAvatarClick}>
-                  <img
-                    src={currentUser.photoUrl}
-                    alt={currentUser.fullName}
-                    onError={() => setPhotoError(true)}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="text-white w-8 h-8" />
-                  </div>
-                </div>
-              ) : (
-                <div className="size-32 rounded-full bg-white/20 backdrop-blur-sm border-4 border-white/30 flex items-center justify-center text-white text-4xl font-bold shadow-2xl cursor-pointer relative overflow-hidden" onClick={handleAvatarClick}>
-                  {getInitials()}
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Camera className="text-white w-8 h-8" />
-                  </div>
-                </div>
-              )}
-              <div className="absolute bottom-1 right-1 bg-green-500 size-6 rounded-full border-4 border-blue-600"></div>
+          <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
+            {/* Left Column: Forms */}
+            <div className="lg:col-span-8 space-y-10">
+              <ProfilePersonalDetails
+                fullName={formData.fullName}
+                email={formData.email}
+                division={currentUser.division || ""}
+                employeeId={formData.employeeId}
+                isEditing={isEditing}
+                onFullNameChange={(val) => setFormData({ ...formData, fullName: val })}
+                onEmailChange={(val) => setFormData({ ...formData, email: val })}
+                onEmployeeIdChange={(val) => setFormData({ ...formData, employeeId: val })}
+                onCancelEdit={() => setIsEditing(false)}
+              />
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handlePhotoChange}
-                className="hidden"
+              <ProfileSecurity
+                isEditing={isEditing}
+                isChangingPassword={isChangingPassword}
+                setIsChangingPassword={setIsChangingPassword}
+                formData={formData}
+                setFormData={setFormData}
+                showPassword={showPassword}
+                setShowPassword={setShowPassword}
+                passwordValidation={passwordValidation}
+                confirmPasswordMatch={confirmPasswordMatch}
+                getStrengthText={getStrengthText}
               />
             </div>
 
-            <div className="text-center md:text-left flex-1">
-              <div className="flex flex-col md:flex-row md:items-center gap-3 mb-2">
-                <h2 className="text-3xl font-extrabold text-white">{currentUser.fullName}</h2>
-                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-white/20 text-white backdrop-blur-md border border-white/30">
-                  {currentUser.roleName?.toUpperCase() || "USER"}
-                </span>
-              </div>
-              <p className="text-white/80 flex items-center justify-center md:justify-start gap-2">
-                <Mail className="w-4 h-4" />
-                {currentUser.email}
-              </p>
+            {/* Right Column: Stats & Platform Insight */}
+            <div className="lg:col-span-4">
+              <ProfileInsights
+                createdAt={currentUser.createdAt}
+                lastLogin={currentUser.lastLogin}
+                profileCompletion={calculateProfileCompletion()}
+              />
             </div>
-
-            <div className="flex flex-wrap justify-center gap-3">
-              {isEditing && (
-                <button
-                  onClick={() => setIsEditing(false)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-sm transition-all border border-white/20 font-medium text-sm"
-                >
-                  <X className="w-4 h-4" />
-                  Cancel Edit
-                </button>
-              )}
-              {!isEditing && (
-                <button
-                  onClick={() => setIsEditing(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 text-white rounded-lg backdrop-blur-sm transition-all border border-white/20 font-medium text-sm"
-                >
-                  <Edit3 className="w-4 h-4" />
-                  Edit Profile
-                </button>
-              )}
-              <button
-                onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg shadow-lg transition-all font-bold text-sm"
-              >
-                <LogOut className="w-4 h-4" />
-                Logout
-              </button>
-            </div>
-          </div>
+          </form>
         </div>
-
-        <form onSubmit={handleSubmit}>
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Left Column: Main Forms */}
-            <div className="lg:col-span-2 space-y-8">
-
-              {/* Personal Information */}
-              <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                  <User className="text-blue-600 w-5 h-5" />
-                  <h3 className="font-bold text-lg">Personal Information</h3>
-                </div>
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Full Name</label>
-                    <input
-                      type="text"
-                      value={isEditing ? formData.fullName : currentUser.fullName}
-                      onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-                      disabled={!isEditing}
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors disabled:bg-slate-50/50 disabled:text-slate-900 dark:disabled:bg-slate-800/50 dark:disabled:text-slate-300 disabled:cursor-default"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-500 dark:text-slate-400">Email Address</label>
-                    <input
-                      type="email"
-                      value={isEditing ? formData.email : currentUser.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      disabled={!isEditing}
-                      className="w-full mt-1 px-3 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-sm bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-blue-500 transition-colors disabled:bg-slate-50/50 disabled:text-slate-900 dark:disabled:bg-slate-800/50 dark:disabled:text-slate-300 disabled:cursor-default"
-                    />
-                  </div>
-                </div>
-              </section>
-
-              {/* Employee Details */}
-              <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                  <BadgeCheck className="text-blue-600 w-5 h-5" />
-                  <h3 className="font-bold text-lg">Employee Details</h3>
-                </div>
-                <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center gap-4">
-                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                      <Building2 className="text-blue-600 dark:text-blue-400 w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Division</p>
-                      <p className="font-bold text-slate-900 dark:text-white">{currentUser.division || "Not set"}</p>
-                    </div>
-                  </div>
-                  <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="p-3 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
-                        <UserCheck className="text-blue-600 dark:text-blue-400 w-5 h-5" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Employee ID</p>
-                        {isEditing ? (
-                          <input
-                            type="text"
-                            value={formData.employeeId}
-                            onChange={(e) => setFormData({ ...formData, employeeId: e.target.value })}
-                            className="w-full mt-1 px-2 py-1 text-sm border border-slate-300 rounded focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="EMP-..."
-                          />
-                        ) : (
-                          <p className="font-bold text-slate-900 dark:text-white">{currentUser.employeeId || "Not set"}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Account Security */}
-              <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 bg-amber-50 dark:bg-amber-900/10 rounded-xl border border-amber-100 dark:border-amber-800">
-                      <Lock className="text-amber-500 w-5 h-5" />
-                    </div>
-                    <div>
-                      <h3 className="font-bold text-slate-800 dark:text-slate-200">Account Security</h3>
-                      <p className="text-xs text-slate-500 mt-0.5">Manage your password and authentication methods</p>
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsEditing(true);
-                      setIsChangingPassword(!isChangingPassword);
-                    }}
-                    className="w-full md:w-auto px-4 py-2 text-sm font-bold text-blue-600 bg-blue-50/50 hover:bg-blue-50 border border-blue-200 hover:border-blue-300 rounded-lg transition-colors"
-                  >
-                    Change Password
-                  </button>
-                </div>
-
-                <AnimatePresence>
-                  {isChangingPassword && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800"
-                    >
-                      <div className="space-y-4 pt-4">
-                        <div className="space-y-1.5">
-                          <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Current Password</label>
-                          <div className="relative">
-                            <input
-                              type={showPassword.old ? "text" : "password"}
-                              value={formData.oldPassword}
-                              onChange={(e) => setFormData({ ...formData, oldPassword: e.target.value })}
-                              className="w-full pr-10 pl-3 py-2 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-900 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors"
-                              required={isChangingPassword}
-                            />
-                            <button type="button" onClick={() => setShowPassword({ ...showPassword, old: !showPassword.old })} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
-                              {showPassword.old ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">New Password</label>
-                            <div className="relative">
-                              <input
-                                type={showPassword.new ? "text" : "password"}
-                                value={formData.newPassword}
-                                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
-                                className={`w-full pr-10 pl-3 py-2 text-sm border rounded-lg bg-white dark:bg-slate-900 transition-colors focus:ring-1 ${formData.newPassword ? (passwordValidation.isValid ? 'border-green-500 focus:ring-green-500 focus:border-green-500' : 'border-orange-500 focus:ring-orange-500 focus:border-orange-500') : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'}`}
-                                required={isChangingPassword}
-                              />
-                              <button type="button" onClick={() => setShowPassword({ ...showPassword, new: !showPassword.new })} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
-                                {showPassword.new ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </div>
-
-                            {formData.newPassword && (
-                              <div className="mt-2 space-y-2 text-xs">
-                                <div className="flex justify-between font-bold">
-                                  <span>Strength: <span className={passwordValidation.strength <= 40 ? 'text-red-500' : passwordValidation.strength <= 80 ? 'text-amber-500' : 'text-green-500'}>{getStrengthText(passwordValidation.strength)}</span></span>
-                                </div>
-                                <div className="flex flex-wrap gap-2 text-slate-500">
-                                  <span className={passwordValidation.requirements.minLength ? 'text-green-500 font-medium' : ''}>8+ chars</span>
-                                  <span className={passwordValidation.requirements.upperCase ? 'text-green-500 font-medium' : ''}>Uppercase</span>
-                                  <span className={passwordValidation.requirements.lowerCase ? 'text-green-500 font-medium' : ''}>Lowercase</span>
-                                  <span className={passwordValidation.requirements.numbers ? 'text-green-500 font-medium' : ''}>Number</span>
-                                  <span className={passwordValidation.requirements.specialChar ? 'text-green-500 font-medium' : ''}>Special</span>
-                                </div>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="space-y-1.5">
-                            <label className="block text-xs font-bold text-slate-500 dark:text-slate-400">Confirm Password</label>
-                            <div className="relative">
-                              <input
-                                type={showPassword.confirm ? "text" : "password"}
-                                value={formData.confirmPassword}
-                                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                                className={`w-full pr-10 pl-3 py-2 text-sm border rounded-lg bg-white dark:bg-slate-900 transition-colors focus:ring-1 ${formData.confirmPassword ? (confirmPasswordMatch ? 'border-green-500 focus:ring-green-500 focus:border-green-500' : 'border-red-500 focus:ring-red-500 focus:border-red-500') : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500'}`}
-                                required={isChangingPassword}
-                              />
-                              <button type="button" onClick={() => setShowPassword({ ...showPassword, confirm: !showPassword.confirm })} className="absolute right-3 top-2.5 text-slate-400 hover:text-slate-600 transition-colors">
-                                {showPassword.confirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                              </button>
-                            </div>
-                            {formData.confirmPassword && (
-                              <p className={`text-xs mt-1 font-medium ${confirmPasswordMatch ? 'text-green-600' : 'text-red-600'}`}>
-                                {confirmPasswordMatch ? 'Passwords match' : 'Passwords do not match'}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </section>
-
-            </div>
-
-            {/* Right Column: Metadata & Summary */}
-            <div className="space-y-8">
-
-              {/* Account Information */}
-              <section className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
-                <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3">
-                  <UserCheck className="text-blue-600 w-5 h-5" />
-                  <h3 className="font-bold text-lg">Account Information</h3>
-                </div>
-                <div className="p-6 space-y-6">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">Registered Since</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {currentUser.createdAt ? (
-                        (() => {
-                          const date = convertUTCtoWITA(currentUser.createdAt);
-                          if (!date) return "-";
-                          const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-                          return `${date.getDate().toString().padStart(2, '0')} ${monthNames[date.getMonth()]} ${date.getFullYear()}`;
-                        })()
-                      ) : "-"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-slate-500 font-medium">Last Login</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">
-                      {formatRelativeTime(currentUser.lastLogin)}
-                    </span>
-                  </div>
-
-                  <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-400 uppercase">Profile Completion</span>
-                      <span className="text-xs font-bold text-blue-600">{calculateProfileCompletion()}%</span>
-                    </div>
-                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-                      <div className="bg-blue-600 h-full rounded-full transition-all duration-1000" style={{ width: `${calculateProfileCompletion()}%` }}></div>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              {/* Save Changes */}
-              {isEditing && (
-                <div className="p-6 bg-blue-50 dark:bg-blue-900/10 rounded-xl border border-blue-100 flex flex-col gap-4 sticky top-24">
-                  <p className="text-xs text-center text-slate-500 font-medium">Any changes made will be logged in the system audit trail.</p>
-                  <button
-                    type="submit"
-                    disabled={loading || (isChangingPassword && (!passwordValidation.isValid || !confirmPasswordMatch))}
-                    className="w-full py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-600/30 transition-all font-bold text-lg flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                    Save Changes
-                  </button>
-                </div>
-              )}
-
-              {/* Active Privileges Info */}
-              <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-100 dark:border-slate-800">
-                <h4 className="font-bold text-sm mb-4 flex items-center gap-2">
-                  <Shield className="text-slate-700 dark:text-slate-300 w-4 h-4" />
-                  Active Privileges
-                </h4>
-                <ul className="space-y-3">
-                  <li className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                    <CheckCircle className="text-green-500 w-4 h-4" />
-                    System Access
-                  </li>
-                  <li className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                    <CheckCircle className="text-green-500 w-4 h-4" />
-                    Data View Rights
-                  </li>
-                  {currentUser.roleName?.toLowerCase() === 'super admin' && (
-                    <li className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
-                      <CheckCircle className="text-green-500 w-4 h-4" />
-                      Full Admin Privileges
-                    </li>
-                  )}
-                </ul>
-              </div>
-
-            </div>
-          </div>
-        </form>
       </div>
+      
+      {/* Image Viewer Modal */}
+      <ImageViewerModal
+        isOpen={!!previewImage}
+        imageUrl={previewImage || ""}
+        onClose={() => setPreviewImage(null)}
+        altText="Foto Profil"
+      />
     </div>
   );
 }
-

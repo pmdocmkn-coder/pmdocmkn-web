@@ -14,6 +14,9 @@ export type HandoverTimelineItem = {
   status?: string;
   picReceiverName?: string | null;
   remarks?: string | null;
+  isPartial?: boolean;
+  containsMainRadioUnit?: boolean;
+  accessories?: string[];
 };
 
 const STEPS: { type: string; label: string; short: string }[] = [
@@ -110,7 +113,14 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
                       <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
                         <div>
                           <span className="block text-slate-500 mb-0.5">No Referensi</span>
-                          <span className="font-mono font-bold text-[#2B6CB0]">{h.handoverNumber}</span>
+                          <span className="font-mono font-bold text-[#2B6CB0] flex items-center gap-1.5">
+                            {h.handoverNumber}
+                            {h.isPartial && (
+                              <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700">
+                                Parsial
+                              </span>
+                            )}
+                          </span>
                         </div>
                         <div>
                           <span className="block text-slate-500 mb-0.5">Waktu Serah Terima</span>
@@ -136,6 +146,17 @@ export default function HandoverTimeline({ handovers, compact }: Props) {
                         <div className="flex gap-1.5 text-slate-600 px-2 mt-2 bg-slate-50 border border-slate-100 py-1.5 rounded-md">
                           <span className="font-medium text-[11px] text-slate-500">Catatan:</span>
                           <span className="text-xs text-slate-700 whitespace-pre-wrap">{h.remarks}</span>
+                        </div>
+                      )}
+
+                      {h.isPartial && h.accessories && h.accessories.length > 0 && (
+                        <div className="px-2 mt-2">
+                          <span className="font-medium text-[11px] text-slate-500 block mb-1">Barang yang diserahkan:</span>
+                          <ul className="list-disc list-inside text-xs text-slate-700 space-y-0.5 ml-1">
+                            {h.accessories.map((acc, i) => (
+                              <li key={i}>{acc}</li>
+                            ))}
+                          </ul>
                         </div>
                       )}
                       

@@ -113,6 +113,8 @@ export interface CreateRadioHandoverPayload {
   remarks?: string;
   picReceiverName?: string;
 
+  isPartial?: boolean;
+  containsMainRadioUnit?: boolean;
 }
 
 
@@ -176,6 +178,8 @@ export interface RadioHandoverList {
 
   previewPhotoBase64?: string | null;
 
+  isPartial?: boolean;
+  containsMainRadioUnit?: boolean;
 }
 
 

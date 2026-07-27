@@ -9,6 +9,8 @@ export interface WarehousePartCatalogItem {
   category?: string | null;
   unit?: string | null;
   description?: string | null;
+  isBorrowed?: boolean;
+  activeBorrowerName?: string | null;
 }
 
 export const warehousePartApi = {

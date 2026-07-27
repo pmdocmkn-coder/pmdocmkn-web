@@ -259,7 +259,7 @@ function AppContent() {
 
           {/* ✅ RADIO HUB (Mobile menu) */}
           <Route path="/radio" element={
-            <PermissionGuard anyOf={["radio.view", "radio.kpc.menu", "radio.scrap.view", "radio.repair.menu", "radio.handover.menu", "fleet.menu"]}>
+            <PermissionGuard anyOf={["radio.view", "radio.kpc.menu", "radio.scrap.view", "radio.repair.menu", "radio.handover.menu", "radio.handover.view", "fleet.menu"]}>
               <RadioHubPage />
             </PermissionGuard>
           } />
@@ -302,7 +302,7 @@ function AppContent() {
           } />
           {/* ✅ WAREHOUSE HUB (Mobile menu) */}
           <Route path="/warehouse" element={
-            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.view", "warehouse.borrow.create", "warehouse.borrow.supervise"]}>
+            <PermissionGuard anyOf={["warehouse.borrow.menu", "warehouse.borrow.view", "warehouse.borrow.create", "warehouse.borrow.supervise", "warehouse.menu.tools"]}>
               <WarehouseHubPage />
             </PermissionGuard>
           } />
