@@ -80,26 +80,29 @@ interface DatePickerProps {
     onSelect: (date: Date | undefined) => void
     placeholder?: string
     className?: string
+    trigger?: React.ReactNode
 }
 
-export function DatePicker({ date, onSelect, placeholder = "Pilih tanggal", className }: DatePickerProps) {
+export function DatePicker({ date, onSelect, placeholder = "Pilih tanggal", className, trigger }: DatePickerProps) {
     return (
         <Popover>
             <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    className={cn(
-                        "w-full justify-start text-left font-normal",
-                        !date && "text-muted-foreground",
-                        className
-                    )}
-                >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {date
-                        ? format(date, "dd MMMM yyyy", { locale: id })
-                        : <span>{placeholder}</span>
-                    }
-                </Button>
+                {trigger ? trigger : (
+                    <Button
+                        variant="outline"
+                        className={cn(
+                            "w-full justify-start text-left font-normal",
+                            !date && "text-muted-foreground",
+                            className
+                        )}
+                    >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {date
+                            ? format(date, "dd MMMM yyyy", { locale: id })
+                            : <span>{placeholder}</span>
+                        }
+                    </Button>
+                )}
             </PopoverTrigger>
             <PopoverContent className="w-auto p-0 z-[200]" align="start">
                 <DayPicker
