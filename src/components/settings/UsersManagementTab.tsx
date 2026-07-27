@@ -8,6 +8,7 @@ import {
   Clock, Building2, ChevronLeft, ChevronRight, ChevronDown, Check,
 } from 'lucide-react';
 import { formatDateTimeIndonesian } from '../../utils/dateUtils';
+import { useLiveRefresh } from '../../hooks/useLiveRefresh';
 import { hasPermission } from '../../utils/permissionUtils';
 import { useAuth } from '../../contexts/AuthContext';
 import BottomSheet from '../common/BottomSheet';
@@ -117,6 +118,9 @@ export default function UsersManagementTab() {
     const t = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(t);
   }, []);
+
+  // Live refresh via SignalR saat ada user login/update
+  useLiveRefresh("User", () => { fetchData(true); });
 
   const fetchData = async (background = false) => {
     try {

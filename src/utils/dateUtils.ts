@@ -4,7 +4,9 @@ import { id } from "date-fns/locale";
 
 /**
  * Convert UTC date string to WITA timezone (UTC+8)
- * Using manual offset calculation for maximum reliability
+ * Fix: Ensure dateString is parsed as UTC by appending 'Z' if missing,
+ * then let the browser's built-in timezone (WITA) handle the display.
+ * No manual +8 hours needed — browser already does this via getHours(), etc.
  */
 export const convertUTCtoWITA = (
   dateString: string | undefined | null
@@ -12,14 +14,17 @@ export const convertUTCtoWITA = (
   if (!dateString) return null;
 
   try {
-    const utcDate = new Date(dateString);
-    if (isNaN(utcDate.getTime())) return null;
+    // Normalize: ensure the date string is treated as UTC
+    let normalized = dateString;
+    if (!dateString.endsWith("Z") && !/[+-]\d{2}(:\d{2})?$/.test(dateString)) {
+      normalized = dateString + "Z";
+    }
 
-    // ✅ Manual conversion: Add 8 hours (WITA = UTC+8)
-    const witaTimestamp = utcDate.getTime() + 8 * 60 * 60 * 1000;
-    const witaDate = new Date(witaTimestamp);
+    const date = new Date(normalized);
+    if (isNaN(date.getTime())) return null;
 
-    return witaDate;
+    // Browser in WITA (UTC+8) will automatically convert via getHours(), etc.
+    return date;
   } catch {
     return null;
   }
