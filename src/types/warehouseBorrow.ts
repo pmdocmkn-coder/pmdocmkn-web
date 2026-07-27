@@ -14,6 +14,7 @@ export interface WarehouseBorrowItem {
   partCode?: string | null;
   unit?: string | null;
   quantity: number;
+  isAlatKerja?: boolean;
 }
 
 export interface WarehouseBorrowList {
@@ -23,6 +24,7 @@ export interface WarehouseBorrowList {
   totalItems: number;
   status: WarehouseBorrowStatus;
   borrowedByName: string;
+  borrowedByUserId: number;
   requestedAt: string;
   issuedAt?: string | null;
   relatedJobNumber?: string | null;

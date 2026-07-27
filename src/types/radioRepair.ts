@@ -152,5 +152,8 @@ export interface RadioRepairJobDetail extends RadioRepairJobList {
     hasReceiverSignature: boolean;
     picReceiverName?: string | null;
     remarks?: string | null;
+    isPartial?: boolean;
+    containsMainRadioUnit?: boolean;
+    accessories?: string[];
   }[];
 }

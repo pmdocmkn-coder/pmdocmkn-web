@@ -14,6 +14,8 @@ import BottomSheet from '../common/BottomSheet';
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '../ui/select';
+import ReactDOM from 'react-dom';
+import ImageViewerModal from '../common/ImageViewerModal';
 
 interface DivisionItem { id: number; code: string; name: string; isActive: boolean; }
 
@@ -26,10 +28,11 @@ function getInitials(name: string) {
     : name[0].toUpperCase();
 }
 
-function Avatar({ user }: { user: User }) {
+function Avatar({ user, onImageClick }: { user: User, onImageClick?: (url: string) => void }) {
   if (user.photoUrl) return (
     <img src={user.photoUrl} alt={user.fullName}
-      className="w-10 h-10 rounded-full object-cover border-2 border-[#E2E8F0] flex-shrink-0" />
+      onClick={(e) => { e.stopPropagation(); onImageClick && onImageClick(user.photoUrl!); }}
+      className={`w-10 h-10 rounded-full object-cover border-2 border-[#E2E8F0] flex-shrink-0 ${onImageClick ? 'cursor-pointer hover:opacity-80 transition-opacity' : ''}`} />
   );
   return (
     <div className="w-10 h-10 rounded-full bg-[#1B3A6B] flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
@@ -99,6 +102,7 @@ export default function UsersManagementTab() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('all');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 10;
@@ -110,13 +114,13 @@ export default function UsersManagementTab() {
   useEffect(() => { setCurrentPage(1); }, [searchTerm, filterStatus]);
   useEffect(() => { fetchData(); }, []);
   useEffect(() => {
-    const t = setInterval(fetchData, 30000);
+    const t = setInterval(() => fetchData(true), 30000);
     return () => clearInterval(t);
   }, []);
 
-  const fetchData = async () => {
+  const fetchData = async (background = false) => {
     try {
-      setLoading(true);
+      if (!background) setLoading(true);
       const [usersData, rolesData, divsData] = await Promise.all([
         userApi.getAll(),
         roleApi.getAll(),
@@ -126,16 +130,16 @@ export default function UsersManagementTab() {
       setRoles(rolesData);
       setDivisions(divsData);
     } catch {
-      showMsg('error', 'Gagal memuat data users');
+      if (!background) showMsg('error', 'Gagal memuat data users');
     } finally {
-      setLoading(false);
+      if (!background) setLoading(false);
     }
   };
 
   const handleRefresh = async () => {
     setRefreshing(true);
     setMessage(null);
-    await fetchData();
+    await fetchData(true);
     showMsg('success', 'Data berhasil diperbarui');
     setRefreshing(false);
   };
@@ -147,30 +151,30 @@ export default function UsersManagementTab() {
 
   const handleActivate = async (userId: number) => {
     if (!confirm('Aktifkan user ini?')) return;
-    try { await userApi.activateUser(userId); showMsg('success', 'User berhasil diaktifkan'); fetchData(); }
+    try { await userApi.activateUser(userId); showMsg('success', 'User berhasil diaktifkan'); fetchData(true); }
     catch (e: any) { showMsg('error', e.response?.data?.message || 'Gagal mengaktifkan user'); }
   };
 
   const handleDeactivate = async (userId: number) => {
     if (!confirm('Nonaktifkan user ini?')) return;
-    try { await userApi.deactivateUser(userId); showMsg('success', 'User berhasil dinonaktifkan'); fetchData(); }
+    try { await userApi.deactivateUser(userId); showMsg('success', 'User berhasil dinonaktifkan'); fetchData(true); }
     catch (e: any) { showMsg('error', e.response?.data?.message || 'Gagal menonaktifkan user'); }
   };
 
   const handleChangeRole = async (userId: number, newRoleId: number) => {
     if (!confirm('Ubah role user ini?')) return;
-    try { await userApi.updateRole(userId, newRoleId); showMsg('success', 'Role berhasil diubah'); fetchData(); }
+    try { await userApi.updateRole(userId, newRoleId); showMsg('success', 'Role berhasil diubah'); fetchData(true); }
     catch (e: any) { showMsg('error', e.response?.data?.message || 'Gagal mengubah role'); }
   };
 
   const handleChangeDivision = async (userId: number, newDiv: string) => {
-    try { await userApi.updateUser(userId, { division: newDiv || undefined }); showMsg('success', 'Divisi berhasil diubah'); fetchData(); }
+    try { await userApi.updateUser(userId, { division: newDiv || undefined }); showMsg('success', 'Divisi berhasil diubah'); fetchData(true); }
     catch (e: any) { showMsg('error', e.response?.data?.message || 'Gagal mengubah divisi'); }
   };
 
   const handleDelete = async (userId: number, name: string) => {
     if (!confirm(`Hapus user "${name}"? Tindakan tidak dapat dibatalkan.`)) return;
-    try { await userApi.deleteUser(userId); showMsg('success', `User "${name}" berhasil dihapus`); fetchData(); }
+    try { await userApi.deleteUser(userId); showMsg('success', `User "${name}" berhasil dihapus`); fetchData(true); }
     catch (e: any) { showMsg('error', e.response?.data?.message || 'Gagal menghapus user'); }
   };
 
@@ -388,7 +392,7 @@ export default function UsersManagementTab() {
                   <tr key={u.userId} className="hover:bg-[#F7F8FA] transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
-                        <Avatar user={u} />
+                        <Avatar user={u} onImageClick={setPreviewImage} />
                         <div className="min-w-0">
                           <p className="text-[13px] font-semibold text-[#1A202C]">{u.fullName}</p>
                           <p className="text-[11px] text-[#718096]">{u.email}</p>
@@ -520,9 +524,9 @@ export default function UsersManagementTab() {
 
       {/* ── User Detail (Desktop: Modal, Mobile: BottomSheet) ── */}
       {/* Desktop Modal */}
-      {isDetailOpen && selectedUser && (
-        <div className="hidden md:flex fixed inset-0 bg-black/50 items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-[14px] shadow-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+      {isDetailOpen && selectedUser && ReactDOM.createPortal(
+        <div className="hidden md:flex fixed inset-0 bg-black/50 items-center justify-center p-0 z-50">
+          <div className="bg-white md:rounded-[14px] shadow-xl max-w-lg w-full h-full md:h-auto max-h-screen overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-[#E2E8F0]">
               <h3 className="text-[16px] font-bold text-[#1A202C]">Detail User</h3>
               <button onClick={() => setIsDetailOpen(false)}
@@ -532,7 +536,7 @@ export default function UsersManagementTab() {
             </div>
             <div className="p-6 space-y-5">
               <div className="flex items-center gap-4">
-                <Avatar user={selectedUser} />
+                <Avatar user={selectedUser} onImageClick={setPreviewImage} />
                 <div>
                   <h4 className="text-[17px] font-bold text-[#1A202C]">{selectedUser.fullName}</h4>
                   <p className="text-[13px] text-[#718096]">@{selectedUser.username}</p>
@@ -564,7 +568,7 @@ export default function UsersManagementTab() {
               </button>
             </div>
           </div>
-        </div>
+        </div>, document.body
       )}
 
       {/* Mobile detail as BottomSheet */}
@@ -572,7 +576,7 @@ export default function UsersManagementTab() {
         <BottomSheet open={isDetailOpen} onClose={() => setIsDetailOpen(false)} title="Detail User" size="xl">
           <div className="space-y-4 pb-4">
             <div className="flex items-center gap-3">
-              <Avatar user={selectedUser} />
+              <Avatar user={selectedUser} onImageClick={setPreviewImage} />
               <div>
                 <h4 className="text-[15px] font-bold text-[#1A202C]">{selectedUser.fullName}</h4>
                 <p className="text-[12px] text-[#718096]">@{selectedUser.username}</p>
@@ -599,6 +603,12 @@ export default function UsersManagementTab() {
           </div>
         </BottomSheet>
       )}
+      
+      <ImageViewerModal 
+        isOpen={!!previewImage} 
+        onClose={() => setPreviewImage(null)} 
+        imageUrl={previewImage || ''} 
+      />
     </div>
   );
 }

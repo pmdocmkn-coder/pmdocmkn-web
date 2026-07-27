@@ -75,12 +75,6 @@ export default function WarehouseHubPage() {
 
   const visibleMenus = WAREHOUSE_MENUS.filter(m => hasAnyPermission(m.permission));
 
-  // Jika hanya 1 menu visible, langsung redirect
-  if (visibleMenus.length === 1) {
-    navigate(visibleMenus[0].path, { replace: true });
-    return null;
-  }
-
   // Jika tidak ada menu visible, kembali ke dashboard
   if (visibleMenus.length === 0) {
     navigate("/dashboard", { replace: true });

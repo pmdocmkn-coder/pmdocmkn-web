@@ -30,6 +30,12 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   const [sigWh, setSigWh] = useState<string | null>(null);
   const [sigHd, setSigHd] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [containsMainRadioUnit, setContainsMainRadioUnit] = useState(true);
+  const [mainUnitDisabled, setMainUnitDisabled] = useState(false);
+  const [mainUnitDisabledInfo, setMainUnitDisabledInfo] = useState("");
+  const [selectedAccessories, setSelectedAccessories] = useState<boolean[]>([]);
+  const [disabledAccessories, setDisabledAccessories] = useState<boolean[]>([]);
+  const [disabledAccessoriesInfo, setDisabledAccessoriesInfo] = useState<string[]>([]);
 
   useEffect(() => {
     radioHandoverApi
@@ -39,7 +45,37 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
 
     radioRepairApi
       .getById(job.id)
-      .then(setJobDetail)
+      .then((res) => {
+        setJobDetail(res);
+        if (res?.primaryHandover?.accessories) {
+          const alreadyHandedOver = new Map<string, string>();
+          res.handovers?.filter(h => h.handoverType === "WarehouseToHelpdesk")
+            .forEach(h => {
+              if (h.accessories) {
+                h.accessories.forEach(acc => alreadyHandedOver.set(acc, h.receivedByName));
+              }
+            });
+
+          const disabled = res.primaryHandover.accessories.map(a => {
+            const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+            return alreadyHandedOver.has(accStr);
+          });
+          const disabledInfo = res.primaryHandover.accessories.map(a => {
+            const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+            return alreadyHandedOver.get(accStr) || "";
+          });
+          setDisabledAccessories(disabled);
+          setDisabledAccessoriesInfo(disabledInfo);
+          setSelectedAccessories(disabled.map(d => !d));
+
+          const mainUnitHandover = res.handovers?.find(h => h.handoverType === "WarehouseToHelpdesk" && h.containsMainRadioUnit);
+          if (mainUnitHandover) {
+            setMainUnitDisabled(true);
+            setContainsMainRadioUnit(false);
+            setMainUnitDisabledInfo(mainUnitHandover.receivedByName);
+          }
+        }
+      })
       .catch(console.error);
   }, [job.id]);
 
@@ -49,13 +85,22 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       return;
     }
 
-    const accPayload = jobDetail?.primaryHandover?.accessories?.map(a => ({
-      itemName: a.itemName,
-      quantity: a.quantity,
-      unit: a.unit || undefined,
-      description: a.description || undefined,
-      serialNumber: a.serialNumber || undefined,
-    })) || [];
+    const accPayload = jobDetail?.primaryHandover?.accessories
+      ?.filter((_, i) => selectedAccessories[i])
+      ?.map(a => ({
+        itemName: a.itemName,
+        quantity: a.quantity,
+        unit: a.unit || undefined,
+        description: a.description || undefined,
+        serialNumber: a.serialNumber || undefined,
+      })) || [];
+
+    if (!containsMainRadioUnit && accPayload.length === 0) {
+      toast({ title: "Pilih minimal 1 barang untuk diserahkan (Radio atau Aksesoris)", variant: "destructive" });
+      return;
+    }
+
+    const isPartial = !containsMainRadioUnit || selectedAccessories.includes(false);
 
     setSubmitting(true);
     try {
@@ -70,9 +115,11 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
         radioPhotos: photos,
         handedOverSignatureBase64: sigWh,
         receiverSignatureBase64: sigHd || undefined,
-        accessories: accPayload, // Use the accessories from the previous handover
+        accessories: accPayload,
         remarks: remarks || undefined,
         picReceiverName: picReceiverName || undefined,
+        isPartial,
+        containsMainRadioUnit,
       });
       toast({ title: "Serah terima ke Helpdesk berhasil" });
       onSuccess();
@@ -111,7 +158,9 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
               radioCategory: job.radioCategory,
               damageDescription: job.damageDescription,
               handoverType: "WarehouseToHelpdesk",
-              accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
+              accessories: jobDetail?.primaryHandover?.accessories
+                ?.filter((_, i) => selectedAccessories[i])
+                ?.map(a => ({
                 itemName: a.itemName,
                 quantity: a.quantity,
                 unit: a.unit ?? undefined,
@@ -145,7 +194,9 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
               physicalCondition: job.physicalCondition,
               displayCondition: job.displayCondition,
               handoverType: "WarehouseToHelpdesk",
-              accessories: jobDetail?.primaryHandover?.accessories?.map(a => ({
+              accessories: jobDetail?.primaryHandover?.accessories
+                ?.filter((_, i) => selectedAccessories[i])
+                ?.map(a => ({
                 itemName: a.itemName,
                 quantity: a.quantity,
                 unit: a.unit ?? undefined,
@@ -178,33 +229,64 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       {/* Photos */}
       <MultiPhotoUpload photos={photos} onChange={setPhotos} required label="Foto Radio" />
 
-      {/* Accessories (Read Only) */}
-      {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
-        <div>
-          <p className="text-sm font-medium text-gray-900 mb-2">Kelengkapan / Aksesoris</p>
-          <table className="w-full text-xs border rounded-lg overflow-hidden">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left px-3 py-2">Barang</th>
-                <th className="text-left px-3 py-2">Qty</th>
-                <th className="text-left px-3 py-2">Unit</th>
-                <th className="text-left px-3 py-2">SN</th>
-              </tr>
-            </thead>
-            <tbody>
+      {/* Items to Handover Checklist */}
+      <div className="space-y-3 p-4 border border-gray-200 rounded-xl bg-gray-50/50">
+        <p className="text-sm font-semibold text-gray-900">Pilih Barang yang Diserahkan</p>
+        <div className="space-y-3">
+          <label className="flex items-start space-x-3 cursor-pointer">
+            <input 
+              type="checkbox" 
+              checked={containsMainRadioUnit} 
+              disabled={mainUnitDisabled}
+              onChange={(e) => setContainsMainRadioUnit(e.target.checked)}
+              className="mt-1 h-4 w-4 rounded border-gray-300 text-[#2B6CB0] focus:ring-[#2B6CB0] disabled:opacity-50"
+            />
+            <div className={mainUnitDisabled ? "opacity-50" : ""}>
+              <p className="text-sm font-medium text-gray-900 flex items-center">
+                Unit Radio Utama
+                {mainUnitDisabled && <span className="ml-2 text-xs text-amber-600 font-medium italic">(Sudah diserahkan ke {mainUnitDisabledInfo})</span>}
+              </p>
+              <p className="text-xs text-gray-500">{job.equipmentName || 'Radio'} - SN: {job.radioSerialNumber}</p>
+            </div>
+          </label>
+          
+          {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
+            <div className="pl-7 space-y-2 border-l-2 border-gray-100 ml-1.5 mt-2 pt-2">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Aksesoris / Kelengkapan</p>
               {jobDetail!.primaryHandover!.accessories.map((a, i) => (
-                <tr key={i} className="border-t">
-                  <td className="px-3 py-2 font-medium">{a.itemName}</td>
-                  <td className="px-3 py-2">{a.quantity}</td>
-                  <td className="px-3 py-2">{a.unit}</td>
-                  <td className="px-3 py-2 text-gray-500">{a.serialNumber || "—"}</td>
-                </tr>
+                <label key={i} className="flex items-start space-x-3 cursor-pointer">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedAccessories[i] ?? false}
+                    disabled={disabledAccessories[i]}
+                    onChange={(e) => {
+                      const next = [...selectedAccessories];
+                      next[i] = e.target.checked;
+                      setSelectedAccessories(next);
+                    }}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300 text-[#2B6CB0] focus:ring-[#2B6CB0] disabled:opacity-50"
+                  />
+                  <div className={`text-sm text-gray-700 ${disabledAccessories[i] ? 'opacity-50' : ''}`}>
+                    <span className="font-medium">{a.itemName}</span> ({a.quantity} {a.unit || 'EA'})
+                    {a.serialNumber ? <span className="text-gray-500 ml-1">SN: {a.serialNumber}</span> : null}
+                    {disabledAccessories[i] && <span className="ml-2 text-xs text-amber-600 font-medium italic">(Sudah diserahkan ke {disabledAccessoriesInfo[i]})</span>}
+                  </div>
+                </label>
               ))}
-            </tbody>
-          </table>
-          <p className="text-[10px] text-gray-500 mt-1">Aksesoris diturunkan dari serah terima sebelumnya.</p>
+            </div>
+          )}
         </div>
-      )}
+        {(!containsMainRadioUnit || selectedAccessories.includes(false)) && (
+          <div className="mt-3 p-2 bg-amber-50 border border-amber-200 rounded-md">
+            <p className="text-xs text-amber-800 font-medium flex items-center">
+              <svg className="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              Serah terima parsial. Status tiket / Job ERP tidak akan ditutup sampai unit radio diserahkan.
+            </p>
+          </div>
+        )}
+      </div>
 
       {/* Signatures */}
       <SignaturePadField

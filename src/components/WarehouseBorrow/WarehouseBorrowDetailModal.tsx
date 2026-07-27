@@ -205,7 +205,14 @@ export default function WarehouseBorrowDetailModal({ borrowId, isOpen, onClose }
                       {data.items.map((item, idx) => (
                         <tr key={idx}>
                           <td className="px-4 py-2.5 font-mono text-xs">{item.partCode || "—"}</td>
-                          <td className="px-4 py-2.5 font-medium">{item.partDescription}</td>
+                          <td className="px-4 py-2.5 font-medium">
+                            <div className="flex items-center gap-2">
+                              {item.partDescription}
+                              {item.isAlatKerja && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Alat Kerja</span>
+                              )}
+                            </div>
+                          </td>
                           <td className="px-4 py-2.5 text-xs font-semibold text-emerald-700">{item.unit || "—"}</td>
                           <td className="px-4 py-2.5 text-right font-bold text-indigo-600">{item.quantity}</td>
                         </tr>

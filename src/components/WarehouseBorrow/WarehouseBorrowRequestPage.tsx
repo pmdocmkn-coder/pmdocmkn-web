@@ -33,6 +33,8 @@ interface BorrowItemRow {
   suggestions: WarehousePartCatalogItem[];
   searching: boolean;
   showSuggestions: boolean;
+  isAlatKerja?: boolean;
+  skipNextSearch?: boolean;
 }
 
 let rowKeyCounter = 0;
@@ -47,6 +49,7 @@ function createEmptyRow(): BorrowItemRow {
     suggestions: [],
     searching: false,
     showSuggestions: false,
+    isAlatKerja: false,
   };
 }
 
@@ -150,6 +153,10 @@ export default function WarehouseBorrowRequestPage() {
           updateRow(idx, { suggestions: [], searching: false });
           return;
         }
+        if (row.skipNextSearch) {
+          updateRow(idx, { skipNextSearch: false });
+          return;
+        }
         updateRow(idx, { searching: true });
         try {
           const items = await warehousePartApi.search(row.partDescription, 6);
@@ -207,12 +214,18 @@ export default function WarehouseBorrowRequestPage() {
   };
 
   const selectPartSuggestion = (idx: number, item: WarehousePartCatalogItem) => {
+    if (item.isBorrowed) return;
+    
+    const isAlatKerja = item.description?.toLowerCase() === "alat kerja";
     updateRow(idx, {
       partDescription: item.partName,
       partCode: item.partCode,
       unit: item.unit ?? "",
+      quantity: isAlatKerja ? 1 : 1,
       suggestions: [],
       showSuggestions: false,
+      isAlatKerja,
+      skipNextSearch: true,
     });
   };
 
@@ -418,14 +431,31 @@ export default function WarehouseBorrowRequestPage() {
                           <li key={item.id}>
                             <button
                               type="button"
-                              className="w-full text-left px-3 py-2 hover:bg-violet-50 transition-colors"
+                              className={`w-full text-left px-3 py-2 transition-colors ${item.isBorrowed ? "opacity-60 cursor-not-allowed bg-gray-50" : "hover:bg-violet-50"}`}
                               onMouseDown={(e) => e.preventDefault()}
-                              onClick={() => selectPartSuggestion(idx, item)}
+                              onClick={() => {
+                                if (!item.isBorrowed) selectPartSuggestion(idx, item);
+                              }}
+                              disabled={item.isBorrowed}
                             >
-                              <div className="text-sm font-semibold text-gray-800">{item.partName}</div>
-                              <div className="text-xs text-gray-500">
-                                {item.partCode}
-                                {item.unit ? <span className="ml-2 font-semibold text-emerald-600">Satuan: {item.unit}</span> : null}
+                              <div className="flex justify-between items-start">
+                                <div>
+                                  <div className="text-sm font-semibold text-gray-800 flex items-center gap-2">
+                                    {item.partName}
+                                    {item.description?.toLowerCase() === "alat kerja" && (
+                                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-700">Alat Kerja</span>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-gray-500">
+                                    {item.partCode}
+                                    {item.unit ? <span className="ml-2 font-semibold text-emerald-600">Satuan: {item.unit}</span> : null}
+                                  </div>
+                                </div>
+                                {item.isBorrowed && (
+                                  <div className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded border border-red-100 whitespace-nowrap ml-2">
+                                    Dipinjam: {item.activeBorrowerName || "Seseorang"}
+                                  </div>
+                                )}
                               </div>
                             </button>
                           </li>
@@ -450,11 +480,17 @@ export default function WarehouseBorrowRequestPage() {
                       <Input
                         type="number"
                         min={1}
-                        className="h-10 bg-white"
+                        className={`h-10 bg-white ${row.isAlatKerja ? 'bg-gray-100 text-gray-500' : ''}`}
                         value={row.quantity}
-                        onChange={(e) => updateRow(idx, { quantity: e.target.value })}
+                        onChange={(e) => {
+                          if (!row.isAlatKerja) updateRow(idx, { quantity: e.target.value });
+                        }}
+                        readOnly={row.isAlatKerja}
                         required
                       />
+                      {row.isAlatKerja && (
+                        <p className="text-[10px] text-amber-600 font-medium">Qty dikunci untuk Alat Kerja</p>
+                      )}
                     </div>
                     <div className="space-y-1.5">
                       <label className="text-xs font-semibold text-gray-600">Satuan</label>
