@@ -24,6 +24,10 @@ import {
   Clock,
   UploadCloud,
 } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
+import { Calendar as CustomCalendar } from "./ui/calendar";
+import { DatePicker } from "./ui/date-picker";
+import { SinglePeriodFilter, PeriodFilterValue } from "./ui/SinglePeriodFilter";
 import { useNavigate } from "react-router-dom";
 import { callRecordApi } from "../services/api";
 import {
@@ -61,6 +65,11 @@ interface QueryParams {
   sortDir: string;
 }
 
+const MONTHS_ID = [
+  "Januari", "Februari", "Maret", "April", "Mei", "Juni",
+  "Juli", "Agustus", "September", "Oktober", "November", "Desember"
+];
+
 const CallRecordsPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -69,6 +78,9 @@ const CallRecordsPage: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(
     new Date().toISOString().split("T")[0]
   );
+  
+  const [periodValue, setPeriodValue] = useState<PeriodFilterValue>({ type: "date", date: new Date() });
+
   const [startDate, setStartDate] = useState(
     new Date().toISOString().split("T")[0]
   );
@@ -104,6 +116,24 @@ const CallRecordsPage: React.FC = () => {
   const [filterHour, setFilterHour] = useState<"all" | number>("all");
   const [showDebug, setShowDebug] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+
+  // Calendar dot indicators: dates that have call record data
+  const [highlightedDates, setHighlightedDates] = useState<Date[]>([]);
+  const [calendarMonth, setCalendarMonth] = useState({ year: new Date().getFullYear(), month: new Date().getMonth() + 1 });
+
+  // Fetch highlighted dates when calendar month changes
+  useEffect(() => {
+    const fetchDatesWithData = async () => {
+      try {
+        const dateStrings = await callRecordApi.getDatesWithData(calendarMonth.year, calendarMonth.month);
+        const dates = dateStrings.map((ds: string) => new Date(ds + "T00:00:00"));
+        setHighlightedDates(dates);
+      } catch (e) {
+        console.error("Error fetching dates with data:", e);
+      }
+    };
+    fetchDatesWithData();
+  }, [calendarMonth.year, calendarMonth.month]);
 
   // Load user data and permissions on component mount
   useEffect(() => {
@@ -770,14 +800,40 @@ const CallRecordsPage: React.FC = () => {
               </p>
             </div>
             <div className="mt-4 lg:mt-0 flex flex-wrap gap-3">
-              <div className="flex items-center space-x-2 bg-blue-50 rounded-lg px-3 py-2">
-                <Calendar className="w-4 h-4 text-blue-600" />
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-transparent border-none focus:ring-0 text-sm font-medium text-blue-700"
-                />
+              <div className="flex items-center gap-2 bg-white p-1.5 rounded-2xl border border-gray-200 shadow-sm">
+                <button onClick={() => navigateDate(-1)} className="w-9 h-9 rounded-xl bg-white hover:bg-blue-50 flex items-center justify-center text-gray-500 hover:text-blue-600 active:scale-95 transition-all">
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                
+                <div className="flex flex-col items-center justify-center">
+                  <span className="text-[9px] font-extrabold text-[#2B6CB0] tracking-[0.2em] uppercase mb-0.5">{mobileMonth}</span>
+                  <SinglePeriodFilter
+                    value={periodValue}
+                    highlightedDates={highlightedDates}
+                    onMonthChange={(year, month) => setCalendarMonth({ year, month })}
+                    onChange={(val) => {
+                      setPeriodValue(val);
+                      if (val.type === "date") {
+                        const tzoffset = val.date.getTimezoneOffset() * 60000;
+                        const localISOTime = (new Date(val.date.getTime() - tzoffset)).toISOString().slice(0, 10);
+                        setSelectedDate(localISOTime);
+                      } else {
+                        const monthNum = val.month === "all" ? "01" : String(Number(val.month) + 1).padStart(2, "0");
+                        setSelectedDate(`${val.year}-${monthNum}-01`);
+                      }
+                    }}
+                    trigger={
+                      <button className="flex items-center gap-1.5 cursor-pointer group bg-transparent border-none outline-none">
+                        <span className="text-[17px] font-black text-[#1A202C] tracking-tight group-hover:text-[#2B6CB0] transition-colors">{mobileDay}</span>
+                        <Calendar className="w-3.5 h-3.5 text-[#A0AEC0] group-hover:text-[#2B6CB0] transition-colors" />
+                      </button>
+                    }
+                  />
+                </div>
+
+                <button onClick={() => navigateDate(1)} className="w-9 h-9 rounded-xl bg-white hover:bg-blue-50 flex items-center justify-center text-gray-500 hover:text-blue-600 active:scale-95 transition-all">
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Delete Button - HIDDEN UNTUK ROLE SELAIN 1 & 2 */}

@@ -364,6 +364,18 @@ export const authApi = {
 // ============================================
 
 export const callRecordApi = {
+  getDatesWithData: async (year: number, month: number): Promise<string[]> => {
+    try {
+      const response = await api.get(`/api/call-records/dates-with-data`, {
+        params: { year, month }
+      });
+      return response.data.data || [];
+    } catch (error: any) {
+      console.error("❌ Error fetching dates with data:", error);
+      return [];
+    }
+  },
+
   getDailySummary: async (date: string): Promise<DailySummary> => {
     try {
       console.log("📡 API Call: getDailySummary", { date });
