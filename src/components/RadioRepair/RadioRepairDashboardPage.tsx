@@ -122,7 +122,7 @@ export default function RadioRepairDashboardPage() {
   const canViewArchive = hasPermission("radio.repair.view.archive");
   const canDeletePermanent = hasPermission("radio.repair.delete.permanent");
   const canHandoverWh = canCreateTekToWarehouseHandover();
-  const canResetTestingData = hasPermission("delete.all-data");
+  const canResetTestingData = hasPermission("delete.all.radios.handover");
   const canPurge = hasPermission("radio.repair.purge");
 
   const statusOptions = useMemo(() => Object.values(STATUS_LABELS), []);
