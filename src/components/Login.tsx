@@ -20,10 +20,7 @@ import {
 } from 'lucide-react';
 import { testConnection, authApi } from '../services/api';
 import { CCTVMascot } from './CCTVMascot';
-import SoftAurora from './SoftAurora';
-import TsParticles, { initParticlesEngine } from '@tsparticles/react';
-import { loadSlim } from '@tsparticles/slim';
-import type { Engine } from '@tsparticles/engine';
+import { LoginBackground } from './LoginBackground';
 
 const Login: React.FC = () => {
   const location = useLocation();
@@ -44,14 +41,6 @@ const Login: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
 
   const [rememberMe, setRememberMe] = useState(false);
-
-  const [initNetwork, setInitNetwork] = useState(false);
-
-  useEffect(() => {
-    initParticlesEngine(async (engine: Engine) => {
-      await loadSlim(engine);
-    }).then(() => setInitNetwork(true));
-  }, []);
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -334,92 +323,8 @@ const Login: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#08182F] flex items-center justify-center p-4 py-12 overflow-x-hidden relative font-sans">
-      {/* Reference composition: static operations artwork, React Bits Aurora, then a connected data network. */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 bg-[#08182F]">
-        {/* Tower, city, and radio remain static. */}
-        <div
-          className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-          style={{ backgroundImage: "url('/bgweb.png')" }}
-        />
-
-        {/* React Bits Soft Aurora — dua titik cahaya: kanan-atas dan kiri-tengah */}
-        {/* Aurora kanan atas — lebih terang, dominan */}
-        <div
-          className="absolute inset-0 z-10 opacity-60 pointer-events-none"
-          style={{
-            maskImage: 'radial-gradient(ellipse 60% 55% at 80% 15%, #000 0%, rgba(0,0,0,0.7) 45%, transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 60% 55% at 80% 15%, #000 0%, rgba(0,0,0,0.7) 45%, transparent 100%)',
-          }}
-        >
-          <SoftAurora
-            speed={0.22}
-            scale={1.35}
-            brightness={1.0}
-            color1="#0EA5E9"
-            color2="#38BDF8"
-            noiseFrequency={1.5}
-            noiseAmplitude={0.55}
-            bandHeight={0.48}
-            bandSpread={0.72}
-            octaveDecay={0.2}
-            layerOffset={0.45}
-            colorSpeed={0.13}
-            mouseInfluence={0}
-          />
-        </div>
-
-        {/* Aurora kiri atas — lebih redup, secondary glow */}
-        <div
-          className="absolute inset-0 z-10 opacity-35 pointer-events-none"
-          style={{
-            maskImage: 'radial-gradient(ellipse 45% 40% at 18% 20%, #000 0%, rgba(0,0,0,0.6) 50%, transparent 100%)',
-            WebkitMaskImage: 'radial-gradient(ellipse 45% 40% at 18% 20%, #000 0%, rgba(0,0,0,0.6) 50%, transparent 100%)',
-          }}
-        >
-          <SoftAurora
-            speed={0.18}
-            scale={1.2}
-            brightness={0.7}
-            color1="#1D4ED8"
-            color2="#3B82F6"
-            noiseFrequency={1.2}
-            noiseAmplitude={0.4}
-            bandHeight={0.4}
-            bandSpread={0.6}
-            octaveDecay={0.25}
-            layerOffset={0.5}
-            colorSpeed={0.1}
-            mouseInfluence={0}
-          />
-        </div>
-
-        {/* Connected nodes match the mockup's radio-network motif. */}
-        {initNetwork && (
-          <TsParticles
-            id="mkn-login-network"
-            className="absolute inset-0 z-20 pointer-events-auto"
-            options={{
-              fullScreen: { enable: false },
-              fpsLimit: 45,
-              interactivity: {
-                events: { onHover: { enable: true, mode: 'grab' } },
-                modes: { grab: { distance: 135, links: { opacity: 0.32 } } },
-              },
-              particles: {
-                color: { value: ['#38BDF8', '#63D8FF', '#2B6CB0'] },
-                links: { color: '#38BDF8', distance: 150, enable: true, opacity: 0.19, width: 1 },
-                move: { enable: true, speed: 0.24, outModes: { default: 'bounce' } },
-                number: { density: { enable: true, width: 1000, height: 800 }, value: 44 },
-                opacity: { value: { min: 0.22, max: 0.7 } },
-                size: { value: { min: 1, max: 2.4 } },
-              },
-              detectRetina: true,
-            }}
-          />
-        )}
-
-        <div className="absolute inset-0 z-30 bg-[linear-gradient(180deg,rgba(8,24,47,0.12)_0%,rgba(8,24,47,0.02)_42%,rgba(8,24,47,0.34)_100%)]" />
-      </div>
+      {/* Memoized background: WebGL Aurora + Particles */}
+      <LoginBackground />
 
       <div className={`w-full ${isLoginMode ? 'max-w-lg' : 'max-w-2xl'} z-10 relative my-8 transition-all duration-500`}>
 

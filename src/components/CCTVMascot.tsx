@@ -1,5 +1,5 @@
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect, useRef, useCallback } from 'react';
 
 interface CCTVMascotProps {
   isChecking: boolean;
@@ -21,7 +21,7 @@ type AnnoyedExpression =
 const BLUE = '#3B82F6'; // Primary eye/mouth blue
 const RED = '#EF4444';  // Anger effect red
 
-export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 'full' }: CCTVMascotProps) {
+export const CCTVMascot = React.memo(function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 'full' }: CCTVMascotProps) {
 
   const [isSmiling, setIsSmiling] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
@@ -31,6 +31,29 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
   const [hoverCount, setHoverCount] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const hoverTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Preload expression & effect PNG assets for instant display on hover
+  useEffect(() => {
+    const assetsToPreload = [
+      '/maskot/mascot-expressions/marah.png',
+      '/maskot/mascot-expressions/bingung.png',
+      '/maskot/mascot-expressions/matakecewa.png',
+      '/maskot/mascot-expressions/kesel.png',
+      '/maskot/mascot-expressions/senang.png',
+      '/maskot/mascot-effects/effect-marah2.png',
+      '/maskot/mascot-effects/effect-marah.png',
+      '/maskot/mascot-effects/fustasi2.png',
+      '/maskot/mascot-effects/fustasi.png',
+      '/maskot/mascot-effects/effect-tanda-tanya.png',
+      '/maskot/mascot-effects/effect-tanda-seru.png',
+      '/maskot/mascot-effects/effect-garis-stress.png',
+      '/maskot/mascot-effects/effect-berkilau.png',
+    ];
+    assetsToPreload.forEach(src => {
+      const img = new Image();
+      img.src = src;
+    });
+  }, []);
 
   useEffect(() => {
     const isIdle = !isChecking && !isClosed && status === 'idle' && !isHovered;
@@ -101,22 +124,22 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
   // ─── STANDARD EYES (non-hover) ───
   const getEyeAnimation = (side: 'left' | 'right') => {
     if (status === 'fail') {
-      return { height: '3px', width: '14px', backgroundColor: '#ef4444', borderRadius: '10px', rotate: side === 'left' ? -15 : 15, transition: { duration: 0.3 } };
+      return { height: '4px', width: '16px', backgroundColor: '#ef4444', borderRadius: '10px', rotate: side === 'left' ? -15 : 15, transition: { duration: 0.3 } };
     }
     if (status === 'success') {
-      return { height: '10px', width: '14px', backgroundColor: '#10b981', borderRadius: '50% 50% 20% 20%', transition: { type: "spring" as const } };
+      return { height: '12px', width: '16px', backgroundColor: '#10b981', borderRadius: '50% 50% 20% 20%', transition: { type: "spring" as const } };
     }
     if (isClosed) {
-      return { height: '2px', width: '14px', backgroundColor: '#60a5fa', borderRadius: '2px 2px 10px 10px', transition: { duration: 0.3 } };
+      return { height: '3px', width: '16px', backgroundColor: '#60a5fa', borderRadius: '2px 2px 10px 10px', transition: { duration: 0.3 } };
     }
     if (isSmiling) {
-      return { height: '8px', width: '14px', backgroundColor: 'transparent', borderStyle: 'solid', borderWidth: '3px 3px 0 3px', borderColor: '#38bdf8', borderRadius: '14px 14px 0px 0px', transition: { duration: 0.2 } };
+      return { height: '10px', width: '16px', backgroundColor: 'transparent', borderStyle: 'solid', borderWidth: '3.5px 3.5px 0 3.5px', borderColor: '#38bdf8', borderRadius: '16px 16px 0px 0px', transition: { duration: 0.2 } };
     }
     // DEFAULT/IDLE: Mata biru bulat dengan efek berkedip natural
     return { 
-      height: ['12px', '2px', '12px'], 
-      width: '12px', 
-      scaleY: [1, 0.1, 1],  // Animasi kelopak mata menutup
+      height: ['14px', '2px', '14px'], 
+      width: '14px', 
+      scaleY: [1, 0.1, 1],
       backgroundColor: BLUE, 
       borderWidth: '0px', 
       borderColor: 'transparent', 
@@ -133,98 +156,82 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
   // Matches the asset sheet exactly
   // ═══════════════════════════════════════════════
   const renderAnnoyedFace = () => {
-    // All faces rendered inside a 50x32 viewBox
-    // Eyes occupy top portion, mouth at bottom
     switch (annoyedExpr) {
 
       case 'terganggu':
-        // MARAH: Menggunakan asset PNG marah.png (mata + mulut marah)
         return (
-          <div className="relative flex items-center justify-center mt-2">
+          <div className="relative flex items-center justify-center">
             <img 
               src="/maskot/mascot-expressions/marah.png" 
               alt="ekspresi marah"
-              className="w-[72px] h-auto"
+              className="w-[68px] h-auto object-contain drop-shadow-sm"
             />
           </div>
         );
 
       case 'tidakSabar':
-        // MENGANTUK/TIDAK SABAR EYES: mata setengah tertutup horizontal (— —)
-        // TANPA MULUT
         return (
-          <svg width="50" height="32" viewBox="0 0 50 32" fill="none">
-            {/* Left eye: garis horizontal tebal (mata setengah tertutup) */}
-            <line x1="6" y1="11" x2="20" y2="11" stroke={BLUE} strokeWidth="4" strokeLinecap="round" />
-            {/* Right eye: garis horizontal tebal */}
-            <line x1="30" y1="11" x2="44" y2="11" stroke={BLUE} strokeWidth="4" strokeLinecap="round" />
+          <svg width="48" height="30" viewBox="0 0 50 32" fill="none">
+            <line x1="6" y1="12" x2="20" y2="12" stroke={BLUE} strokeWidth="3.5" strokeLinecap="round" />
+            <line x1="30" y1="12" x2="44" y2="12" stroke={BLUE} strokeWidth="3.5" strokeLinecap="round" />
           </svg>
         );
 
       case 'bingung':
-        // BINGUNG: Menggunakan asset PNG bingung.png
         return (
-          <div className="relative flex items-center justify-center mt-2">
+          <div className="relative flex items-center justify-center">
             <img 
               src="/maskot/mascot-expressions/bingung.png" 
               alt="ekspresi bingung"
-              className="w-[72px] h-auto"
+              className="w-[68px] h-auto object-contain drop-shadow-sm"
             />
           </div>
         );
 
       case 'kecewa':
-        // FULL FACE dari PNG asset: matakecewa.png (mata + mulut sudah jadi satu)
         return (
-          <div className="relative flex items-center justify-center mt-2">
+          <div className="relative flex items-center justify-center">
             <img 
               src="/maskot/mascot-expressions/matakecewa.png" 
               alt="ekspresi kecewa"
-              className="w-[72px] h-auto"
+              className="w-[68px] h-auto object-contain drop-shadow-sm"
             />
           </div>
         );
 
       case 'frustrasi':
-        // MATA FRUSTRASI: mata dipicingkan kuat dengan sudut tajam (> <)
-        // MARAH MOUTH: zigzag mouth menunjukkan frustrasi
         return (
           <svg width="50" height="34" viewBox="0 0 50 34" fill="none">
-            {/* Left eye: > chevron dengan stroke lebih tebal dan filled area */}
-            <path d="M 6,8 L 16,12 L 6,16 Z" fill={RED} opacity="0.8" />
-            <line x1="6" y1="8" x2="16" y2="12" stroke={RED} strokeWidth="3.5" strokeLinecap="round" />
-            <line x1="16" y1="12" x2="6" y2="16" stroke={RED} strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M 6,8 L 16,12 L 6,16 Z" fill={RED} opacity="0.9" />
+            <line x1="6" y1="8" x2="16" y2="12" stroke={RED} strokeWidth="3.2" strokeLinecap="round" />
+            <line x1="16" y1="12" x2="6" y2="16" stroke={RED} strokeWidth="3.2" strokeLinecap="round" />
             
-            {/* Right eye: < chevron dengan filled area */}
-            <path d="M 44,8 L 34,12 L 44,16 Z" fill={RED} opacity="0.8" />
-            <line x1="44" y1="8" x2="34" y2="12" stroke={RED} strokeWidth="3.5" strokeLinecap="round" />
-            <line x1="34" y1="12" x2="44" y2="16" stroke={RED} strokeWidth="3.5" strokeLinecap="round" />
+            <path d="M 44,8 L 34,12 L 44,16 Z" fill={RED} opacity="0.9" />
+            <line x1="44" y1="8" x2="34" y2="12" stroke={RED} strokeWidth="3.2" strokeLinecap="round" />
+            <line x1="34" y1="12" x2="44" y2="16" stroke={RED} strokeWidth="3.2" strokeLinecap="round" />
             
-            {/* Marah zigzag mouth: lebih tajam */}
             <path d="M16 27 L20 24 L25 28 L30 24 L34 27" stroke={RED} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" fill="none" />
           </svg>
         );
 
       case 'sangatKesal':
-        // KESEL: Menggunakan asset PNG kesel (sangat marah)
         return (
-          <div className="relative flex items-center justify-center mt-2">
+          <div className="relative flex items-center justify-center">
             <img 
               src="/maskot/mascot-expressions/kesel.png" 
               alt="ekspresi sangat kesel"
-              className="w-[72px] h-auto"
+              className="w-[68px] h-auto object-contain drop-shadow-sm"
             />
           </div>
         );
 
       case 'senang':
-        // SENANG: Menggunakan asset PNG senang.png (mata + mulut senang)
         return (
-          <div className="relative flex items-center justify-center mt-2">
+          <div className="relative flex items-center justify-center">
             <img 
               src="/maskot/mascot-expressions/senang.png" 
               alt="ekspresi senang"
-              className="w-[72px] h-auto"
+              className="w-[68px] h-auto object-contain drop-shadow-sm"
             />
           </div>
         );
@@ -242,110 +249,112 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
     switch (annoyedExpr) {
 
       case 'terganggu':
-        // 💢 MARAH EFFECT: Menggunakan effect-marah2.png (simbol marah manga)
+        // 💢 MARAH EFFECT: simbol marah manga
         return (
           <>
             <motion.img
               src="/maskot/mascot-effects/effect-marah2.png"
               alt="effect marah"
-              initial={{ opacity: 0, scale: 0 }} 
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }}
+              initial={{ opacity: 0, scale: 0.8 }} 
+              animate={{ opacity: 1, scale: 1, y: [0, -3, 0] }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 2, ease: "easeInOut" } }}
               className="absolute -top-8 -left-7 z-40 w-8 h-8 drop-shadow-md"
             />
             <motion.img
               src="/maskot/mascot-effects/effect-marah.png"
               alt="effect marah"
-              initial={{ opacity: 0, scale: 0 }} 
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0 }} 
-              transition={{ delay: 0.12 }}
-              className="absolute -top-6 -right-6 z-40 w-7 h-7 drop-shadow-md"
+              initial={{ opacity: 0, scale: 0.8 }} 
+              animate={{ opacity: 1, scale: 1, y: [0, -3, 0] }}
+              exit={{ opacity: 0, scale: 0.8 }} 
+              transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 2, delay: 0.2, ease: "easeInOut" } }}
+              className="absolute -top-6 -right-6 z-40 w-8 h-8 drop-shadow-md"
             />
           </>
         );
 
       case 'tidakSabar':
-        // ⚙️ FRUSTRASI EFFECT — menggunakan effect-fustasi2.png dan effect-fustasi.png
+        // ⚙️ FRUSTRASI EFFECT
         return (
           <>
             <motion.img
               src="/maskot/mascot-effects/fustasi2.png"
               alt="effect frustrasi"
-              initial={{ opacity: 0, rotate: 0 }}
-              animate={{ opacity: [0.6, 1, 0.6], rotate: [0, 5, -5, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{ repeat: Infinity, duration: 1.2 }}
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1, y: [0, -3, 0] }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 2, ease: "easeInOut" } }}
               className="absolute -top-6 -right-6 z-40 w-8 h-8 drop-shadow-md"
             />
             <motion.img
               src="/maskot/mascot-effects/fustasi.png"
               alt="effect frustrasi"
-              initial={{ opacity: 0, rotate: 0 }}
-              animate={{ opacity: [0.6, 1, 0.6], rotate: [0, -5, 5, 0] }}
-              exit={{ opacity: 0 }}
-              transition={{ repeat: Infinity, duration: 1.2, delay: 0.3 }}
-              className="absolute -top-7 -left-5 z-40 w-7 h-7 drop-shadow-md"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1, y: [0, -3, 0] }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 2, delay: 0.2, ease: "easeInOut" } }}
+              className="absolute -top-7 -left-5 z-40 w-8 h-8 drop-shadow-md"
             />
           </>
         );
 
       case 'bingung':
-        // ? TANDA TANYA — menggunakan effect-tanda-tanya.png
+        // ? TANDA TANYA
         return (
           <motion.img
             src="/maskot/mascot-effects/effect-tanda-tanya.png"
             alt="effect tanda tanya"
-            initial={{ opacity: 0, y: 5 }}
-            animate={{ opacity: 1, y: [0, -5, 0] }}
-            exit={{ opacity: 0 }}
-            transition={{ y: { repeat: Infinity, duration: 1.5, ease: "easeInOut" } }}
-            className="absolute -top-8 -right-5 z-40 w-7 h-9 drop-shadow-md"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1, y: [0, -4, 0] }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 1.8, ease: "easeInOut" } }}
+            className="absolute -top-9 -right-5 z-40 w-8 h-9 drop-shadow-md object-contain"
           />
         );
 
       case 'kecewa':
-        // ! TANDA SERU — menggunakan effect-tanda-seru.png
+        // ! TANDA SERU
         return (
           <motion.img
             src="/maskot/mascot-effects/effect-tanda-seru.png"
             alt="effect tanda seru"
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: [1, 1.2, 1] }}
-            exit={{ opacity: 0, scale: 0 }}
-            transition={{ scale: { repeat: Infinity, duration: 1 } }}
-            className="absolute -top-8 -right-3 z-40 w-6 h-9 drop-shadow-md"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1, y: [0, -4, 0] }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 1.8, ease: "easeInOut" } }}
+            className="absolute -top-9 -right-4 z-40 w-7 h-9 drop-shadow-md object-contain"
           />
         );
 
       case 'frustrasi':
-        // GARIS STRESS — menggunakan effect-garis-stress.png di kedua sisi
+        // GARIS STRESS
         return (
           <>
             <motion.img
               src="/maskot/mascot-effects/effect-garis-stress.png"
               alt="effect stress"
-              initial={{ opacity: 0, x: 4 }}
-              animate={{ opacity: [0.5, 1, 0.5], x: [2, 0, 2] }}
-              exit={{ opacity: 0 }}
-              transition={{ repeat: Infinity, duration: 0.6 }}
-              className="absolute top-1/2 -translate-y-1/2 -left-8 z-40 w-7 h-10 drop-shadow-sm"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-1/2 -left-8 z-40 w-7 h-10 drop-shadow-sm"
               style={{ transform: 'scaleX(-1) translateY(-50%)' }}
             />
             <motion.img
               src="/maskot/mascot-effects/effect-garis-stress.png"
               alt="effect stress"
-              initial={{ opacity: 0, x: -4 }}
-              animate={{ opacity: [0.5, 1, 0.5], x: [-2, 0, -2] }}
-              exit={{ opacity: 0 }}
-              transition={{ repeat: Infinity, duration: 0.6, delay: 0.1 }}
-              className="absolute top-1/2 -translate-y-1/2 -right-8 z-40 w-7 h-10 drop-shadow-sm"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ duration: 0.15 }}
+              className="absolute top-1/2 -right-8 z-40 w-7 h-10 drop-shadow-sm"
+              style={{ transform: 'translateY(-50%)' }}
             />
           </>
         );
 
       case 'sangatKesal':
-        // 💨 UAP KESAL — steam cloud puffs floating up from both sides
+        // 💨 UAP KESAL
         return (
           <>
             <motion.svg
@@ -374,35 +383,26 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
         );
 
       case 'senang':
-        // ✨ SPARKLES — menggunakan effect-berkilau.png di kedua sisi
+        // ✨ SPARKLES — ukuran stabil konsisten
         return (
           <>
             <motion.img
               src="/maskot/mascot-effects/effect-berkilau.png"
               alt="effect berkilau"
-              initial={{ opacity: 0, scale: 0, rotate: 0 }}
-              animate={{ opacity: [0, 1, 0], scale: [0.8, 1.2, 0.8], rotate: [0, 15, 0] }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={{ repeat: Infinity, duration: 1.5 }}
-              className="absolute -top-8 -left-7 z-40 w-10 h-10 drop-shadow-md"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1, y: [0, -3, 0] }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 2, ease: "easeInOut" } }}
+              className="absolute -top-8 -left-7 z-40 w-9 h-9 drop-shadow-md"
             />
             <motion.img
               src="/maskot/mascot-effects/effect-berkilau.png"
               alt="effect berkilau"
-              initial={{ opacity: 0, scale: 0, rotate: 0 }}
-              animate={{ opacity: [0, 1, 0], scale: [0.8, 1.2, 0.8], rotate: [0, -15, 0] }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={{ repeat: Infinity, duration: 1.5, delay: 0.3 }}
-              className="absolute -top-6 -right-6 z-40 w-9 h-9 drop-shadow-md"
-            />
-            <motion.img
-              src="/maskot/mascot-effects/effect-berkilau.png"
-              alt="effect berkilau"
-              initial={{ opacity: 0, scale: 0, rotate: 0 }}
-              animate={{ opacity: [0, 1, 0], scale: [0.7, 1, 0.7], rotate: [0, 10, 0] }}
-              exit={{ opacity: 0, scale: 0 }}
-              transition={{ repeat: Infinity, duration: 1.5, delay: 0.6 }}
-              className="absolute -bottom-2 -right-8 z-40 w-7 h-7 drop-shadow-md"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1, y: [0, -3, 0] }}
+              exit={{ opacity: 0, scale: 0.8 }}
+              transition={{ opacity: { duration: 0.15 }, scale: { duration: 0.15 }, y: { repeat: Infinity, duration: 2, delay: 0.3, ease: "easeInOut" } }}
+              className="absolute -top-6 -right-6 z-40 w-8 h-8 drop-shadow-md"
             />
           </>
         );
@@ -469,26 +469,26 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
               <div className="absolute top-1 right-2 w-8 h-2.5 bg-white/10 rounded-full rotate-12 blur-[1px]" />
 
               {/* FACE: Eyes + Mouth */}
-              <AnimatePresence mode="wait">
+              <AnimatePresence>
                 {isAnnoyedMode ? (
                   <motion.div
                     key={`annoyed-${annoyedExpr}`}
-                    initial={{ opacity: 0, scale: 0.7 }}
+                    initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.7 }}
-                    transition={{ duration: 0.2, type: "spring", stiffness: 400, damping: 25 }}
-                    className="relative z-10 flex items-center justify-center"
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.1, ease: "easeOut" }}
+                    className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none"
                   >
                     {renderAnnoyedFace()}
                   </motion.div>
                 ) : (
                   <motion.div
                     key="normal"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.15 }}
-                    className="flex items-center justify-center gap-2.5 relative z-10"
+                    initial={{ opacity: 0, scale: 0.9 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    transition={{ duration: 0.1, ease: "easeOut" }}
+                    className="absolute inset-0 flex items-center justify-center gap-2.5 z-10 pointer-events-none"
                   >
                     <motion.div animate={getEyeAnimation('left')} style={{ originX: 0.5, originY: 0.5 }} />
                     <motion.div animate={getEyeAnimation('right')} style={{ originX: 0.5, originY: 0.5 }} />
@@ -510,4 +510,4 @@ export function CCTVMascot({ isChecking, numLook, isClosed, status, fieldSpan = 
       </motion.div>
     </div>
   );
-}
+});
