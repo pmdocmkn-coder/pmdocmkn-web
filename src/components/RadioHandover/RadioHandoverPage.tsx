@@ -26,6 +26,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import HelpdeskToTechnicianForm from "./HelpdeskToTechnicianForm";
+import HelpdeskToWarehouseForm from "./HelpdeskToWarehouseForm";
 import HandoverStatusBadge from "./HandoverStatusBadge";
 import HandoverTagPreview from "./HandoverTagPreview";
 import HandoverTimeline from "./HandoverTimeline";
@@ -220,7 +221,12 @@ function HandoverHistoryTable({
                         {h.helpdeskTicketNumber ?? "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
+                          {h.isScrap && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-800 text-[10px] font-bold rounded">Scrap</span>
+                          )}
+                        </div>
                         {h.equipmentName && <div className="text-xs text-gray-500">{h.equipmentName}</div>}
                       </td>
                       <td className="px-4 py-3">
@@ -335,7 +341,12 @@ function HandoverHistoryTable({
                   <div key={h.id} className="p-4 hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => onOpenDetail(h.id)}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                          {h.isScrap && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-800 text-[10px] font-bold rounded">Scrap</span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Unit: {h.unitNumber || "-"} • Alat: {h.equipmentName || "-"}
                         </p>
@@ -424,9 +435,12 @@ export default function RadioHandoverPage() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [outgoing, setOutgoing] = useState<RadioHandoverList[]>([]);
+  const [outgoingWh, setOutgoingWh] = useState<RadioHandoverList[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<"hd-tek" | "hd-wh">("hd-tek");
 
   const [loadingOutgoing, setLoadingOutgoing] = useState(true);
+  const [loadingOutgoingWh, setLoadingOutgoingWh] = useState(false);
 
   const [detail, setDetail] = useState<RadioHandoverDetail | null>(null);
   const [detailJob, setDetailJob] = useState<RadioRepairJobDetail | null>(null);
@@ -438,6 +452,7 @@ export default function RadioHandoverPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showCreateHdWh, setShowCreateHdWh] = useState(false);
 
   const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
   const [signRowDetail, setSignRowDetail] = useState<RadioHandoverDetail | null>(null);
@@ -468,7 +483,10 @@ export default function RadioHandoverPage() {
 
 
   const load = useCallback((silent = false) => {
-    if (!silent) setLoadingOutgoing(true);
+    if (!silent) {
+      setLoadingOutgoing(true);
+      setLoadingOutgoingWh(true);
+    }
 
     radioHandoverApi
       .getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToTechnician" })
@@ -479,6 +497,14 @@ export default function RadioHandoverPage() {
       })
       .catch(() => setOutgoing([]))
       .finally(() => { if (!silent) setLoadingOutgoing(false); });
+      
+    radioHandoverApi
+      .getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToWarehouse" })
+      .then((r) => {
+        setOutgoingWh(r.data ?? []);
+      })
+      .catch(() => setOutgoingWh([]))
+      .finally(() => { if (!silent) setLoadingOutgoingWh(false); });
   }, []);
 
   useLiveRefresh("RadioHandover", () => {
@@ -693,22 +719,60 @@ export default function RadioHandoverPage() {
         </Card>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-gray-200 hide-scrollbar">
+        <button
+          onClick={() => setActiveTab("hd-tek")}
+          className={`px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+            activeTab === "hd-tek"
+              ? "border-violet-600 text-violet-700"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          Helpdesk → Teknisi
+        </button>
+        <button
+          onClick={() => setActiveTab("hd-wh")}
+          className={`px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+            activeTab === "hd-wh"
+              ? "border-violet-600 text-violet-700"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          Helpdesk → Warehouse (Scrap)
+        </button>
+      </div>
+
       {/* History */}
       <section className="space-y-4">
         <h2 className="text-lg font-semibold text-gray-900">Histori serah terima</h2>
-        <HandoverHistoryTable
-          items={outgoing}
-          loading={loadingOutgoing}
-          flowLabel="Helpdesk → Teknisi"
-          emptyMessage="Belum ada serah terima ke teknisi"
-          onOpenDetail={openDetail}
-          onOpenGallery={openGallery}
-          onOpenEdit={openEdit}
-          onSoftDelete={softDelete}
-          onSignRow={setSignRow}
-          canEdit={isHd}
-          canDelete={canDelete}
-        />
+        {activeTab === "hd-tek" ? (
+          <HandoverHistoryTable
+            items={outgoing}
+            loading={loadingOutgoing}
+            flowLabel="Helpdesk → Teknisi"
+            emptyMessage="Belum ada serah terima ke teknisi"
+            onOpenDetail={openDetail}
+            onOpenGallery={openGallery}
+            onOpenEdit={openEdit}
+            onSoftDelete={softDelete}
+            onSignRow={setSignRow}
+            canEdit={isHd}
+            canDelete={canDelete}
+          />
+        ) : (
+          <HandoverHistoryTable
+            items={outgoingWh}
+            loading={loadingOutgoingWh}
+            flowLabel="Helpdesk → Warehouse"
+            emptyMessage="Belum ada serah terima ke warehouse"
+            onOpenDetail={openDetail}
+            onOpenGallery={openGallery}
+            onSoftDelete={softDelete}
+            onSignRow={setSignRow}
+            canDelete={canDelete}
+          />
+        )}
       </section>
 
       {/* ── Mobile FAB ── */}
@@ -741,6 +805,33 @@ export default function RadioHandoverPage() {
               load();
             }}
             onCancel={() => setShowCreate(false)}
+          />
+        </ResponsiveModal>
+      )}
+
+      {/* HD -> WH create dialog */}
+      {showCreateHdWh && detailJob && (
+        <ResponsiveModal
+          open={showCreateHdWh}
+          onOpenChange={setShowCreateHdWh}
+          bottomSheetSize="xl"
+          desktopClassName="max-w-2xl"
+          title={
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="w-5 h-5 text-amber-600" />
+              Serah Terima Scrap (Helpdesk → Warehouse)
+            </div>
+          }
+        >
+          <HelpdeskToWarehouseForm
+            job={detailJob}
+            onSuccess={() => {
+              setShowCreateHdWh(false);
+              setDetail(null);
+              setDetailJob(null);
+              load();
+            }}
+            onCancel={() => setShowCreateHdWh(false)}
           />
         </ResponsiveModal>
       )}
@@ -882,7 +973,10 @@ export default function RadioHandoverPage() {
         {detail && !detailLoading && (
           <div className="space-y-5 text-sm">
             {detailJob?.handovers && detailJob.handovers.length > 0 && (
-              <HandoverTimeline handovers={detailJob.handovers} />
+              <HandoverTimeline 
+                handovers={detailJob.handovers} 
+                isScrap={detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap" || detailJob.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")} 
+              />
             )}
             <HandoverTagPreview detail={detail} />
 
@@ -912,6 +1006,51 @@ export default function RadioHandoverPage() {
                 <span className="font-medium text-gray-700">Catatan: </span>
                 {detail.remarks}
               </p>
+            )}
+
+            {/* Tombol Serah ke Warehouse untuk Scrap */}
+            {isHd && detailJob && detailJob.status === "ReturnedToHelpdesk" && detailJob.pendingHandoverType !== "HelpdeskToWarehouse" && !detailJob.isDeleted && (
+              <div className="pt-4 border-t border-gray-100 flex justify-end">
+                <button
+                  type="button"
+                  className="px-4 py-2.5 bg-amber-600 text-white rounded-lg font-medium shadow-sm hover:bg-amber-700 transition-colors flex items-center gap-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setShowCreateHdWh(true);
+                  }}
+                >
+                  <ArrowUpRight className="w-4 h-4" />
+                  Serah Radio Scrap ke Warehouse
+                </button>
+              </div>
+            )}
+
+            {/* Scrap Details */}
+            {detailJob && (detailJob.damageDescription === "Scrap" || detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap") && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-3 mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-red-600" />
+                  <h4 className="font-bold text-red-900 text-sm">Informasi Scrap</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Keluhan / Kerusakan</p>
+                    <p className="mt-0.5 text-red-950">{detailJob.damageDescription || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Hasil Pengecekan Teknisi</p>
+                    <p className="mt-0.5 text-red-950 font-medium">{detailJob.repairDataDescription || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Kondisi Fisik</p>
+                    <p className="mt-0.5 text-red-950">{detailJob.physicalCondition || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Kondisi Display</p>
+                    <p className="mt-0.5 text-red-950">{detailJob.displayCondition || "—"}</p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {(() => {

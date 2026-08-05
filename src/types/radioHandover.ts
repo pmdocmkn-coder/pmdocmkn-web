@@ -1,6 +1,6 @@
 import type { EquipmentTagType, GreenTagFields } from "./equipmentTag";
 
-export type RadioHandoverType = "HelpdeskToTechnician" | "TechnicianToWarehouse" | "WarehouseToHelpdesk";
+export type RadioHandoverType = "HelpdeskToTechnician" | "TechnicianToWarehouse" | "WarehouseToHelpdesk" | "TechnicianToHelpdesk" | "HelpdeskToWarehouse";
 
 export type { EquipmentTagType, GreenTagFields };
 
@@ -180,6 +180,7 @@ export interface RadioHandoverList {
 
   isPartial?: boolean;
   containsMainRadioUnit?: boolean;
+  isScrap?: boolean;
 }
 
 

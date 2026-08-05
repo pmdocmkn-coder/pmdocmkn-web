@@ -19,12 +19,6 @@ export type HandoverTimelineItem = {
   accessories?: string[];
 };
 
-const STEPS: { type: string; label: string; short: string }[] = [
-  { type: "HelpdeskToTechnician", label: "Helpdesk → Teknisi", short: "HD → Tek" },
-  { type: "TechnicianToWarehouse", label: "Teknisi → Warehouse", short: "Tek → WH" },
-  { type: "WarehouseToHelpdesk", label: "Warehouse → Helpdesk", short: "WH → HD" },
-];
-
 function tagBadge(type?: string) {
   if (type === "Good") {
     return (
@@ -45,9 +39,21 @@ function tagBadge(type?: string) {
 type Props = {
   handovers: HandoverTimelineItem[];
   compact?: boolean;
+  isScrap?: boolean;
 };
 
-export default function HandoverTimeline({ handovers, compact }: Props) {
+export default function HandoverTimeline({ handovers, compact, isScrap }: Props) {
+  const STEPS = isScrap 
+    ? [
+        { type: "HelpdeskToTechnician", label: "Helpdesk → Teknisi", short: "HD → Tek" },
+        { type: "TechnicianToHelpdesk", label: "Teknisi → Helpdesk (Scrap)", short: "Tek → HD" },
+        { type: "HelpdeskToWarehouse", label: "Helpdesk → Warehouse", short: "HD → WH" },
+      ]
+    : [
+        { type: "HelpdeskToTechnician", label: "Helpdesk → Teknisi", short: "HD → Tek" },
+        { type: "TechnicianToWarehouse", label: "Teknisi → Warehouse", short: "Tek → WH" },
+        { type: "WarehouseToHelpdesk", label: "Warehouse → Helpdesk", short: "WH → HD" },
+      ];
   const byType = new Map(handovers.map((h) => [h.handoverType, h]));
 
   return (

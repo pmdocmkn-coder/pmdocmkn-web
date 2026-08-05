@@ -2,7 +2,18 @@ import { Fragment, useState, useRef, useEffect } from "react";
 
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse, Wrench } from "lucide-react";
+import { 
+  Eye, 
+  Pencil, 
+  RotateCcw, 
+  Trash2, 
+  ChevronDown, 
+  Warehouse, 
+  Wrench,
+  AlertTriangle,
+  FileCheck,
+  MonitorSmartphone
+} from "lucide-react";
 import type { RadioRepairJobList, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import { LazyPhotoThumb } from "../RadioHandover/LazyPhotoThumb";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
@@ -284,14 +295,25 @@ export default function RadioRepairGroupedTable({
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && (
+                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && (
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
-                              className="inline-flex items-center justify-center h-8 px-3 border border-violet-600 rounded-xl text-white bg-violet-600 text-xs font-semibold shrink-0 transition-colors shadow-sm"
+                              className={`inline-flex items-center justify-center h-8 px-3 border rounded-xl text-white text-xs font-semibold shrink-0 transition-colors shadow-sm ${
+                                j.status === "Scrapped" ? "bg-red-600 border-red-600" : "bg-violet-600 border-violet-600"
+                              }`}
                             >
-                              <Warehouse className="w-3.5 h-3.5 mr-1" />
-                              Ke WH
+                              {j.status === "Scrapped" ? (
+                                <>
+                                  <MonitorSmartphone className="w-3.5 h-3.5 mr-1" />
+                                  Ke HD
+                                </>
+                              ) : (
+                                <>
+                                  <Warehouse className="w-3.5 h-3.5 mr-1" />
+                                  Ke WH
+                                </>
+                              )}
                             </button>
                           )}
 
@@ -483,8 +505,17 @@ function MobileQuickActionDropdown({
               }}
               className="w-full text-left px-3 py-3 text-[14px] font-medium text-[#2B6CB0] hover:bg-[#EBF4FF] rounded-[10px] transition-colors flex items-center gap-2 border-t border-[#E2E8F0] mt-1 pt-3"
             >
-              <Warehouse className="w-4 h-4" />
-              Serah ke WH
+              {job.status === "Scrapped" ? (
+                <>
+                  <MonitorSmartphone className="w-4 h-4" />
+                  Serah ke HD
+                </>
+              ) : (
+                <>
+                  <Warehouse className="w-4 h-4" />
+                  Serah ke WH
+                </>
+              )}
             </button>
           )}
 
@@ -563,7 +594,7 @@ function RadioRepairRow({
   const nextStatuses = !locked && !showArchive
     ? allowedNextStatuses(j.status as RadioRepairJobStatus)
     : [];
-  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && !j.isDeleted && !showArchive;
+  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && !j.isDeleted && !showArchive;
 
   return (
     <tr className={`border-t border-gray-100 hover:bg-violet-50/40 ${j.isDeleted ? "opacity-60" : ""}`}>
@@ -627,15 +658,25 @@ function RadioRepairRow({
       </td>
       <td className="px-3 py-2.5">
         <div className="flex justify-end items-center gap-1">
-          {/* Shortcut serah terima ke warehouse */}
+          {/* Shortcut serah terima ke warehouse / helpdesk */}
           {showWhShortcut && (
             <button
               type="button"
-              title="Serah terima ke Warehouse"
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 whitespace-nowrap"
+              title={j.status === "Scrapped" ? "Serah terima ke Helpdesk" : "Serah terima ke Warehouse"}
+              className={`flex items-center gap-1 px-2 py-1 text-xs text-white rounded-lg whitespace-nowrap ${
+                j.status === "Scrapped" ? "bg-red-600 hover:bg-red-700" : "bg-violet-600 hover:bg-violet-700"
+              }`}
               onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
             >
-              <Warehouse className="w-3 h-3" /> Ke WH
+              {j.status === "Scrapped" ? (
+                <>
+                  <MonitorSmartphone className="w-3 h-3" /> Ke HD
+                </>
+              ) : (
+                <>
+                  <Warehouse className="w-3 h-3" /> Ke WH
+                </>
+              )}
             </button>
           )}
 

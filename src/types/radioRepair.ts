@@ -146,6 +146,7 @@ export interface RadioRepairJobDetail extends RadioRepairJobList {
     equipmentTagType?: string;
     handedOverByName: string;
     receivedByName: string;
+    receivedByUserId: number;
     status?: string;
     hasRadioPhoto: boolean;
     hasHandedOverSignature: boolean;

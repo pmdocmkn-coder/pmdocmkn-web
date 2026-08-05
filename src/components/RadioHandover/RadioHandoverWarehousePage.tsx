@@ -28,12 +28,14 @@ function handoverTypeLabel(t: string) {
   if (t === "HelpdeskToTechnician") return "HD → Tek";
   if (t === "TechnicianToWarehouse") return "Tek → WH";
   if (t === "WarehouseToHelpdesk") return "WH → HD";
+  if (t === "HelpdeskToWarehouse") return "HD → WH";
   return t;
 }
 
 function handoverTypeBadgeClass(t: string) {
   if (t === "TechnicianToWarehouse") return "bg-[#EBF4FF] text-[#2B6CB0] border-[#2B6CB0]/20";
   if (t === "WarehouseToHelpdesk") return "bg-[#FFF0EC] text-[#D94F2B] border-[#D94F2B]/20";
+  if (t === "HelpdeskToWarehouse") return "bg-[#FFF8E1] text-[#B7791F] border-[#B7791F]/20";
   return "bg-[#F7F8FA] text-[#718096] border-[#E2E8F0]";
 }
 
@@ -192,6 +194,11 @@ function HandoverHistoryTable({
                           >
                             {handoverTypeLabel(group.flowLabel)}
                           </span>
+                          {group.firstItem.isScrap && (
+                            <span className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold border bg-red-100 text-red-800 border-red-200">
+                              Scrap
+                            </span>
+                          )}
                           <span className="font-semibold text-gray-800">
                             No. Job ERP: <span className="font-mono text-[#2B6CB0]">{group.ticketNumber || "—"}</span>
                           </span>
@@ -232,7 +239,12 @@ function HandoverHistoryTable({
                           {h.helpdeskTicketNumber ?? "—"}
                         </td>
                         <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
+                          <div className="font-medium text-gray-900 flex items-center gap-2">
+                            {h.radioSerialNumber}
+                            {h.isScrap && (
+                              <span className="px-1.5 py-0.5 bg-red-100 text-red-800 text-[10px] font-bold rounded">Scrap</span>
+                            )}
+                          </div>
                           {h.equipmentName && <div className="text-xs text-gray-500">{h.equipmentName}</div>}
                         </td>
                         <td className="px-4 py-3">
@@ -357,7 +369,12 @@ function HandoverHistoryTable({
                   >
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                          {h.isScrap && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-800 text-[10px] font-bold rounded">Scrap</span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Unit: {h.unitNumber || "-"} • Alat: {h.equipmentName || "-"}
                         </p>
@@ -502,9 +519,15 @@ export default function RadioHandoverWarehousePage() {
       setLoadingOutgoing(true);
     }
 
-    radioHandoverApi
-      .getAll({ page: 1, pageSize: 50, handoverType: "TechnicianToWarehouse" })
-      .then((r) => setIncoming(r.data ?? []))
+    Promise.all([
+      radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "TechnicianToWarehouse" }),
+      radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToWarehouse" })
+    ])
+      .then(([res1, res2]) => {
+        const combined = [...(res1.data ?? []), ...(res2.data ?? [])];
+        combined.sort((a, b) => new Date(b.handoverAt).getTime() - new Date(a.handoverAt).getTime());
+        setIncoming(combined);
+      })
       .catch(() => setIncoming([]))
       .finally(() => { if (!silent) setLoadingIncoming(false); });
 
@@ -952,7 +975,10 @@ export default function RadioHandoverWarehousePage() {
             {/* Timeline Serah Terima (History steps) */}
             {detailJob?.handovers && detailJob.handovers.length > 0 && (
               <div className="bg-[#F7F8FA] border border-[#E2E8F0] rounded-[10px] p-4">
-                <HandoverTimeline handovers={detailJob.handovers} />
+                <HandoverTimeline 
+                  handovers={detailJob.handovers} 
+                  isScrap={detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap" || detailJob.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")} 
+                />
               </div>
             )}
 

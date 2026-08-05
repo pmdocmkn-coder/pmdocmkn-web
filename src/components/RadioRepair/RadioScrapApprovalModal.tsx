@@ -28,7 +28,7 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
     <ResponsiveModal 
       open={open} 
       onOpenChange={(o) => { if (!o) onClose(); }}
-      title="Persetujuan Radio Scrap"
+      title="Data Radio Scrap"
     >
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
@@ -60,7 +60,7 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
             <Button variant="outline" type="button" onClick={onClose} disabled={loading}>Batal</Button>
             <Button type="submit" disabled={!dateScrapped || loading} className="bg-orange-600 hover:bg-orange-700">
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Setujui Scrap
+              Simpan Data Scrap
             </Button>
           </div>
         </form>

@@ -29,6 +29,7 @@ export default function RadioRepairStatusBadge({ status, customStatusLabel, cust
       if (pendingHandoverType === "TechnicianToWarehouse") label = "Menunggu TTD WH";
       else if (pendingHandoverType === "WarehouseToHelpdesk") label = "Menunggu TTD HD";
       else if (pendingHandoverType === "HelpdeskToTechnician") label = "Menunggu TTD Teknisi";
+      else if (pendingHandoverType === "TechnicianToHelpdesk") label = "Menunggu TTD HD";
       
       return (
         <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
