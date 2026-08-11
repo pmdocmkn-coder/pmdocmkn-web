@@ -169,6 +169,97 @@ function ComboboxFilter({
   );
 }
 
+function MultiSelectComboboxFilter({
+  value,
+  onChange,
+  options,
+  placeholder,
+  emptyText = "Tidak ditemukan.",
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+  emptyText?: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const selectedValues = value ? value.split(',') : [];
+
+  let selectedLabel = `Semua ${placeholder.split(' ')[0]}`;
+  if (selectedValues.length === 1) {
+    selectedLabel = options.find((opt) => opt.value === selectedValues[0])?.label || selectedValues[0];
+  } else if (selectedValues.length > 1) {
+    selectedLabel = `${selectedValues.length} dipilih`;
+  }
+
+  const toggleOption = (optValue: string) => {
+    let newValues;
+    if (selectedValues.includes(optValue)) {
+      newValues = selectedValues.filter(v => v !== optValue);
+    } else {
+      newValues = [...selectedValues, optValue];
+    }
+    onChange(newValues.join(','));
+  };
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          role="combobox"
+          aria-expanded={open}
+          className="flex items-center justify-between w-full h-10 px-3 text-[13px] font-medium text-[#4A5568] bg-transparent hover:bg-[#F7F8FA] rounded-[6px] transition-colors"
+        >
+          <span className="truncate">{selectedLabel}</span>
+          <ChevronDown className="w-4 h-4 ml-2 opacity-50 shrink-0" />
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[220px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder={`Cari ${placeholder.toLowerCase()}...`} className="h-9" />
+          <CommandList>
+            <CommandEmpty>{emptyText}</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value="all"
+                onSelect={() => {
+                  onChange("");
+                  setOpen(false);
+                }}
+              >
+                Semua {placeholder.split(' ')[0]}
+                <Check
+                  className={cn(
+                    "ml-auto h-4 w-4",
+                    selectedValues.length === 0 ? "opacity-100" : "opacity-0"
+                  )}
+                />
+              </CommandItem>
+              {options.map((opt) => (
+                <CommandItem
+                  key={opt.value}
+                  value={opt.label}
+                  onSelect={() => {
+                    toggleOption(opt.value);
+                  }}
+                >
+                  {opt.label}
+                  <Check
+                    className={cn(
+                      "ml-auto h-4 w-4",
+                      selectedValues.includes(opt.value) ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 export default function OperationalDocumentPage() {
   const { toast } = useToast();
@@ -849,10 +940,10 @@ export default function OperationalDocumentPage() {
         </div>
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
           {[
-            { label: filterType || "Tipe Dokumen", active: !!filterType, onClick: () => setTypeSheetOpen(true) },
-            { label: filterStatus || "Status Berakhir", active: !!filterStatus, onClick: () => setStatusSheetOpen(true) },
-            { label: filterFollowUp || "Tindak Lanjut", active: !!filterFollowUp, onClick: () => setFollowUpSheetOpen(true) },
-            { label: filterGroup || "Grup", active: !!filterGroup, onClick: () => setGroupSheetOpen(true) },
+            { label: filterType ? (filterType.split(',').length > 1 ? `${filterType.split(',').length} Tipe` : filterType) : "Tipe Dokumen", active: !!filterType, onClick: () => setTypeSheetOpen(true) },
+            { label: filterStatus ? (filterStatus.split(',').length > 1 ? `${filterStatus.split(',').length} Status` : filterStatus) : "Status Berakhir", active: !!filterStatus, onClick: () => setStatusSheetOpen(true) },
+            { label: filterFollowUp ? (filterFollowUp.split(',').length > 1 ? `${filterFollowUp.split(',').length} Tindak Lanjut` : filterFollowUp) : "Tindak Lanjut", active: !!filterFollowUp, onClick: () => setFollowUpSheetOpen(true) },
+            { label: filterGroup ? (filterGroup.split(',').length > 1 ? `${filterGroup.split(',').length} Grup` : filterGroup) : "Grup", active: !!filterGroup, onClick: () => setGroupSheetOpen(true) },
           ].map((chip, idx) => (
             <button key={idx} onClick={chip.onClick}
               className={`flex items-center gap-1.5 h-9 px-3 rounded-[10px] border text-[12px] font-semibold whitespace-nowrap flex-shrink-0 transition-colors ${chip.active ? "bg-[#1B3A6B] border-[#1B3A6B] text-white" : "bg-white border-[#E2E8F0] text-[#4A5568]"}`}>
@@ -897,7 +988,7 @@ export default function OperationalDocumentPage() {
         <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
         <div className="min-w-[160px]">
-          <ComboboxFilter
+          <MultiSelectComboboxFilter
             value={filterType}
             onChange={(v) => { setFilterType(v); setPage(1); }}
             options={typeOptions}
@@ -908,7 +999,7 @@ export default function OperationalDocumentPage() {
         <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
         <div className="min-w-[160px]">
-          <ComboboxFilter
+          <MultiSelectComboboxFilter
             value={filterStatus}
             onChange={(v) => { setFilterStatus(v); setPage(1); }}
             options={statusOptions}
@@ -918,7 +1009,18 @@ export default function OperationalDocumentPage() {
         <div className="w-px h-6 bg-[#E2E8F0]"></div>
         
         <div className="min-w-[160px]">
-          <ComboboxFilter
+          <MultiSelectComboboxFilter
+            value={filterFollowUp}
+            onChange={(v) => { setFilterFollowUp(v); setPage(1); }}
+            options={followUpOptions}
+            placeholder="Tindak Lanjut"
+          />
+        </div>
+
+        <div className="w-px h-6 bg-[#E2E8F0]"></div>
+        
+        <div className="min-w-[160px]">
+          <MultiSelectComboboxFilter
             value={filterGroup}
             onChange={(v) => { setFilterGroup(v); setPage(1); }}
             options={groupOptions}
@@ -1595,43 +1697,95 @@ export default function OperationalDocumentPage() {
 
       {/* ── Mobile Filter BottomSheets ── */}
       <BottomSheet open={typeSheetOpen} onClose={() => setTypeSheetOpen(false)} title="Tipe Dokumen">
-        {[{ value: "", label: "Semua Tipe" }, ...typeOptions].map(opt => (
-          <button key={opt.value} onClick={() => { setFilterType(opt.value); setPage(1); setTypeSheetOpen(false); }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${filterType === opt.value ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
-            <span>{opt.label}</span>
-            {filterType === opt.value && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
-          </button>
-        ))}
+        <button onClick={() => { setFilterType(""); setPage(1); setTypeSheetOpen(false); }}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${!filterType ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+          <span>Semua Tipe</span>
+          {!filterType && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+        </button>
+        {typeOptions.map(opt => {
+          const isSelected = (filterType || "").split(",").includes(opt.value);
+          return (
+            <button key={opt.value} onClick={() => {
+              const currentVals = filterType ? filterType.split(",") : [];
+              const newVals = isSelected ? currentVals.filter(v => v !== opt.value) : [...currentVals, opt.value];
+              setFilterType(newVals.join(","));
+              setPage(1);
+            }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${isSelected ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+              <span>{opt.label}</span>
+              {isSelected && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+            </button>
+          );
+        })}
       </BottomSheet>
 
       <BottomSheet open={statusSheetOpen} onClose={() => setStatusSheetOpen(false)} title="Status Kadaluarsa">
-        {[{ value: "", label: "Semua Status" }, ...statusOptions].map(opt => (
-          <button key={opt.value} onClick={() => { setFilterStatus(opt.value); setPage(1); setStatusSheetOpen(false); }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${filterStatus === opt.value ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
-            <span>{opt.label}</span>
-            {filterStatus === opt.value && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
-          </button>
-        ))}
+        <button onClick={() => { setFilterStatus(""); setPage(1); setStatusSheetOpen(false); }}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${!filterStatus ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+          <span>Semua Status</span>
+          {!filterStatus && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+        </button>
+        {statusOptions.map(opt => {
+          const isSelected = (filterStatus || "").split(",").includes(opt.value);
+          return (
+            <button key={opt.value} onClick={() => {
+              const currentVals = filterStatus ? filterStatus.split(",") : [];
+              const newVals = isSelected ? currentVals.filter(v => v !== opt.value) : [...currentVals, opt.value];
+              setFilterStatus(newVals.join(","));
+              setPage(1);
+            }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${isSelected ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+              <span>{opt.label}</span>
+              {isSelected && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+            </button>
+          );
+        })}
       </BottomSheet>
 
       <BottomSheet open={followUpSheetOpen} onClose={() => setFollowUpSheetOpen(false)} title="Status Tindak Lanjut">
-        {[{ value: "", label: "Semua" }, ...followUpOptions].map(opt => (
-          <button key={opt.value} onClick={() => { setFilterFollowUp(opt.value); setPage(1); setFollowUpSheetOpen(false); }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${filterFollowUp === opt.value ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
-            <span>{opt.label}</span>
-            {filterFollowUp === opt.value && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
-          </button>
-        ))}
+        <button onClick={() => { setFilterFollowUp(""); setPage(1); setFollowUpSheetOpen(false); }}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${!filterFollowUp ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+          <span>Semua Tindak Lanjut</span>
+          {!filterFollowUp && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+        </button>
+        {followUpOptions.map(opt => {
+          const isSelected = (filterFollowUp || "").split(",").includes(opt.value);
+          return (
+            <button key={opt.value} onClick={() => {
+              const currentVals = filterFollowUp ? filterFollowUp.split(",") : [];
+              const newVals = isSelected ? currentVals.filter(v => v !== opt.value) : [...currentVals, opt.value];
+              setFilterFollowUp(newVals.join(","));
+              setPage(1);
+            }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${isSelected ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+              <span>{opt.label}</span>
+              {isSelected && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+            </button>
+          );
+        })}
       </BottomSheet>
 
       <BottomSheet open={groupSheetOpen} onClose={() => setGroupSheetOpen(false)} title="Grup Dokumen">
-        {[{ value: "", label: "Semua Grup" }, ...groupOptions].map(opt => (
-          <button key={opt.value} onClick={() => { setFilterGroup(opt.value); setPage(1); setGroupSheetOpen(false); }}
-            className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${filterGroup === opt.value ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
-            <span>{opt.label}</span>
-            {filterGroup === opt.value && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
-          </button>
-        ))}
+        <button onClick={() => { setFilterGroup(""); setPage(1); setGroupSheetOpen(false); }}
+          className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${!filterGroup ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+          <span>Semua Grup</span>
+          {!filterGroup && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+        </button>
+        {groupOptions.map(opt => {
+          const isSelected = (filterGroup || "").split(",").includes(opt.value);
+          return (
+            <button key={opt.value} onClick={() => {
+              const currentVals = filterGroup ? filterGroup.split(",") : [];
+              const newVals = isSelected ? currentVals.filter(v => v !== opt.value) : [...currentVals, opt.value];
+              setFilterGroup(newVals.join(","));
+              setPage(1);
+            }}
+              className={`w-full flex items-center justify-between px-4 py-3 rounded-[10px] text-[14px] font-medium ${isSelected ? "bg-[#EBF4FF] text-[#1B3A6B] font-semibold" : "text-[#1A202C] hover:bg-[#F7F8FA]"}`}>
+              <span>{opt.label}</span>
+              {isSelected && <CheckCircle className="w-4 h-4 text-[#2B6CB0]" />}
+            </button>
+          );
+        })}
       </BottomSheet>
 
       {/* ── Form Content ── */}

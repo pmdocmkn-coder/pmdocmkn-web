@@ -61,6 +61,7 @@ export default function WarehouseBorrowHistoryPage() {
   // Filters & Print
   const [statusFilter, setStatusFilter] = useState("all");
   const [borrowerFilter, setBorrowerFilter] = useState("all");
+  const [alatKerjaFilter, setAlatKerjaFilter] = useState("all");
   const [dateRangeFrom, setDateRangeFrom] = useState("");
   const [dateRangeTo, setDateRangeTo] = useState("");
   const [monthFilter, setMonthFilter] = useState(String(new Date().getMonth()));
@@ -165,6 +166,7 @@ export default function WarehouseBorrowHistoryPage() {
     if (!silent) setLoading(true);
     const params: any = { page: 1, pageSize: 100 };
     if (statusFilter !== "all") params.status = statusFilter;
+    if (alatKerjaFilter === "alat-kerja") params.isAlatKerja = true;
     if (dateRangeFrom) params.fromDate = dateRangeFrom;
     if (dateRangeTo) params.toDate = dateRangeTo;
     
@@ -177,7 +179,7 @@ export default function WarehouseBorrowHistoryPage() {
 
   useEffect(() => {
     loadData();
-  }, [statusFilter, dateRangeFrom, dateRangeTo]);
+  }, [statusFilter, alatKerjaFilter, dateRangeFrom, dateRangeTo]);
 
   const applyMonthYearFilter = (month: string, year: string) => {
     const selectedYear = Number(year);
@@ -1042,6 +1044,16 @@ export default function WarehouseBorrowHistoryPage() {
                 {borrowerRoleOptions.map(role => (
                   <SelectItem key={role} value={role}>{role}</SelectItem>
                 ))}
+              </SelectContent>
+            </Select>
+
+            <Select value={alatKerjaFilter} onValueChange={setAlatKerjaFilter}>
+              <SelectTrigger className="w-full sm:w-40 h-10 bg-white border-[#E2E8F0]">
+                <SelectValue placeholder="Semua Barang" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Semua Barang</SelectItem>
+                <SelectItem value="alat-kerja">Alat Kerja</SelectItem>
               </SelectContent>
             </Select>
             
