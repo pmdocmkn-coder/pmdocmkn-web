@@ -36,6 +36,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   const [selectedAccessories, setSelectedAccessories] = useState<boolean[]>([]);
   const [disabledAccessories, setDisabledAccessories] = useState<boolean[]>([]);
   const [disabledAccessoriesInfo, setDisabledAccessoriesInfo] = useState<string[]>([]);
+  const [availableAccessories, setAvailableAccessories] = useState<HandoverAccessoryItem[]>([]);
 
   useEffect(() => {
     radioHandoverApi
@@ -47,27 +48,52 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       .getById(job.id)
       .then((res) => {
         setJobDetail(res);
-        if (res?.primaryHandover?.accessories) {
-          const alreadyHandedOver = new Map<string, string>();
-          res.handovers?.filter(h => h.handoverType === "WarehouseToHelpdesk")
+        if (res?.handovers && res?.primaryHandover?.accessories) {
+          // 1. Apa saja yang benar-benar masuk ke Warehouse?
+          const incomingToWhStr = new Set<string>();
+          res.handovers.filter(h => h.handoverType === "TechnicianToWarehouse" || h.handoverType === "HelpdeskToWarehouse")
             .forEach(h => {
-              if (h.accessories) {
-                h.accessories.forEach(acc => alreadyHandedOver.set(acc, h.receivedByName));
-              }
+              h.accessories?.forEach((accStr: any) => {
+                incomingToWhStr.add(accStr as string);
+              });
+            });
+          
+          const whReceivedList = res.primaryHandover.accessories.filter(a => {
+             const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+             return incomingToWhStr.has(accStr);
+          }).map(a => ({
+             itemName: a.itemName,
+             quantity: a.quantity,
+             unit: a.unit ?? undefined,
+             description: a.description ?? undefined,
+             serialNumber: a.serialNumber ?? undefined
+          }));
+          setAvailableAccessories(whReceivedList);
+
+          // 2. Apa saja yang sudah diserahkan keluar dari Warehouse?
+          const alreadyHandedOver = new Map<string, string>();
+          res.handovers.filter(h => h.handoverType === "WarehouseToHelpdesk")
+            .forEach(h => {
+              h.accessories?.forEach((accStr: any) => {
+                alreadyHandedOver.set(accStr as string, h.receivedByName);
+              });
             });
 
-          const disabled = res.primaryHandover.accessories.map(a => {
+          const disabled = whReceivedList.map(a => {
             const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
             return alreadyHandedOver.has(accStr);
           });
-          const disabledInfo = res.primaryHandover.accessories.map(a => {
+          const disabledInfo = whReceivedList.map(a => {
             const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
             return alreadyHandedOver.get(accStr) || "";
           });
+          
           setDisabledAccessories(disabled);
           setDisabledAccessoriesInfo(disabledInfo);
+          // By default select all items that have not been handed over yet
           setSelectedAccessories(disabled.map(d => !d));
 
+          // Check main unit
           const mainUnitHandover = res.handovers?.find(h => h.handoverType === "WarehouseToHelpdesk" && h.containsMainRadioUnit);
           if (mainUnitHandover) {
             setMainUnitDisabled(true);
@@ -85,9 +111,9 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       return;
     }
 
-    const accPayload = jobDetail?.primaryHandover?.accessories
-      ?.filter((_, i) => selectedAccessories[i])
-      ?.map(a => ({
+    const accPayload = availableAccessories
+      .filter((_, i) => selectedAccessories[i])
+      .map(a => ({
         itemName: a.itemName,
         quantity: a.quantity,
         unit: a.unit || undefined,
@@ -158,9 +184,9 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
               radioCategory: job.radioCategory,
               damageDescription: job.damageDescription,
               handoverType: "WarehouseToHelpdesk",
-              accessories: jobDetail?.primaryHandover?.accessories
-                ?.filter((_, i) => selectedAccessories[i])
-                ?.map(a => ({
+              accessories: availableAccessories
+                .filter((_, i) => selectedAccessories[i])
+                .map(a => ({
                 itemName: a.itemName,
                 quantity: a.quantity,
                 unit: a.unit ?? undefined,
@@ -194,9 +220,9 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
               physicalCondition: job.physicalCondition,
               displayCondition: job.displayCondition,
               handoverType: "WarehouseToHelpdesk",
-              accessories: jobDetail?.primaryHandover?.accessories
-                ?.filter((_, i) => selectedAccessories[i])
-                ?.map(a => ({
+              accessories: availableAccessories
+                .filter((_, i) => selectedAccessories[i])
+                .map(a => ({
                 itemName: a.itemName,
                 quantity: a.quantity,
                 unit: a.unit ?? undefined,
@@ -250,10 +276,10 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
             </div>
           </label>
           
-          {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
+          {(availableAccessories.length ?? 0) > 0 && (
             <div className="pl-7 space-y-2 border-l-2 border-gray-100 ml-1.5 mt-2 pt-2">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Aksesoris / Kelengkapan</p>
-              {jobDetail!.primaryHandover!.accessories.map((a, i) => (
+              {availableAccessories.map((a, i) => (
                 <label key={i} className="flex items-start space-x-3 cursor-pointer">
                   <input 
                     type="checkbox" 

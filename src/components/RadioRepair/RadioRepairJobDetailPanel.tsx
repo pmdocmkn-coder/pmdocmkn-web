@@ -38,6 +38,7 @@ type Props = {
   canSupervise: boolean;
   canHandoverWh: boolean;
   canCreateHdToWh?: boolean;
+  canCreateWhToHd?: boolean;
   patchingStatus?: boolean;
   onPatchStatus: (status: RadioRepairJobStatus, customStatusId?: number | null) => void;
   onApproveMaterial: (resume: "InProgress" | "Monitoring") => void;
@@ -60,6 +61,7 @@ export default function RadioRepairJobDetailPanel({
   canSupervise,
   canHandoverWh,
   canCreateHdToWh,
+  canCreateWhToHd,
   patchingStatus = false,
   onPatchStatus,
   onApproveMaterial,
@@ -163,7 +165,7 @@ export default function RadioRepairJobDetailPanel({
   const locked = isJobStatusLocked(job.status) || job.isDeleted;
 
   const pendingHandover = job.handovers?.find(h => 
-    (h.handoverType === "TechnicianToHelpdesk" || h.handoverType === "TechnicianToWarehouse" || h.handoverType === "HelpdeskToWarehouse") && 
+    (h.handoverType === "TechnicianToHelpdesk" || h.handoverType === "TechnicianToWarehouse" || h.handoverType === "HelpdeskToWarehouse" || h.handoverType === "WarehouseToHelpdesk") && 
     h.status === "PendingReceiverSignature"
   );
 
@@ -219,6 +221,11 @@ export default function RadioRepairJobDetailPanel({
   return (
     <div className="space-y-4 text-sm">
       <div className="flex flex-wrap items-center gap-2 text-xs">
+        {job.isScrap && (
+          <span className="px-2 py-1 rounded-full bg-red-100 text-red-700 border border-red-200 uppercase font-bold tracking-wider">
+            Scrap
+          </span>
+        )}
         <span className="px-2 py-1 rounded-full bg-slate-100 text-slate-700 border border-slate-200">
           Lama di workshop: <strong>{formatActiveWorkshopDuration(job.status, job.accumulatedProgressDurationMinutes, job.currentProgressStartedAt, job.firstInProgressAt)}</strong>
         </span>
@@ -542,36 +549,46 @@ export default function RadioRepairJobDetailPanel({
         </button>
       )}
 
-      {pendingHandover && (
-        <div className="border border-amber-200 rounded-lg p-3 bg-amber-50 space-y-2">
-          <p className="text-xs font-semibold text-amber-800">Menunggu Tanda Tangan Penerima</p>
-          <p className="text-xs text-amber-700">
-            Anda telah menyerahkan radio ini ke {pendingHandover.handoverType === "TechnicianToHelpdesk" ? "Helpdesk" : pendingHandover.handoverType === "HelpdeskToWarehouse" ? "Warehouse (Scrap)" : "Warehouse"}. Menunggu TTD dari penerima untuk selesai.
-          </p>
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={patchingStatus}
-              onClick={() => onCancelHandover?.(pendingHandover.id)}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 disabled:opacity-60"
-            >
-              {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Batalkan Serah Terima
-            </button>
-            {onChangeHandoverReceiver && (
-              <button
-                type="button"
-                disabled={patchingStatus}
-                onClick={() => onChangeHandoverReceiver(pendingHandover.id, pendingHandover.receivedByUserId)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-violet-600 border border-violet-300 rounded-lg hover:bg-violet-50 disabled:opacity-60"
-              >
-                <Pencil className="w-3.5 h-3.5" />
-                Ubah Penerima
-              </button>
+      {pendingHandover && (() => {
+        const canManagePending = 
+          (pendingHandover.handoverType === "TechnicianToHelpdesk" && canUpdate) ||
+          (pendingHandover.handoverType === "TechnicianToWarehouse" && canUpdate) ||
+          (pendingHandover.handoverType === "HelpdeskToWarehouse" && canCreateHdToWh) ||
+          (pendingHandover.handoverType === "WarehouseToHelpdesk" && canCreateWhToHd);
+
+        return (
+          <div className="border border-amber-200 rounded-lg p-3 bg-amber-50 space-y-2">
+            <p className="text-xs font-semibold text-amber-800">Menunggu Tanda Tangan Penerima</p>
+            <p className="text-xs text-amber-700">
+              Radio ini telah diserahkan ke {pendingHandover.handoverType === "TechnicianToHelpdesk" ? "Helpdesk" : pendingHandover.handoverType === "HelpdeskToWarehouse" ? "Warehouse (Scrap)" : pendingHandover.handoverType === "WarehouseToHelpdesk" ? "Helpdesk" : "Warehouse"}. Menunggu TTD dari penerima untuk selesai.
+            </p>
+            {canManagePending && (
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  disabled={patchingStatus}
+                  onClick={() => onCancelHandover?.(pendingHandover.id)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-red-600 border border-red-300 rounded-lg hover:bg-red-50 disabled:opacity-60"
+                >
+                  {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                  Batalkan Serah Terima
+                </button>
+                {onChangeHandoverReceiver && (
+                  <button
+                    type="button"
+                    disabled={patchingStatus}
+                    onClick={() => onChangeHandoverReceiver(pendingHandover.id, pendingHandover.receivedByUserId)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-sm bg-white text-violet-600 border border-violet-300 rounded-lg hover:bg-violet-50 disabled:opacity-60"
+                  >
+                    <Pencil className="w-3.5 h-3.5" />
+                    Ubah Penerima
+                  </button>
+                )}
+              </div>
             )}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* Supervisor: rollback dari RepairCompleted jika teknisi salah tekan */}
       {canSupervise && job.status === "RepairCompleted" && !job.isDeleted && (

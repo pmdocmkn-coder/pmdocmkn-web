@@ -45,6 +45,7 @@ import {
 } from "../../utils/repairDashboardPermissions";
 import {
   canCreateHandoverHd,
+  canCreateHandoverWhHd,
 } from "../../utils/handoverPermissions";
 import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtils";
 import { format } from "date-fns";
@@ -98,7 +99,7 @@ export default function RadioRepairDashboardPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   const [editJob, setEditJob] = useState<RadioRepairJobDetail | null>(null);
-  const [technicians, setTechnicians] = useState<UserOption[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
   const [patchingStatus, setPatchingStatus] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -135,6 +136,7 @@ export default function RadioRepairDashboardPage() {
   const canDeletePermanent = hasPermission("radio.repair.delete.permanent");
   const canHandoverWh = canCreateTekToWarehouseHandover();
   const canCreateHdToWh = canCreateHandoverHd();
+  const canCreateWhToHd = canCreateHandoverWhHd();
   const canResetTestingData = hasPermission("delete.all.radios.handover");
   const canPurge = hasPermission("radio.repair.purge");
 
@@ -142,14 +144,14 @@ export default function RadioRepairDashboardPage() {
   const statusLabel = filterStatus ? STATUS_LABELS[filterStatus as RadioRepairJobStatus] ?? "" : "";
 
   const technicianOptions = useMemo(
-    () => technicians.map((t) => `${t.fullName} (${t.username})`),
-    [technicians]
+    () => workshopTechs.map((t) => t.name),
+    [workshopTechs]
   );
   const technicianLabel = useMemo(() => {
     if (!filterTechnician) return "";
-    const t = technicians.find((x) => String(x.userId) === filterTechnician);
-    return t ? `${t.fullName} (${t.username})` : "";
-  }, [filterTechnician, technicians]);
+    const t = workshopTechs.find((x) => String(x.id) === filterTechnician);
+    return t ? t.name : "";
+  }, [filterTechnician, workshopTechs]);
 
   const ticketGroups: TicketJobGroup[] = useMemo(() => {
     const map = new Map<string, RadioRepairJobList[]>();
@@ -196,7 +198,7 @@ export default function RadioRepairDashboardPage() {
         pageSize: PAGE_SIZE,
         search: search.trim() || undefined,
         status: filterStatus || undefined,
-        technicianUserId: filterTechnician ? Number(filterTechnician) : undefined,
+        workshopTechnicianId: filterTechnician ? Number(filterTechnician) : undefined,
         fromDate: filterFromDate || undefined,
         toDate: filterToDate || undefined,
         includeDeleted: showArchive,
@@ -231,10 +233,10 @@ export default function RadioRepairDashboardPage() {
 
   useEffect(() => {
     load();
+    radioRepairApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
   }, [page, search, filterStatus, filterTechnician, filterFromDate, filterToDate, showArchive]);
 
   useEffect(() => {
-    radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
     repairJobCustomStatusApi.getAll().then((list) => setCustomStatuses(list.filter((s) => s.isActive))).catch(() => setCustomStatuses([]));
     workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setWorkshopTechs(res.data.data)).catch(() => setWorkshopTechs([]));
   }, []);
@@ -494,7 +496,7 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) => {
+  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string; isPendingHelpdeskScrapFill?: boolean }) => {
     if (!detail) return;
     setPatchingStatus(true);
     try {
@@ -668,8 +670,8 @@ export default function RadioRepairDashboardPage() {
             <FormMobileSelect
               value={technicianLabel}
               onChange={(v) => {
-                const t = technicians.find((x) => `${x.fullName} (${x.username})` === v);
-                setFilterTechnician(t ? String(t.userId) : "");
+                const t = workshopTechs.find((x) => x.name === v);
+                setFilterTechnician(t ? String(t.id) : "");
                 setPage(1);
               }}
               options={technicianOptions}
@@ -845,8 +847,8 @@ export default function RadioRepairDashboardPage() {
                   <FilterSelect
                     value={technicianLabel}
                     onChange={(v) => {
-                      const t = technicians.find((x) => `${x.fullName} (${x.username})` === v);
-                      setFilterTechnician(t ? String(t.userId) : "");
+                      const t = workshopTechs.find((x) => x.name === v);
+                      setFilterTechnician(t ? String(t.id) : "");
                       setPage(1);
                     }}
                     options={technicianOptions}
@@ -960,6 +962,7 @@ export default function RadioRepairDashboardPage() {
               canSupervise={canSupervise}
               canHandoverWh={canHandoverWh}
               canCreateHdToWh={canCreateHdToWh}
+              canCreateWhToHd={canCreateWhToHd}
               onPatchStatus={(s, cid) => patchStatus(detail.id, s, cid)}
               onApproveMaterial={approveMaterial}
               onOpenWh={() => { 
@@ -979,7 +982,12 @@ export default function RadioRepairDashboardPage() {
               onCancelHandover={handleCancelHandover}
               onChangeHandoverReceiver={(id, receiverId) => {
                 setChangeReceiverId(id);
-                setChangeReceiverType(detail.pendingHandoverType === "HelpdeskToTechnician" ? "Teknisi" : detail.pendingHandoverType === "TechnicianToHelpdesk" ? "Helpdesk" : "Warehouse");
+                const pType = detail.pendingHandoverType || "";
+                setChangeReceiverType(
+                  pType.endsWith("Technician") ? "Teknisi" :
+                  pType.endsWith("Helpdesk") ? "Helpdesk" :
+                  "Warehouse"
+                );
                 setChangeReceiverCurrentUserId(receiverId);
               }}
               onOpenPhotos={openPhotos}

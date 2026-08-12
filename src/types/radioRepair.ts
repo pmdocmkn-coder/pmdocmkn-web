@@ -62,6 +62,7 @@ export interface RadioRepairJobList {
   hasActiveBorrowedPart: boolean;
   hasReturnedBorrowedPart: boolean;
   pendingHandoverType?: string | null;
+  isScrap?: boolean;
 }
 
 // ─── Custom Status Types ──────────────────────────────────────────────────────

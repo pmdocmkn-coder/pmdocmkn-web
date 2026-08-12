@@ -23,6 +23,7 @@ import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtil
 import { canCreateHandoverWhHd } from "../../utils/handoverPermissions";
 import { useToast } from "../../hooks/use-toast";
 import EditHandoverDialog from "./EditHandoverDialog";
+import ChangeReceiverModal from "./ChangeReceiverModal";
 
 function handoverTypeLabel(t: string) {
   if (t === "HelpdeskToTechnician") return "HD → Tek";
@@ -54,7 +55,8 @@ function EmptyState({ message }: { message: string }) {
 function currentUserId(): number | null {
   try {
     const u = JSON.parse(localStorage.getItem("user") || "{}");
-    return u.userId ?? u.UserId ?? null;
+    const id = u.userId ?? u.UserId;
+    return id ? Number(id) : null;
   } catch {
     return null;
   }
@@ -107,10 +109,12 @@ function HandoverHistoryTable({
     return h.status === "PendingReceiverSignature" && h.receivedByUserId === myId;
   };
   // Warehouse hanya bisa edit serah terima yang ditujukan ke dirinya
-  // (atau jika penerima belum ditentukan)
-  const canWarehouseEdit = (_h: RadioHandoverList) => {
+  // Helpdesk bisa edit jika mereka adalah pengirimnya (misal HD ke WH Scrap)
+  const canWarehouseEdit = (h: RadioHandoverList) => {
     const role = currentUserRole();
-    if (role === "helpdesk") return false;
+    if (role === "helpdesk") {
+      return h.handoverType === "HelpdeskToWarehouse";
+    }
 
     // Semua warehouse boleh edit (misal foto salah, dll)
     // Pembatasan penerima hanya di dalam form edit (field disabled)
@@ -446,10 +450,12 @@ export default function RadioHandoverWarehousePage() {
   const navigate = useNavigate();
   // Workshop (Teknisi WKS) tidak boleh edit tab "Serah ke Helpdesk"
   const isWorkshopUser = currentUserRole() === "teknisi wks";
-  const [incoming, setIncoming] = useState<RadioHandoverList[]>([]);
+  const [incomingTek, setIncomingTek] = useState<RadioHandoverList[]>([]);
+  const [incomingHd, setIncomingHd] = useState<RadioHandoverList[]>([]);
   const [outgoing, setOutgoing] = useState<RadioHandoverList[]>([]);
   const [pendingJobs, setPendingJobs] = useState<RadioRepairJobList[]>([]);
-  const [loadingIncoming, setLoadingIncoming] = useState(true);
+  const [loadingIncomingTek, setLoadingIncomingTek] = useState(true);
+  const [loadingIncomingHd, setLoadingIncomingHd] = useState(true);
   const [loadingOutgoing, setLoadingOutgoing] = useState(true);
   const [detail, setDetail] = useState<RadioHandoverDetail | null>(null);
   const [detailJob, setDetailJob] = useState<RadioRepairJobDetail | null>(null);
@@ -468,6 +474,15 @@ export default function RadioHandoverWarehousePage() {
   const [sigRowPicReceiverName, setSigRowPicReceiverName] = useState("");
   const [sigRowRemarks, setSigRowRemarks] = useState("");
   const sigWhRowRef = useRef<any>(null);
+  const [createHdModalOpen, setCreateHdModalOpen] = useState(false);
+
+  // State untuk ChangeReceiverModal
+  const [changeReceiverId, setChangeReceiverId] = useState<number | null>(null);
+  const [changeReceiverType, setChangeReceiverType] = useState<"Helpdesk" | "Warehouse" | "Teknisi">("Helpdesk");
+  const [changeReceiverCurrentUserId, setChangeReceiverCurrentUserId] = useState<number | undefined>();
+
+  // Helper untuk signature canvas
+  const sigRef = useRef<any>(null);
   const [editHandover, setEditHandover] = useState<RadioHandoverDetail | null>(null);
   const [resettingSignature, setResettingSignature] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
@@ -483,8 +498,15 @@ export default function RadioHandoverWarehousePage() {
     if (!signRows || signRows.length === 0) {
       setSignRowDetails([]);
       setActiveTagIndex(0);
+      setSigRowPicReceiverName("");
+      setSigRowRemarks("");
       return;
     }
+    
+    // Pre-populate fields based on what was entered during handover creation
+    setSigRowPicReceiverName(signRows[0].picReceiverName || "");
+    setSigRowRemarks(signRows[0].remarks || "");
+
     Promise.all(signRows.map(row => radioHandoverApi.getById(row.id)))
       .then(details => {
         setSignRowDetails(details.filter(Boolean) as RadioHandoverDetail[]);
@@ -498,7 +520,14 @@ export default function RadioHandoverWarehousePage() {
     setSearchParams({ tab: val });
   };
 
-  const filteredIncoming = incoming.filter((h) =>
+  const filteredIncomingTek = incomingTek.filter((h) =>
+    h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.helpdeskTicketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.handoverNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    h.handedOverByName?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredIncomingHd = incomingHd.filter((h) =>
     h.radioSerialNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.helpdeskTicketNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     h.handoverNumber?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -515,21 +544,20 @@ export default function RadioHandoverWarehousePage() {
 
   const load = useCallback((silent = false) => {
     if (!silent) {
-      setLoadingIncoming(true);
+      setLoadingIncomingTek(true);
+      setLoadingIncomingHd(true);
       setLoadingOutgoing(true);
     }
 
-    Promise.all([
-      radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "TechnicianToWarehouse" }),
-      radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToWarehouse" })
-    ])
-      .then(([res1, res2]) => {
-        const combined = [...(res1.data ?? []), ...(res2.data ?? [])];
-        combined.sort((a, b) => new Date(b.handoverAt).getTime() - new Date(a.handoverAt).getTime());
-        setIncoming(combined);
-      })
-      .catch(() => setIncoming([]))
-      .finally(() => { if (!silent) setLoadingIncoming(false); });
+    radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "TechnicianToWarehouse" })
+      .then((res) => setIncomingTek(res.data ?? []))
+      .catch(() => setIncomingTek([]))
+      .finally(() => { if (!silent) setLoadingIncomingTek(false); });
+
+    radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToWarehouse" })
+      .then((res) => setIncomingHd(res.data ?? []))
+      .catch(() => setIncomingHd([]))
+      .finally(() => { if (!silent) setLoadingIncomingHd(false); });
 
     radioHandoverApi
       .getAll({ page: 1, pageSize: 50, handoverType: "WarehouseToHelpdesk" })
@@ -715,10 +743,10 @@ export default function RadioHandoverWarehousePage() {
               <span className="hidden sm:inline">Masuk dari Teknisi</span>
               <span className="sm:hidden">Masuk</span>
             </CardDescription>
-            <CardTitle className="text-2xl md:text-3xl text-gray-900">{incoming.length}</CardTitle>
+            <CardTitle className="text-2xl md:text-3xl text-gray-900">{incomingTek.length + incomingHd.length}</CardTitle>
           </CardHeader>
           <CardContent className="px-3 md:px-4 pb-3 md:pb-4 pt-0">
-            <p className="text-[10px] md:text-xs text-gray-500 hidden sm:block">Histori Tek → WH</p>
+            <p className="text-[10px] md:text-xs text-gray-500 hidden sm:block">Histori Tek → WH / HD → WH</p>
           </CardContent>
         </Card>
         <Card>
@@ -768,7 +796,12 @@ export default function RadioHandoverWarehousePage() {
                 {pendingJobs.map((j, idx) => (
                   <tr key={j.id} className={`border-t border-amber-100/80 ${idx % 2 === 1 ? "bg-amber-50/30" : ""}`}>
                     <td className="px-4 py-3 font-mono text-xs">{j.helpdeskTicketNumber ?? "—"}</td>
-                    <td className="px-4 py-3 font-medium">{j.radioSerialNumber}</td>
+                    <td className="px-4 py-3 font-medium">
+                      {j.radioSerialNumber}
+                      {j.isScrap && (
+                        <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase">Scrap</span>
+                      )}
+                    </td>
                     <td className="px-4 py-3">{j.assignedTechnicianName}</td>
                     {canCreateHandoverWhHd() && (
                       <td className="px-4 py-3 text-right">
@@ -800,7 +833,12 @@ export default function RadioHandoverWarehousePage() {
               <div key={j.id} className="bg-white rounded-2xl p-4 shadow-sm border border-amber-200">
                 <div className="flex justify-between items-start">
                   <div>
-                    <div className="font-bold text-gray-900">{j.radioSerialNumber}</div>
+                    <div className="font-bold text-gray-900 flex items-center gap-2">
+                      {j.radioSerialNumber}
+                      {j.isScrap && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase">Scrap</span>
+                      )}
+                    </div>
                     {j.helpdeskTicketNumber && (
                       <div className="text-xs font-mono text-gray-600 mt-0.5">Tiket: {j.helpdeskTicketNumber}</div>
                     )}
@@ -854,13 +892,25 @@ export default function RadioHandoverWarehousePage() {
             <TabsTrigger value="incoming" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
               <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4" />
               <span className="hidden sm:inline">Masuk dari Teknisi</span>
-              <span className="sm:hidden">Masuk</span>
-              {!loadingIncoming && incoming.length > 0 && (
+              <span className="sm:hidden">Tek → WH</span>
+              {!loadingIncomingTek && incomingTek.length > 0 && (
                 <span className="ml-1 bg-[#EBF4FF] text-[#2B6CB0] text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
-                  {incoming.length}
+                  {incomingTek.length}
                 </span>
               )}
             </TabsTrigger>
+            {hasPermission("radio.handover.warehouse.scrap") && (
+              <TabsTrigger value="incoming-hd" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
+                <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#B7791F]" />
+                <span className="hidden sm:inline">Masuk dari Helpdesk (Scrap)</span>
+                <span className="sm:hidden">HD → WH</span>
+                {!loadingIncomingHd && incomingHd.length > 0 && (
+                  <span className="ml-1 bg-[#FFF8E1] text-[#B7791F] border border-[#B7791F]/20 text-[10px] md:text-xs px-1.5 py-0.5 rounded-full font-medium">
+                    {incomingHd.length}
+                  </span>
+                )}
+              </TabsTrigger>
+            )}
             <TabsTrigger value="outgoing" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
               <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
               <span className="hidden sm:inline">Serah ke Helpdesk</span>
@@ -875,11 +925,11 @@ export default function RadioHandoverWarehousePage() {
 
           <TabsContent value="incoming" className="mt-4 space-y-2">
             <p className="text-sm text-gray-500">
-              Daftar radio yang sudah diserahkan teknisi ke warehouse (Tek → WH).
+              Daftar radio yang masuk ke warehouse dari teknisi (Tek → WH).
             </p>
             <HandoverHistoryTable
-              items={filteredIncoming}
-              loading={loadingIncoming}
+              items={filteredIncomingTek}
+              loading={loadingIncomingTek}
               flowLabel="Teknisi → Warehouse"
               emptyMessage="Belum ada radio masuk dari teknisi"
               onOpenDetail={openDetail}
@@ -888,6 +938,24 @@ export default function RadioHandoverWarehousePage() {
               onEdit={handleEdit}
             />
           </TabsContent>
+
+          {hasPermission("radio.handover.warehouse.scrap") && (
+            <TabsContent value="incoming-hd" className="mt-4 space-y-2">
+              <p className="text-sm text-gray-500">
+                Daftar radio scrap yang masuk ke warehouse dari helpdesk (HD → WH).
+              </p>
+              <HandoverHistoryTable
+                items={filteredIncomingHd}
+                loading={loadingIncomingHd}
+                flowLabel="Helpdesk → Warehouse (Scrap)"
+                emptyMessage="Belum ada radio scrap masuk dari helpdesk"
+                onOpenDetail={openDetail}
+                onOpenGallery={openGallery}
+                onSignRow={setSignRows}
+                onEdit={handleEdit}
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="outgoing" className="mt-4 space-y-2">
             <p className="text-sm text-gray-500">
@@ -971,6 +1039,29 @@ export default function RadioHandoverWarehousePage() {
       >
         {detail && !detailLoading && (
           <div className="space-y-6 pt-2 w-full min-w-0 text-sm">
+            
+            {detail.handoverType === "WarehouseToHelpdesk" && detail.status === "PendingReceiverSignature" && (
+              <div className="bg-amber-50 border border-amber-200 rounded-[10px] p-4 flex items-start sm:items-center justify-between flex-col sm:flex-row gap-4 mb-2">
+                <div>
+                  <h4 className="font-bold text-amber-900 text-sm">Menunggu Tanda Tangan Penerima</h4>
+                  <p className="text-amber-800 text-sm mt-1">Anda telah menyerahkan radio ini ke Helpdesk. Menunggu TTD dari penerima untuk selesai.</p>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    className="flex-1 sm:flex-none px-4 py-2 bg-white border border-amber-300 text-amber-800 rounded-lg text-sm font-medium hover:bg-amber-50 transition-colors shadow-sm whitespace-nowrap"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setChangeReceiverType("Helpdesk");
+                      setChangeReceiverId(detail.id);
+                      setChangeReceiverCurrentUserId(detail.receivedByUserId);
+                    }}
+                  >
+                    Ubah Penerima
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* Timeline Serah Terima (History steps) */}
             {detailJob?.handovers && detailJob.handovers.length > 0 && (
@@ -1343,6 +1434,30 @@ export default function RadioHandoverWarehousePage() {
           detail={editHandover}
           onClose={() => setEditHandover(null)}
           onSuccess={handleEditSuccess}
+        />
+      )}
+
+      {/* Ubah Penerima Modal */}
+      {changeReceiverId && (
+        <ChangeReceiverModal
+          open={!!changeReceiverId}
+          onOpenChange={(open) => {
+            if (!open) setChangeReceiverId(null);
+          }}
+          handoverId={changeReceiverId}
+          receiverType={changeReceiverType}
+          currentReceiverUserId={changeReceiverCurrentUserId}
+          onSuccess={() => {
+            setChangeReceiverId(null);
+            load();
+            if (detail) {
+              openDetail(detail.id);
+            }
+            toast({
+              title: "Penerima diubah",
+              description: "Berhasil mengubah akun penerima serah terima.",
+            });
+          }}
         />
       )}
     </div>
