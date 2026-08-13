@@ -135,7 +135,7 @@ function HandoverHistoryTable({
       map.get(key)!.push(h);
     });
     return Array.from(map.entries()).map(([key, group]) => {
-      const hasPendingSignature = group.some((h) => canWarehouseSign(h));
+      const hasPendingSignature = group.some((h) => h.status === "PendingReceiverSignature");
       const first = group[0];
       return {
         key,
@@ -224,7 +224,7 @@ function HandoverHistoryTable({
                         </div>
                       </td>
                       <td className="px-4 py-2 text-right sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.05)] border-l border-gray-100">
-                        {group.hasPendingSignature && onSignRow && (
+                        {group.hasPendingSignature && group.items.some(canWarehouseSign) && onSignRow && (
                           <button
                             type="button"
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#1B3A6B] text-white rounded-[10px] text-xs font-medium hover:bg-[#2B6CB0] transition-colors shadow-sm whitespace-nowrap"
@@ -489,6 +489,7 @@ export default function RadioHandoverWarehousePage() {
   const PAGE_SIZE = 10;
   const [searchQuery, setSearchQuery] = useState("");
   const debouncedSearch = useDebounce(searchQuery, 500);
+  const [showActionNeededOnly, setShowActionNeededOnly] = useState(false);
   const [periodFilter, setPeriodFilter] = useState<PeriodFilterValue>({
     type: "month",
     year: String(new Date().getFullYear()),
@@ -567,11 +568,10 @@ export default function RadioHandoverWarehousePage() {
     setSearchParams({ tab: val });
   };
 
-  // Reset page when tab or search changes
+  // Reset page when tab, search, or filter changes
   useEffect(() => {
     setPage(1);
-  }, [activeTab, debouncedSearch]);
-
+  }, [activeTab, debouncedSearch, showActionNeededOnly]);
 
   const load = useCallback((silent = false) => {
     if (!silent) {
@@ -602,7 +602,15 @@ export default function RadioHandoverWarehousePage() {
     }
 
     if (activeTab === "incoming") {
-      radioHandoverApi.getAll({ page, pageSize: PAGE_SIZE, handoverType: "TechnicianToWarehouse", search: debouncedSearch, fromDate, toDate })
+      radioHandoverApi.getAll({ 
+        page, 
+        pageSize: PAGE_SIZE, 
+        handoverType: "TechnicianToWarehouse", 
+        search: debouncedSearch, 
+        fromDate: showActionNeededOnly ? undefined : fromDate, 
+        toDate: showActionNeededOnly ? undefined : toDate,
+        status: showActionNeededOnly ? "PendingReceiverSignature" : undefined
+      })
         .then((res) => {
           setIncomingTek(res.data ?? []);
           setTotalCountIncomingTek(res.meta?.pagination?.totalCount ?? 0);
@@ -615,7 +623,15 @@ export default function RadioHandoverWarehousePage() {
     }
     
     if (activeTab === "incoming-hd") {
-      radioHandoverApi.getAll({ page, pageSize: PAGE_SIZE, handoverType: "HelpdeskToWarehouse", search: debouncedSearch, fromDate, toDate })
+      radioHandoverApi.getAll({ 
+        page, 
+        pageSize: PAGE_SIZE, 
+        handoverType: "HelpdeskToWarehouse", 
+        search: debouncedSearch, 
+        fromDate: showActionNeededOnly ? undefined : fromDate, 
+        toDate: showActionNeededOnly ? undefined : toDate,
+        status: showActionNeededOnly ? "PendingReceiverSignature" : undefined
+      })
         .then((res) => {
           setIncomingHd(res.data ?? []);
           setTotalCountIncomingHd(res.meta?.pagination?.totalCount ?? 0);
@@ -629,7 +645,15 @@ export default function RadioHandoverWarehousePage() {
     
     if (activeTab === "outgoing") {
       radioHandoverApi
-        .getAll({ page, pageSize: PAGE_SIZE, handoverType: "WarehouseToHelpdesk", search: debouncedSearch, fromDate, toDate })
+        .getAll({ 
+          page, 
+          pageSize: PAGE_SIZE, 
+          handoverType: "WarehouseToHelpdesk", 
+          search: debouncedSearch, 
+          fromDate: showActionNeededOnly ? undefined : fromDate, 
+          toDate: showActionNeededOnly ? undefined : toDate,
+          status: showActionNeededOnly ? "PendingReceiverSignature" : undefined
+        })
         .then((r) => {
           setOutgoing(r.data ?? []);
           setTotalCountOutgoing(r.meta?.pagination?.totalCount ?? 0);
@@ -650,7 +674,7 @@ export default function RadioHandoverWarehousePage() {
       })
       .catch(() => setPendingJobs([]));
 
-  }, [activeTab, page, debouncedSearch, periodFilter]);
+  }, [activeTab, page, debouncedSearch, periodFilter, showActionNeededOnly]);
 
   useLiveRefresh("RadioHandover", () => {
     load(true);
@@ -1090,15 +1114,30 @@ export default function RadioHandoverWarehousePage() {
       <section className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-base md:text-lg font-semibold text-gray-900">Histori serah terima</h2>
-          <div className="relative w-full sm:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cari SN, Tiket, atau Nama..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-[10px] focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] bg-white"
-            />
+          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+            <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-[10px] border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors">
+              <div className="relative flex items-center">
+                <input 
+                  type="checkbox" 
+                  className="sr-only" 
+                  checked={showActionNeededOnly} 
+                  onChange={(e) => setShowActionNeededOnly(e.target.checked)} 
+                />
+                <div className={`block w-9 h-5 rounded-full transition-colors ${showActionNeededOnly ? 'bg-red-500' : 'bg-gray-300'}`}></div>
+                <div className={`dot absolute left-[2px] top-[2px] bg-white w-4 h-4 rounded-full transition-transform ${showActionNeededOnly ? 'transform translate-x-4' : ''}`}></div>
+              </div>
+              <span className="text-sm font-bold text-gray-700">Hanya Perlu Tindakan</span>
+            </label>
+            <div className="relative w-full sm:w-64">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Cari SN, Tiket, atau Nama..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 rounded-[10px] focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] bg-white"
+              />
+            </div>
           </div>
         </div>
         <Tabs value={activeTab} onValueChange={handleTabChange}>
