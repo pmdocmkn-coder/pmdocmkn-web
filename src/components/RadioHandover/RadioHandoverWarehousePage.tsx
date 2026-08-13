@@ -861,7 +861,7 @@ export default function RadioHandoverWarehousePage() {
 
       {/* Stats & Chart Redesign */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl overflow-hidden relative transition-transform hover:scale-[1.02]">
             <div className="absolute top-0 right-0 p-4 opacity-20"><PackageCheck className="w-16 h-16" /></div>
             <CardHeader className="pb-1 pt-5 px-5 relative z-10">
@@ -871,7 +871,11 @@ export default function RadioHandoverWarehousePage() {
               <CardTitle className="text-5xl font-extrabold text-white mt-1 drop-shadow-md">{totalCountPendingJobs}</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5 pt-0 relative z-10">
-              <p className="text-xs text-amber-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Status HandedToWarehouse</p>
+              <div className="mt-3">
+                <span className="text-xs text-white/90 font-bold bg-white/20 px-3 py-1 rounded-full inline-block backdrop-blur-sm border border-white/10 shadow-sm">
+                  Menunggu Tindakan
+                </span>
+              </div>
             </CardContent>
           </Card>
           
@@ -881,23 +885,36 @@ export default function RadioHandoverWarehousePage() {
               <CardDescription className="flex items-center gap-1.5 text-xs font-bold text-blue-100 uppercase tracking-widest drop-shadow-sm">
                 Masuk dari Teknisi
               </CardDescription>
-              <CardTitle className="text-5xl font-extrabold text-white mt-1 drop-shadow-md">{totalCountIncomingTek + totalCountIncomingHd}</CardTitle>
+              <CardTitle className="text-5xl font-extrabold text-white mt-1 drop-shadow-md">{totalCountIncomingTek}</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5 pt-0 relative z-10">
               <p className="text-xs text-blue-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Histori masuk bulan ini</p>
             </CardContent>
           </Card>
 
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-[#D94F2B] to-[#F56565] text-white rounded-2xl overflow-hidden relative transition-transform hover:scale-[1.02]">
-            <div className="absolute top-0 right-0 p-4 opacity-20"><ArrowUpRight className="w-16 h-16" /></div>
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-2xl overflow-hidden relative transition-transform hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 p-4 opacity-20"><ArrowDownLeft className="w-16 h-16" /></div>
             <CardHeader className="pb-1 pt-5 px-5 relative z-10">
               <CardDescription className="flex items-center gap-1.5 text-xs font-bold text-red-100 uppercase tracking-widest drop-shadow-sm">
+                Masuk dari Helpdesk (Scrap)
+              </CardDescription>
+              <CardTitle className="text-5xl font-extrabold text-white mt-1 drop-shadow-md">{totalCountIncomingHd}</CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-5 pt-0 relative z-10">
+              <p className="text-xs text-red-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Histori masuk bulan ini</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-0 shadow-lg bg-gradient-to-br from-emerald-500 to-teal-500 text-white rounded-2xl overflow-hidden relative transition-transform hover:scale-[1.02]">
+            <div className="absolute top-0 right-0 p-4 opacity-20"><ArrowUpRight className="w-16 h-16" /></div>
+            <CardHeader className="pb-1 pt-5 px-5 relative z-10">
+              <CardDescription className="flex items-center gap-1.5 text-xs font-bold text-emerald-100 uppercase tracking-widest drop-shadow-sm">
                 Serah ke Helpdesk
               </CardDescription>
               <CardTitle className="text-5xl font-extrabold text-white mt-1 drop-shadow-md">{totalCountOutgoing}</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-5 pt-0 relative z-10">
-              <p className="text-xs text-red-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Histori keluar bulan ini</p>
+              <p className="text-xs text-emerald-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Histori keluar bulan ini</p>
             </CardContent>
           </Card>
         </div>
