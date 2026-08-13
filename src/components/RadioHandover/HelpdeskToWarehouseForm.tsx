@@ -19,16 +19,16 @@ type Props = {
   onCancel: () => void;
 };
 
-export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Props) {
+export default function HelpdeskToWarehouseForm({ job, onSuccess, onCancel }: Props) {
   const { toast } = useToast();
   const [receivers, setReceivers] = useState<UserOption[]>([]);
-  const [hdId, setHdId] = useState("");
+  const [whId, setWhId] = useState("");
   const [jobDetail, setJobDetail] = useState<RadioRepairJobDetail | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
   const [remarks, setRemarks] = useState("");
   const [picReceiverName, setPicReceiverName] = useState("");
-  const [sigWh, setSigWh] = useState<string | null>(null);
   const [sigHd, setSigHd] = useState<string | null>(null);
+  const [sigWh, setSigWh] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [containsMainRadioUnit, setContainsMainRadioUnit] = useState(true);
   const [mainUnitDisabled, setMainUnitDisabled] = useState(false);
@@ -36,11 +36,10 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   const [selectedAccessories, setSelectedAccessories] = useState<boolean[]>([]);
   const [disabledAccessories, setDisabledAccessories] = useState<boolean[]>([]);
   const [disabledAccessoriesInfo, setDisabledAccessoriesInfo] = useState<string[]>([]);
-  const [availableAccessories, setAvailableAccessories] = useState<HandoverAccessoryItem[]>([]);
 
   useEffect(() => {
     radioHandoverApi
-      .getHelpdeskReceivers()
+      .getWarehouseReceivers()
       .then((list) => setReceivers(list ?? []))
       .catch(() => setReceivers([]));
 
@@ -48,66 +47,28 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       .getById(job.id)
       .then((res) => {
         setJobDetail(res);
-        if (res?.handovers) {
-          // 1. Apa saja yang benar-benar masuk ke Warehouse?
-          const incomingToWhStr = new Set<string>();
-          res.handovers.filter(h => h.handoverType === "TechnicianToWarehouse" || h.handoverType === "HelpdeskToWarehouse")
-            .forEach(h => {
-              h.accessories?.forEach((accStr: any) => {
-                incomingToWhStr.add(accStr as string);
-              });
-            });
-          
-          const whReceivedList = Array.from(incomingToWhStr).map(accStr => {
-            // Backend formats accessories as "Quantity Unit ItemName" (e.g. "1 EA Antena" or "1  Antena")
-            const match = accStr.match(/^(\d+)\s*(\S*)\s+(.+)$/);
-            if (match) {
-              return {
-                quantity: parseInt(match[1], 10) || 1,
-                unit: match[2] || "EA",
-                itemName: match[3],
-                description: undefined,
-                serialNumber: undefined
-              };
-            }
-            return {
-              quantity: 1,
-              unit: "EA",
-              itemName: accStr,
-              description: undefined,
-              serialNumber: undefined
-            };
-          });
-          
-          setAvailableAccessories(whReceivedList);
-
-          // 2. Apa saja yang sudah diserahkan keluar dari Warehouse?
+        if (res?.primaryHandover?.accessories) {
           const alreadyHandedOver = new Map<string, string>();
-          res.handovers.filter(h => h.handoverType === "WarehouseToHelpdesk")
+          res.handovers?.filter(h => h.handoverType === "HelpdeskToWarehouse")
             .forEach(h => {
-              h.accessories?.forEach((accStr: any) => {
-                alreadyHandedOver.set(accStr as string, h.receivedByName);
-              });
+              if (h.accessories) {
+                h.accessories.forEach(acc => alreadyHandedOver.set(acc, h.receivedByName));
+              }
             });
 
-          const disabled = whReceivedList.map(a => {
-            const accStr1 = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
-            const accStr2 = `${a.quantity}  ${a.itemName}`; // In case unit was originally empty
-            return alreadyHandedOver.has(accStr1) || alreadyHandedOver.has(accStr2);
+          const disabled = res.primaryHandover.accessories.map(a => {
+            const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+            return alreadyHandedOver.has(accStr);
           });
-          const disabledInfo = whReceivedList.map(a => {
-            const accStr1 = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
-            const accStr2 = `${a.quantity}  ${a.itemName}`;
-            return alreadyHandedOver.get(accStr1) || alreadyHandedOver.get(accStr2) || "";
+          const disabledInfo = res.primaryHandover.accessories.map(a => {
+            const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+            return alreadyHandedOver.get(accStr) || "";
           });
-          
           setDisabledAccessories(disabled);
           setDisabledAccessoriesInfo(disabledInfo);
-          // By default select all items that have not been handed over yet
           setSelectedAccessories(disabled.map(d => !d));
 
-          // Check main unit
-          const mainUnitHandover = res.handovers?.find(h => h.handoverType === "WarehouseToHelpdesk" && h.containsMainRadioUnit);
+          const mainUnitHandover = res.handovers?.find(h => h.handoverType === "HelpdeskToWarehouse" && h.containsMainRadioUnit);
           if (mainUnitHandover) {
             setMainUnitDisabled(true);
             setContainsMainRadioUnit(false);
@@ -119,14 +80,14 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
   }, [job.id]);
 
   const submit = async () => {
-    if (!hdId || photos.length === 0 || !sigWh) {
-      toast({ title: "Lengkapi penerima helpdesk, foto, dan TTD penyerah", variant: "destructive" });
+    if (!whId || photos.length === 0 || !sigHd) {
+      toast({ title: "Lengkapi penerima warehouse, foto, dan TTD penyerah", variant: "destructive" });
       return;
     }
 
-    const accPayload = availableAccessories
-      .filter((_, i) => selectedAccessories[i])
-      .map(a => ({
+    const accPayload = jobDetail?.primaryHandover?.accessories
+      ?.filter((_, i) => selectedAccessories[i])
+      ?.map(a => ({
         itemName: a.itemName,
         quantity: a.quantity,
         unit: a.unit || undefined,
@@ -144,23 +105,23 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
     setSubmitting(true);
     try {
       await radioHandoverApi.create({
-        handoverType: "WarehouseToHelpdesk",
-        equipmentTagType: (job.equipmentTagType as "Good" | "Damaged" | undefined) || "Good", // Fallback to Good if null
+        handoverType: "HelpdeskToWarehouse",
+        equipmentTagType: (job.equipmentTagType as "Good" | "Damaged" | undefined) || "Damaged",
         radioRepairJobId: job.id,
         radioId: job.radioId ?? undefined,
         radioSerialNumber: job.radioSerialNumber,
         equipmentName: job.equipmentName ?? undefined,
-        receivedByUserId: Number(hdId),
+        receivedByUserId: Number(whId),
         radioPhotos: photos,
-        handedOverSignatureBase64: sigWh,
-        receiverSignatureBase64: sigHd || undefined,
+        handedOverSignatureBase64: sigHd,
+        receiverSignatureBase64: sigWh || undefined,
         accessories: accPayload,
         remarks: remarks || undefined,
         picReceiverName: picReceiverName || undefined,
         isPartial,
         containsMainRadioUnit,
       });
-      toast({ title: "Serah terima ke Helpdesk berhasil" });
+      toast({ title: "Serah terima ke Warehouse berhasil" });
       onSuccess();
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string } } };
@@ -178,81 +139,43 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
     <div className="space-y-4">
       {/* Tag Preview Card */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-600">Pratinjau Tag Hijau</p>
-        {job.equipmentTagType === "Damaged" ? (
-          <DamagedEquipmentTagCard
-            data={{
-              handoverNumber: "STR-…",
-              helpdeskTicketNumber: job.helpdeskTicketNumber,
-              handoverAt: new Date().toISOString(),
-              handedOverByName: "Warehouse",
-              receivedByName: "Helpdesk",
-              equipmentName: job.equipmentName,
-              unitNumber: job.unitNumber,
-              radioSerialNumber: job.radioSerialNumber,
-              radioOwnerLabel: job.radioOwnerLabel,
-              radioMasterId: job.radioId,
-              radioMasterRadioId: job.radioMasterRadioId,
-              radioFleet: job.radioFleet,
-              radioCategory: job.radioCategory,
-              damageDescription: job.damageDescription,
-              handoverType: "WarehouseToHelpdesk",
-              accessories: availableAccessories
-                .filter((_, i) => selectedAccessories[i])
-                .map(a => ({
-                itemName: a.itemName,
-                quantity: a.quantity,
-                unit: a.unit ?? undefined,
-                description: a.description ?? undefined,
-                serialNumber: a.serialNumber ?? undefined,
-              })) ?? [],
-            }}
-          />
-        ) : (
-          <GoodEquipmentTagCard
-            data={{
-              handoverNumber: "STR-…",
-              helpdeskTicketNumber: job.helpdeskTicketNumber,
-              handoverAt: new Date().toISOString(),
-              handedOverByName: "Warehouse",
-              receivedByName: "Helpdesk",
-              equipmentName: job.equipmentName,
-              unitNumber: job.unitNumber,
-              radioSerialNumber: job.radioSerialNumber,
-              radioOwnerLabel: job.radioOwnerLabel,
-              radioMasterRadioId: job.radioMasterRadioId,
-              radioFleet: job.radioFleet,
-              originFrom: job.originFrom || job.radioOwnerLabel,
-              repairDataDescription: job.repairDataDescription,
-              repairedByName: job.repairedByName || job.assignedTechnicianName,
-              frequencyError: job.frequencyError,
-              afReading: job.afReading,
-              powerReading: job.powerReading,
-              voltageOutNoLoad: job.voltageOutNoLoad,
-              voltageOutWithLoad: job.voltageOutWithLoad,
-              physicalCondition: job.physicalCondition,
-              displayCondition: job.displayCondition,
-              handoverType: "WarehouseToHelpdesk",
-              accessories: availableAccessories
-                .filter((_, i) => selectedAccessories[i])
-                .map(a => ({
-                itemName: a.itemName,
-                quantity: a.quantity,
-                unit: a.unit ?? undefined,
-                description: a.description ?? undefined,
-                serialNumber: a.serialNumber ?? undefined,
-              })) ?? [],
-            }}
-          />
-        )}
+        <p className="text-xs font-medium text-gray-600">Pratinjau Tag</p>
+        <DamagedEquipmentTagCard
+          data={{
+            handoverNumber: "STR-…",
+            helpdeskTicketNumber: job.helpdeskTicketNumber,
+            handoverAt: new Date().toISOString(),
+            handedOverByName: "Helpdesk",
+            receivedByName: "Warehouse",
+            equipmentName: job.equipmentName,
+            unitNumber: job.unitNumber,
+            radioSerialNumber: job.radioSerialNumber,
+            radioOwnerLabel: job.radioOwnerLabel,
+            radioMasterId: job.radioId,
+            radioMasterRadioId: job.radioMasterRadioId,
+            radioFleet: job.radioFleet,
+            radioCategory: job.radioCategory,
+            damageDescription: job.damageDescription || "Scrap",
+            handoverType: "HelpdeskToWarehouse",
+            accessories: jobDetail?.primaryHandover?.accessories
+              ?.filter((_, i) => selectedAccessories[i])
+              ?.map(a => ({
+              itemName: a.itemName,
+              quantity: a.quantity,
+              unit: a.unit ?? undefined,
+              description: a.description ?? undefined,
+              serialNumber: a.serialNumber ?? undefined,
+            })) ?? [],
+          }}
+        />
       </div>
 
-      {/* Helpdesk Receiver Selection */}
+      {/* Warehouse Receiver Selection */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-900">Penerima Helpdesk *</label>
-        <Select value={hdId} onValueChange={setHdId}>
+        <label className="text-sm font-medium text-gray-900">Penerima Warehouse *</label>
+        <Select value={whId} onValueChange={setWhId}>
           <SelectTrigger className="w-full h-11 border-gray-300 focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0]">
-            <SelectValue placeholder="Pilih staff helpdesk" />
+            <SelectValue placeholder="Pilih staff warehouse" />
           </SelectTrigger>
           <SelectContent className="max-h-[300px]">
             {(receivers ?? []).map((r) => (
@@ -282,17 +205,17 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
             />
             <div className={mainUnitDisabled ? "opacity-50" : ""}>
               <p className="text-sm font-medium text-gray-900 flex items-center">
-                Unit Radio Utama
+                Unit Radio Utama (Scrap)
                 {mainUnitDisabled && <span className="ml-2 text-xs text-amber-600 font-medium italic">(Sudah diserahkan ke {mainUnitDisabledInfo})</span>}
               </p>
               <p className="text-xs text-gray-500">{job.equipmentName || 'Radio'} - SN: {job.radioSerialNumber}</p>
             </div>
           </label>
           
-          {(availableAccessories.length ?? 0) > 0 && (
+          {(jobDetail?.primaryHandover?.accessories?.length ?? 0) > 0 && (
             <div className="pl-7 space-y-2 border-l-2 border-gray-100 ml-1.5 mt-2 pt-2">
               <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">Aksesoris / Kelengkapan</p>
-              {availableAccessories.map((a, i) => (
+              {jobDetail!.primaryHandover!.accessories.map((a, i) => (
                 <label key={i} className="flex items-start space-x-3 cursor-pointer">
                   <input 
                     type="checkbox" 
@@ -329,40 +252,20 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
 
       {/* Signatures */}
       <SignaturePadField
-        label="TTD Penyerah"
+        label="TTD Penyerah (Helpdesk)"
         required
-        value={sigWh}
-        onChange={setSigWh}
-      />
-      <SignaturePadField
-        label="TTD Penerima (opsional)"
-        required={false}
         value={sigHd}
         onChange={setSigHd}
       />
-
-      {/* PIC Receiver */}
-      <div className="space-y-2 pt-2">
-        <div className="flex justify-between items-center">
-          <label className="text-sm font-medium text-gray-900">Nama PIC / Penerima Fisik</label>
-          <button
-            type="button"
-            className="text-xs text-[#2B6CB0] hover:text-[#1B3A6B] font-medium bg-[#EBF4FF] hover:bg-[#EBF4FF]/80 px-2 py-1 rounded transition-colors"
-            onClick={() => setPicReceiverName(job.radioOwnerLabel || "")}
-          >
-            Gunakan data Pemilik
-          </button>
-        </div>
-        <input
-          className="w-full border border-gray-300 rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] transition-colors"
-          value={picReceiverName}
-          onChange={(e) => setPicReceiverName(e.target.value)}
-          placeholder="Nama pengambil radio (opsional)"
-        />
-      </div>
+      <SignaturePadField
+        label="TTD Penerima (Warehouse - opsional)"
+        required={false}
+        value={sigWh}
+        onChange={setSigWh}
+      />
 
       {/* Remarks */}
-      <div className="space-y-2 pb-4">
+      <div className="space-y-2 pb-4 pt-2">
         <label className="text-sm font-medium text-gray-900">Catatan</label>
         <input
           className="w-full border border-gray-300 rounded-[10px] px-3 py-2.5 text-sm focus:ring-2 focus:ring-[#2B6CB0]/20 focus:border-[#2B6CB0] transition-colors"
@@ -386,7 +289,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
           disabled={submitting}
           onClick={submit}
         >
-          {submitting ? "Menyimpan..." : "Serah ke Helpdesk"}
+          {submitting ? "Menyimpan..." : "Serah ke Warehouse"}
         </button>
       </div>
     </div>

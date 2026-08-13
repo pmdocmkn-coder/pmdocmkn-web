@@ -9,34 +9,44 @@ import { format } from "date-fns";
 type Props = {
   open: boolean;
   onClose: () => void;
-  onApprove: (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) => Promise<void>;
+  onApprove: (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string; isPendingHelpdeskScrapFill?: boolean }) => Promise<void>;
   loading?: boolean;
+  hideDelegationCheckbox?: boolean;
 };
 
-export default function RadioScrapApprovalModal({ open, onClose, onApprove, loading }: Props) {
+export default function RadioScrapApprovalModal({ open, onClose, onApprove, loading, hideDelegationCheckbox }: Props) {
   const [dateScrapped, setDateScrapped] = useState<Date | undefined>(new Date());
   const [scrapJobNumber, setScrapJobNumber] = useState("");
   const [remarks, setRemarks] = useState("");
 
+  const [isPendingHelpdeskScrapFill, setIsPendingHelpdeskScrapFill] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!dateScrapped) return;
-    await onApprove({ dateScrapped: format(dateScrapped, "yyyy-MM-dd"), scrapJobNumber, remarks });
+    if (!isPendingHelpdeskScrapFill && !dateScrapped) return;
+    await onApprove({ 
+      dateScrapped: dateScrapped ? format(dateScrapped, "yyyy-MM-dd") : "", 
+      scrapJobNumber, 
+      remarks,
+      isPendingHelpdeskScrapFill
+    });
   };
 
   return (
     <ResponsiveModal 
       open={open} 
       onOpenChange={(o) => { if (!o) onClose(); }}
-      title="Persetujuan Radio Scrap"
+      title="Data Radio Scrap"
     >
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1">
-            <label className="text-sm font-medium text-gray-700">Tanggal Scrap <span className="text-red-500">*</span></label>
-            <FormMobileDatePicker
-              date={dateScrapped}
-              onSelect={setDateScrapped}
-            />
+            <label className="text-sm font-medium text-gray-700">Tanggal Scrap {!isPendingHelpdeskScrapFill && <span className="text-red-500">*</span>}</label>
+            <div className={isPendingHelpdeskScrapFill ? "opacity-50 pointer-events-none" : ""}>
+              <FormMobileDatePicker
+                date={dateScrapped}
+                onSelect={setDateScrapped}
+              />
+            </div>
           </div>
           <div className="space-y-1">
             <label className="text-sm font-medium text-gray-700">Nomor Job Scrap</label>
@@ -44,6 +54,7 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
               placeholder="Contoh: SCR-2024-001" 
               value={scrapJobNumber} 
               onChange={(e) => setScrapJobNumber(e.target.value)} 
+              disabled={isPendingHelpdeskScrapFill}
             />
           </div>
           <div className="space-y-1">
@@ -56,11 +67,25 @@ export default function RadioScrapApprovalModal({ open, onClose, onApprove, load
               onChange={(e) => setRemarks(e.target.value)}
             />
           </div>
+          {!hideDelegationCheckbox && (
+            <div className="flex items-center gap-2 pt-2">
+              <input 
+                type="checkbox" 
+                id="pendingHelpdesk" 
+                checked={isPendingHelpdeskScrapFill} 
+                onChange={(e) => setIsPendingHelpdeskScrapFill(e.target.checked)}
+                className="w-4 h-4 text-orange-600 rounded focus:ring-orange-500"
+              />
+              <label htmlFor="pendingHelpdesk" className="text-sm font-medium text-gray-700">
+                Data scrap akan diisi oleh Helpdesk nanti
+              </label>
+            </div>
+          )}
           <div className="flex gap-2 justify-end pt-4 border-t">
             <Button variant="outline" type="button" onClick={onClose} disabled={loading}>Batal</Button>
-            <Button type="submit" disabled={!dateScrapped || loading} className="bg-orange-600 hover:bg-orange-700">
+            <Button type="submit" disabled={(!isPendingHelpdeskScrapFill && !dateScrapped) || loading} className="bg-orange-600 hover:bg-orange-700">
               {loading && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-              Setujui Scrap
+              Simpan Data Scrap
             </Button>
           </div>
         </form>

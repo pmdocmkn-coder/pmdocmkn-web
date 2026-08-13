@@ -2,7 +2,18 @@ import { Fragment, useState, useRef, useEffect } from "react";
 
 import { format } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Eye, Pencil, RotateCcw, Trash2, ChevronDown, Warehouse, Wrench } from "lucide-react";
+import { 
+  Eye, 
+  Pencil, 
+  RotateCcw, 
+  Trash2, 
+  ChevronDown, 
+  Warehouse, 
+  Wrench,
+  AlertTriangle,
+  FileCheck,
+  MonitorSmartphone
+} from "lucide-react";
 import type { RadioRepairJobList, RadioRepairJobStatus, RepairJobCustomStatus } from "../../types/radioRepair";
 import { LazyPhotoThumb } from "../RadioHandover/LazyPhotoThumb";
 import RadioRepairStatusBadge from "./RadioRepairStatusBadge";
@@ -120,13 +131,15 @@ export default function RadioRepairGroupedTable({
                 </tr>
               )}
               {!loading &&
-                groups.map(({ ticket, radios }) => (
+                groups.map(({ ticket, radios }) => {
+                  const isScrapGroup = radios.some(r => r.isScrap);
+                  return (
                   <Fragment key={ticket}>
-                    <tr className="bg-gradient-to-r from-violet-100/90 to-violet-50/50 border-t-2 border-violet-200">
+                    <tr className={`border-t-2 ${isScrapGroup ? "bg-gradient-to-r from-red-100/90 to-red-50/50 border-red-200" : "bg-gradient-to-r from-violet-100/90 to-violet-50/50 border-violet-200"}`}>
                       <td colSpan={colCount} className="px-4 py-2.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-semibold text-violet-900">{ticket}</span>
-                          <span className="text-xs px-2 py-0.5 rounded-full bg-violet-200/80 text-violet-800 font-medium">
+                          <span className={`font-semibold ${isScrapGroup ? "text-red-900" : "text-violet-900"}`}>{ticket}</span>
+                          <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${isScrapGroup ? "bg-red-200/80 text-red-800" : "bg-violet-200/80 text-violet-800"}`}>
                             {radios.length} radio{radios.length > 1 ? "s" : ""}
                           </span>
                         </div>
@@ -160,7 +173,8 @@ export default function RadioRepairGroupedTable({
                       />
                     ))}
                   </Fragment>
-                ))}
+                );
+                })}
             </tbody>
           </table>
         </div>
@@ -173,11 +187,13 @@ export default function RadioRepairGroupedTable({
         ) : groups.length === 0 ? (
           <div className="text-center py-8 text-gray-500 text-sm">Belum ada data perbaikan</div>
         ) : (
-          groups.map(({ ticket, radios }) => (
+          groups.map(({ ticket, radios }) => {
+            const isScrapGroup = radios.some(r => r.isScrap);
+            return (
             <div key={ticket} className="space-y-3">
               <div className="flex items-center gap-2 px-1">
-                <span className="font-bold text-violet-900 text-sm">{ticket}</span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-violet-100 text-violet-700 font-bold">
+                <span className={`font-bold text-sm ${isScrapGroup ? "text-red-900" : "text-violet-900"}`}>{ticket}</span>
+                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-bold ${isScrapGroup ? "bg-red-100 text-red-700" : "bg-violet-100 text-violet-700"}`}>
                   {radios.length} radio
                 </span>
               </div>
@@ -185,10 +201,15 @@ export default function RadioRepairGroupedTable({
                 {radios.map((j) => {
                   const { days } = getWorkshopDays(j.openedAt, j.closedAt, j.firstInProgressAt, j.workshopCompletedAt);
                   return (
-                    <div key={j.id} className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 flex flex-col gap-2.5 relative">
+                    <div key={j.id} className={`rounded-xl border shadow-sm p-4 flex flex-col gap-2.5 relative ${j.isScrap ? "bg-red-50/30 border-red-200" : "bg-white border-gray-200"}`}>
                       {/* Row 1: Category Badge + Date */}
                       <div className="flex justify-between items-start">
                         <div className="flex flex-wrap gap-1">
+                          {j.isScrap && (
+                            <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-bold rounded-full bg-red-100 text-red-700 border border-red-200 uppercase tracking-wider">
+                              Scrap
+                            </span>
+                          )}
                           <span className="px-2 py-0.5 inline-flex text-[10px] leading-5 font-semibold rounded-full bg-blue-50 text-blue-700 border border-blue-100">
                             {j.radioOwnerLabel || "Perbaikan"}
                           </span>
@@ -284,14 +305,25 @@ export default function RadioRepairGroupedTable({
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && (
+                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && (
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
-                              className="inline-flex items-center justify-center h-8 px-3 border border-violet-600 rounded-xl text-white bg-violet-600 text-xs font-semibold shrink-0 transition-colors shadow-sm"
+                              className={`inline-flex items-center justify-center h-8 px-3 border rounded-xl text-white text-xs font-semibold shrink-0 transition-colors shadow-sm ${
+                                j.status === "Scrapped" ? "bg-red-600 border-red-600" : "bg-violet-600 border-violet-600"
+                              }`}
                             >
-                              <Warehouse className="w-3.5 h-3.5 mr-1" />
-                              Ke WH
+                              {j.status === "Scrapped" ? (
+                                <>
+                                  <MonitorSmartphone className="w-3.5 h-3.5 mr-1" />
+                                  Ke HD
+                                </>
+                              ) : (
+                                <>
+                                  <Warehouse className="w-3.5 h-3.5 mr-1" />
+                                  Ke WH
+                                </>
+                              )}
                             </button>
                           )}
 
@@ -366,7 +398,8 @@ export default function RadioRepairGroupedTable({
                 })}
               </div>
             </div>
-          ))
+          );
+          })
         )}
       </div>
     </>
@@ -483,8 +516,17 @@ function MobileQuickActionDropdown({
               }}
               className="w-full text-left px-3 py-3 text-[14px] font-medium text-[#2B6CB0] hover:bg-[#EBF4FF] rounded-[10px] transition-colors flex items-center gap-2 border-t border-[#E2E8F0] mt-1 pt-3"
             >
-              <Warehouse className="w-4 h-4" />
-              Serah ke WH
+              {job.status === "Scrapped" ? (
+                <>
+                  <MonitorSmartphone className="w-4 h-4" />
+                  Serah ke HD
+                </>
+              ) : (
+                <>
+                  <Warehouse className="w-4 h-4" />
+                  Serah ke WH
+                </>
+              )}
             </button>
           )}
 
@@ -563,10 +605,10 @@ function RadioRepairRow({
   const nextStatuses = !locked && !showArchive
     ? allowedNextStatuses(j.status as RadioRepairJobStatus)
     : [];
-  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && !j.isDeleted && !showArchive;
+  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && !j.isDeleted && !showArchive;
 
   return (
-    <tr className={`border-t border-gray-100 hover:bg-violet-50/40 ${j.isDeleted ? "opacity-60" : ""}`}>
+    <tr className={`border-t transition-colors ${j.isDeleted ? "opacity-60" : ""} ${j.isScrap ? "bg-red-50/30 hover:bg-red-100/50 border-red-100" : "bg-white hover:bg-violet-50/40 border-gray-100"}`}>
       <td className="px-3 py-2.5 w-14">
         {j.photoHandoverId ? (
           <div className="relative inline-block">
@@ -581,7 +623,10 @@ function RadioRepairRow({
           <span className="text-gray-300 text-xs">—</span>
         )}
       </td>
-      <td className="px-3 py-2.5 font-mono text-xs font-medium">{j.radioSerialNumber}</td>
+      <td className="px-3 py-2.5 font-mono text-xs font-medium">
+        {j.radioSerialNumber}
+        {j.isScrap && <div className="text-[10px] text-red-600 font-bold mt-0.5 uppercase tracking-wide">Scrap</div>}
+      </td>
       <td className="px-3 py-2.5 max-w-[110px] truncate text-xs" title={j.equipmentName ?? ""}>
         {j.equipmentName ?? "—"}
       </td>
@@ -627,15 +672,25 @@ function RadioRepairRow({
       </td>
       <td className="px-3 py-2.5">
         <div className="flex justify-end items-center gap-1">
-          {/* Shortcut serah terima ke warehouse */}
+          {/* Shortcut serah terima ke warehouse / helpdesk */}
           {showWhShortcut && (
             <button
               type="button"
-              title="Serah terima ke Warehouse"
-              className="flex items-center gap-1 px-2 py-1 text-xs bg-violet-600 text-white rounded-lg hover:bg-violet-700 whitespace-nowrap"
+              title={j.status === "Scrapped" ? "Serah terima ke Helpdesk" : "Serah terima ke Warehouse"}
+              className={`flex items-center gap-1 px-2 py-1 text-xs text-white rounded-lg whitespace-nowrap ${
+                j.status === "Scrapped" ? "bg-red-600 hover:bg-red-700" : "bg-violet-600 hover:bg-violet-700"
+              }`}
               onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
             >
-              <Warehouse className="w-3 h-3" /> Ke WH
+              {j.status === "Scrapped" ? (
+                <>
+                  <MonitorSmartphone className="w-3 h-3" /> Ke HD
+                </>
+              ) : (
+                <>
+                  <Warehouse className="w-3 h-3" /> Ke WH
+                </>
+              )}
             </button>
           )}
 

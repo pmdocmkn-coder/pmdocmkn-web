@@ -39,6 +39,9 @@ export const radioRepairApi = {
         cancelled: 0,
       }),
 
+  getTechnicians: () =>
+    api.get("/api/radio-repair-jobs/technicians").then((r) => unwrapData<any[]>(r) ?? []),
+
   getAll: (params?: Record<string, unknown>) =>
     api.get("/api/radio-repair-jobs", { params }).then((r) => unwrapPaged<RadioRepairJobList>(r)),
 

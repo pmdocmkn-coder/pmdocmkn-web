@@ -1,6 +1,6 @@
 import type { EquipmentTagType, GreenTagFields } from "./equipmentTag";
 
-export type RadioHandoverType = "HelpdeskToTechnician" | "TechnicianToWarehouse" | "WarehouseToHelpdesk";
+export type RadioHandoverType = "HelpdeskToTechnician" | "TechnicianToWarehouse" | "WarehouseToHelpdesk" | "TechnicianToHelpdesk" | "HelpdeskToWarehouse";
 
 export type { EquipmentTagType, GreenTagFields };
 
@@ -129,6 +129,8 @@ export interface RadioHandoverList {
 
   radioRepairJobId: number;
 
+  jobStatus?: string | null;
+
   helpdeskTicketNumber?: string;
   noJobErp?: string | null;
 
@@ -148,11 +150,14 @@ export interface RadioHandoverList {
 
   deletedAt?: string | null;
 
+  isScrap?: boolean;
+
   receivedByUserId?: number;
 
   handedOverByName: string;
   receivedByName: string;
   picReceiverName?: string;
+  remarks?: string | null;
 
   workshopTechnicianId?: number;
   workshopTechnicianName?: string;
@@ -180,6 +185,8 @@ export interface RadioHandoverList {
 
   isPartial?: boolean;
   containsMainRadioUnit?: boolean;
+  isPendingScrapData?: boolean;
+  hasRemainingItemsForWarehouse?: boolean;
 }
 
 
@@ -222,13 +229,9 @@ export interface RadioHandoverDetail extends RadioHandoverList {
 
   receiverSignatureBase64?: string | null;
 
-  remarks?: string | null;
-
   accessories: HandoverAccessoryItem[];
 
   helpdeskTicketNumber: string;
-
-  jobStatus: string;
 
 }
 

@@ -50,7 +50,7 @@ const requestInterceptor = (config: any) => {
     config.headers.Authorization = `Bearer ${token}`;
   }
 
-  if (!config.headers["Content-Type"]) {
+  if (!config.headers["Content-Type"] && !(config.data instanceof FormData)) {
     config.headers["Content-Type"] = "application/json";
   }
 
@@ -230,11 +230,7 @@ export const authApi = {
 
     console.log("📤 Uploading photo for user:", userId);
 
-    const response = await api.post(`/api/users/${userId}/photo`, formData, {
-      headers: {
-        "Content-Type": "multipart/form-data",
-      },
-    });
+    const response = await api.post(`/api/users/${userId}/photo`, formData);
 
     console.log("📤 Photo upload response:", response.data);
 
@@ -465,9 +461,6 @@ export const callRecordApi = {
         "/api/call-records/import-csv",
         formData,
         {
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
           onUploadProgress: (progressEvent) => {
             if (progressEvent.total) {
               const percentCompleted = Math.round(

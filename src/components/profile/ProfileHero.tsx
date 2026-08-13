@@ -11,6 +11,7 @@ interface ProfileHeroProps {
   getInitials: () => string;
   hasPhoto: boolean;
   isEditing: boolean;
+  uploadingPhoto?: boolean;
   onAvatarClick: () => void;
   onPreviewClick: () => void;
   onCancelEdit: () => void;
@@ -27,6 +28,7 @@ export function ProfileHero({
   getInitials,
   hasPhoto,
   isEditing,
+  uploadingPhoto = false,
   onAvatarClick,
   onPreviewClick,
   onCancelEdit,
@@ -53,29 +55,46 @@ export function ProfileHero({
           {hasPhoto ? (
             <div 
               className="w-44 h-44 rounded-[40px] overflow-hidden bg-white shadow-2xl ring-8 ring-white/30 cursor-pointer transition-transform duration-300 group-hover:scale-105" 
-              onClick={onPreviewClick}
+              onClick={uploadingPhoto ? undefined : onPreviewClick}
             >
               <img src={photoUrl!} alt={fullName} className="w-full h-full object-cover" />
               <div className="absolute inset-0 bg-[#1B3A6B]/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px]">
                 <Eye className="text-white w-10 h-10" />
               </div>
+              
+              {/* Loading Overlay */}
+              {uploadingPhoto && (
+                <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex flex-col items-center justify-center z-10 text-white">
+                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-2"></div>
+                  <span className="text-xs font-bold animate-pulse">Mengunggah...</span>
+                </div>
+              )}
             </div>
           ) : (
             <div 
-              className="w-44 h-44 rounded-[40px] overflow-hidden bg-[#1B3A6B] shadow-2xl ring-8 ring-white/30 cursor-pointer transition-transform duration-300 group-hover:scale-105 flex items-center justify-center" 
-              onClick={onAvatarClick}
+              className="w-44 h-44 rounded-[40px] overflow-hidden bg-[#1B3A6B] shadow-2xl ring-8 ring-white/30 cursor-pointer transition-transform duration-300 group-hover:scale-105 flex items-center justify-center relative" 
+              onClick={uploadingPhoto ? undefined : onAvatarClick}
             >
               <span className="text-white text-5xl font-bold">{getInitials()}</span>
               <div className="absolute inset-0 bg-[#1B3A6B]/80 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-300 backdrop-blur-[2px]">
                 <Camera className="text-white w-10 h-10" />
               </div>
+
+              {/* Loading Overlay */}
+              {uploadingPhoto && (
+                <div className="absolute inset-0 bg-[#1B3A6B]/90 backdrop-blur-sm flex flex-col items-center justify-center z-10 text-white">
+                  <div className="w-10 h-10 border-4 border-white/20 border-t-white rounded-full animate-spin mb-2"></div>
+                  <span className="text-xs font-bold animate-pulse">Mengunggah...</span>
+                </div>
+              )}
             </div>
           )}
           
           <button 
             type="button"
+            disabled={uploadingPhoto}
             onClick={onAvatarClick}
-            className="absolute -bottom-4 -right-4 w-14 h-14 bg-[#1B3A6B] text-white rounded-2xl flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all border-4 border-white z-20"
+            className="absolute -bottom-4 -right-4 w-14 h-14 bg-[#1B3A6B] text-white rounded-2xl flex items-center justify-center shadow-2xl hover:scale-110 active:scale-95 transition-all border-4 border-white z-20 disabled:opacity-50 disabled:cursor-not-allowed"
             title="Ubah Foto Profil"
           >
             <Camera className="w-6 h-6" />

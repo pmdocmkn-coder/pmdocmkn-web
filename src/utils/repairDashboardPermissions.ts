@@ -37,3 +37,8 @@ export function canCreateTekToWarehouseHandover(): boolean {
 export function canApproveRepairMaterial(): boolean {
   return hasPermission("radio.repair.supervise");
 }
+
+export function canInputScrapData(): boolean {
+  const role = getCurrentRoleName();
+  return role === "Helpdesk" || hasPermission("radio.repair.supervise");
+}

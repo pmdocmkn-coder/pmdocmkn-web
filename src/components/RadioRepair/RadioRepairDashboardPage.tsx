@@ -25,6 +25,9 @@ import ImageGalleryModal from "../common/ImageGalleryModal";
 import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
 import RadioCompletionTagModal from "./RadioCompletionTagModal";
 import RadioWarrantyCheckModal from "./RadioWarrantyCheckModal";
+import TechnicianToHelpdeskScrapForm from "../RadioHandover/TechnicianToHelpdeskScrapForm";
+import HelpdeskToWarehouseForm from "../RadioHandover/HelpdeskToWarehouseForm";
+import ChangeReceiverModal from "../RadioHandover/ChangeReceiverModal";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -40,6 +43,10 @@ import {
   canCreateTekToWarehouseHandover,
   canUpdateRepairJobStatus,
 } from "../../utils/repairDashboardPermissions";
+import {
+  canCreateHandoverHd,
+  canCreateHandoverWhHd,
+} from "../../utils/handoverPermissions";
 import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtils";
 import { format } from "date-fns";
 import { id as dateFnsLocale } from "date-fns/locale";
@@ -70,6 +77,8 @@ export default function RadioRepairDashboardPage() {
   const [detail, setDetail] = useState<RadioRepairJobDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [whJob, setWhJob] = useState<RadioRepairJobDetail | null>(null);
+  const [hdScrapJob, setHdScrapJob] = useState<RadioRepairJobDetail | null>(null);
+  const [hdToWhJob, setHdToWhJob] = useState<RadioRepairJobDetail | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showScrapApproval, setShowScrapApproval] = useState(false);
 
@@ -90,7 +99,7 @@ export default function RadioRepairDashboardPage() {
   const [isFilterOpen, setIsFilterOpen] = useState(true);
 
   const [editJob, setEditJob] = useState<RadioRepairJobDetail | null>(null);
-  const [technicians, setTechnicians] = useState<UserOption[]>([]);
+  const [technicians, setTechnicians] = useState<any[]>([]);
   const [savingEdit, setSavingEdit] = useState(false);
   const [patchingStatus, setPatchingStatus] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
@@ -115,6 +124,10 @@ export default function RadioRepairDashboardPage() {
     resumeStatus?: "InProgress" | "Monitoring";
   } | null>(null);
 
+  const [changeReceiverId, setChangeReceiverId] = useState<number | null>(null);
+  const [changeReceiverType, setChangeReceiverType] = useState<"Helpdesk" | "Warehouse" | "Teknisi">("Helpdesk");
+  const [changeReceiverCurrentUserId, setChangeReceiverCurrentUserId] = useState<number | undefined>();
+
   const canSupervise = canApproveRepairMaterial();
   const canUpdate = canUpdateRepairJobStatus();
   const canDelete = hasPermission("radio.repair.delete");
@@ -122,6 +135,8 @@ export default function RadioRepairDashboardPage() {
   const canViewArchive = hasPermission("radio.repair.view.archive");
   const canDeletePermanent = hasPermission("radio.repair.delete.permanent");
   const canHandoverWh = canCreateTekToWarehouseHandover();
+  const canCreateHdToWh = canCreateHandoverHd();
+  const canCreateWhToHd = canCreateHandoverWhHd();
   const canResetTestingData = hasPermission("delete.all.radios.handover");
   const canPurge = hasPermission("radio.repair.purge");
 
@@ -129,14 +144,14 @@ export default function RadioRepairDashboardPage() {
   const statusLabel = filterStatus ? STATUS_LABELS[filterStatus as RadioRepairJobStatus] ?? "" : "";
 
   const technicianOptions = useMemo(
-    () => technicians.map((t) => `${t.fullName} (${t.username})`),
-    [technicians]
+    () => workshopTechs.map((t) => t.name),
+    [workshopTechs]
   );
   const technicianLabel = useMemo(() => {
     if (!filterTechnician) return "";
-    const t = technicians.find((x) => String(x.userId) === filterTechnician);
-    return t ? `${t.fullName} (${t.username})` : "";
-  }, [filterTechnician, technicians]);
+    const t = workshopTechs.find((x) => String(x.id) === filterTechnician);
+    return t ? t.name : "";
+  }, [filterTechnician, workshopTechs]);
 
   const ticketGroups: TicketJobGroup[] = useMemo(() => {
     const map = new Map<string, RadioRepairJobList[]>();
@@ -183,7 +198,7 @@ export default function RadioRepairDashboardPage() {
         pageSize: PAGE_SIZE,
         search: search.trim() || undefined,
         status: filterStatus || undefined,
-        technicianUserId: filterTechnician ? Number(filterTechnician) : undefined,
+        workshopTechnicianId: filterTechnician ? Number(filterTechnician) : undefined,
         fromDate: filterFromDate || undefined,
         toDate: filterToDate || undefined,
         includeDeleted: showArchive,
@@ -218,10 +233,10 @@ export default function RadioRepairDashboardPage() {
 
   useEffect(() => {
     load();
+    radioRepairApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
   }, [page, search, filterStatus, filterTechnician, filterFromDate, filterToDate, showArchive]);
 
   useEffect(() => {
-    radioHandoverApi.getTechnicians().then(setTechnicians).catch(() => setTechnicians([]));
     repairJobCustomStatusApi.getAll().then((list) => setCustomStatuses(list.filter((s) => s.isActive))).catch(() => setCustomStatuses([]));
     workshopTechnicianApi.getAllActive("Teknisi WKS").then(res => setWorkshopTechs(res.data.data)).catch(() => setWorkshopTechs([]));
   }, []);
@@ -481,7 +496,7 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) => {
+  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string; isPendingHelpdeskScrapFill?: boolean }) => {
     if (!detail) return;
     setPatchingStatus(true);
     try {
@@ -509,6 +524,22 @@ export default function RadioRepairDashboardPage() {
       load(true);
     } catch (err: unknown) {
       toast({ title: "Gagal membatalkan scrap", description: apiMessage(err), variant: "destructive" });
+    } finally {
+      setPatchingStatus(false);
+    }
+  };
+
+  const handleCancelHandover = async (handoverId: number) => {
+    if (!window.confirm("Apakah Anda yakin ingin membatalkan serah terima ini?")) return;
+    setPatchingStatus(true);
+    try {
+      await radioHandoverApi.cancelPending(handoverId);
+      toast({ title: "Serah terima berhasil dibatalkan" });
+      const newDetail = await radioRepairApi.getById(detail!.id);
+      setDetail(newDetail);
+      load(true);
+    } catch (err: unknown) {
+      toast({ title: "Gagal membatalkan serah terima", description: apiMessage(err), variant: "destructive" });
     } finally {
       setPatchingStatus(false);
     }
@@ -639,8 +670,8 @@ export default function RadioRepairDashboardPage() {
             <FormMobileSelect
               value={technicianLabel}
               onChange={(v) => {
-                const t = technicians.find((x) => `${x.fullName} (${x.username})` === v);
-                setFilterTechnician(t ? String(t.userId) : "");
+                const t = workshopTechs.find((x) => x.name === v);
+                setFilterTechnician(t ? String(t.id) : "");
                 setPage(1);
               }}
               options={technicianOptions}
@@ -816,8 +847,8 @@ export default function RadioRepairDashboardPage() {
                   <FilterSelect
                     value={technicianLabel}
                     onChange={(v) => {
-                      const t = technicians.find((x) => `${x.fullName} (${x.username})` === v);
-                      setFilterTechnician(t ? String(t.userId) : "");
+                      const t = workshopTechs.find((x) => x.name === v);
+                      setFilterTechnician(t ? String(t.id) : "");
                       setPage(1);
                     }}
                     options={technicianOptions}
@@ -865,7 +896,11 @@ export default function RadioRepairDashboardPage() {
           // Fetch detail tanpa membuka modal detail
           try {
             const d = await radioRepairApi.getById(job.id, showArchive);
-            setWhJob(d);
+            if (job.status === "Scrapped") {
+              setHdScrapJob(d);
+            } else {
+              setWhJob(d);
+            }
           } catch (err: unknown) {
             toast({ title: "Gagal memuat detail", description: apiMessage(err), variant: "destructive" });
           }
@@ -926,11 +961,35 @@ export default function RadioRepairDashboardPage() {
               canUpdate={canUpdate}
               canSupervise={canSupervise}
               canHandoverWh={canHandoverWh}
+              canCreateHdToWh={canCreateHdToWh}
+              canCreateWhToHd={canCreateWhToHd}
               onPatchStatus={(s, cid) => patchStatus(detail.id, s, cid)}
               onApproveMaterial={approveMaterial}
-              onOpenWh={() => { setWhJob(detail); setDetail(null); }}
+              onOpenWh={() => { 
+                if (detail.status === "Scrapped") {
+                  setHdScrapJob(detail);
+                } else {
+                  setWhJob(detail);
+                }
+                setDetail(null); 
+              }}
+              onOpenWhHd={() => {
+                setHdToWhJob(detail);
+                setDetail(null);
+              }}
               onOpenApproveScrap={() => setShowScrapApproval(true)}
               onCancelScrap={handleCancelScrap}
+              onCancelHandover={handleCancelHandover}
+              onChangeHandoverReceiver={(id, receiverId) => {
+                setChangeReceiverId(id);
+                const pType = detail.pendingHandoverType || "";
+                setChangeReceiverType(
+                  pType.endsWith("Technician") ? "Teknisi" :
+                  pType.endsWith("Helpdesk") ? "Helpdesk" :
+                  "Warehouse"
+                );
+                setChangeReceiverCurrentUserId(receiverId);
+              }}
               onOpenPhotos={openPhotos}
               onJobUpdated={(updated) => {
                 setDetail(updated);
@@ -977,6 +1036,64 @@ export default function RadioRepairDashboardPage() {
           />
         )}
       </ResponsiveModal>
+
+      <ResponsiveModal
+        open={!!hdScrapJob}
+        onOpenChange={(open) => { if (!open) setHdScrapJob(null); }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-lg"
+        title="Teknisi → Helpdesk (Scrap)"
+      >
+        {hdScrapJob && (
+          <TechnicianToHelpdeskScrapForm
+            job={hdScrapJob}
+            onSuccess={() => {
+              setHdScrapJob(null);
+              load();
+            }}
+            onCancel={() => setHdScrapJob(null)}
+          />
+        )}
+      </ResponsiveModal>
+
+      <ResponsiveModal
+        open={!!hdToWhJob}
+        onOpenChange={(open) => { if (!open) setHdToWhJob(null); }}
+        bottomSheetSize="xl"
+        desktopClassName="max-w-lg"
+        title="Helpdesk → Warehouse (Scrap)"
+      >
+        {hdToWhJob && (
+          <HelpdeskToWarehouseForm
+            job={hdToWhJob}
+            onSuccess={() => {
+              setHdToWhJob(null);
+              load();
+            }}
+            onCancel={() => setHdToWhJob(null)}
+          />
+        )}
+      </ResponsiveModal>
+
+      {changeReceiverId && (
+        <ChangeReceiverModal
+          open={!!changeReceiverId}
+          onOpenChange={(open) => {
+            if (!open) setChangeReceiverId(null);
+          }}
+          handoverId={changeReceiverId}
+          receiverType={changeReceiverType}
+          currentReceiverUserId={changeReceiverCurrentUserId}
+          onSuccess={() => {
+            setChangeReceiverId(null);
+            // Refresh detail to get updated pendingHandover
+            if (detail) {
+              openDetail(detail.id);
+            }
+            load();
+          }}
+        />
+      )}
 
       <RadioWarrantyCheckModal
         open={warrantyCheckOpen}

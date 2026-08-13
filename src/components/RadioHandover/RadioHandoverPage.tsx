@@ -14,7 +14,9 @@ import {
   Clock,
   ArrowUpRight,
   ArrowLeft,
-  Home
+  Home,
+  ListTodo,
+  Search
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -26,6 +28,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui
 import SignaturePadField, { type SignaturePadHandle } from "../common/SignaturePadField";
 import ImageGalleryModal from "../common/ImageGalleryModal";
 import HelpdeskToTechnicianForm from "./HelpdeskToTechnicianForm";
+import HelpdeskToWarehouseForm from "./HelpdeskToWarehouseForm";
 import HandoverStatusBadge from "./HandoverStatusBadge";
 import HandoverTagPreview from "./HandoverTagPreview";
 import HandoverTimeline from "./HandoverTimeline";
@@ -36,16 +39,24 @@ import { isValidSignature } from "../../utils/signatureUtils";
 import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtils";
 import { hasPermission } from "../../utils/permissionUtils";
 import { useToast } from "../../hooks/use-toast";
+import RadioScrapApprovalModal from "../RadioRepair/RadioScrapApprovalModal";
+import Pagination from "../common/Pagination";
+import { useDebounce } from "../../hooks/useDebounce";
+import { Input } from "../ui/input";
 
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
 function handoverTypeLabel(t: string) {
   if (t === "HelpdeskToTechnician") return "HD → Tek";
+  if (t === "TechnicianToHelpdesk") return "Tek → HD";
+  if (t === "HelpdeskToWarehouse") return "HD → WH";
   return t;
 }
 
 function handoverTypeBadgeClass(t: string) {
   if (t === "HelpdeskToTechnician") return "bg-blue-100 text-blue-800 border-blue-200";
+  if (t === "TechnicianToHelpdesk") return "bg-red-100 text-red-800 border-red-200";
+  if (t === "HelpdeskToWarehouse") return "bg-amber-100 text-amber-800 border-amber-200";
   return "bg-gray-100 text-gray-700 border-gray-200";
 }
 
@@ -64,7 +75,8 @@ function EmptyState({ message }: { message: string }) {
 function currentUserId(): number | null {
   try {
     const u = JSON.parse(localStorage.getItem("user") || "{}");
-    return u.userId ?? u.UserId ?? null;
+    const id = u.userId ?? u.UserId;
+    return id ? Number(id) : null;
   } catch {
     return null;
   }
@@ -89,6 +101,9 @@ type HandoverTableProps = {
   onOpenEdit?: (e: React.MouseEvent, id: number) => void;
   onSoftDelete?: (h: RadioHandoverList) => void;
   onSignRow?: (h: RadioHandoverList) => void;
+  onFillScrapData?: (jobId: number) => void;
+  onCreateWhHandover?: (jobId: number) => void;
+
   canEdit?: boolean;
   canDelete?: boolean;
 };
@@ -103,6 +118,8 @@ function HandoverHistoryTable({
   onOpenEdit,
   onSoftDelete,
   onSignRow,
+  onFillScrapData,
+  onCreateWhHandover,
   canEdit,
   canDelete,
 }: HandoverTableProps) {
@@ -110,13 +127,13 @@ function HandoverHistoryTable({
   const role = currentUserRole();
 
   const canUserSign = (h: RadioHandoverList) => {
-    return h.status === "PendingReceiverSignature";
+    return h.status === "PendingReceiverSignature" && h.receivedByUserId === uid;
   };
 
   const groupedItems = useMemo(() => {
     const map = new Map<string, RadioHandoverList[]>();
     items.forEach(h => {
-      const key = h.helpdeskTicketNumber || h.radioRepairJobId?.toString() || h.id.toString();
+      const key = `${h.handoverType}-${h.helpdeskTicketNumber || h.radioRepairJobId?.toString() || h.id.toString()}`;
       if (!map.has(key)) {
         map.set(key, []);
       }
@@ -136,6 +153,10 @@ function HandoverHistoryTable({
         firstItem: first,
         items: group
       };
+    }).sort((a, b) => {
+      if (a.hasPendingSignature && !b.hasPendingSignature) return -1;
+      if (!a.hasPendingSignature && b.hasPendingSignature) return 1;
+      return new Date(b.handoverAt).getTime() - new Date(a.handoverAt).getTime();
     });
   }, [items]);
 
@@ -186,6 +207,12 @@ function HandoverHistoryTable({
                         <span className="text-xs text-gray-500 bg-white px-2 py-0.5 rounded border">
                           {group.items.length} Radio
                         </span>
+                        {group.hasPendingSignature && (
+                          <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md text-[11px] font-bold bg-red-100 text-red-700 border border-red-200">
+                            <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                            Perlu TTD
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-2 text-right sticky right-0 bg-gray-50 z-10 shadow-[-10px_0_15px_-10px_rgba(0,0,0,0.05)] border-l border-gray-100">
@@ -220,7 +247,12 @@ function HandoverHistoryTable({
                         {h.helpdeskTicketNumber ?? "—"}
                       </td>
                       <td className="px-4 py-3">
-                        <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium text-gray-900">{h.radioSerialNumber}</div>
+                          {h.isScrap && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-800 text-[10px] font-bold rounded">Scrap</span>
+                          )}
+                        </div>
                         {h.equipmentName && <div className="text-xs text-gray-500">{h.equipmentName}</div>}
                       </td>
                       <td className="px-4 py-3">
@@ -272,6 +304,29 @@ function HandoverHistoryTable({
                             >
                               <PenLine className="w-4 h-4" />
                             </button>
+                          )}
+                          {onCreateWhHandover && h.handoverType === "TechnicianToHelpdesk" && h.status === "Completed" && role === "Helpdesk" && h.hasRemainingItemsForWarehouse && (
+                            <>
+                              {h.isScrap && h.isPendingScrapData ? (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-8 h-8 border border-orange-200 rounded-lg text-orange-600 hover:bg-orange-50 transition-colors bg-white shadow-sm"
+                                  title="Lengkapi Data Scrap"
+                                  onClick={() => onFillScrapData?.(h.radioRepairJobId)}
+                                >
+                                  <ListTodo className="w-4 h-4" />
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="inline-flex items-center justify-center w-8 h-8 border border-amber-200 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors bg-white shadow-sm"
+                                  title="Serah Radio Scrap ke Warehouse"
+                                  onClick={() => onCreateWhHandover(h.radioRepairJobId)}
+                                >
+                                  <ArrowUpRight className="w-4 h-4" />
+                                </button>
+                              )}
+                            </>
                           )}
                           {canDelete && onSoftDelete && (
                             <button
@@ -325,6 +380,12 @@ function HandoverHistoryTable({
                     <span className="truncate max-w-[120px]">{group.handedOverByName}</span>
                     <ArrowRight className="w-3 h-3 text-blue-400 shrink-0" />
                     <span className="truncate max-w-[120px] text-gray-700">{group.receivedByName}</span>
+                    {group.hasPendingSignature && (
+                      <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                        Perlu TTD
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -335,7 +396,12 @@ function HandoverHistoryTable({
                   <div key={h.id} className="p-4 hover:bg-gray-50/50 transition-colors cursor-pointer" onClick={() => onOpenDetail(h.id)}>
                     <div className="flex justify-between items-start mb-2">
                       <div>
-                        <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-bold text-gray-900 leading-tight">{h.radioSerialNumber}</p>
+                          {h.isScrap && (
+                            <span className="px-1.5 py-0.5 bg-red-100 text-red-800 text-[10px] font-bold rounded">Scrap</span>
+                          )}
+                        </div>
                         <p className="text-xs text-gray-500 mt-0.5">
                           Unit: {h.unitNumber || "-"} • Alat: {h.equipmentName || "-"}
                         </p>
@@ -379,6 +445,7 @@ function HandoverHistoryTable({
                             <Pencil className="w-4 h-4" />
                           </button>
                         )}
+
                         {canDelete && onSoftDelete && (
                           <button
                             type="button"
@@ -391,6 +458,31 @@ function HandoverHistoryTable({
                         )}
                       </div>
                     </div>
+
+                    {/* Mobile Full-width Shortcut Button */}
+                    {onCreateWhHandover && h.handoverType === "TechnicianToHelpdesk" && h.status === "Completed" && role === "Helpdesk" && h.hasRemainingItemsForWarehouse && (
+                      <div className="pt-3 mt-3 border-t border-gray-100" onClick={(e) => e.stopPropagation()}>
+                        {h.isScrap && h.isPendingScrapData ? (
+                          <button
+                            type="button"
+                            onClick={() => onFillScrapData?.(h.radioRepairJobId)}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-orange-50 text-orange-700 hover:bg-orange-100 rounded-lg text-sm font-semibold transition-colors border border-orange-200 shadow-sm"
+                          >
+                            <ListTodo className="w-4 h-4" />
+                            Lengkapi Data Scrap
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => onCreateWhHandover(h.radioRepairJobId)}
+                            className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-amber-50 text-amber-700 hover:bg-amber-100 rounded-lg text-sm font-semibold transition-colors border border-amber-200 shadow-sm"
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                            Serah ke Warehouse (Scrap)
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -419,17 +511,39 @@ function HandoverHistoryTable({
     </>
   );
 }
+
+import ChangeReceiverModal from "./ChangeReceiverModal";
+
 export default function RadioHandoverPage() {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const role = currentUserRole();
   const [outgoing, setOutgoing] = useState<RadioHandoverList[]>([]);
+  const isWks = role === "Workshop";
+
+  const [incomingTekHd, setIncomingTekHd] = useState<RadioHandoverList[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [activeTab, setActiveTab] = useState<"hd-tek" | "tek-hd" | "hd-wh">("hd-tek");
+
+  const [page, setPage] = useState(1);
+  const [totalCountOutgoing, setTotalCountOutgoing] = useState(0);
+  const [totalCountIncoming, setTotalCountIncoming] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  const PAGE_SIZE = 10;
 
   const [loadingOutgoing, setLoadingOutgoing] = useState(true);
 
+  const [loadingTekHd, setLoadingTekHd] = useState(false);
+
   const [detail, setDetail] = useState<RadioHandoverDetail | null>(null);
   const [detailJob, setDetailJob] = useState<RadioRepairJobDetail | null>(null);
+  
+  // State untuk ChangeReceiverModal
+  const [changeReceiverId, setChangeReceiverId] = useState<number | null>(null);
+  const [changeReceiverType, setChangeReceiverType] = useState<"Helpdesk" | "Warehouse" | "Teknisi">("Warehouse");
+  const [changeReceiverCurrentUserId, setChangeReceiverCurrentUserId] = useState<number | undefined>();
   const [detailLoading, setDetailLoading] = useState(false);
   const [editDetail, setEditDetail] = useState<RadioHandoverDetail | null>(null);
 
@@ -438,11 +552,16 @@ export default function RadioHandoverPage() {
   const [galleryOpen, setGalleryOpen] = useState(false);
 
   const [showCreate, setShowCreate] = useState(false);
+  const [showCreateHdWh, setShowCreateHdWh] = useState(false);
+
 
   const [signRow, setSignRow] = useState<RadioHandoverList | null>(null);
   const [signRowDetail, setSignRowDetail] = useState<RadioHandoverDetail | null>(null);
+  const [pendingScrapJobId, setPendingScrapJobId] = useState<number | null>(null);
+  const [scrapReminderData, setScrapReminderData] = useState<{ count: number; jobIds: number[] } | null>(null);
   const [sigRowReceiver, setSigRowReceiver] = useState<string | null>(null);
   const [sigRowPicReceiverName, setSigRowPicReceiverName] = useState("");
+  const [sigRowRemarks, setSigRowRemarks] = useState("");
   const [completing, setCompleting] = useState(false);
   const sigTekRowRef = useRef<SignaturePadHandle>(null);
 
@@ -451,7 +570,17 @@ export default function RadioHandoverPage() {
 
   // Fetch full detail when sign dialog opens for tag preview
   useEffect(() => {
-    if (!signRow) { setSignRowDetail(null); return; }
+    if (!signRow) { 
+      setSignRowDetail(null); 
+      setSigRowPicReceiverName("");
+      setSigRowRemarks("");
+      return; 
+    }
+    
+    // Pre-populate fields based on what was entered during handover creation
+    setSigRowPicReceiverName(signRow.picReceiverName || "");
+    setSigRowRemarks(signRow.remarks || "");
+
     radioHandoverApi.getById(signRow.id)
       .then(setSignRowDetail)
       .catch(() => setSignRowDetail(null));
@@ -459,27 +588,61 @@ export default function RadioHandoverPage() {
 
   const relatedPendingHandovers = useMemo(() => {
     if (!signRow || !signRow.helpdeskTicketNumber) return [];
-    return outgoing.filter(h => 
+    const allItems = [...outgoing, ...incomingTekHd];
+    return allItems.filter(h => 
       h.helpdeskTicketNumber === signRow.helpdeskTicketNumber && 
       h.handoverType === signRow.handoverType &&
       h.status === "PendingReceiverSignature"
     );
-  }, [signRow, outgoing]);
+  }, [signRow, outgoing, incomingTekHd]);
 
+  // Reset page when tab or search changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, debouncedSearch]);
 
   const load = useCallback((silent = false) => {
-    if (!silent) setLoadingOutgoing(true);
+    if (!silent) {
+      if (activeTab === "hd-tek") setLoadingOutgoing(true);
+      if (activeTab === "tek-hd") setLoadingTekHd(true);
+    }
 
-    radioHandoverApi
-      .getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToTechnician" })
-      .then((r) => {
-        setOutgoing(r.data ?? []);
-        const pending = (r.data ?? []).filter((h) => h.status === "PendingReceiverSignature").length;
-        setPendingCount(pending);
-      })
-      .catch(() => setOutgoing([]))
-      .finally(() => { if (!silent) setLoadingOutgoing(false); });
-  }, []);
+    if (activeTab === "hd-tek") {
+      radioHandoverApi
+        .getAll({ page, pageSize: PAGE_SIZE, handoverType: "HelpdeskToTechnician", search: debouncedSearch })
+        .then((r) => {
+          setOutgoing(r.data ?? []);
+          setTotalCountOutgoing(r.meta?.pagination?.totalCount ?? 0);
+          
+          // Also fetch pending count without pagination/search just for the badge
+          if (!debouncedSearch && page === 1) {
+            radioHandoverApi.getAll({ handoverType: "HelpdeskToTechnician" }).then(res => {
+              const pending = (res.data ?? []).filter((h) => h.status === "PendingReceiverSignature").length;
+              setPendingCount(pending);
+            });
+          }
+        })
+        .catch(() => setOutgoing([]))
+        .finally(() => { if (!silent) setLoadingOutgoing(false); });
+    } else {
+      Promise.all([
+        radioHandoverApi.getAll({ page, pageSize: PAGE_SIZE, handoverType: "TechnicianToHelpdesk", search: debouncedSearch }),
+        radioHandoverApi.getAll({ page, pageSize: PAGE_SIZE, handoverType: "HelpdeskToWarehouse", search: debouncedSearch })
+      ])
+        .then(([resTekHd, resHdWks]) => {
+          // Since the UI originally combined these or relied on a specific flow,
+          // If activeTab is "tek-hd", we probably just want TechnicianToHelpdesk for the list, 
+          // but we might need both if they are combined in the UI. 
+          // Looking at the original code, it only sets incomingTekHd to resTekHd.data.
+          setIncomingTekHd(resTekHd.data ?? []);
+          setTotalCountIncoming(resTekHd.meta?.pagination?.totalCount ?? 0);
+        })
+        .catch(() => {
+          setIncomingTekHd([]);
+        })
+        .finally(() => { if (!silent) setLoadingTekHd(false); });
+    }
+  }, [activeTab, page, debouncedSearch]);
 
   useLiveRefresh("RadioHandover", () => {
     load(true);
@@ -542,6 +705,20 @@ export default function RadioHandoverPage() {
     }
   };
 
+  const handleShortcutCreateWh = async (jobId: number) => {
+    try {
+      const jobRes = await radioRepairApi.getById(jobId);
+      if ((jobRes.status === "ReturnedToHelpdesk" || jobRes.status === "Scrapped" || jobRes.status === "HandedToWarehouse") && jobRes.pendingHandoverType !== "HelpdeskToWarehouse") {
+        setDetailJob(jobRes);
+        setShowCreateHdWh(true);
+      } else {
+        toast({ title: "Radio ini sudah diserahkan ke Warehouse atau statusnya tidak valid", variant: "destructive" });
+      }
+    } catch (error) {
+      toast({ title: "Gagal memuat detail radio", variant: "destructive" });
+    }
+  };
+
   const softDelete = async (h: RadioHandoverList) => {
     if (!window.confirm(`Hapus STR ${h.handoverNumber}?`)) return;
     try {
@@ -593,7 +770,7 @@ export default function RadioHandoverPage() {
       
       await Promise.all(targets.map(async (t) => {
         try {
-          await radioHandoverApi.completeReceiverSignature(t.id, tekSig!, sigRowPicReceiverName || undefined);
+          await radioHandoverApi.completeReceiverSignature(t.id, tekSig!, sigRowPicReceiverName || undefined, sigRowRemarks || undefined);
           okCount++;
         } catch(e) {
           fails.push(t.radioSerialNumber);
@@ -613,8 +790,18 @@ export default function RadioHandoverPage() {
       setSignRow(null);
       setSigRowReceiver(null);
       setSigRowPicReceiverName("");
+      setSigRowRemarks("");
       if (detail?.id === signRow.id) setDetail(null);
       load();
+
+      // Cari radio scrap yang masih menunggu input data
+      const pendingScrapItems = targets.filter((t) => t.isScrap && t.isPendingScrapData);
+      if (pendingScrapItems.length > 0) {
+        setScrapReminderData({
+          count: pendingScrapItems.length,
+          jobIds: pendingScrapItems.map(t => t.radioRepairJobId)
+        });
+      }
     } catch (err: unknown) {
       toast({
         title: err instanceof Error ? err.message : "Gagal menyimpan TTD",
@@ -676,7 +863,7 @@ export default function RadioHandoverPage() {
             <CardTitle className="text-3xl text-amber-900">{pendingCount}</CardTitle>
           </CardHeader>
           <CardContent className="px-4 pb-4 pt-0">
-            <p className="text-xs text-amber-700/80">Helpdesk → Teknisi (Pending)</p>
+            <p className="text-xs text-amber-700/80">Penerimaan (Pending)</p>
           </CardContent>
         </Card>
         <Card>
@@ -693,22 +880,100 @@ export default function RadioHandoverPage() {
         </Card>
       </div>
 
+      {/* Tabs */}
+      <div className="flex gap-2 overflow-x-auto pb-2 border-b border-gray-200 hide-scrollbar">
+        <button
+          onClick={() => setActiveTab("hd-tek")}
+          className={`px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+            activeTab === "hd-tek"
+              ? "border-violet-600 text-violet-700"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          Helpdesk → Teknisi
+        </button>
+        <button
+          onClick={() => setActiveTab("tek-hd")}
+          className={`relative px-4 py-2 text-sm font-semibold whitespace-nowrap border-b-2 transition-colors ${
+            activeTab === "tek-hd"
+              ? "border-red-600 text-red-700"
+              : "border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+          }`}
+        >
+          Teknisi → Helpdesk (Scrap)
+          {incomingTekHd.filter(h => h.status === "PendingReceiverSignature").length > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {incomingTekHd.filter(h => h.status === "PendingReceiverSignature").length}
+            </span>
+          )}
+        </button>
+      </div>
+
       {/* History */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Histori serah terima</h2>
-        <HandoverHistoryTable
-          items={outgoing}
-          loading={loadingOutgoing}
-          flowLabel="Helpdesk → Teknisi"
-          emptyMessage="Belum ada serah terima ke teknisi"
-          onOpenDetail={openDetail}
-          onOpenGallery={openGallery}
-          onOpenEdit={openEdit}
-          onSoftDelete={softDelete}
-          onSignRow={setSignRow}
-          canEdit={isHd}
-          canDelete={canDelete}
-        />
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900">Histori serah terima</h2>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input 
+              type="text" 
+              placeholder="Cari No. Seri / Handover..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+        </div>
+
+        {activeTab === "hd-tek" ? (
+          <div>
+            <HandoverHistoryTable
+              items={outgoing}
+              loading={loadingOutgoing}
+              flowLabel="Helpdesk → Teknisi"
+              emptyMessage={searchQuery ? "Tidak ada hasil pencarian" : "Belum ada serah terima ke teknisi"}
+              onOpenDetail={openDetail}
+              onOpenGallery={openGallery}
+              onOpenEdit={openEdit}
+              onSoftDelete={softDelete}
+              onSignRow={setSignRow}
+              canEdit={isHd}
+              canDelete={canDelete}
+            />
+            <Pagination
+              currentPage={page}
+              pageSize={PAGE_SIZE}
+              totalCount={totalCountOutgoing}
+              totalPages={Math.ceil(totalCountOutgoing / PAGE_SIZE)}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : (
+          <div>
+            <HandoverHistoryTable
+              items={incomingTekHd}
+              loading={loadingTekHd}
+              flowLabel="Teknisi → Helpdesk (Scrap)"
+              emptyMessage={searchQuery ? "Tidak ada hasil pencarian" : "Belum ada serah terima kembali dari teknisi"}
+              onOpenDetail={openDetail}
+              onOpenGallery={openGallery}
+              onSoftDelete={softDelete}
+              onSignRow={setSignRow}
+              onFillScrapData={setPendingScrapJobId}
+              onCreateWhHandover={handleShortcutCreateWh}
+
+              canEdit={false}
+              canDelete={isHd || isWks}
+            />
+            <Pagination
+              currentPage={page}
+              pageSize={PAGE_SIZE}
+              totalCount={totalCountIncoming}
+              totalPages={Math.ceil(totalCountIncoming / PAGE_SIZE)}
+              onPageChange={setPage}
+            />
+          </div>
+        )}
       </section>
 
       {/* ── Mobile FAB ── */}
@@ -741,6 +1006,33 @@ export default function RadioHandoverPage() {
               load();
             }}
             onCancel={() => setShowCreate(false)}
+          />
+        </ResponsiveModal>
+      )}
+
+      {/* HD -> WH create dialog */}
+      {showCreateHdWh && detailJob && (
+        <ResponsiveModal
+          open={showCreateHdWh}
+          onOpenChange={setShowCreateHdWh}
+          bottomSheetSize="xl"
+          desktopClassName="max-w-2xl"
+          title={
+            <div className="flex items-center gap-2">
+              <ArrowUpRight className="w-5 h-5 text-amber-600" />
+              Serah Terima Scrap (Helpdesk → Warehouse)
+            </div>
+          }
+        >
+          <HelpdeskToWarehouseForm
+            job={detailJob}
+            onSuccess={() => {
+              setShowCreateHdWh(false);
+              setDetail(null);
+              setDetailJob(null);
+              load();
+            }}
+            onCancel={() => setShowCreateHdWh(false)}
           />
         </ResponsiveModal>
       )}
@@ -803,6 +1095,7 @@ export default function RadioHandoverPage() {
             )}
 
             {signRow.handoverType === "WarehouseToHelpdesk" && (
+            <>
               <div className="space-y-2 mt-4">
                 <div className="flex justify-between items-center">
                   <label className="text-sm font-medium text-gray-900">Nama PIC Penerima (opsional)</label>
@@ -822,6 +1115,18 @@ export default function RadioHandoverPage() {
                   onChange={(e) => setSigRowPicReceiverName(e.target.value)}
                 />
               </div>
+              
+              <div className="space-y-2 mt-3">
+                <label className="text-sm font-medium text-gray-900">Catatan Penerima</label>
+                <input
+                  type="text"
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-violet-500 focus:border-violet-500 transition-colors"
+                  placeholder="Catatan tambahan (opsional)"
+                  value={sigRowRemarks}
+                  onChange={(e) => setSigRowRemarks(e.target.value)}
+                />
+              </div>
+            </>
             )}
 
             <SignaturePadField
@@ -882,7 +1187,10 @@ export default function RadioHandoverPage() {
         {detail && !detailLoading && (
           <div className="space-y-5 text-sm">
             {detailJob?.handovers && detailJob.handovers.length > 0 && (
-              <HandoverTimeline handovers={detailJob.handovers} />
+              <HandoverTimeline 
+                handovers={detailJob.handovers} 
+                isScrap={detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap" || detailJob.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")} 
+              />
             )}
             <HandoverTagPreview detail={detail} />
 
@@ -912,6 +1220,80 @@ export default function RadioHandoverPage() {
                 <span className="font-medium text-gray-700">Catatan: </span>
                 {detail.remarks}
               </p>
+            )}
+
+            {/* Tombol Serah ke Warehouse / Ubah Penerima untuk Scrap */}
+            {isHd && detail.handoverType === "TechnicianToHelpdesk" && detailJob && !detailJob.isDeleted && (() => {
+              // Cek apakah masih ada barang yang belum diserahkan ke WH
+              if (detail.hasRemainingItemsForWarehouse) {
+                return (
+                  <div className="pt-4 border-t border-gray-100 flex justify-end">
+                    <button
+                      type="button"
+                      className="px-4 py-2.5 bg-amber-600 text-white rounded-lg font-medium shadow-sm hover:bg-amber-700 transition-colors flex items-center gap-2"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowCreateHdWh(true);
+                      }}
+                    >
+                      <ArrowUpRight className="w-4 h-4" />
+                      Serah Radio Scrap ke Warehouse
+                    </button>
+                  </div>
+                );
+              }
+              
+              // Jika SUDAH diserahkan ke Warehouse dan statusnya pending signature, munculkan tombol "Ubah Penerima Warehouse"
+              if (detailJob.pendingHandoverType === "HelpdeskToWarehouse") {
+                const pendingHandover = detailJob.handovers?.find(h => h.handoverType === "HelpdeskToWarehouse" && h.status === "PendingReceiverSignature");
+                if (pendingHandover) {
+                  return (
+                    <div className="pt-4 border-t border-gray-100 flex justify-end">
+                      <button
+                        type="button"
+                        className="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors shadow-sm"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setChangeReceiverType("Warehouse");
+                          setChangeReceiverId(pendingHandover.id);
+                          setChangeReceiverCurrentUserId(pendingHandover.receivedByUserId);
+                        }}
+                      >
+                        Ubah Penerima Warehouse
+                      </button>
+                    </div>
+                  );
+                }
+              }
+              return null;
+            })()}
+
+            {/* Scrap Details */}
+            {detailJob && (detailJob.damageDescription === "Scrap" || detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap") && (
+              <div className="rounded-lg border border-red-200 bg-red-50 p-4 space-y-3 mt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <div className="w-2 h-2 rounded-full bg-red-600" />
+                  <h4 className="font-bold text-red-900 text-sm">Informasi Scrap</h4>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Keluhan / Kerusakan</p>
+                    <p className="mt-0.5 text-red-950">{detailJob.damageDescription || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Hasil Pengecekan Teknisi</p>
+                    <p className="mt-0.5 text-red-950 font-medium">{detailJob.repairDataDescription || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Kondisi Fisik</p>
+                    <p className="mt-0.5 text-red-950">{detailJob.physicalCondition || "—"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-red-700 uppercase tracking-wide">Kondisi Display</p>
+                    <p className="mt-0.5 text-red-950">{detailJob.displayCondition || "—"}</p>
+                  </div>
+                </div>
+              </div>
             )}
 
             {(() => {
@@ -998,6 +1380,101 @@ export default function RadioHandoverPage() {
         onClose={() => setGalleryOpen(false)}
         onIndexChange={setGalleryIndex}
       />
+
+      <RadioScrapApprovalModal
+        open={!!pendingScrapJobId}
+        onClose={() => setPendingScrapJobId(null)}
+        hideDelegationCheckbox={true}
+        onApprove={async (payload) => {
+          if (!pendingScrapJobId) return;
+          try {
+            await radioRepairApi.approveScrap(pendingScrapJobId, payload);
+            toast({ title: "Data Scrap berhasil disimpan" });
+            setPendingScrapJobId(null);
+            load();
+          } catch (err: any) {
+            toast({ title: "Gagal menyimpan Data Scrap", description: err?.response?.data?.message, variant: "destructive" });
+          }
+        }}
+      />
+
+      {/* ===== SCRAP REMINDER POPUP ===== */}
+      <ResponsiveModal
+        open={!!scrapReminderData}
+        onOpenChange={(o) => { if (!o) setScrapReminderData(null); }}
+        title=""
+      >
+        {scrapReminderData && (
+          <div className="text-center space-y-4 py-2">
+            {/* Icon */}
+            <div className="mx-auto w-16 h-16 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-200">
+              <svg xmlns="http://www.w3.org/2000/svg" className="w-8 h-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4.5c-.77-.833-2.694-.833-3.464 0L3.34 16.5c-.77.833.192 2.5 1.732 2.5z" />
+              </svg>
+            </div>
+
+            {/* Title */}
+            <h3 className="text-xl font-bold text-gray-900">Jangan Lupa Isi Data Scrap!</h3>
+
+            {/* Description */}
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-xl p-4 mx-2">
+              <p className="text-sm text-amber-800 leading-relaxed">
+                Terdapat <span className="font-bold text-orange-600 text-base">{scrapReminderData.count}</span> radio scrap yang datanya perlu dilengkapi sebelum bisa dilanjutkan ke proses berikutnya.
+              </p>
+            </div>
+
+            {/* Info */}
+            <p className="text-xs text-gray-500 px-4">
+              Lengkapi data scrap (tanggal, nomor job) agar radio dapat diproses ke warehouse.
+            </p>
+
+            {/* Buttons */}
+            <div className="flex flex-col gap-2 pt-2 px-2">
+              <button
+                onClick={() => {
+                  const firstJobId = scrapReminderData.jobIds[0];
+                  setScrapReminderData(null);
+                  setPendingScrapJobId(firstJobId);
+                }}
+                className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-semibold text-sm shadow-md shadow-orange-200 transition-all duration-200 transform hover:scale-[1.02] active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <PenLine className="w-4 h-4" />
+                Langsung Isi Sekarang
+              </button>
+              <button
+                onClick={() => setScrapReminderData(null)}
+                className="w-full py-2.5 px-4 rounded-xl border border-gray-200 text-gray-600 font-medium text-sm hover:bg-gray-50 transition-colors"
+              >
+                Nanti Saja
+              </button>
+            </div>
+          </div>
+        )}
+      </ResponsiveModal>
+
+      {/* Ubah Penerima Modal */}
+      {changeReceiverId && (
+        <ChangeReceiverModal
+          open={!!changeReceiverId}
+          onOpenChange={(open) => {
+            if (!open) setChangeReceiverId(null);
+          }}
+          handoverId={changeReceiverId}
+          receiverType={changeReceiverType}
+          currentReceiverUserId={changeReceiverCurrentUserId}
+          onSuccess={() => {
+            setChangeReceiverId(null);
+            load();
+            if (detail) {
+              radioRepairApi.getById(detail.radioRepairJobId).then(setDetailJob).catch(() => setDetailJob(null));
+            }
+            toast({
+              title: "Penerima diubah",
+              description: "Berhasil mengubah akun penerima serah terima.",
+            });
+          }}
+        />
+      )}
     </div>
   );
 }

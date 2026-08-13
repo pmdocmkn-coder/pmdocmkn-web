@@ -51,6 +51,7 @@ export interface RadioRepairJobList {
   /** Warna status custom (Tailwind class) */
   customStatusColor?: string | null;
   openedAt: string;
+  updatedAt?: string | null;
   closedAt?: string | null;
   firstInProgressAt?: string | null;
   workshopCompletedAt?: string | null;
@@ -62,6 +63,7 @@ export interface RadioRepairJobList {
   hasActiveBorrowedPart: boolean;
   hasReturnedBorrowedPart: boolean;
   pendingHandoverType?: string | null;
+  isScrap?: boolean;
 }
 
 // ─── Custom Status Types ──────────────────────────────────────────────────────
@@ -146,6 +148,7 @@ export interface RadioRepairJobDetail extends RadioRepairJobList {
     equipmentTagType?: string;
     handedOverByName: string;
     receivedByName: string;
+    receivedByUserId: number;
     status?: string;
     hasRadioPhoto: boolean;
     hasHandedOverSignature: boolean;
