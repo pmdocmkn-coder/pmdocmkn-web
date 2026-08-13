@@ -6,7 +6,7 @@ import {
   FileText, Plus, Search, ExternalLink, Edit2, Trash2,
   CheckCircle, Clock, AlertTriangle, ChevronDown, Filter, X,
   Calendar, ChevronRight, RotateCw, CalendarX, Loader2,
-  Download, Upload, FileSpreadsheet, Info, Eye
+  Download, Upload, FileSpreadsheet, Info, Eye, Users
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import BottomSheet from "../common/BottomSheet";
@@ -88,7 +88,7 @@ function FollowUpBadge({ status, onClick }: { status: FollowUpStatus; onClick?: 
 // ── Default form ──────────────────────────────────────────────────────────────
 const defaultForm = (): CreateOperationalDocumentDto => ({
   name: "", type: "", referenceNumber: "", groupName: "", validFrom: "", validUntil: "",
-  picName: "", picTelegramId: "", fileLink: "",
+  picName: "", picTelegramId: "", picEmail: "", fileLink: "",
 });
 
 // ── Combobox Filter Helper ───────────────────────────────────────────────────
@@ -280,7 +280,7 @@ export default function OperationalDocumentPage() {
   const [filterFollowUp, setFilterFollowUp] = useState("");
   const [filterGroup, setFilterGroup] = useState("");
   const [availableGroups, setAvailableGroups] = useState<string[]>([]);
-  const [sendingNotifId, setSendingNotifId] = useState<number | null>(null);
+  const [sendingNotifId, setSendingNotifId] = useState<{ id: number, channel: 'telegram' | 'email' } | null>(null);
   
   const [typeSheetOpen, setTypeSheetOpen] = useState(false);
   const [statusSheetOpen, setStatusSheetOpen] = useState(false);
@@ -310,7 +310,7 @@ export default function OperationalDocumentPage() {
   const [validFromDate, setValidFromDate] = useState<Date | undefined>();
   const [validUntilDate, setValidUntilDate] = useState<Date | undefined>();
   // Multi-PIC entries — setiap entry punya nama dan telegramId
-  const [picEntries, setPicEntries] = useState<{ name: string; telegramId: string }[]>([{ name: "", telegramId: "" }]);
+  const [picEntries, setPicEntries] = useState<{ name: string; telegramId: string; email: string }[]>([{ name: "", telegramId: "", email: "" }]);
   const [deleteConfirm, setDeleteConfirm] = useState<OperationalDocumentDto | null>(null);
   const [isBusy, setIsBusy] = useState(false);
   const [isSendingNotif, setIsSendingNotif] = useState(false);
@@ -412,7 +412,7 @@ export default function OperationalDocumentPage() {
     setForm(defaultForm());
     setValidFromDate(undefined);
     setValidUntilDate(undefined);
-    setPicEntries([{ name: "", telegramId: "" }]);
+    setPicEntries([{ name: "", telegramId: "", email: "" }]);
     setFormOpen(true);
   };
   
@@ -432,21 +432,25 @@ export default function OperationalDocumentPage() {
       validUntil: doc.validUntil,
       picName: doc.picName ?? "",
       picTelegramId: doc.picTelegramId ?? "",
+      picEmail: doc.picEmail ?? "",
       fileLink: doc.fileLink ?? ""
     });
     setValidFromDate(parseISO(doc.validFrom));
     setValidUntilDate(parseISO(doc.validUntil));
 
     // Parse picEntries dari data — split nama & telegram ID per koma
-    const names = (doc.picName ?? "").split(",").map(n => n.trim()).filter(Boolean);
-    const tids = (doc.picTelegramId ?? "").split(",").map(t => t.trim()).filter(Boolean);
-    const maxLen = Math.max(names.length, tids.length, 1);
-    setPicEntries(
-      Array.from({ length: maxLen }, (_, i) => ({
-        name: names[i] ?? "",
-        telegramId: tids[i] ?? "",
-      }))
-    );
+    const names = doc.picName ? doc.picName.split(",").map(n => n.trim()) : [];
+    const tids = doc.picTelegramId ? doc.picTelegramId.split(",").map(t => t.trim()) : [];
+    const emails = doc.picEmail ? doc.picEmail.split(",").map(e => e.trim()) : [];
+    
+    const maxLen = Math.max(names.length, tids.length, emails.length);
+    const parsedEntries = Array.from({ length: maxLen }, (_, i) => ({
+        name: names[i] || "",
+        telegramId: tids[i] || "",
+        email: emails[i] || "",
+    })).filter(p => p.name || p.telegramId || p.email);
+
+    setPicEntries(parsedEntries.length > 0 ? parsedEntries : [{ name: "", telegramId: "", email: "" }]);
 
     setFormOpen(true);
   };
@@ -454,14 +458,15 @@ export default function OperationalDocumentPage() {
     setFormOpen(false);
     setEditId(null);
     setForm(defaultForm());
-    setPicEntries([{ name: "", telegramId: "" }]);
+    setPicEntries([{ name: "", telegramId: "", email: "" }]);
   };
   
   const handleSubmit = async () => {
-    // Serialize picEntries → picName & picTelegramId (koma-separated, skip yang kosong)
-    const validPicEntries = picEntries.filter(p => p.name.trim() || p.telegramId.trim());
+    // Serialize picEntries
+    const validPicEntries = picEntries.filter(p => p.name.trim() || p.telegramId.trim() || p.email.trim());
     const picName = validPicEntries.map(p => p.name.trim()).join(",");
-    const picTelegramId = [...new Set(validPicEntries.map(p => p.telegramId.trim()).filter(Boolean))].join(",");
+    const picTelegramId = validPicEntries.map(p => p.telegramId.trim()).join(",");
+    const picEmail = validPicEntries.map(p => p.email.trim()).join(",");
 
     const dto: CreateOperationalDocumentDto = {
       ...form,
@@ -469,6 +474,7 @@ export default function OperationalDocumentPage() {
       validUntil: validUntilDate ? validUntilDate.toISOString() : form.validUntil,
       picName: picName || undefined as any,
       picTelegramId: picTelegramId || undefined as any,
+      picEmail: picEmail || undefined as any,
     };
     if (!dto.name.trim() || !dto.type || !dto.validFrom || !dto.validUntil) {
       toast({ title: "Nama, Tipe, dan Tanggal wajib diisi", variant: "destructive" }); return;
@@ -610,18 +616,22 @@ export default function OperationalDocumentPage() {
     }
   };
 
-  const handleSendNotification = async (doc: OperationalDocumentDto) => {
+  const handleSendNotification = async (doc: OperationalDocumentDto, channel: "telegram" | "email" = "telegram") => {
     if (sendingNotifId !== null) return;
-    if (!doc.picTelegramId) {
+    if (channel === "telegram" && !doc.picTelegramId) {
       toast({ title: "Tidak ada Telegram ID", description: `Dokumen "${doc.name}" tidak memiliki Telegram Chat ID PIC.`, variant: "destructive" });
       return;
     }
-    setSendingNotifId(doc.id);
+    if (channel === "email" && !doc.picEmail) {
+      toast({ title: "Tidak ada Email", description: `Dokumen "${doc.name}" tidak memiliki Email PIC.`, variant: "destructive" });
+      return;
+    }
+    setSendingNotifId({ id: doc.id, channel });
     try {
-      const res = await operationalDocumentApi.sendNotification(doc.id);
-      toast({ title: "✅ Telegram Terkirim!", description: res.data?.message ?? `Notifikasi berhasil dikirim ke ${doc.picTelegramId}` });
+      const res = await operationalDocumentApi.sendNotification(doc.id, channel);
+      toast({ title: "✅ Notifikasi Terkirim!", description: res.data?.message ?? `Notifikasi ${channel} berhasil dikirim` });
     } catch (e: any) {
-      toast({ title: "Gagal kirim Telegram", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
+      toast({ title: `Gagal kirim ${channel}`, description: e?.response?.data?.message ?? e.message, variant: "destructive" });
     } finally {
       setSendingNotifId(null);
     }
@@ -698,6 +708,7 @@ export default function OperationalDocumentPage() {
         { header: "Tindak Lanjut",       key: "followUpStatus",  width: 18 },
         { header: "PIC",                 key: "picName",         width: 22 },
         { header: "Telegram Chat ID PIC",          key: "picTelegramId",        width: 18 },
+        { header: "Email PIC",                     key: "picEmail",             width: 25 },
         { header: "Link Dokumen",        key: "fileLink",        width: 40 },
       ];
 
@@ -728,6 +739,7 @@ export default function OperationalDocumentPage() {
           followUpStatus:  doc.followUpStatus,
           picName:         doc.picName ?? "",
           picTelegramId:        doc.picTelegramId ?? "",
+          picEmail:             doc.picEmail ?? "",
           fileLink:        doc.fileLink ?? "",
         });
 
@@ -785,6 +797,7 @@ export default function OperationalDocumentPage() {
       { header: "Tanggal Berakhir *",   key: "validUntil",      width: 18 },
       { header: "Nama PIC",             key: "picName",         width: 22 },
       { header: "Telegram Chat ID PIC",           key: "picTelegramId",        width: 18 },
+      { header: "Email PIC",                      key: "picEmail",             width: 25 },
       { header: "Link Dokumen",         key: "fileLink",        width: 40 },
     ];
 
@@ -800,7 +813,7 @@ export default function OperationalDocumentPage() {
     ws.addRow({
       name: "Ijin Frekuensi", type: "Ijin Frekuensi", referenceNumber: "REF/001/2025", groupName: "Grup ISR KPC",
       validFrom: "01/01/2025", validUntil: "31/12/2025",
-      picName: "Nama PIC", picTelegramId: "123456789", fileLink: "https://sharepoint..."
+      picName: "Nama PIC", picTelegramId: "123456789", picEmail: "mknsite.sgt@gmail.com", fileLink: "https://sharepoint..."
     });
 
     // Instructions sheet
@@ -972,8 +985,8 @@ export default function OperationalDocumentPage() {
       </div>
 
       {/* ── Search & Filter Bar (Desktop Mockup Style) ── */}
-      <div className="hidden md:flex bg-white border border-[#E2E8F0] rounded-[12px] p-2 gap-3 items-center shadow-sm">
-        <div className="relative flex-1 max-w-[320px]">
+      <div className="hidden md:flex flex-wrap bg-white border border-[#E2E8F0] rounded-[12px] p-2 gap-3 items-center shadow-sm">
+        <div className="relative flex-1 min-w-[200px] max-w-[320px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
           <input
             className="w-full pl-9 pr-3 h-10 border-none bg-transparent text-[13px] text-[#1A202C] focus:outline-none placeholder-[#A0AEC0]"
@@ -1056,13 +1069,13 @@ export default function OperationalDocumentPage() {
       </div>
 
       {/* ── Desktop Table (Mockup Style) ── */}
-      <div className="hidden md:block rounded-[12px] border border-[#E2E8F0] overflow-hidden bg-white shadow-sm mt-4">
-        <table className="w-full">
+      <div className="hidden md:block rounded-[12px] border border-[#E2E8F0] overflow-x-auto bg-white shadow-sm mt-4">
+        <table className="w-full min-w-max">
           <thead className="bg-[#F8FAFC]">
             <tr>
               <th className="px-5 py-4 w-10"></th>
               {["No", "Nama Dokumen", "Tipe", "Grup", "Tanggal Berakhir", "Sisa Hari", "Status", "Tindak Lanjut", "Aksi"].map(h => (
-                <th key={h} className="px-5 py-4 text-left text-[11px] font-bold text-[#718096] uppercase tracking-wider">{h}</th>
+                <th key={h} className="px-5 py-4 text-left text-[11px] font-bold text-[#718096] uppercase tracking-wider whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
@@ -1168,15 +1181,27 @@ export default function OperationalDocumentPage() {
                           </a>
                         )}
                         {canSendNotification && (
-                          <button onClick={() => handleSendNotification(doc)} disabled={sendingNotifId === doc.id}
-                            title="Kirim Notifikasi Telegram (Manual)"
-                            className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#229ED9] hover:bg-[#E8F4FD] transition-colors disabled:opacity-50">
-                            {sendingNotifId === doc.id ? <RotateCw className="w-4 h-4 animate-spin" /> : (
-                              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                              </svg>
-                            )}
-                          </button>
+                          <div className="flex items-center gap-1.5">
+                            <button onClick={() => handleSendNotification(doc, 'telegram')} disabled={sendingNotifId?.id === doc.id}
+                              title="Kirim Notifikasi Telegram"
+                              className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#229ED9] hover:bg-[#E8F4FD] transition-colors disabled:opacity-50">
+                              {sendingNotifId?.id === doc.id && sendingNotifId.channel === 'telegram' ? <RotateCw className="w-4 h-4 animate-spin" /> : (
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                                </svg>
+                              )}
+                            </button>
+                            <button onClick={() => handleSendNotification(doc, 'email')} disabled={sendingNotifId?.id === doc.id}
+                              title="Kirim Notifikasi Email"
+                              className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#2B6CB0] hover:bg-[#EBF4FF] transition-colors disabled:opacity-50">
+                              {sendingNotifId?.id === doc.id && sendingNotifId.channel === 'email' ? <RotateCw className="w-4 h-4 animate-spin" /> : (
+                                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <rect x="2" y="4" width="20" height="16" rx="2" />
+                                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                                </svg>
+                              )}
+                            </button>
+                          </div>
                         )}
                         {canUpdate && (
                           <button onClick={() => openEdit(doc)}
@@ -1599,15 +1624,27 @@ export default function OperationalDocumentPage() {
                   </a>
                 )}
                 {canSendNotification && (
-                  <button onClick={() => handleSendNotification(doc)} disabled={sendingNotifId === doc.id}
-                    title="Kirim Notifikasi Telegram (Manual)"
-                    className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-white border border-[#E2E8F0] text-[#229ED9] hover:bg-[#E8F4FD] disabled:opacity-50">
-                    {sendingNotifId === doc.id ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : (
-                      <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
-                      </svg>
-                    )}
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <button onClick={() => handleSendNotification(doc, 'telegram')} disabled={sendingNotifId?.id === doc.id}
+                      title="Kirim Notifikasi Telegram"
+                      className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-white border border-[#E2E8F0] text-[#229ED9] hover:bg-[#E8F4FD] disabled:opacity-50">
+                      {sendingNotifId?.id === doc.id && sendingNotifId.channel === 'telegram' ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : (
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                          <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                        </svg>
+                      )}
+                    </button>
+                    <button onClick={() => handleSendNotification(doc, 'email')} disabled={sendingNotifId?.id === doc.id}
+                      title="Kirim Notifikasi Email"
+                      className="w-8 h-8 flex items-center justify-center rounded-[8px] bg-white border border-[#E2E8F0] text-[#2B6CB0] hover:bg-[#EBF4FF] disabled:opacity-50">
+                      {sendingNotifId?.id === doc.id && sendingNotifId.channel === 'email' ? <RotateCw className="w-3.5 h-3.5 animate-spin" /> : (
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <rect x="2" y="4" width="20" height="16" rx="2" />
+                          <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
                 )}
                 {canUpdate && (
                   <button onClick={() => openEdit(doc)}
@@ -1791,68 +1828,95 @@ export default function OperationalDocumentPage() {
       {/* ── Form Content ── */}
       {(() => {
         const FormContent = (
-          <div className="space-y-4 py-2">
-            <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Nama Dokumen <span className="text-[#DC2626]">*</span></label>
-              <Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Contoh: Sertifikasi Alat Uji HT-102" className="h-11 rounded-[10px]" />
-            </div>
-            <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Tipe Dokumen <span className="text-[#DC2626]">*</span></label>
-              <Select value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v }))}>
-                <SelectTrigger className="h-11 rounded-[10px] bg-white border-[#E2E8F0] text-[#1A202C] text-[13px]">
-                  <SelectValue placeholder="-- Pilih Tipe --" />
-                </SelectTrigger>
-                <SelectContent>
-                  {documentTypes.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
-                </SelectContent>
-              </Select>
-            </div>
-            <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">No. Referensi</label>
-              <Input value={form.referenceNumber} onChange={(e) => setForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="REF/CERT/POL nomor..." className="h-11 rounded-[10px]" />
-            </div>
-            <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block flex items-center gap-1">
-                Grup Dokumen (Opsional)
-                <div className="group relative cursor-help">
-                  <Info className="w-3.5 h-3.5 text-[#718096] hover:text-[#2B6CB0]" />
-                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-[#1A202C] text-white text-[11px] rounded-[6px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-center shadow-lg">
-                    Dokumen dengan Nama Grup dan Tanggal Berakhir yang sama akan digabung jadi 1 notifikasi WA.
-                    <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1A202C]"></div>
-                  </div>
+          <div className="flex flex-col gap-6 py-2">
+            {/* --- Section 1: Informasi Dokumen --- */}
+            <div className="bg-[#F8FAFC] p-4 sm:p-5 rounded-[12px] border border-[#E2E8F0]">
+              <h3 className="text-[13px] font-bold text-[#1A202C] mb-4 flex items-center gap-2">
+                <FileText className="w-4 h-4 text-[#2B6CB0]" />
+                Informasi Utama
+              </h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Nama Dokumen <span className="text-[#DC2626]">*</span></label>
+                  <Input value={form.name} onChange={(e) => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Contoh: Sertifikasi Alat Uji HT-102" className="h-11 rounded-[10px]" />
                 </div>
-              </label>
-              <Input value={form.groupName} onChange={(e) => setForm(f => ({ ...f, groupName: e.target.value }))} placeholder="Contoh: ISR Link Backbone 2027 KPC" className="h-11 rounded-[10px]" />
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Tanggal Berlaku <span className="text-[#DC2626]">*</span></label>
-                <FormMobileDatePicker date={validFromDate} onSelect={setValidFromDate} placeholder="Pilih tanggal" />
+                <div>
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Tipe Dokumen <span className="text-[#DC2626]">*</span></label>
+                  <Select value={form.type} onValueChange={(v) => setForm(f => ({ ...f, type: v }))}>
+                    <SelectTrigger className="h-11 rounded-[10px] bg-white border-[#E2E8F0] text-[#1A202C] text-[13px]">
+                      <SelectValue placeholder="-- Pilih Tipe --" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documentTypes.map(t => <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">No. Referensi</label>
+                  <Input value={form.referenceNumber} onChange={(e) => setForm(f => ({ ...f, referenceNumber: e.target.value }))} placeholder="REF/CERT/POL nomor..." className="h-11 rounded-[10px]" />
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block flex items-center gap-1">
+                    Grup Dokumen (Opsional)
+                    <div className="group relative cursor-help">
+                      <Info className="w-3.5 h-3.5 text-[#718096] hover:text-[#2B6CB0]" />
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-64 p-2 bg-[#1A202C] text-white text-[11px] rounded-[6px] opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none text-center shadow-lg">
+                        Dokumen dengan Nama Grup dan Tanggal Berakhir yang sama akan digabung jadi 1 notifikasi WA.
+                        <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-[#1A202C]"></div>
+                      </div>
+                    </div>
+                  </label>
+                  <Input value={form.groupName} onChange={(e) => setForm(f => ({ ...f, groupName: e.target.value }))} placeholder="Contoh: ISR Link Backbone 2027 KPC" className="h-11 rounded-[10px]" />
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Link Dokumen (OneDrive/SharePoint)</label>
+                  <Input value={form.fileLink} onChange={(e) => setForm(f => ({ ...f, fileLink: e.target.value }))} placeholder="https://..." type="url" className="h-11 rounded-[10px]" />
+                </div>
               </div>
-              <div>
-                <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Tanggal Berakhir <span className="text-[#DC2626]">*</span></label>
-                <FormMobileDatePicker date={validUntilDate} onSelect={setValidUntilDate} placeholder="Pilih tanggal" />
+            </div>
+
+            {/* --- Section 2: Masa Berlaku --- */}
+            <div className="bg-[#F8FAFC] p-4 sm:p-5 rounded-[12px] border border-[#E2E8F0]">
+              <h3 className="text-[13px] font-bold text-[#1A202C] mb-4 flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-[#2B6CB0]" />
+                Masa Berlaku
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Tanggal Berlaku <span className="text-[#DC2626]">*</span></label>
+                  <FormMobileDatePicker date={validFromDate} onSelect={setValidFromDate} placeholder="Pilih tanggal" />
+                </div>
+                <div>
+                  <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Tanggal Berakhir <span className="text-[#DC2626]">*</span></label>
+                  <FormMobileDatePicker date={validUntilDate} onSelect={setValidUntilDate} placeholder="Pilih tanggal" />
+                </div>
               </div>
             </div>
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-[12px] font-semibold text-[#4A5568]">Penanggung Jawab (PIC)</label>
+
+            {/* --- Section 3: PIC --- */}
+            <div className="bg-[#F8FAFC] p-4 sm:p-5 rounded-[12px] border border-[#E2E8F0]">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[13px] font-bold text-[#1A202C] flex items-center gap-2">
+                  <Users className="w-4 h-4 text-[#2B6CB0]" />
+                  Penanggung Jawab (PIC)
+                </h3>
                 <button
                   type="button"
-                  onClick={() => setPicEntries(prev => [...prev, { name: "", telegramId: "" }])}
+                  onClick={() => setPicEntries(prev => [...prev, { name: "", telegramId: "", email: "" }])}
                   className="flex items-center gap-1 text-[11px] font-semibold text-[#2B6CB0] hover:text-[#1B3A6B] transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" /> Tambah PIC
                 </button>
               </div>
-              <div className="space-y-2">
+              
+              <div className="space-y-3">
                 {picEntries.map((entry, idx) => (
                   <div key={idx} className="flex gap-2 items-start">
                     {/* Avatar nomor */}
-                    <div className="w-8 h-8 rounded-full bg-[#EBF4FF] border border-[#2B6CB0]/20 flex items-center justify-center flex-shrink-0 mt-1.5">
+                    <div className="w-8 h-8 rounded-full bg-[#EBF4FF] border border-[#2B6CB0]/20 flex items-center justify-center flex-shrink-0 mt-0.5">
                       <span className="text-[11px] font-bold text-[#2B6CB0]">{idx + 1}</span>
                     </div>
-                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-2">
                       <Input
                         value={entry.name}
                         onChange={e => setPicEntries(prev => prev.map((p, i) => i === idx ? { ...p, name: e.target.value } : p))}
@@ -1865,12 +1929,18 @@ export default function OperationalDocumentPage() {
                         placeholder="Telegram Chat ID"
                         className="h-9 rounded-[8px] text-[13px] font-mono"
                       />
+                      <Input
+                        value={entry.email}
+                        onChange={e => setPicEntries(prev => prev.map((p, i) => i === idx ? { ...p, email: e.target.value } : p))}
+                        placeholder="Email PIC"
+                        className="h-9 rounded-[8px] text-[13px]"
+                      />
                     </div>
                     {picEntries.length > 1 && (
                       <button
                         type="button"
                         onClick={() => setPicEntries(prev => prev.filter((_, i) => i !== idx))}
-                        className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-red-50 hover:text-[#DC2626] transition-colors mt-1.5 flex-shrink-0"
+                        className="w-8 h-8 flex items-center justify-center rounded-[8px] text-[#718096] hover:bg-red-50 hover:text-[#DC2626] transition-colors mt-0.5 flex-shrink-0"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -1878,12 +1948,9 @@ export default function OperationalDocumentPage() {
                   </div>
                 ))}
               </div>
-              <p className="text-[11px] text-[#718096] mt-2">Telegram Chat ID: buka bot @userinfobot untuk cek ID Anda.</p>
+              <p className="text-[11px] text-[#718096] mt-3">Telegram Chat ID: buka bot @userinfobot untuk cek ID Anda.</p>
             </div>
-            <div>
-              <label className="text-[12px] font-semibold text-[#4A5568] mb-1.5 block">Link Dokumen (OneDrive/SharePoint)</label>
-              <Input value={form.fileLink} onChange={(e) => setForm(f => ({ ...f, fileLink: e.target.value }))} placeholder="https://..." type="url" className="h-11 rounded-[10px]" />
-            </div>
+
           </div>
         );
 
@@ -1913,7 +1980,7 @@ export default function OperationalDocumentPage() {
             open={formOpen}
             onOpenChange={(o) => !o && closeForm()}
             bottomSheetSize="xl"
-            desktopClassName="max-w-lg"
+            desktopClassName="sm:max-w-3xl md:max-w-4xl"
             title={editId ? "Edit Dokumen" : "Tambah Dokumen Baru"}
             footer={<>{FormActions}</>}
           >
@@ -1963,6 +2030,9 @@ export default function OperationalDocumentPage() {
         const telegramIds = selectedDetailDoc.picTelegramId
           ? [...new Set(selectedDetailDoc.picTelegramId.split(",").map(id => id.trim()).filter(Boolean))]
           : [];
+        const emails = selectedDetailDoc.picEmail
+          ? [...new Set(selectedDetailDoc.picEmail.split(",").map(id => id.trim()).filter(Boolean))]
+          : [];
 
         const TelegramIcon = () => (
           <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="currentColor">
@@ -1985,7 +2055,7 @@ export default function OperationalDocumentPage() {
               </div>
             </div>
 
-            {(selectedDetailDoc.picName || selectedDetailDoc.picTelegramId) && (
+            {(selectedDetailDoc.picName || selectedDetailDoc.picTelegramId || selectedDetailDoc.picEmail) && (
               <div className="bg-[#F7F8FA] rounded-[12px] p-4 border border-[#E2E8F0]">
                 <p className="text-[10px] font-bold text-[#718096] uppercase tracking-wider mb-3">Penanggung Jawab (PIC)</p>
 
@@ -2027,6 +2097,33 @@ export default function OperationalDocumentPage() {
                           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#229ED9]/10 border border-[#229ED9]/20 text-[#229ED9] text-[12px] font-semibold hover:bg-[#229ED9]/20 transition-colors"
                         >
                           <TelegramIcon /> {tid}
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Divider jika ada email */}
+                {(picNames.length > 0 || telegramIds.length > 0) && emails.length > 0 && (
+                  <div className="border-t border-[#E2E8F0] my-3" />
+                )}
+
+                {/* Email IDs — bisa multiple, tampil terpisah */}
+                {emails.length > 0 && (
+                  <div>
+                    <p className="text-[10px] text-[#A0AEC0] font-semibold uppercase tracking-wide mb-2">Email Notifikasi</p>
+                    <div className="flex flex-wrap gap-2">
+                      {emails.map((email, i) => (
+                        <a
+                          key={i}
+                          href={`mailto:${email}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[8px] bg-[#2B6CB0]/10 border border-[#2B6CB0]/20 text-[#2B6CB0] text-[12px] font-semibold hover:bg-[#2B6CB0]/20 transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <rect x="2" y="4" width="20" height="16" rx="2" />
+                            <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
+                          </svg>
+                          {email}
                         </a>
                       ))}
                     </div>

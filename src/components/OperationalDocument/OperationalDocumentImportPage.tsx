@@ -22,6 +22,7 @@ interface ImportRow {
   validUntil: string;
   picName?: string;
   picTelegramId?: string;
+  picEmail?: string;
   fileLink?: string;
   error?: string;
   status?: "pending" | "success" | "error";
@@ -111,7 +112,8 @@ export default function OperationalDocumentImportPage() {
           validUntil,
           picName:   get(7) || undefined,
           picTelegramId:  get(8) || undefined,
-          fileLink:  get(9) || undefined,
+          picEmail:  get(9) || undefined,
+          fileLink:  get(10) || undefined,
           error,
           status: error ? "error" : "pending",
         });
@@ -157,6 +159,7 @@ export default function OperationalDocumentImportPage() {
           validUntil:      parseDateStr(r.validUntil),
           picName:         r.picName,
           picTelegramId:        r.picTelegramId,
+          picEmail:        r.picEmail,
           fileLink:        r.fileLink,
         });
         updated[idx] = { ...r, status: "success" };
@@ -186,12 +189,13 @@ export default function OperationalDocumentImportPage() {
     ws.columns = [
       { header: "Nama Dokumen *",    key: "name",            width: 35 },
       { header: "Tipe Dokumen *",    key: "type",            width: 22 },
-      { header: "Grup Dokumen",      key: "groupName",       width: 25 },
       { header: "No. Referensi",     key: "referenceNumber", width: 22 },
+      { header: "Grup Dokumen",      key: "groupName",       width: 25 },
       { header: "Tanggal Berlaku *", key: "validFrom",       width: 18 },
       { header: "Tanggal Berakhir *",key: "validUntil",      width: 18 },
       { header: "Nama PIC",          key: "picName",         width: 22 },
       { header: "Telegram Chat ID PIC",        key: "picTelegramId",        width: 18 },
+      { header: "Email PIC",         key: "picEmail",        width: 25 },
       { header: "Link Dokumen",      key: "fileLink",        width: 40 },
     ];
 
@@ -206,7 +210,7 @@ export default function OperationalDocumentImportPage() {
     ws.addRow({
       name: "Ijin Frekuensi", type: "Ijin Frekuensi", groupName: "Grup ISR Jakarta", referenceNumber: "REF/001/2025",
       validFrom: "01/01/2025", validUntil: "31/12/2025",
-      picName: "Nama PIC", picTelegramId: "123456789", fileLink: "https://sharepoint...",
+      picName: "Nama PIC", picTelegramId: "123456789", picEmail: "mknsite.sgt@gmail.com", fileLink: "https://sharepoint...",
     });
 
     const ws2 = wb.addWorksheet("Petunjuk");
@@ -215,7 +219,8 @@ export default function OperationalDocumentImportPage() {
       [""],
       ["Kolom Wajib (*): Nama Dokumen, Tipe Dokumen, Tanggal Berlaku, Tanggal Berakhir"],
       ["Format Tanggal: DD/MM/YYYY  (contoh: 31/12/2025)"],
-      ["Telegram Chat ID PIC: awali dengan 62, tanpa + atau spasi (contoh: 123456789)"],
+      ["Telegram Chat ID PIC: awali dengan 62, tanpa + atau spasi (contoh: 62812345678)"],
+      ["Email PIC: dapat diisi lebih dari satu, pisahkan dengan koma (contoh: a@mail.com, b@mail.com)"],
       ["Tipe Dokumen: harus sesuai dengan master data Operational Doc Types"],
     ].forEach(r => ws2.addRow(r));
     ws2.getCell("A1").font = { bold: true, size: 13, color: { argb: "FF1B3A6B" } };

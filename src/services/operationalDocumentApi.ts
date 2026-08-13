@@ -20,6 +20,7 @@ export interface OperationalDocumentDto {
   validUntil: string;
   picName?: string;
   picTelegramId?: string;
+  picEmail?: string;
   fileLink?: string;
   followUpStatus: "Tidak Ada" | "Pending" | "SedangDiproses" | "Selesai";
   followUpRemark?: string;
@@ -47,6 +48,7 @@ export interface CreateOperationalDocumentDto {
   validUntil: string;
   picName?: string;
   picTelegramId?: string;
+  picEmail?: string;
   fileLink?: string;
 }
 
@@ -113,8 +115,8 @@ export const operationalDocumentApi = {
   triggerNotification: () =>
     api.post<any>("/api/operational-documents/trigger-notification"),
 
-  sendNotification: (id: number) =>
-    api.post<any>(`/api/operational-documents/${id}/send-notification`),
+  sendNotification: (id: number, channel?: string) =>
+    api.post<any>(`/api/operational-documents/${id}/send-notification${channel ? `?channel=${channel}` : ''}`),
   
   sendNotificationBulk: (req: { groupName?: string, type?: string, expiryStatus?: string }) =>
     api.post<any>(`/api/operational-documents/send-notification-bulk`, req),
