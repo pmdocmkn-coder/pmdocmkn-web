@@ -51,6 +51,7 @@ export interface RadioRepairJobList {
   /** Warna status custom (Tailwind class) */
   customStatusColor?: string | null;
   openedAt: string;
+  updatedAt?: string | null;
   closedAt?: string | null;
   firstInProgressAt?: string | null;
   workshopCompletedAt?: string | null;

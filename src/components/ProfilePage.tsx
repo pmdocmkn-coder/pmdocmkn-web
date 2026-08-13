@@ -241,7 +241,7 @@ export default function ProfilePage() {
     return () => window.removeEventListener("storage", handler);
   }, []);
 
-  const refreshUserData = useCallback(async () => {
+  const refreshUserData = useCallback(async (silent = false) => {
     if (!contextUser?.userId) return;
     setRefreshing(true);
     try {
@@ -251,9 +251,13 @@ export default function ProfilePage() {
       setPhotoError(false);
       // Also update the global auth context so other components see fresh data
       await refreshUser();
-      setMessage({ type: "success", text: "Data profil diperbarui" });
+      if (!silent) {
+        setMessage({ type: "success", text: "Data profil diperbarui" });
+      }
     } catch (error) {
-      setMessage({ type: "error", text: "Gagal memuat profil terbaru" });
+      if (!silent) {
+        setMessage({ type: "error", text: "Gagal memuat profil terbaru" });
+      }
     } finally {
       setRefreshing(false);
     }
@@ -611,6 +615,7 @@ export default function ProfilePage() {
             getInitials={getInitials}
             hasPhoto={hasPhoto}
             isEditing={isEditing}
+            uploadingPhoto={uploadingPhoto}
             onAvatarClick={handleAvatarClick}
             onPreviewClick={() => setPreviewImage(currentUser.photoUrl!)}
             onCancelEdit={() => setIsEditing(false)}
@@ -618,6 +623,13 @@ export default function ProfilePage() {
             onSaveProfile={handleSubmit}
           />
 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handlePhotoChange}
+            accept="image/*"
+            className="hidden"
+          />
           <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-12 gap-10">
             {/* Left Column: Forms */}
             <div className="lg:col-span-8 space-y-10">

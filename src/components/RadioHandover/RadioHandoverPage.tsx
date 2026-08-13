@@ -15,7 +15,8 @@ import {
   ArrowUpRight,
   ArrowLeft,
   Home,
-  ListTodo
+  ListTodo,
+  Search
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -39,6 +40,9 @@ import { asImageSrc, resolveHandoverPhotos } from "../../utils/handoverPhotoUtil
 import { hasPermission } from "../../utils/permissionUtils";
 import { useToast } from "../../hooks/use-toast";
 import RadioScrapApprovalModal from "../RadioRepair/RadioScrapApprovalModal";
+import Pagination from "../common/Pagination";
+import { useDebounce } from "../../hooks/useDebounce";
+import { Input } from "../ui/input";
 
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
 
@@ -123,7 +127,7 @@ function HandoverHistoryTable({
   const role = currentUserRole();
 
   const canUserSign = (h: RadioHandoverList) => {
-    return h.status === "PendingReceiverSignature";
+    return h.status === "PendingReceiverSignature" && h.receivedByUserId === uid;
   };
 
   const groupedItems = useMemo(() => {
@@ -522,6 +526,13 @@ export default function RadioHandoverPage() {
   const [pendingCount, setPendingCount] = useState(0);
   const [activeTab, setActiveTab] = useState<"hd-tek" | "tek-hd" | "hd-wh">("hd-tek");
 
+  const [page, setPage] = useState(1);
+  const [totalCountOutgoing, setTotalCountOutgoing] = useState(0);
+  const [totalCountIncoming, setTotalCountIncoming] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  const PAGE_SIZE = 10;
+
   const [loadingOutgoing, setLoadingOutgoing] = useState(true);
 
   const [loadingTekHd, setLoadingTekHd] = useState(false);
@@ -585,35 +596,53 @@ export default function RadioHandoverPage() {
     );
   }, [signRow, outgoing, incomingTekHd]);
 
+  // Reset page when tab or search changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, debouncedSearch]);
 
   const load = useCallback((silent = false) => {
     if (!silent) {
-      setLoadingOutgoing(true);
-      setLoadingTekHd(true);
+      if (activeTab === "hd-tek") setLoadingOutgoing(true);
+      if (activeTab === "tek-hd") setLoadingTekHd(true);
     }
 
-    radioHandoverApi
-      .getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToTechnician" })
-      .then((r) => {
-        setOutgoing(r.data ?? []);
-        const pending = (r.data ?? []).filter((h) => h.status === "PendingReceiverSignature").length;
-        setPendingCount(pending);
-      })
-      .catch(() => setOutgoing([]))
-      .finally(() => { if (!silent) setLoadingOutgoing(false); });
-
-    Promise.all([
-      radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "TechnicianToHelpdesk" }),
-      radioHandoverApi.getAll({ page: 1, pageSize: 50, handoverType: "HelpdeskToWarehouse" })
-    ])
-      .then(([resTekHd, resHdWks]) => {
-        setIncomingTekHd(resTekHd.data ?? []);
-      })
-      .catch(() => {
-        setIncomingTekHd([]);
-      })
-      .finally(() => { if (!silent) setLoadingTekHd(false); });
-  }, []);
+    if (activeTab === "hd-tek") {
+      radioHandoverApi
+        .getAll({ page, pageSize: PAGE_SIZE, handoverType: "HelpdeskToTechnician", search: debouncedSearch })
+        .then((r) => {
+          setOutgoing(r.data ?? []);
+          setTotalCountOutgoing(r.meta?.pagination?.totalCount ?? 0);
+          
+          // Also fetch pending count without pagination/search just for the badge
+          if (!debouncedSearch && page === 1) {
+            radioHandoverApi.getAll({ handoverType: "HelpdeskToTechnician" }).then(res => {
+              const pending = (res.data ?? []).filter((h) => h.status === "PendingReceiverSignature").length;
+              setPendingCount(pending);
+            });
+          }
+        })
+        .catch(() => setOutgoing([]))
+        .finally(() => { if (!silent) setLoadingOutgoing(false); });
+    } else {
+      Promise.all([
+        radioHandoverApi.getAll({ page, pageSize: PAGE_SIZE, handoverType: "TechnicianToHelpdesk", search: debouncedSearch }),
+        radioHandoverApi.getAll({ page, pageSize: PAGE_SIZE, handoverType: "HelpdeskToWarehouse", search: debouncedSearch })
+      ])
+        .then(([resTekHd, resHdWks]) => {
+          // Since the UI originally combined these or relied on a specific flow,
+          // If activeTab is "tek-hd", we probably just want TechnicianToHelpdesk for the list, 
+          // but we might need both if they are combined in the UI. 
+          // Looking at the original code, it only sets incomingTekHd to resTekHd.data.
+          setIncomingTekHd(resTekHd.data ?? []);
+          setTotalCountIncoming(resTekHd.meta?.pagination?.totalCount ?? 0);
+        })
+        .catch(() => {
+          setIncomingTekHd([]);
+        })
+        .finally(() => { if (!silent) setLoadingTekHd(false); });
+    }
+  }, [activeTab, page, debouncedSearch]);
 
   useLiveRefresh("RadioHandover", () => {
     load(true);
@@ -882,37 +911,68 @@ export default function RadioHandoverPage() {
 
       {/* History */}
       <section className="space-y-4">
-        <h2 className="text-lg font-semibold text-gray-900">Histori serah terima</h2>
-        {activeTab === "hd-tek" ? (
-          <HandoverHistoryTable
-            items={outgoing}
-            loading={loadingOutgoing}
-            flowLabel="Helpdesk → Teknisi"
-            emptyMessage="Belum ada serah terima ke teknisi"
-            onOpenDetail={openDetail}
-            onOpenGallery={openGallery}
-            onOpenEdit={openEdit}
-            onSoftDelete={softDelete}
-            onSignRow={setSignRow}
-            canEdit={isHd}
-            canDelete={canDelete}
-          />
-        ) : (
-          <HandoverHistoryTable
-            items={incomingTekHd}
-            loading={loadingTekHd}
-            flowLabel="Teknisi → Helpdesk (Scrap)"
-            emptyMessage="Belum ada serah terima kembali dari teknisi"
-            onOpenDetail={openDetail}
-            onOpenGallery={openGallery}
-            onSoftDelete={softDelete}
-            onSignRow={setSignRow}
-            onFillScrapData={setPendingScrapJobId}
-            onCreateWhHandover={handleShortcutCreateWh}
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold text-gray-900">Histori serah terima</h2>
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <Input 
+              type="text" 
+              placeholder="Cari No. Seri / Handover..." 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 bg-white"
+            />
+          </div>
+        </div>
 
-            canEdit={false}
-            canDelete={isHd || isWks}
-          />
+        {activeTab === "hd-tek" ? (
+          <div>
+            <HandoverHistoryTable
+              items={outgoing}
+              loading={loadingOutgoing}
+              flowLabel="Helpdesk → Teknisi"
+              emptyMessage={searchQuery ? "Tidak ada hasil pencarian" : "Belum ada serah terima ke teknisi"}
+              onOpenDetail={openDetail}
+              onOpenGallery={openGallery}
+              onOpenEdit={openEdit}
+              onSoftDelete={softDelete}
+              onSignRow={setSignRow}
+              canEdit={isHd}
+              canDelete={canDelete}
+            />
+            <Pagination
+              currentPage={page}
+              pageSize={PAGE_SIZE}
+              totalCount={totalCountOutgoing}
+              totalPages={Math.ceil(totalCountOutgoing / PAGE_SIZE)}
+              onPageChange={setPage}
+            />
+          </div>
+        ) : (
+          <div>
+            <HandoverHistoryTable
+              items={incomingTekHd}
+              loading={loadingTekHd}
+              flowLabel="Teknisi → Helpdesk (Scrap)"
+              emptyMessage={searchQuery ? "Tidak ada hasil pencarian" : "Belum ada serah terima kembali dari teknisi"}
+              onOpenDetail={openDetail}
+              onOpenGallery={openGallery}
+              onSoftDelete={softDelete}
+              onSignRow={setSignRow}
+              onFillScrapData={setPendingScrapJobId}
+              onCreateWhHandover={handleShortcutCreateWh}
+
+              canEdit={false}
+              canDelete={isHd || isWks}
+            />
+            <Pagination
+              currentPage={page}
+              pageSize={PAGE_SIZE}
+              totalCount={totalCountIncoming}
+              totalPages={Math.ceil(totalCountIncoming / PAGE_SIZE)}
+              onPageChange={setPage}
+            />
+          </div>
         )}
       </section>
 

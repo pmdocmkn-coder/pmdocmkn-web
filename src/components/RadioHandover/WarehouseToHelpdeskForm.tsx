@@ -48,7 +48,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
       .getById(job.id)
       .then((res) => {
         setJobDetail(res);
-        if (res?.handovers && res?.primaryHandover?.accessories) {
+        if (res?.handovers) {
           // 1. Apa saja yang benar-benar masuk ke Warehouse?
           const incomingToWhStr = new Set<string>();
           res.handovers.filter(h => h.handoverType === "TechnicianToWarehouse" || h.handoverType === "HelpdeskToWarehouse")
@@ -58,16 +58,27 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
               });
             });
           
-          const whReceivedList = res.primaryHandover.accessories.filter(a => {
-             const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
-             return incomingToWhStr.has(accStr);
-          }).map(a => ({
-             itemName: a.itemName,
-             quantity: a.quantity,
-             unit: a.unit ?? undefined,
-             description: a.description ?? undefined,
-             serialNumber: a.serialNumber ?? undefined
-          }));
+          const whReceivedList = Array.from(incomingToWhStr).map(accStr => {
+            // Backend formats accessories as "Quantity Unit ItemName" (e.g. "1 EA Antena" or "1  Antena")
+            const match = accStr.match(/^(\d+)\s*(\S*)\s+(.+)$/);
+            if (match) {
+              return {
+                quantity: parseInt(match[1], 10) || 1,
+                unit: match[2] || "EA",
+                itemName: match[3],
+                description: undefined,
+                serialNumber: undefined
+              };
+            }
+            return {
+              quantity: 1,
+              unit: "EA",
+              itemName: accStr,
+              description: undefined,
+              serialNumber: undefined
+            };
+          });
+          
           setAvailableAccessories(whReceivedList);
 
           // 2. Apa saja yang sudah diserahkan keluar dari Warehouse?
@@ -80,12 +91,14 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
             });
 
           const disabled = whReceivedList.map(a => {
-            const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
-            return alreadyHandedOver.has(accStr);
+            const accStr1 = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+            const accStr2 = `${a.quantity}  ${a.itemName}`; // In case unit was originally empty
+            return alreadyHandedOver.has(accStr1) || alreadyHandedOver.has(accStr2);
           });
           const disabledInfo = whReceivedList.map(a => {
-            const accStr = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
-            return alreadyHandedOver.get(accStr) || "";
+            const accStr1 = `${a.quantity} ${a.unit || 'EA'} ${a.itemName}`;
+            const accStr2 = `${a.quantity}  ${a.itemName}`;
+            return alreadyHandedOver.get(accStr1) || alreadyHandedOver.get(accStr2) || "";
           });
           
           setDisabledAccessories(disabled);
