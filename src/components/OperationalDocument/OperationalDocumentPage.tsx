@@ -6,12 +6,13 @@ import {
   FileText, Plus, Search, ExternalLink, Edit2, Trash2,
   CheckCircle, Clock, AlertTriangle, ChevronDown, Filter, X,
   Calendar, ChevronRight, RotateCw, CalendarX, Loader2,
-  Download, Upload, FileSpreadsheet, Info, Eye, Users
+  Download, Upload, FileSpreadsheet, Info, Eye, Users, MoreVertical
 } from "lucide-react";
 import { MobilePageHeader } from "../ui/MobilePageHeader";
 import BottomSheet from "../common/BottomSheet";
 import { ResponsiveModal } from "../common/ResponsiveModal";
 import { PageWrapper } from "../common/PageWrapper";
+import { MobileSpeedDial } from "../ui/MobileSpeedDial";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "../ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
@@ -43,6 +44,40 @@ type FollowUpStatus = typeof FOLLOW_UP_STATUS_OPTIONS[number];
 const PAGE_SIZE = 10;
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+function getBhpWarningStatus(doc: OperationalDocumentDto): "overdue" | "due_soon" | "safe" {
+  if (!doc.type?.toLowerCase().includes("isr") || !doc.bhpChecklist) return "safe";
+  
+  const unpaidYears = doc.bhpChecklist.filter(chk => !chk.isPaid);
+  if (unpaidYears.length === 0) return "safe";
+  
+  const validFromDate = new Date(doc.validFrom);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+  
+  let status: "overdue" | "due_soon" | "safe" = "safe";
+  
+  for (const unpaid of unpaidYears) {
+    let calcYear = unpaid.year;
+    if (calcYear < 100) {
+      // If year is relative (1, 2, 3, 4, 5), convert to actual year
+      calcYear = validFromDate.getFullYear() + (calcYear - 1);
+    }
+    
+    const dueDate = new Date(calcYear, validFromDate.getMonth(), validFromDate.getDate());
+    dueDate.setHours(0, 0, 0, 0);
+    
+    const diffTime = dueDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) {
+      return "overdue"; // Highest priority
+    } else if (diffDays <= 30) {
+      status = "due_soon";
+    }
+  }
+  return status;
+}
+
 function parseResponse(raw: any): { items: OperationalDocumentDto[]; totalCount: number; totalPages: number } {
   const items: OperationalDocumentDto[] = Array.isArray(raw?.data) ? raw.data : [];
   const pagination = raw?.meta?.pagination;
@@ -298,6 +333,8 @@ export default function OperationalDocumentPage() {
 
   // Form state
   const [formOpen, setFormOpen] = useState(false);
+  const [faqTelegramOpen, setFaqTelegramOpen] = useState(false);
+  const [qrZoomOpen, setQrZoomOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [selectedDetailDoc, setSelectedDetailDoc] = useState<OperationalDocumentDto | null>(null);
   const [followUpModalOpen, setFollowUpModalOpen] = useState(false);
@@ -889,6 +926,12 @@ export default function OperationalDocumentPage() {
                 <Upload className="w-3.5 h-3.5 text-[#F59E0B]" /> Import
               </button>
               <button
+                onClick={() => setFaqTelegramOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-[8px] border border-[#1B3A6B]/20 bg-white text-[13px] font-semibold text-[#1B3A6B] hover:bg-[#1B3A6B]/5 transition-colors"
+              >
+                <Info className="w-3.5 h-3.5" /> FAQ Telegram
+              </button>
+              <button
                 onClick={openCreate}
                 className="bg-[#D94F2B] hover:bg-[#B83D20] text-white px-5 py-2.5 rounded-[10px] flex items-center gap-2 font-semibold shadow-sm shadow-[#D94F2B]/20 transition-all active:scale-95 text-[14px]"
               >
@@ -899,39 +942,65 @@ export default function OperationalDocumentPage() {
         </div>
       </div>
 
-      {/* ── Summary Cards (Mockup Style) ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+      {/* ── Summary Cards (Modern & Premium Style) ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
         {/* Card 1 - Total */}
-        <div className="bg-white border border-[#E2E8F0] rounded-[14px] p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[12px] bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] flex items-center justify-center flex-shrink-0 shadow-sm shadow-[#1B3A6B]/20">
-            <FileText className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </div>
-          <div>
-            <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Total Dokumen</p>
-            <p className="text-[26px] md:text-[30px] font-bold text-[#1A202C] leading-none mt-1.5">{summary.totalDocuments.toLocaleString()}</p>
-            <p className="text-[11px] text-[#718096] mt-1">dokumen aktif terpantau</p>
+        <div className="group relative overflow-hidden bg-white border border-[#E2E8F0] rounded-[20px] p-5 md:p-6 shadow-sm hover:shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:-translate-y-1 transition-all duration-300 ease-out">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#2B6CB0]/10 to-transparent rounded-bl-full -mr-8 -mt-8 transition-transform duration-500 group-hover:scale-110"></div>
+          <div className="relative z-10 flex items-center gap-5">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] p-[1px] shadow-lg shadow-[#2B6CB0]/20 group-hover:shadow-[#2B6CB0]/40 transition-shadow duration-300">
+              <div className="w-full h-full rounded-[15px] bg-gradient-to-br from-[#1B3A6B] to-[#2B6CB0] flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out"></div>
+                <FileText className="w-6 h-6 md:w-7 md:h-7 text-white relative z-10" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-[#718096] uppercase tracking-[0.15em]">Total Dokumen</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-[32px] md:text-[36px] font-extrabold text-[#1A202C] leading-none tracking-tight">{summary.totalDocuments.toLocaleString()}</p>
+              </div>
+              <p className="text-[12px] text-[#A0AEC0] mt-1.5 font-medium">Semua dokumen aktif</p>
+            </div>
           </div>
         </div>
+
         {/* Card 2 - Expiring */}
-        <div className="bg-white border border-amber-100 rounded-[14px] p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[12px] bg-gradient-to-br from-[#F59E0B] to-[#FBBF24] flex items-center justify-center flex-shrink-0 shadow-sm shadow-amber-200">
-            <RotateCw className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </div>
-          <div>
-            <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Akan Berakhir &lt; 30 Hari</p>
-            <p className="text-[26px] md:text-[30px] font-bold text-[#F59E0B] leading-none mt-1.5">{summary.expiringSoon}</p>
-            <p className="text-[11px] text-[#718096] mt-1">segera perbarui dokumen ini</p>
+        <div className="group relative overflow-hidden bg-white border border-[#E2E8F0] hover:border-amber-200 rounded-[20px] p-5 md:p-6 shadow-sm hover:shadow-[0_8px_30px_rgb(245,158,11,0.08)] hover:-translate-y-1 transition-all duration-300 ease-out">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-amber-400/10 to-transparent rounded-bl-full -mr-8 -mt-8 transition-transform duration-500 group-hover:scale-110"></div>
+          <div className="relative z-10 flex items-center gap-5">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#F59E0B] to-[#FBBF24] p-[1px] shadow-lg shadow-amber-500/20 group-hover:shadow-amber-500/40 transition-shadow duration-300">
+              <div className="w-full h-full rounded-[15px] bg-gradient-to-br from-[#F59E0B] to-[#FBBF24] flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out"></div>
+                <RotateCw className="w-6 h-6 md:w-7 md:h-7 text-white relative z-10 group-hover:rotate-180 transition-transform duration-700 ease-in-out" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-[#718096] uppercase tracking-[0.15em]">Berakhir &lt; 30 Hari</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-[32px] md:text-[36px] font-extrabold text-[#F59E0B] leading-none tracking-tight">{summary.expiringSoon}</p>
+              </div>
+              <p className="text-[12px] text-[#A0AEC0] mt-1.5 font-medium">Segera perbarui dokumen</p>
+            </div>
           </div>
         </div>
+
         {/* Card 3 - Expired */}
-        <div className="bg-white border border-red-100 rounded-[14px] p-4 md:p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 md:w-14 md:h-14 rounded-[12px] bg-gradient-to-br from-[#DC2626] to-[#EF4444] flex items-center justify-center flex-shrink-0 shadow-sm shadow-red-200">
-            <CalendarX className="w-5 h-5 md:w-6 md:h-6 text-white" />
-          </div>
-          <div>
-            <p className="text-[10px] md:text-[11px] font-bold text-[#718096] uppercase tracking-wider">Sudah Expired</p>
-            <p className="text-[26px] md:text-[30px] font-bold text-[#DC2626] leading-none mt-1.5">{summary.expired}</p>
-            <p className="text-[11px] text-[#718096] mt-1">tindakan segera diperlukan</p>
+        <div className="group relative overflow-hidden bg-white border border-[#E2E8F0] hover:border-red-200 rounded-[20px] p-5 md:p-6 shadow-sm hover:shadow-[0_8px_30px_rgb(220,38,38,0.08)] hover:-translate-y-1 transition-all duration-300 ease-out">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-red-500/10 to-transparent rounded-bl-full -mr-8 -mt-8 transition-transform duration-500 group-hover:scale-110"></div>
+          <div className="relative z-10 flex items-center gap-5">
+            <div className="w-14 h-14 md:w-16 md:h-16 rounded-2xl bg-gradient-to-br from-[#DC2626] to-[#EF4444] p-[1px] shadow-lg shadow-red-500/20 group-hover:shadow-red-500/40 transition-shadow duration-300">
+              <div className="w-full h-full rounded-[15px] bg-gradient-to-br from-[#DC2626] to-[#EF4444] flex items-center justify-center relative overflow-hidden">
+                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-in-out"></div>
+                <CalendarX className="w-6 h-6 md:w-7 md:h-7 text-white relative z-10 group-hover:scale-110 transition-transform duration-300" />
+              </div>
+            </div>
+            <div>
+              <p className="text-[11px] font-bold text-[#718096] uppercase tracking-[0.15em]">Sudah Expired</p>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-[32px] md:text-[36px] font-extrabold text-[#DC2626] leading-none tracking-tight">{summary.expired}</p>
+              </div>
+              <p className="text-[12px] text-[#A0AEC0] mt-1.5 font-medium">Tindakan segera diperlukan</p>
+            </div>
           </div>
         </div>
       </div>
@@ -1108,7 +1177,27 @@ export default function OperationalDocumentPage() {
                     </td>
                     <td className="px-5 py-4 text-[13px] text-[#718096] font-mono">{(page - 1) * PAGE_SIZE + idx + 1 < 10 ? `0${(page - 1) * PAGE_SIZE + idx + 1}` : (page - 1) * PAGE_SIZE + idx + 1}</td>
                     <td className="px-5 py-4">
-                      <p className="text-[14px] font-bold text-[#1A202C] leading-snug">{doc.name}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-[14px] font-bold text-[#1A202C] leading-snug">{doc.name}</p>
+                        {getBhpWarningStatus(doc) === "overdue" && (
+                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 border border-red-200" title="BHP Tahunan Menunggak">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                            </span>
+                            <span className="text-[10px] font-bold text-red-600">Menunggak</span>
+                          </span>
+                        )}
+                        {getBhpWarningStatus(doc) === "due_soon" && (
+                          <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#FFF7ED] border border-[#FED7AA]" title="BHP Tahunan Segera Jatuh Tempo">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F97316] opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-[#EA580C]"></span>
+                            </span>
+                            <span className="text-[10px] font-bold text-[#EA580C]">Jatuh Tempo</span>
+                          </span>
+                        )}
+                      </div>
                       {doc.referenceNumber && <p className="text-[11px] text-[#718096] uppercase mt-1 tracking-wide">REF: {doc.referenceNumber}</p>}
                     </td>
                     <td className="px-5 py-4">
@@ -1420,7 +1509,25 @@ export default function OperationalDocumentPage() {
           <div key={doc.id} className="bg-white rounded-[12px] border border-[#E2E8F0] shadow-sm p-4 space-y-3">
             <div className="flex items-start justify-between gap-2">
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-bold text-[#1A202C] leading-snug">{doc.name}</p>
+                <div className="flex items-start gap-2">
+                  <p className="text-[14px] font-bold text-[#1A202C] leading-snug">{doc.name}</p>
+                  {getBhpWarningStatus(doc) === "overdue" && (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-red-50 border border-red-200 shrink-0 mt-0.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-red-600"></span>
+                      </span>
+                    </span>
+                  )}
+                  {getBhpWarningStatus(doc) === "due_soon" && (
+                    <span className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-[#FFF7ED] border border-[#FED7AA] shrink-0 mt-0.5">
+                      <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-[#F97316] opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-[#EA580C]"></span>
+                      </span>
+                    </span>
+                  )}
+                </div>
                 {doc.referenceNumber && <p className="text-[10px] text-[#718096] uppercase tracking-wider mt-1">REF: {doc.referenceNumber}</p>}
                 <div className="flex flex-wrap gap-2 mt-1.5">
                   <span className="text-[12px] text-[#4A5568] bg-[#F7F8FA] px-2 py-0.5 rounded-[4px]">{doc.type}</span>
@@ -1710,27 +1817,34 @@ export default function OperationalDocumentPage() {
       )}
 
       {/* ── Mobile FAB group ── */}
-      <div className="md:hidden fixed bottom-[100px] right-4 z-30 flex flex-col items-end gap-2">
-        {canCreate && (
-          <button
-            onClick={() => navigate("/operational-documents/import")}
-            className="flex items-center gap-2 bg-[#2B6CB0] hover:bg-[#1B3A6B] text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95"
-          >
-            <Upload className="w-4 h-4" /> Import
-          </button>
-        )}
-        <button onClick={handleExport}
-          disabled={isExporting}
-          className={`flex items-center gap-2 text-white px-4 py-3 rounded-full shadow-lg font-bold text-[13px] transition-all active:scale-95 ${isExporting ? 'bg-[#059669]/60 cursor-not-allowed' : 'bg-[#059669] hover:bg-[#047857]'}`}>
-          {isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />} Export
-        </button>
-        {canCreate && (
-          <button onClick={openCreate}
-            className="flex items-center gap-2 bg-[#D94F2B] hover:bg-[#B83D20] text-white px-5 py-3.5 rounded-full shadow-lg font-bold shadow-[#D94F2B]/40 transition-all active:scale-95 text-[15px]">
-            <Plus className="w-5 h-5" /> Tambah
-          </button>
-        )}
-      </div>
+      <MobileSpeedDial 
+        actions={[
+          {
+            icon: <Info className="w-4 h-4" />,
+            label: "FAQ Telegram",
+            onClick: () => setFaqTelegramOpen(true),
+            className: "text-[#1B3A6B]"
+          },
+          ...(canCreate ? [{
+            icon: <Upload className="w-4 h-4" />,
+            label: "Import Excel",
+            onClick: () => navigate("/operational-documents/import"),
+            className: "text-[#2B6CB0]"
+          }] : []),
+          {
+            icon: isExporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />,
+            label: "Export Excel",
+            onClick: handleExport,
+            disabled: isExporting,
+            className: "text-[#059669]"
+          }
+        ]}
+        mainAction={canCreate ? {
+          icon: <Plus className="w-5 h-5" />,
+          label: "Tambah",
+          onClick: openCreate
+        } : undefined}
+      />
 
       {/* ── Mobile Filter BottomSheets ── */}
       <BottomSheet open={typeSheetOpen} onClose={() => setTypeSheetOpen(false)} title="Tipe Dokumen">
@@ -2296,6 +2410,162 @@ export default function OperationalDocumentPage() {
               onChange={(e) => setFollowUpFormRemark(e.target.value)}
               placeholder="Tambahkan catatan tindak lanjut..."
               className="w-full h-24 text-[14px] border border-[#E2E8F0] rounded-[8px] p-3 focus:outline-none focus:ring-2 focus:ring-[#2B6CB0] focus:border-transparent resize-none"
+            />
+          </div>
+        </div>
+      </ResponsiveModal>
+
+      {/* ── FAQ Telegram Modal ── */}
+      <ResponsiveModal
+        open={faqTelegramOpen}
+        onOpenChange={setFaqTelegramOpen}
+        title="Panduan Telegram Bot & Chat ID"
+        bottomSheetSize="xl"
+        desktopClassName="sm:max-w-2xl"
+        footer={
+          <Button onClick={() => setFaqTelegramOpen(false)} className="w-full sm:w-auto bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white font-medium px-6">
+            Tutup
+          </Button>
+        }
+      >
+        <div className="space-y-6 text-[14px] text-slate-700 pb-2">
+          {/* Section 1: Chat ID */}
+          <div className="bg-slate-50 p-5 rounded-xl border border-slate-200/80 space-y-4">
+            <h4 className="font-semibold text-slate-900 text-[15px] flex items-center gap-2">
+              <span className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-[#1B3A6B] text-white text-xs font-bold">1</span>
+              Cara Mendapatkan Telegram Chat ID Anda
+            </h4>
+            
+            <p className="text-slate-600 text-[13px] leading-relaxed ml-8">
+              Chat ID adalah angka identitas unik akun Telegram Anda untuk menerima notifikasi. Untuk mengetahuinya, Anda bisa menggunakan bantuan bot:
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm ml-0 sm:ml-8">
+              {/* Bot Info & Action */}
+              <div className="flex-1 text-center sm:text-left space-y-3">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#1B3A6B]/10 text-[#1B3A6B] font-medium text-xs mb-1">
+                    Bot Helper ID
+                  </span>
+                  <h5 className="font-bold text-slate-800 text-base">User Info Bot</h5>
+                  <p className="font-mono text-xs text-[#229ED9] font-semibold">@userinfobot</p>
+                </div>
+                
+                <ol className="list-decimal text-left pl-4 space-y-1.5 text-slate-600 text-[13px]">
+                  <li>Klik tombol <strong>Buka Bot & Dapatkan ID</strong> di bawah.</li>
+                  <li>Di Telegram, klik <strong>Start</strong>.</li>
+                  <li>Salin angka pada baris <code className="bg-slate-200/70 px-1.5 py-0.5 rounded text-slate-800 font-mono text-xs">Id: 12345678</code>.</li>
+                  <li>Masukkan angka tersebut ke kolom Telegram PIC dokumen.</li>
+                </ol>
+
+                <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-2">
+                  <a
+                    href="https://t.me/userinfobot"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-sm active:scale-95"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                    Buka Bot & Dapatkan ID
+                    <ExternalLink className="w-3 h-3 ml-0.5 opacity-80" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Section 2: Activate Bot with QR Code & Link */}
+          <div className="bg-gradient-to-br from-[#229ED9]/5 via-sky-50/50 to-indigo-50/30 p-5 rounded-xl border border-[#229ED9]/20 space-y-4">
+            <h4 className="font-semibold text-slate-900 text-[15px] flex items-center gap-2">
+              <span className="shrink-0 flex items-center justify-center w-6 h-6 rounded-full bg-[#229ED9] text-white text-xs font-bold">2</span>
+              Cara Mengaktifkan Bot Notifikasi PM
+            </h4>
+
+            <p className="text-slate-600 text-[13px] leading-relaxed ml-8">
+              Agar Telegram mengizinkan sistem kami mengirimkan peringatan otomatis ke HP Anda, <strong>Anda wajib menekan tombol Start pada bot notifikasi minimal 1x</strong>.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-center gap-5 bg-white p-4 rounded-xl border border-slate-200 shadow-sm ml-0 sm:ml-8">
+              {/* QR Code Frame - Clickable */}
+              <div 
+                onClick={() => setQrZoomOpen(true)}
+                className="relative group flex-shrink-0 flex flex-col items-center cursor-pointer"
+                title="Klik untuk memperbesar QR Code"
+              >
+                <div className="w-40 h-40 p-1.5 bg-[#0D1B2A] rounded-xl border border-[#229ED9]/30 shadow-md flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-105 group-hover:border-[#229ED9]">
+                  <img 
+                    src="/telegram-bot-qr.jpg" 
+                    alt="Telegram Bot QR Code" 
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                  <div className="absolute inset-0 bg-slate-900/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                    <span className="bg-[#229ED9] text-white text-[11px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow">
+                      <Eye className="w-3.5 h-3.5" /> Perbesar
+                    </span>
+                  </div>
+                </div>
+                <span className="text-[11px] text-[#229ED9] mt-1.5 font-medium flex items-center gap-1 group-hover:underline">
+                  🔍 Klik untuk Memperbesar
+                </span>
+              </div>
+
+              {/* Bot Info & Action */}
+              <div className="flex-1 text-center sm:text-left space-y-2.5">
+                <div>
+                  <span className="inline-block px-2.5 py-0.5 rounded-full bg-[#229ED9]/10 text-[#229ED9] font-medium text-xs mb-1">
+                    Bot Resmi System
+                  </span>
+                  <h5 className="font-bold text-slate-800 text-base">PM MKN Notification Bot</h5>
+                  <p className="font-mono text-xs text-[#229ED9] font-semibold">@PMMKN_NOTIFICATION_BOT</p>
+                </div>
+                
+                <p className="text-slate-500 text-xs leading-relaxed">
+                  Pindai QR Code di samping atau klik tombol di bawah untuk langsung membuka chat bot:
+                </p>
+
+                <div className="pt-1 flex flex-wrap justify-center sm:justify-start gap-2">
+                  <a
+                    href="https://t.me/PMMKN_NOTIFICATION_BOT"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 bg-[#229ED9] hover:bg-[#1E8DBE] text-white text-xs font-semibold px-4 py-2 rounded-lg transition-all shadow-sm active:scale-95"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z"/>
+                    </svg>
+                    Buka Bot Telegram & Klik Start
+                    <ExternalLink className="w-3 h-3 ml-0.5 opacity-80" />
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </ResponsiveModal>
+
+      {/* ── QR Zoom Modal ── */}
+      <ResponsiveModal
+        open={qrZoomOpen}
+        onOpenChange={setQrZoomOpen}
+        title="Scan QR Code Telegram Bot"
+        bottomSheetSize="lg"
+        desktopClassName="sm:max-w-2xl"
+        footer={
+          <div className="flex w-full justify-end">
+            <Button onClick={() => setQrZoomOpen(false)} className="bg-[#1B3A6B] hover:bg-[#2B6CB0] text-white">
+              Tutup
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex flex-col items-center justify-center p-2 text-center">
+          <div className="w-full max-w-[480px] aspect-square p-2 bg-[#0D1B2A] rounded-2xl border-2 border-[#229ED9]/40 shadow-2xl overflow-hidden flex items-center justify-center">
+            <img 
+              src="/telegram-bot-qr.jpg" 
+              alt="Telegram Bot QR Code Large" 
+              className="w-full h-full object-contain rounded-xl"
             />
           </div>
         </div>
