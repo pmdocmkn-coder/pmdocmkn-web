@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import {
   Shield, Users, Key, UserCog, Building2, ScrollText,
-  ChevronRight, ArrowLeft, Settings, Wrench, Home,
+  ChevronRight, ArrowLeft, Settings, Wrench, Home, Mail,
 } from 'lucide-react';
 import PermissionsTab from './settings/PermissionsTab';
 import RolesTab from './settings/RolesTab';
@@ -11,6 +11,7 @@ import UsersManagementTab from './settings/UsersManagementTab';
 import DivisionsTab from './settings/DivisionsTab';
 import ActivityLogTab from './settings/ActivityLogTab';
 import TechniciansTab from './settings/TechniciansTab';
+import NotificationSettingsTab from './settings/NotificationSettingsTab';
 import { hasPermission } from '../utils/permissionUtils';
 import { MobilePageHeader } from './ui/MobilePageHeader';
 
@@ -18,7 +19,8 @@ import { MobilePageHeader } from './ui/MobilePageHeader';
 
 type TabId =
   | 'permissions' | 'roles' | 'role-permissions'
-  | 'users' | 'divisions' | 'activity-logs' | 'technicians';
+  | 'users' | 'divisions' | 'activity-logs' | 'technicians'
+  | 'notification-settings';
 
 interface TabDef {
   id: TabId;
@@ -96,6 +98,15 @@ const TABS: TabDef[] = [
     iconBg: 'bg-[#FFF0EC]',
     iconColor: 'text-[#D94F2B]',
   },
+  {
+    id: 'notification-settings',
+    name: 'Notifikasi Email',
+    icon: Mail,
+    description: 'Atur notifikasi email helpdesk saat radio siap di WH',
+    permission: 'system.notification.setting.view',
+    iconBg: 'bg-[#EBF4FF]',
+    iconColor: 'text-[#2B6CB0]',
+  },
 ];
 
 // ─── Tab content renderer ─────────────────────────────────────────────────────
@@ -109,6 +120,7 @@ function TabContent({ id }: { id: TabId }) {
     case 'divisions': return <DivisionsTab />;
     case 'activity-logs': return <ActivityLogTab />;
     case 'technicians': return <TechniciansTab />;
+    case 'notification-settings': return <NotificationSettingsTab />;
     default: return null;
   }
 }

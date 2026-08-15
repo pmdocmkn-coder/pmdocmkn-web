@@ -30,3 +30,25 @@ export const notificationApi = {
     await api.post(`${BASE_URL}/read-all`);
   }
 };
+
+export interface HelpdeskNotificationSetting {
+  helpdeskEmailEnabled: boolean;
+  helpdeskEmailRecipients: string[];
+}
+
+export const notificationSettingApi = {
+  getHelpdeskSetting: async (): Promise<HelpdeskNotificationSetting> => {
+    const res = await api.get<ApiResponse<HelpdeskNotificationSetting>>('/api/notification-settings/helpdesk');
+    return res.data.data;
+  },
+
+  updateHelpdeskSetting: async (data: HelpdeskNotificationSetting): Promise<HelpdeskNotificationSetting> => {
+    const res = await api.put<ApiResponse<HelpdeskNotificationSetting>>('/api/notification-settings/helpdesk', data);
+    return res.data.data;
+  },
+
+  sendTestEmail: async (targetEmail: string): Promise<boolean> => {
+    const res = await api.post<ApiResponse<{ sent: boolean }>>('/api/notification-settings/test-email', { targetEmail });
+    return res.data.success;
+  }
+};
