@@ -28,6 +28,8 @@ import WarehouseBorrowDetailModal from "./WarehouseBorrowDetailModal";
 import { useAuth } from "../../contexts/AuthContext";
 import { FormMobileSelect } from "../Radio/FormMobileSelect";
 import { useLiveRefresh } from "../../hooks/useLiveRefresh";
+import { PageWrapper } from "../common";
+import { MobilePageHeader, MobileActionButton } from "../ui/MobilePageHeader";
 
 interface UserLookupItem {
   id: number;
@@ -918,112 +920,111 @@ export default function WarehouseBorrowHistoryPage() {
   );
 
   return (
-    <div className="p-4 sm:p-6 space-y-6 max-w-[1400px] mx-auto">
+    <PageWrapper>
       {/* ====== MOBILE INTEGRATED HEADER ====== */}
-      <div className="md:hidden bg-white rounded-[14px] border border-[#E2E8F0] shadow-sm mb-4">
-        <div className="flex items-start gap-4 p-4">
-          <div className="w-12 h-12 rounded-[12px] bg-[#EBF4FF] flex items-center justify-center flex-shrink-0">
-            <History className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[10px] font-bold text-[#2B6CB0] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
-            <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Histori Peminjaman</h1>
-            <p className="text-[12px] text-[#718096] mt-0.5">Riwayat permintaan dan transaksi tools</p>
-          </div>
-          <button
-            onClick={() => navigate("/warehouse")}
-            className="w-10 h-10 flex items-center justify-center rounded-[10px] bg-[#F7F8FA] border border-[#E2E8F0] text-[#718096] hover:bg-[#EBF4FF] hover:text-[#2B6CB0] transition-colors flex-shrink-0"
-          >
+      <MobilePageHeader
+        label="Warehouse"
+        title="Histori Peminjaman"
+        subtitle="Riwayat permintaan dan transaksi tools"
+        icon={<History className="w-5 h-5 text-[#2B6CB0]" strokeWidth={2} />}
+        iconBg="bg-[#EBF4FF]"
+        rightAction={
+          <MobileActionButton onClick={() => navigate("/warehouse")}>
             <ArrowLeft className="h-5 w-5" strokeWidth={2} />
-          </button>
+          </MobileActionButton>
+        }
+      />
+
+      {/* Mobile Filter Bar (Outside MobilePageHeader) */}
+      <div className="md:hidden flex flex-col gap-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
+          <Input
+            placeholder="Cari transaksi, part, atau peminjam..."
+            className="pl-10 pr-4 h-10 border-[#E2E8F0] rounded-[10px] text-sm bg-white text-[#1A202C] placeholder:text-[#718096] w-full focus:border-[#2B6CB0]"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
-        {/* Search */}
-        <div className="px-4 pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
-            <Input
-              placeholder="Cari transaksi, part, atau peminjam..."
-              className="pl-10 pr-4 h-10 border-[#E2E8F0] rounded-[10px] text-sm bg-[#F7F8FA] text-[#1A202C] placeholder:text-[#718096] w-full focus:border-[#2B6CB0]"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-2 mt-3">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-10 bg-[#F7F8FA] border-[#E2E8F0] text-[12px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Status</SelectItem>
-                <SelectItem value="PendingApproval">Waiting Approval</SelectItem>
-                <SelectItem value="PendingSignature">Menunggu TTD</SelectItem>
-                <SelectItem value="Approved">Disetujui</SelectItem>
-                <SelectItem value="Rejected">Ditolak</SelectItem>
-                <SelectItem value="Issued">Telah Diberikan</SelectItem>
-                <SelectItem value="Returned">Dikembalikan</SelectItem>
-              </SelectContent>
-            </Select>
+        <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="h-9 min-w-[130px] bg-white border-[#E2E8F0] text-[12px] rounded-[10px]">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Status</SelectItem>
+              <SelectItem value="PendingApproval">Waiting Approval</SelectItem>
+              <SelectItem value="PendingSignature">Menunggu TTD</SelectItem>
+              <SelectItem value="Approved">Disetujui</SelectItem>
+              <SelectItem value="Rejected">Ditolak</SelectItem>
+              <SelectItem value="Issued">Telah Diberikan</SelectItem>
+              <SelectItem value="Returned">Dikembalikan</SelectItem>
+            </SelectContent>
+          </Select>
 
-            <Select value={borrowerFilter} onValueChange={setBorrowerFilter}>
-              <SelectTrigger className="h-10 bg-[#F7F8FA] border-[#E2E8F0] text-[12px]">
-                <SelectValue placeholder="Semua Role" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Group</SelectItem>
-                {borrowerRoleOptions.map(role => (
-                  <SelectItem key={role} value={role}>{role}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <Select value={borrowerFilter} onValueChange={setBorrowerFilter}>
+            <SelectTrigger className="h-9 min-w-[120px] bg-white border-[#E2E8F0] text-[12px] rounded-[10px]">
+              <SelectValue placeholder="Semua Role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Group</SelectItem>
+              {borrowerRoleOptions.map(role => (
+                <SelectItem key={role} value={role}>{role}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
 
-            <Popover>
-              <PopoverTrigger asChild>
-                <button
-                  type="button"
-                  className={`h-10 px-3 rounded-[10px] border text-[12px] font-semibold flex items-center justify-between gap-2 ${
-                    dateRangeFrom
-                      ? "bg-[#EBF4FF] border-[#2B6CB0] text-[#1B3A6B]"
-                      : "bg-[#F7F8FA] border-[#E2E8F0] text-[#4A5568]"
-                  }`}
-                >
-                  <span className="truncate">{getDateFilterLabel()}</span>
-                  <Calendar className="w-3.5 h-3.5 shrink-0" />
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" className="w-[calc(100vw-2rem)] p-4 z-[200]">
-                {renderPeriodFilterPanel()}
-              </PopoverContent>
-            </Popover>
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className={`h-9 px-3 rounded-[10px] border text-[12px] font-semibold flex items-center gap-1.5 whitespace-nowrap transition-colors ${
+                  dateRangeFrom
+                    ? "bg-[#1B3A6B] border-[#1B3A6B] text-white"
+                    : "bg-white border-[#E2E8F0] text-[#4A5568]"
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5 shrink-0 opacity-80" />
+                <span>{getDateFilterLabel()}</span>
+                <ChevronDown className="w-3 h-3 opacity-60" />
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[calc(100vw-2rem)] p-4 z-[200]">
+              {renderPeriodFilterPanel()}
+            </PopoverContent>
+          </Popover>
         </div>
       </div>
 
       {/* ── Page Header (Desktop) ── */}
-      <div className="hidden md:flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 sm:p-6 rounded-[10px] border border-[#E2E8F0] shadow-sm">
-        <div className="flex items-center gap-4">
-          <div className="p-3 bg-[#EBF4FF] rounded-[10px]">
-            <History className="w-6 h-6 text-[#2B6CB0]" />
+      <div className="hidden md:block bg-white p-5 rounded-[14px] border border-[#E2E8F0] shadow-sm mb-6">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-5">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 flex flex-shrink-0 items-center justify-center bg-[#EBF4FF] rounded-[12px]">
+              <History className="w-6 h-6 text-[#2B6CB0]" />
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-[#2B6CB0] tracking-[0.1em] uppercase mb-0.5">Warehouse</p>
+              <h1 className="text-[20px] font-bold text-[#1A202C] leading-tight">Histori Peminjaman Tools</h1>
+              <p className="text-[12px] text-[#718096] mt-0.5">Daftar lengkap riwayat permintaan dan transaksi tools</p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-[#1A202C] tracking-tight">Histori Peminjaman Tools</h1>
-            <p className="text-sm text-[#718096] mt-0.5">Daftar lengkap riwayat permintaan dan transaksi tools</p>
-          </div>
-        </div>
 
-        <div className="flex flex-col gap-3 w-full md:w-auto">
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="relative w-full sm:w-64">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative w-full sm:w-[240px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[#718096]" />
               <Input
                 placeholder="Cari transaksi..."
-                className="pl-9 h-10 w-full border-[#E2E8F0] focus:border-[#2B6CB0]"
+                className="pl-9 h-10 w-full rounded-[10px] border-[#E2E8F0] focus:border-[#2B6CB0] bg-[#F7F8FA]"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
             
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48 h-10 bg-white"><SelectValue placeholder="Semua Status" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-[150px] h-10 rounded-[10px] bg-white border-[#E2E8F0]">
+                <SelectValue placeholder="Semua Status" />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="PendingApproval">Waiting Approval</SelectItem>
@@ -1036,7 +1037,7 @@ export default function WarehouseBorrowHistoryPage() {
             </Select>
             
             <Select value={borrowerFilter} onValueChange={setBorrowerFilter}>
-              <SelectTrigger className="w-full sm:w-44 h-10 bg-white border-[#E2E8F0]">
+              <SelectTrigger className="w-full sm:w-[140px] h-10 rounded-[10px] bg-white border-[#E2E8F0]">
                 <SelectValue placeholder="Semua Role" />
               </SelectTrigger>
               <SelectContent>
@@ -1048,7 +1049,7 @@ export default function WarehouseBorrowHistoryPage() {
             </Select>
 
             <Select value={alatKerjaFilter} onValueChange={setAlatKerjaFilter}>
-              <SelectTrigger className="w-full sm:w-40 h-10 bg-white border-[#E2E8F0]">
+              <SelectTrigger className="w-full sm:w-[140px] h-10 rounded-[10px] bg-white border-[#E2E8F0]">
                 <SelectValue placeholder="Semua Barang" />
               </SelectTrigger>
               <SelectContent>
@@ -1062,7 +1063,7 @@ export default function WarehouseBorrowHistoryPage() {
                 <Button
                   type="button"
                   variant="outline"
-                  className={`w-full sm:w-56 h-10 justify-between bg-white border-[#E2E8F0] ${
+                  className={`w-full sm:w-[180px] h-10 justify-between rounded-[10px] bg-white border-[#E2E8F0] ${
                     dateRangeFrom ? "text-[#1B3A6B] border-[#2B6CB0] bg-[#EBF4FF]" : "text-[#1A202C]"
                   }`}
                 >
@@ -1077,7 +1078,7 @@ export default function WarehouseBorrowHistoryPage() {
               </PopoverContent>
             </Popover>
 
-            <Button variant="outline" className="h-10 bg-white whitespace-nowrap" onClick={handleExportExcel}>
+            <Button variant="outline" className="h-10 rounded-[10px] bg-white border-[#E2E8F0] whitespace-nowrap" onClick={handleExportExcel}>
               <Download className="w-4 h-4 mr-2" /> Export
             </Button>
           </div>
@@ -1806,6 +1807,6 @@ export default function WarehouseBorrowHistoryPage() {
           </div>
         )}
       </ResponsiveModal>
-    </div>
+    </PageWrapper>
   );
 }
