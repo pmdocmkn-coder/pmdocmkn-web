@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+import pmIcon from "../assets/pm-icon.png";
 import {
   LayoutDashboard,
   Phone,
@@ -249,19 +250,21 @@ export default function Sidebar({
 
       {/* ── Logo strip ── */}
       <div
-        className="flex items-center justify-center h-[64px] flex-shrink-0"
+        className="flex items-center justify-center h-[72px] flex-shrink-0 border-b border-white/10"
         style={{
           background: "linear-gradient(135deg, #1B3A6B 0%, #2B6CB0 60%, #D94F2B 100%)",
         }}
       >
-        <div className={`flex items-center ${isCollapsed ? 'justify-center w-full px-0' : 'gap-3 px-4 w-full'}`}>
-          <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center flex-shrink-0">
-            <span className="text-white font-bold text-xs tracking-tight">MKN</span>
-          </div>
+        <div className={`flex items-center ${isCollapsed ? 'justify-center w-full px-0' : 'gap-3.5 px-5 w-full'}`}>
+          <img 
+            src={pmIcon} 
+            alt="PM Docs Logo" 
+            className={`object-contain transition-all duration-300 rounded-[12px] shadow-md ${isCollapsed ? 'w-10 h-10' : 'w-12 h-12'}`} 
+          />
           {!isCollapsed && (
-            <div className="leading-none transition-opacity duration-300">
-              <p className="text-white font-bold text-sm tracking-tight">PM DOCS</p>
-              <p className="text-white/60 text-[10px] font-medium tracking-wide uppercase">System</p>
+            <div className="leading-tight transition-opacity duration-300">
+              <p className="text-white font-extrabold text-[16px] tracking-wide">PM DOCS</p>
+              <p className="text-white/80 text-[10px] font-bold tracking-[0.2em] uppercase mt-0.5">System</p>
             </div>
           )}
         </div>

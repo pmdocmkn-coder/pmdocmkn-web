@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import Footer from "./Footer";
 import { useAuth } from "../contexts/AuthContext";
+import pmIcon from "../assets/pm-icon.png";
 import { Menu, Search, Bell, Calendar, Clock, LayoutDashboard, CalendarDays, Radio, Warehouse, Wrench, Video, Phone, Link2, TrendingUp, BookOpen, FileText, Package, ClipboardList, Building2, FileType, Settings, ChevronRight, LogOut } from "lucide-react";
 import { useLocation, Link, useNavigate } from "react-router-dom";
 import { useSignalR } from "../hooks/useSignalR";
@@ -362,12 +363,13 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab }) =>
             >
               <Menu className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0"
-                style={{ background: "linear-gradient(135deg, #1B3A6B, #2B6CB0)" }}>
-                <span className="text-white text-[9px] font-bold">MKN</span>
-              </div>
-              <span className="text-[14px] font-bold text-[#1A202C]">PM Dashboard</span>
+            <div className="flex items-center gap-2.5">
+              <img 
+                src={pmIcon} 
+                alt="PM Docs Logo" 
+                className="h-9 w-9 object-contain rounded-[10px] shadow-sm" 
+              />
+              <span className="text-[15px] font-bold text-[#1A202C] tracking-tight">PM DOCS</span>
             </div>
           </div>
 
