@@ -34,9 +34,10 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   // tapi boleh edit data perbaikan (green/yellow tag fields) dan foto
   const lockCoreFields = isWorkshopTech || isWhToHd || isHdToWh;      // tag type: teknisi dan saat serah ke HD/WH scrap tidak bisa ganti
   const lockTicketSerial = isTechToWh || isWhToHd || isHdToWh;        // tiket & SN selalu readonly untuk Tek→WH, WH→HD, dan HD→WH
-  // Hanya Teknisi WKS yang tidak boleh ubah field penerima
-  // Warehouse boleh edit akun penerima
-  const lockReceiverFields = isWorkshopTech;
+  // Semua role (termasuk Teknisi WKS) boleh ubah field akun warehouse/helpdesk penerima jika salah input
+  const lockReceiverFields = false;
+  // Tapi Teknisi WKS tidak boleh mengubah siapa Teknisi Penyerah/Penerima-nya (hanya Warehouse/HD yang boleh)
+  const lockTechFields = isWorkshopTech;
   // foto: semua role boleh tambah/hapus (lockPhotos dihapus)
 
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
@@ -364,8 +365,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
               <label className="text-sm font-medium text-gray-700">
                 {isTechToWh ? `Teknisi Penyerah${!isWarehouse ? " *" : ""}` : "Teknisi Penerima *"}
               </label>
-              <Select value={workshopTechId} onValueChange={setWorkshopTechId} disabled={lockReceiverFields}>
-                <SelectTrigger className={`w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${lockReceiverFields ? 'bg-gray-100 cursor-not-allowed opacity-80' : 'bg-white'}`}>
+              <Select value={workshopTechId} onValueChange={setWorkshopTechId} disabled={lockTechFields}>
+                <SelectTrigger className={`w-full h-11 border-gray-300 focus:ring-2 focus:ring-violet-500 focus:border-violet-500 ${lockTechFields ? 'bg-gray-100 cursor-not-allowed opacity-80' : 'bg-white'}`}>
                   <SelectValue placeholder={isTechToWh ? "Pilih teknisi penyerah" : "Pilih teknisi penerima"} />
                 </SelectTrigger>
                 <SelectContent className="max-h-[300px]">
