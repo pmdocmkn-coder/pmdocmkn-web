@@ -34,9 +34,8 @@ export default function EditHandoverDialog({ detail, onClose, onSuccess }: Props
   // tapi boleh edit data perbaikan (green/yellow tag fields) dan foto
   const lockCoreFields = isWorkshopTech || isWhToHd || isHdToWh;      // tag type: teknisi dan saat serah ke HD/WH scrap tidak bisa ganti
   const lockTicketSerial = isTechToWh || isWhToHd || isHdToWh;        // tiket & SN selalu readonly untuk Tek→WH, WH→HD, dan HD→WH
-  // Hanya Teknisi WKS yang tidak boleh ubah field penerima
-  // Warehouse boleh edit akun penerima
-  const lockReceiverFields = isWorkshopTech;
+  // Semua role (termasuk Teknisi WKS) boleh ubah field penerima jika salah input
+  const lockReceiverFields = false;
   // foto: semua role boleh tambah/hapus (lockPhotos dihapus)
 
   const [tagType, setTagType] = useState<EquipmentTagType>((detail.equipmentTagType as EquipmentTagType) || "Damaged");
