@@ -501,9 +501,13 @@ export default function OperationalDocumentPage() {
   const handleSubmit = async () => {
     // Serialize picEntries
     const validPicEntries = picEntries.filter(p => p.name.trim() || p.telegramId.trim() || p.email.trim());
-    const picName = validPicEntries.map(p => p.name.trim()).join(",");
-    const picTelegramId = validPicEntries.map(p => p.telegramId.trim()).join(",");
-    const picEmail = validPicEntries.map(p => p.email.trim()).join(",");
+    const hasAnyName = validPicEntries.some(p => p.name.trim().length > 0);
+    const hasAnyTelegramId = validPicEntries.some(p => p.telegramId.trim().length > 0);
+    const hasAnyEmail = validPicEntries.some(p => p.email.trim().length > 0);
+
+    const picName = hasAnyName ? validPicEntries.map(p => p.name.trim()).join(",") : undefined;
+    const picTelegramId = hasAnyTelegramId ? validPicEntries.map(p => p.telegramId.trim()).join(",") : undefined;
+    const picEmail = hasAnyEmail ? validPicEntries.map(p => p.email.trim()).join(",") : undefined;
 
     const dto: CreateOperationalDocumentDto = {
       ...form,
@@ -655,11 +659,14 @@ export default function OperationalDocumentPage() {
 
   const handleSendNotification = async (doc: OperationalDocumentDto, channel: "telegram" | "email" = "telegram") => {
     if (sendingNotifId !== null) return;
-    if (channel === "telegram" && !doc.picTelegramId) {
+    const hasValidTelegram = Boolean(doc.picTelegramId && doc.picTelegramId.split(',').some(t => t.trim().length > 0));
+    const hasValidEmail = Boolean(doc.picEmail && doc.picEmail.split(',').some(e => e.trim().length > 0));
+
+    if (channel === "telegram" && !hasValidTelegram) {
       toast({ title: "Tidak ada Telegram ID", description: `Dokumen "${doc.name}" tidak memiliki Telegram Chat ID PIC.`, variant: "destructive" });
       return;
     }
-    if (channel === "email" && !doc.picEmail) {
+    if (channel === "email" && !hasValidEmail) {
       toast({ title: "Tidak ada Email", description: `Dokumen "${doc.name}" tidak memiliki Email PIC.`, variant: "destructive" });
       return;
     }
