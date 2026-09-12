@@ -4,7 +4,7 @@ import { hasPermission } from "./permissionUtils";
 const ROLES_BLOCKED_STATUS_UPDATE = new Set(["Helpdesk", "Warehouse", "Supervisor", "Supervisor Warehouse"]);
 
 /** Role yang boleh serah terima Tek → Warehouse. */
-const ROLES_ALLOWED_TEK_WH = new Set(["Teknisi", "Teknisi WSK"]);
+const ROLES_ALLOWED_TEK_WH = new Set(["Teknisi", "Teknisi WSK", "Teknisi WKS"]);
 
 export function getCurrentRoleName(): string {
   try {
@@ -40,5 +40,5 @@ export function canApproveRepairMaterial(): boolean {
 
 export function canInputScrapData(): boolean {
   const role = getCurrentRoleName();
-  return role === "Helpdesk" || hasPermission("radio.repair.supervise");
+  return role === "Supv WKS";
 }

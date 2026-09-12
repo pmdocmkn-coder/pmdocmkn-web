@@ -151,6 +151,9 @@ export interface RadioHandoverList {
   deletedAt?: string | null;
 
   isScrap?: boolean;
+  dateScrapped?: string | null;
+  scrapJobNumber?: string | null;
+  scrapRemarks?: string | null;
 
   receivedByUserId?: number;
 

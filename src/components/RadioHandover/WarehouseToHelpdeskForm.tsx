@@ -145,7 +145,7 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
     try {
       await radioHandoverApi.create({
         handoverType: "WarehouseToHelpdesk",
-        equipmentTagType: (job.equipmentTagType as "Good" | "Damaged" | undefined) || "Good", // Fallback to Good if null
+        equipmentTagType: job.isScrap ? "Damaged" : (job.equipmentTagType as "Good" | "Damaged" | undefined) || "Good",
         radioRepairJobId: job.id,
         radioId: job.radioId ?? undefined,
         radioSerialNumber: job.radioSerialNumber,
@@ -178,8 +178,10 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
     <div className="space-y-4">
       {/* Tag Preview Card */}
       <div className="space-y-2">
-        <p className="text-xs font-medium text-gray-600">Pratinjau Tag Hijau</p>
-        {job.equipmentTagType === "Damaged" ? (
+        <p className="text-xs font-medium text-gray-600">
+          {job.isScrap ? "Pratinjau Tag Merah (Scrap)" : job.equipmentTagType === "Damaged" ? "Pratinjau Tag Merah" : "Pratinjau Tag Hijau"}
+        </p>
+        {job.isScrap || job.equipmentTagType === "Damaged" ? (
           <DamagedEquipmentTagCard
             data={{
               handoverNumber: "STR-…",
@@ -197,6 +199,10 @@ export default function WarehouseToHelpdeskForm({ job, onSuccess, onCancel }: Pr
               radioCategory: job.radioCategory,
               damageDescription: job.damageDescription,
               handoverType: "WarehouseToHelpdesk",
+              isScrap: job.isScrap,
+              dateScrapped: job.dateScrapped,
+              scrapJobNumber: job.scrapJobNumber,
+              scrapRemarks: job.scrapRemarks,
               accessories: availableAccessories
                 .filter((_, i) => selectedAccessories[i])
                 .map(a => ({

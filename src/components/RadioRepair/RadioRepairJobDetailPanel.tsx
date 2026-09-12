@@ -496,13 +496,31 @@ export default function RadioRepairJobDetailPanel({
         </div>
       )}
 
-      {canInputScrap && (job.status === "ProcessScrap" || job.status === "Scrapped" || job.status === "ReturnedToHelpdesk") && !job.isDeleted && (
+      {canInputScrap && (job.status === "ProcessScrap" || job.status === "Scrapped" || (job.status === "ReturnedToHelpdesk" && job.isScrap)) && !job.isDeleted && (
         <div className="p-3 border border-orange-200 bg-orange-50 rounded-lg space-y-2">
           <p className="font-medium text-orange-900">
             {job.status === "Scrapped" ? "Radio Telah di Scrap" : "Persetujuan / Data Radio Scrap"}
           </p>
+          {(job.dateScrapped || job.scrapJobNumber || job.scrapRemarks) && (
+            <div className="text-xs bg-white/70 p-2.5 rounded border border-orange-200 space-y-1 text-orange-950">
+              <div className="flex justify-between">
+                <span className="text-gray-500">Tanggal Scrap:</span>
+                <span className="font-semibold">{job.dateScrapped ? format(new Date(job.dateScrapped), "dd MMMM yyyy", { locale: localeId }) : "—"}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-500">No. Job Scrap:</span>
+                <span className="font-mono font-bold text-red-700">{job.scrapJobNumber || "—"}</span>
+              </div>
+              {job.scrapRemarks && (
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Keterangan:</span>
+                  <span className="font-medium text-gray-800">{job.scrapRemarks}</span>
+                </div>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap gap-2">
-            {(job.status === "ProcessScrap" || job.status === "ReturnedToHelpdesk") && (
+            {(job.status === "ProcessScrap" || job.status === "Scrapped" || (job.status === "ReturnedToHelpdesk" && job.isScrap)) && (
               <button
                 type="button"
                 disabled={patchingStatus}
@@ -510,23 +528,25 @@ export default function RadioRepairJobDetailPanel({
                 onClick={onOpenApproveScrap}
               >
                 {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                Input Data Scrap
+                {job.status === "Scrapped" ? "Edit Data Scrap" : "Setujui Scrap"}
               </button>
             )}
-            <button
-              type="button"
-              disabled={patchingStatus}
-              className="px-4 py-2 border border-orange-600 text-orange-800 rounded-lg text-sm hover:bg-orange-100 disabled:opacity-60 flex items-center gap-1.5"
-              onClick={onCancelScrap}
-            >
-              {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-              Batalkan Scrap
-            </button>
+            {!pendingHandover && (
+              <button
+                type="button"
+                disabled={patchingStatus}
+                className="px-4 py-2 border border-orange-600 text-orange-800 rounded-lg text-sm hover:bg-orange-100 disabled:opacity-60 flex items-center gap-1.5"
+                onClick={onCancelScrap}
+              >
+                {patchingStatus && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
+                Batalkan Scrap
+              </button>
+            )}
           </div>
         </div>
       )}
 
-      {canHandoverWh && (job.status === "RepairCompleted" || job.status === "Scrapped") && job.pendingHandoverType !== "TechnicianToWarehouse" && job.pendingHandoverType !== "TechnicianToHelpdesk" && !job.isDeleted && (
+      {canHandoverWh && (job.status === "RepairCompleted" || job.status === "Scrapped") && !job.closedAt && job.pendingHandoverType !== "TechnicianToWarehouse" && job.pendingHandoverType !== "TechnicianToHelpdesk" && !job.isDeleted && (
         <button
           type="button"
           className={`px-4 py-2 text-white rounded-lg font-medium shadow-sm ${
@@ -534,12 +554,12 @@ export default function RadioRepairJobDetailPanel({
           }`}
           onClick={onOpenWh}
         >
-          {job.status === "Scrapped" ? "Serah terima ke Helpdesk" : "Serah terima ke Warehouse"}
+          {job.status === "Scrapped" ? "Serah terima ke Warehouse (Scrap)" : "Serah terima ke Warehouse"}
         </button>
       )}
 
       {/* HD → WH: Helpdesk serah radio scrap ke Warehouse */}
-      {canCreateHdToWh && job.status === "ReturnedToHelpdesk" && job.pendingHandoverType !== "HelpdeskToWarehouse" && !job.isDeleted && (
+      {canCreateHdToWh && job.handovers.some(h => h.handoverType === "TechnicianToHelpdesk" && h.status === "Completed") && job.status === "ReturnedToHelpdesk" && job.pendingHandoverType !== "HelpdeskToWarehouse" && !job.isDeleted && (
         <button
           type="button"
           className="px-4 py-2 text-white rounded-lg font-medium shadow-sm bg-amber-600 hover:bg-amber-700"
@@ -616,7 +636,7 @@ export default function RadioRepairJobDetailPanel({
 
       {job.handovers && job.handovers.length > 0 && (
         <HandoverTimeline
-          isScrap={job.status === "Scrapped" || job.status === "ProcessScrap" || job.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")}
+          isScrap={job.isScrap || job.status === "Scrapped" || job.status === "ProcessScrap" || job.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")}
           handovers={job.handovers.map((h) => ({
             id: h.id,
             handoverNumber: h.handoverNumber,

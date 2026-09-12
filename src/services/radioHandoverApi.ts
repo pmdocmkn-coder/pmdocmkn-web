@@ -56,7 +56,8 @@ export const radioHandoverApi = {
 
   softDelete: (id: number) => api.delete(`/api/radio-handovers/${id}`),
 
-  cancelPending: (id: number) => api.patch(`/api/radio-handovers/${id}/cancel-pending`),
+  cancelPending: (id: number, payload?: { reason: string; notes?: string; isDirectInstall?: boolean }) =>
+    api.patch(`/api/radio-handovers/${id}/cancel-pending`, payload || {}),
 
   changeReceiver: (id: number, newReceiverUserId: number) =>
     api.patch(`/api/radio-handovers/${id}/change-receiver`, { newReceiverUserId }).then((r) => unwrapData<RadioHandoverDetail>(r)!),

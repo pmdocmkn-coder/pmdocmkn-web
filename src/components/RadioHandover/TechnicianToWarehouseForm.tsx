@@ -125,6 +125,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
 
   return (
     <div className="space-y-4">
+      {job.isScrap && <div className="border border-red-200 bg-red-50 rounded-[10px] p-3 text-red-700 font-bold">RADIO SCRAP — Teknisi → Warehouse</div>}
       <p className="text-sm text-gray-600">
         Tiket <strong>{job.helpdeskTicketNumber}</strong> — SN {job.radioSerialNumber}
       </p>
@@ -186,7 +187,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
           disabled={submitting}
           onClick={submit}
         >
-          {submitting ? "Menyimpan..." : "Serah Terima"}
+          {submitting ? "Menyimpan..." : (job.isScrap ? "Serah Terima Scrap ke WHS" : "Serah Terima")}
         </button>
       </div>
     </div>
