@@ -1154,7 +1154,7 @@ export default function RadioScrapPage() {
 
       {/* ── Data Table ── */}
       <motion.div variants={itemVariants} className="hidden md:block rounded-xl border bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[140px]">
           <table className="w-full caption-bottom text-sm border-collapse">
             <thead className="sticky top-0 z-10 bg-gray-50 shadow-sm">
               <tr className="border-b border-gray-200">

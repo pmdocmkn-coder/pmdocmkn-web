@@ -293,6 +293,7 @@ export default function RadioRepairGroupedTable({
                             customStatusColor={j.customStatusColor}
                             pendingHandoverType={j.pendingHandoverType}
                             isWarranty={j.isWarranty}
+                            repairDataDescription={j.repairDataDescription}
                           />
                         </div>
                         <div className="flex gap-1.5 shrink-0 ml-auto items-center" onClick={(e) => e.stopPropagation()}>
@@ -305,7 +306,7 @@ export default function RadioRepairGroupedTable({
                             <Eye className="w-4 h-4" />
                           </button>
 
-                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && (
+                          {canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && !j.closedAt && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && (
                             <button
                               type="button"
                               onClick={(e) => { e.stopPropagation(); onQuickHandoverWh(j); }}
@@ -315,8 +316,8 @@ export default function RadioRepairGroupedTable({
                             >
                               {j.status === "Scrapped" ? (
                                 <>
-                                  <MonitorSmartphone className="w-3.5 h-3.5 mr-1" />
-                                  Ke HD
+                                  <Warehouse className="w-3.5 h-3.5 mr-1" />
+                                  Ke WHS
                                 </>
                               ) : (
                                 <>
@@ -438,7 +439,7 @@ function MobileQuickActionDropdown({
   const canShowCustom = customStatuses.length > 0 && ["InProgress", "Received"].includes(job.status);
   const showBackToProgress = !!job.customStatusId;
   const canBorrow = job.status === "InProgress";
-  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || (job.status === "RepairCompleted" && canHandoverWh) || canBorrow;
+  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || (job.status === "RepairCompleted" && !job.closedAt && canHandoverWh) || canBorrow;
 
   if (!hasActions) return null;
 
@@ -507,7 +508,7 @@ function MobileQuickActionDropdown({
             </>
           )}
 
-          {(job.status === "RepairCompleted" || job.status === "Scrapped") && canHandoverWh && (
+          {(job.status === "RepairCompleted" || job.status === "Scrapped") && !job.closedAt && canHandoverWh && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -605,7 +606,7 @@ function RadioRepairRow({
   const nextStatuses = !locked && !showArchive
     ? allowedNextStatuses(j.status as RadioRepairJobStatus)
     : [];
-  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && !j.isDeleted && !showArchive;
+  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && !j.closedAt && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && !j.isDeleted && !showArchive;
 
   return (
     <tr className={`border-t transition-colors ${j.isDeleted ? "opacity-60" : ""} ${j.isScrap ? "bg-red-50/30 hover:bg-red-100/50 border-red-100" : "bg-white hover:bg-violet-50/40 border-gray-100"}`}>
@@ -650,6 +651,7 @@ function RadioRepairRow({
           customStatusColor={j.customStatusColor}
           pendingHandoverType={j.pendingHandoverType}
           isWarranty={j.isWarranty}
+          repairDataDescription={j.repairDataDescription}
         />
       </td>
       <td className="px-3 py-2.5 whitespace-nowrap text-xs text-gray-600">
@@ -676,7 +678,7 @@ function RadioRepairRow({
           {showWhShortcut && (
             <button
               type="button"
-              title={j.status === "Scrapped" ? "Serah terima ke Helpdesk" : "Serah terima ke Warehouse"}
+              title={j.status === "Scrapped" ? "Serah terima ke Warehouse (Scrap)" : "Serah terima ke Warehouse"}
               className={`flex items-center gap-1 px-2 py-1 text-xs text-white rounded-lg whitespace-nowrap ${
                 j.status === "Scrapped" ? "bg-red-600 hover:bg-red-700" : "bg-violet-600 hover:bg-violet-700"
               }`}
@@ -684,7 +686,7 @@ function RadioRepairRow({
             >
               {j.status === "Scrapped" ? (
                 <>
-                  <MonitorSmartphone className="w-3 h-3" /> Ke HD
+                  <Warehouse className="w-3 h-3" /> Ke WHS
                 </>
               ) : (
                 <>
