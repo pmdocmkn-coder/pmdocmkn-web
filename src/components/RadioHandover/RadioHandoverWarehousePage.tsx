@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState, useRef, useMemo, Fragment } from "react";
 import { format, startOfMonth, endOfMonth, parse, formatISO } from "date-fns";
 import { id as localeId } from "date-fns/locale";
-import { Search, Filter, Warehouse, PackageCheck, Image as ImageIcon, Loader2, ArrowRight, User, FileText, MessageSquare, ArrowDownLeft, ArrowUpRight, Home, ChevronRight, ChevronLeft, Inbox, ClipboardList, Edit, Eye, ArrowLeft, Undo2, ChevronUp, ChevronDown } from "lucide-react";
+import { Search, Filter, Warehouse, PackageCheck, Image as ImageIcon, Loader2, ArrowRight, User, FileText, MessageSquare, ArrowDownLeft, ArrowUpRight, Home, ChevronRight, ChevronLeft, Inbox, ClipboardList, Edit, Eye, ArrowLeft, Undo2, ChevronUp, ChevronDown, Ban, Archive } from "lucide-react";
 import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend } from "recharts";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -26,6 +26,7 @@ import { useToast } from "../../hooks/use-toast";
 import { SinglePeriodFilter, type PeriodFilterValue } from "../ui/SinglePeriodFilter";
 import EditHandoverDialog from "./EditHandoverDialog";
 import ChangeReceiverModal from "./ChangeReceiverModal";
+import CancelHandoverModal from "./CancelHandoverModal";
 import Pagination from "../common/Pagination";
 import { useDebounce } from "../../hooks/useDebounce";
 import { Input } from "../ui/input";
@@ -96,6 +97,7 @@ type HandoverTableProps = {
   onOpenGallery: (h: RadioHandoverList) => void;
   onSignRow?: (h: RadioHandoverList[]) => void;
   onEdit?: (h: RadioHandoverList) => void;
+  onCancelPending?: (h: RadioHandoverList) => void;
 };
 
 function HandoverHistoryTable({
@@ -107,6 +109,7 @@ function HandoverHistoryTable({
   onOpenGallery,
   onSignRow,
   onEdit,
+  onCancelPending,
 }: HandoverTableProps) {
   const myId = currentUserId();
   const canWarehouseSign = (h: RadioHandoverList) => {
@@ -190,9 +193,17 @@ function HandoverHistoryTable({
                 </tr>
               )}
               {!loading &&
-                groupedItems.map((group) => (
+                groupedItems.map((group) => {
+                  const isScrapGroup = group.items.some((h) => h.isScrap);
+                  return (
                   <Fragment key={group.key}>
-                    <tr className={`border-t border-b ${group.hasPendingSignature ? 'bg-amber-50/80 border-amber-200' : 'bg-gray-50 border-gray-200'}`}>
+                    <tr className={`border-t border-b ${
+                      group.hasPendingSignature 
+                        ? 'bg-amber-50/80 border-amber-200' 
+                        : isScrapGroup 
+                          ? 'bg-gradient-to-r from-red-100/90 to-red-50/50 border-red-200' 
+                          : 'bg-gray-50 border-gray-200'
+                    }`}>
                       <td colSpan={6} className="px-4 py-3">
                         <div className="flex items-center gap-3 relative">
                           {group.hasPendingSignature && (
@@ -205,15 +216,15 @@ function HandoverHistoryTable({
                           >
                             {handoverTypeLabel(group.flowLabel)}
                           </span>
-                          {group.firstItem.isScrap && (
+                          {isScrapGroup && (
                             <span className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold border bg-red-100 text-red-800 border-red-200">
                               Scrap
                             </span>
                           )}
-                          <span className={`font-semibold ${group.hasPendingSignature ? 'text-amber-900' : 'text-gray-800'}`}>
+                          <span className={`font-semibold ${group.hasPendingSignature ? 'text-amber-900' : isScrapGroup ? 'text-red-950' : 'text-gray-800'}`}>
                             No. Job ERP: <span className="font-mono text-[#2B6CB0]">{group.ticketNumber || "—"}</span>
                           </span>
-                          <span className={`text-xs px-2 py-0.5 rounded border ${group.hasPendingSignature ? 'text-amber-800 bg-amber-100/50 border-amber-200' : 'text-gray-500 bg-white border-gray-200'}`}>
+                          <span className={`text-xs px-2 py-0.5 rounded border ${group.hasPendingSignature ? 'text-amber-800 bg-amber-100/50 border-amber-200' : isScrapGroup ? 'text-red-700 bg-red-50 border-red-200' : 'text-gray-500 bg-white border-gray-200'}`}>
                             {group.items.length} Radio
                           </span>
                           {group.hasPendingSignature && (
@@ -244,7 +255,13 @@ function HandoverHistoryTable({
                     {group.items.map((h, idx) => (
                       <tr
                         key={h.id}
-                        className={`cursor-pointer transition-colors ${h.status === "PendingReceiverSignature" ? "bg-amber-50/40 hover:bg-amber-100/50" : "hover:bg-[#EBF4FF]/30"} ${idx !== group.items.length - 1 ? (group.hasPendingSignature ? "border-b border-amber-100" : "border-b border-gray-100/60") : ""
+                        className={`cursor-pointer transition-colors ${
+                          h.status === "PendingReceiverSignature" 
+                            ? "bg-amber-50/40 hover:bg-amber-100/50" 
+                            : h.isScrap 
+                              ? "bg-red-50/25 hover:bg-red-100/40" 
+                              : "hover:bg-[#EBF4FF]/30"
+                        } ${idx !== group.items.length - 1 ? (group.hasPendingSignature ? "border-b border-amber-100" : h.isScrap ? "border-b border-red-100/60" : "border-b border-gray-100/60") : ""
                           }`}
                         onClick={() => onOpenDetail(h.id)}
                       >
@@ -318,6 +335,16 @@ function HandoverHistoryTable({
                                 <Edit className="w-4 h-4" />
                               </button>
                             )}
+                            {h.status === "PendingReceiverSignature" && onCancelPending && (
+                              <button
+                                type="button"
+                                className="inline-flex items-center justify-center w-8 h-8 border border-red-200 rounded-[10px] text-red-600 hover:bg-red-50 transition-colors bg-white shadow-sm"
+                                title="Tolak / Batalkan Serah Terima"
+                                onClick={() => onCancelPending(h)}
+                              >
+                                <Ban className="w-4 h-4" />
+                              </button>
+                            )}
                             <button
                               type="button"
                               className="inline-flex items-center justify-center w-8 h-8 border border-[#E2E8F0] rounded-[10px] text-[#2B6CB0] hover:bg-[#EBF4FF]/50 transition-colors bg-white shadow-sm"
@@ -331,7 +358,8 @@ function HandoverHistoryTable({
                       </tr>
                     ))}
                   </Fragment>
-                ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -346,29 +374,50 @@ function HandoverHistoryTable({
         ) : items.length === 0 ? (
           <EmptyState message={emptyMessage} />
         ) : (
-          groupedItems.map((group) => (
+          groupedItems.map((group) => {
+            const isScrapGroup = group.items.some((h) => h.isScrap);
+            return (
             <div
               key={group.key}
-              className={`bg-white rounded-xl border ${group.hasPendingSignature ? 'border-amber-200 shadow-[0_0_10px_rgba(217,119,6,0.1)]' : 'border-gray-200 shadow-sm'} overflow-hidden md:hidden mb-4`}
+              className={`bg-white rounded-xl border ${
+                group.hasPendingSignature 
+                  ? 'border-amber-200 shadow-[0_0_10px_rgba(217,119,6,0.1)]' 
+                  : isScrapGroup 
+                    ? 'border-red-200 shadow-sm' 
+                    : 'border-gray-200 shadow-sm'
+              } overflow-hidden md:hidden mb-4`}
             >
-              <div className={`p-4 ${group.hasPendingSignature ? 'bg-amber-50/80 border-b border-amber-100' : 'bg-gray-50/80 border-b border-gray-100'}`}>
+              <div className={`p-4 ${
+                group.hasPendingSignature 
+                  ? 'bg-amber-50/80 border-b border-amber-100' 
+                  : isScrapGroup 
+                    ? 'bg-red-50/80 border-b border-red-100' 
+                    : 'bg-gray-50/80 border-b border-gray-100'
+              }`}>
                 <div className="flex flex-col gap-2 relative">
                   {group.hasPendingSignature && (
                     <span className="absolute -left-4 top-0 w-1 h-full bg-red-500 rounded-r-md animate-pulse"></span>
                   )}
                   <div className="flex justify-between items-center">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold border ${handoverTypeBadgeClass(
-                        group.flowLabel
-                      )}`}
-                    >
-                      {handoverTypeLabel(group.flowLabel)}
-                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <span
+                        className={`inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold border ${handoverTypeBadgeClass(
+                          group.flowLabel
+                        )}`}
+                      >
+                        {handoverTypeLabel(group.flowLabel)}
+                      </span>
+                      {isScrapGroup && (
+                        <span className="inline-flex px-2 py-0.5 rounded-md text-[11px] font-bold border bg-red-100 text-red-800 border-red-200">
+                          Scrap
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-500 font-medium">
                       {group.handoverAt ? format(new Date(group.handoverAt), "dd MMM yyyy", { locale: localeId }) : "-"}
                     </span>
                   </div>
-                  <h3 className={`font-bold text-sm flex items-center gap-1.5 ${group.hasPendingSignature ? 'text-amber-900' : 'text-gray-900'}`}>
+                  <h3 className={`font-bold text-sm flex items-center gap-1.5 ${group.hasPendingSignature ? 'text-amber-900' : isScrapGroup ? 'text-red-950' : 'text-gray-900'}`}>
                     No. Job ERP: <span className="font-mono text-[#2B6CB0]">{group.ticketNumber || "—"}</span>
                   </h3>
                   <div className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-1 font-medium">
@@ -383,7 +432,13 @@ function HandoverHistoryTable({
                 {group.items.map((h) => (
                   <div
                     key={h.id}
-                    className={`p-4 transition-colors cursor-pointer ${h.status === "PendingReceiverSignature" ? 'bg-amber-50/40 hover:bg-amber-100/50' : 'hover:bg-gray-50/50'}`}
+                    className={`p-4 transition-colors cursor-pointer ${
+                      h.status === "PendingReceiverSignature" 
+                        ? 'bg-amber-50/40 hover:bg-amber-100/50' 
+                        : h.isScrap 
+                          ? 'bg-red-50/20 hover:bg-red-100/30' 
+                          : 'hover:bg-gray-50/50'
+                    }`}
                     onClick={() => onOpenDetail(h.id)}
                   >
                     <div className="flex justify-between items-start mb-2">
@@ -428,6 +483,16 @@ function HandoverHistoryTable({
                             <Edit className="w-3.5 h-3.5" />
                           </button>
                         )}
+                        {h.status === "PendingReceiverSignature" && onCancelPending && (
+                          <button
+                            type="button"
+                            className="p-1.5 border border-red-200 rounded text-red-600 hover:bg-red-50"
+                            title="Tolak / Batalkan Serah Terima"
+                            onClick={() => onCancelPending(h)}
+                          >
+                            <Ban className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                         <button
                           type="button"
                           className="p-1.5 border border-gray-200 rounded text-gray-500 hover:bg-gray-50 hover:text-gray-700"
@@ -453,7 +518,8 @@ function HandoverHistoryTable({
                 </div>
               )}
             </div>
-          ))
+            );
+          })
         )}
       </div>
     </>
@@ -527,13 +593,30 @@ export default function RadioHandoverWarehousePage() {
   const [changeReceiverCurrentUserId, setChangeReceiverCurrentUserId] = useState<number | undefined>();
 
   const canDelete = hasPermission("radio.handover.delete");
+  const canViewArchive = true;
   const isWks = currentUserRole() === "Workshop";
+  const [showArchive, setShowArchive] = useState(false);
 
   // Helper untuk signature canvas
   const sigRef = useRef<any>(null);
   const [editHandover, setEditHandover] = useState<RadioHandoverDetail | null>(null);
   const [resettingSignature, setResettingSignature] = useState(false);
   const [confirmResetOpen, setConfirmResetOpen] = useState(false);
+  const [cancelTarget, setCancelTarget] = useState<{
+    id: number;
+    handoverNumber?: string;
+    serialNumber?: string;
+    ticketNumber?: string;
+  } | null>(null);
+
+  const handleCancelPending = (h: RadioHandoverList) => {
+    setCancelTarget({
+      id: h.id,
+      handoverNumber: h.handoverNumber,
+      serialNumber: h.radioSerialNumber,
+      ticketNumber: h.helpdeskTicketNumber || undefined,
+    });
+  };
 
   useEffect(() => {
     if (searchParams.get("tab")) {
@@ -571,7 +654,7 @@ export default function RadioHandoverWarehousePage() {
   // Reset page when tab, search, or filter changes
   useEffect(() => {
     setPage(1);
-  }, [activeTab, debouncedSearch, showActionNeededOnly]);
+  }, [activeTab, debouncedSearch, showActionNeededOnly, showArchive]);
 
   const load = useCallback((silent = false) => {
     if (!silent) {
@@ -607,9 +690,10 @@ export default function RadioHandoverWarehousePage() {
         pageSize: PAGE_SIZE, 
         handoverType: "TechnicianToWarehouse", 
         search: debouncedSearch, 
-        fromDate: showActionNeededOnly ? undefined : fromDate, 
-        toDate: showActionNeededOnly ? undefined : toDate,
-        status: showActionNeededOnly ? "PendingReceiverSignature" : undefined
+        fromDate: (showActionNeededOnly || showArchive) ? undefined : fromDate, 
+        toDate: (showActionNeededOnly || showArchive) ? undefined : toDate,
+        status: showActionNeededOnly && !showArchive ? "PendingReceiverSignature" : undefined,
+        includeDeleted: showArchive
       })
         .then((res) => {
           setIncomingTek(res.data ?? []);
@@ -628,9 +712,10 @@ export default function RadioHandoverWarehousePage() {
         pageSize: PAGE_SIZE, 
         handoverType: "HelpdeskToWarehouse", 
         search: debouncedSearch, 
-        fromDate: showActionNeededOnly ? undefined : fromDate, 
-        toDate: showActionNeededOnly ? undefined : toDate,
-        status: showActionNeededOnly ? "PendingReceiverSignature" : undefined
+        fromDate: (showActionNeededOnly || showArchive) ? undefined : fromDate, 
+        toDate: (showActionNeededOnly || showArchive) ? undefined : toDate,
+        status: showActionNeededOnly && !showArchive ? "PendingReceiverSignature" : undefined,
+        includeDeleted: showArchive
       })
         .then((res) => {
           setIncomingHd(res.data ?? []);
@@ -650,9 +735,10 @@ export default function RadioHandoverWarehousePage() {
           pageSize: PAGE_SIZE, 
           handoverType: "WarehouseToHelpdesk", 
           search: debouncedSearch, 
-          fromDate: showActionNeededOnly ? undefined : fromDate, 
-          toDate: showActionNeededOnly ? undefined : toDate,
-          status: showActionNeededOnly ? "PendingReceiverSignature" : undefined
+          fromDate: (showActionNeededOnly || showArchive) ? undefined : fromDate, 
+          toDate: (showActionNeededOnly || showArchive) ? undefined : toDate,
+          status: showActionNeededOnly && !showArchive ? "PendingReceiverSignature" : undefined,
+          includeDeleted: showArchive
         })
         .then((r) => {
           setOutgoing(r.data ?? []);
@@ -674,7 +760,7 @@ export default function RadioHandoverWarehousePage() {
       })
       .catch(() => setPendingJobs([]));
 
-  }, [activeTab, page, debouncedSearch, periodFilter, showActionNeededOnly]);
+  }, [activeTab, page, debouncedSearch, periodFilter, showActionNeededOnly, showArchive]);
 
   useLiveRefresh("RadioHandover", () => {
     load(true);
@@ -885,7 +971,7 @@ export default function RadioHandoverWarehousePage() {
 
       {/* Stats & Chart Redesign */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl overflow-hidden relative transition-transform hover:scale-[1.02]">
             <div className="absolute top-0 right-0 p-4 opacity-20"><PackageCheck className="w-16 h-16" /></div>
             <CardHeader className="pb-1 pt-5 px-5 relative z-10">
@@ -913,19 +999,6 @@ export default function RadioHandoverWarehousePage() {
             </CardHeader>
             <CardContent className="px-5 pb-5 pt-0 relative z-10">
               <p className="text-xs text-blue-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Histori masuk bulan ini</p>
-            </CardContent>
-          </Card>
-
-          <Card className="border-0 shadow-lg bg-gradient-to-br from-red-500 to-rose-600 text-white rounded-2xl overflow-hidden relative transition-transform hover:scale-[1.02]">
-            <div className="absolute top-0 right-0 p-4 opacity-20"><ArrowDownLeft className="w-16 h-16" /></div>
-            <CardHeader className="pb-1 pt-5 px-5 relative z-10">
-              <CardDescription className="flex items-center gap-1.5 text-xs font-bold text-red-100 uppercase tracking-widest drop-shadow-sm">
-                Masuk dari Helpdesk (Scrap)
-              </CardDescription>
-              <CardTitle className="text-5xl font-extrabold text-white mt-1 drop-shadow-md">{totalCountIncomingHd}</CardTitle>
-            </CardHeader>
-            <CardContent className="px-5 pb-5 pt-0 relative z-10">
-              <p className="text-xs text-red-100 mt-2 font-medium bg-black/10 inline-block px-2 py-1 rounded-md">Histori masuk bulan ini</p>
             </CardContent>
           </Card>
 
@@ -1115,6 +1188,22 @@ export default function RadioHandoverWarehousePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <h2 className="text-base md:text-lg font-semibold text-gray-900">Histori serah terima</h2>
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+            <button
+              type="button"
+              onClick={() => {
+                setShowArchive((v) => !v);
+                setPage(1);
+              }}
+              className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-[10px] text-sm font-bold border transition-all shadow-sm ${
+                showArchive
+                  ? "bg-[#1B3A6B] text-white border-[#1B3A6B] hover:bg-[#2B6CB0]"
+                  : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+              }`}
+              title="Lihat dokumen serah terima yang dibatalkan atau dihapus"
+            >
+              <Archive className={`w-4 h-4 ${showArchive ? "text-amber-300" : "text-amber-600"}`} />
+              <span>{showArchive ? "Keluar Arsip" : "Lihat Arsip"}</span>
+            </button>
             <label className="flex items-center gap-2 cursor-pointer bg-white px-3 py-2 rounded-[10px] border border-gray-300 shadow-sm hover:bg-gray-50 transition-colors">
               <div className="relative flex items-center">
                 <input 
@@ -1140,6 +1229,25 @@ export default function RadioHandoverWarehousePage() {
             </div>
           </div>
         </div>
+
+        {showArchive && (
+          <div className="bg-slate-100 border border-slate-300 rounded-xl p-3.5 flex items-center justify-between text-sm text-slate-800 shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <Archive className="w-5 h-5 text-slate-600 shrink-0" />
+              <div>
+                <p className="font-bold">Mode Arsip Serah Terima Aktif</p>
+                <p className="text-xs text-slate-600">Menampilkan daftar dokumen serah terima yang dibatalkan atau dihapus.</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowArchive(false)}
+              className="text-xs font-bold text-slate-700 hover:text-slate-900 bg-white border border-slate-300 px-3 py-1.5 rounded-lg shadow-sm"
+            >
+              Kembali ke Data Aktif
+            </button>
+          </div>
+        )}
         <Tabs value={activeTab} onValueChange={handleTabChange}>
           <TabsList className="bg-gray-100 p-1 h-auto w-full md:w-auto">
             <TabsTrigger value="incoming" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
@@ -1152,18 +1260,6 @@ export default function RadioHandoverWarehousePage() {
                 </span>
               )}
             </TabsTrigger>
-            {hasPermission("radio.handover.warehouse.scrap") && (
-              <TabsTrigger value="incoming-hd" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
-                <ArrowDownLeft className="w-3.5 h-3.5 md:w-4 md:h-4 text-[#B7791F]" />
-                <span className="hidden sm:inline">Masuk dari Helpdesk (Scrap)</span>
-                <span className="sm:hidden">HD → WH</span>
-                {pendingCountHdWh > 0 && (
-                  <span className="ml-1 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white bg-red-500 rounded-full">
-                    {pendingCountHdWh}
-                  </span>
-                )}
-              </TabsTrigger>
-            )}
             <TabsTrigger value="outgoing" className="gap-1.5 md:gap-2 px-3 md:px-4 py-2 data-[state=active]:shadow-sm flex-1 md:flex-none text-xs md:text-sm">
               <ArrowUpRight className="w-3.5 h-3.5 md:w-4 md:h-4" />
               <span className="hidden sm:inline">Serah ke Helpdesk</span>
@@ -1189,6 +1285,7 @@ export default function RadioHandoverWarehousePage() {
               onOpenGallery={openGallery}
               onSignRow={setSignRows}
               onEdit={handleEdit}
+              onCancelPending={handleCancelPending}
             />
             <Pagination
               currentPage={page}
@@ -1198,31 +1295,6 @@ export default function RadioHandoverWarehousePage() {
               onPageChange={setPage}
             />
           </TabsContent>
-
-          {hasPermission("radio.handover.warehouse.scrap") && (
-            <TabsContent value="incoming-hd" className="mt-4 space-y-2">
-              <p className="text-sm text-gray-500">
-                Daftar radio scrap yang masuk ke warehouse dari helpdesk (HD → WH).
-              </p>
-              <HandoverHistoryTable
-                items={incomingHd}
-                loading={loadingIncomingHd}
-                flowLabel="Helpdesk → Warehouse (Scrap)"
-                emptyMessage={searchQuery ? "Tidak ada hasil pencarian" : "Belum ada radio scrap masuk dari helpdesk"}
-                onOpenDetail={openDetail}
-                onOpenGallery={openGallery}
-                onSignRow={setSignRows}
-                onEdit={handleEdit}
-              />
-              <Pagination
-                currentPage={page}
-                pageSize={PAGE_SIZE}
-                totalCount={totalCountIncomingHd}
-                totalPages={Math.ceil(totalCountIncomingHd / PAGE_SIZE)}
-                onPageChange={setPage}
-              />
-            </TabsContent>
-          )}
 
           <TabsContent value="outgoing" className="mt-4 space-y-2">
             <p className="text-sm text-gray-500">
@@ -1237,6 +1309,7 @@ export default function RadioHandoverWarehousePage() {
               onOpenGallery={openGallery}
               onSignRow={setSignRows}
               onEdit={isWorkshopUser ? undefined : handleEdit}
+              onCancelPending={handleCancelPending}
             />
             <Pagination
               currentPage={page}
@@ -1342,7 +1415,7 @@ export default function RadioHandoverWarehousePage() {
               <div className="bg-[#F7F8FA] border border-[#E2E8F0] rounded-[10px] p-4">
                 <HandoverTimeline 
                   handovers={detailJob.handovers} 
-                  isScrap={detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap" || detailJob.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")} 
+                  isScrap={detailJob.isScrap || detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap" || detailJob.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")} 
                 />
               </div>
             )}
@@ -1374,6 +1447,42 @@ export default function RadioHandoverWarehousePage() {
                 </div>
               );
             })()}
+
+            {detail.isScrap && (
+              <div className="bg-red-50/70 border border-red-200 rounded-[10px] p-4 space-y-2">
+                <div className="flex items-center justify-between border-b border-red-200 pb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-600 animate-pulse" />
+                    <h4 className="text-xs font-bold text-red-800 uppercase tracking-wider">
+                      Informasi Radio Scrap
+                    </h4>
+                  </div>
+                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">
+                    SCRAP
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 text-xs">
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-semibold block">Tanggal Scrap</span>
+                    <span className="text-gray-900 font-semibold mt-0.5 block">
+                      {detail.dateScrapped ? format(new Date(detail.dateScrapped), "dd MMMM yyyy", { locale: localeId }) : "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-semibold block">No. Job Scrap</span>
+                    <span className="font-mono text-red-700 font-bold mt-0.5 block">
+                      {detail.scrapJobNumber || "—"}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-gray-500 uppercase font-semibold block">Keterangan Scrap</span>
+                    <span className="text-gray-800 font-medium mt-0.5 block">
+                      {detail.scrapRemarks || "—"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Pihak Terlibat & Catatan */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -1477,7 +1586,24 @@ export default function RadioHandoverWarehousePage() {
 
             {/* Action Buttons */}
             <div className="flex justify-between items-center pt-3 border-t border-[#E2E8F0]">
-              <div>
+              <div className="flex items-center gap-2">
+                {detail.status === "PendingReceiverSignature" && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCancelTarget({
+                        id: detail.id,
+                        handoverNumber: detail.handoverNumber,
+                        serialNumber: detail.radioSerialNumber,
+                        ticketNumber: detail.noJobErp || detail.helpdeskTicketNumber || undefined,
+                      });
+                    }}
+                    className="inline-flex items-center gap-2 px-4 py-2 border border-red-300 rounded-[10px] text-sm font-medium text-red-700 hover:bg-red-50 transition-colors"
+                  >
+                    <Ban className="w-4 h-4" />
+                    Tolak / Batalkan Serah Terima
+                  </button>
+                )}
                 {detail.handoverType === "WarehouseToHelpdesk" && detail.status === "Completed" && currentUserRole() === "warehouse" && (
                   <>
                     <button
@@ -1731,6 +1857,26 @@ export default function RadioHandoverWarehousePage() {
               title: "Penerima diubah",
               description: "Berhasil mengubah akun penerima serah terima.",
             });
+          }}
+        />
+      )}
+
+      {/* Tolak / Batalkan Serah Terima Modal */}
+      {cancelTarget && (
+        <CancelHandoverModal
+          open={!!cancelTarget}
+          onOpenChange={(open) => {
+            if (!open) setCancelTarget(null);
+          }}
+          handoverId={cancelTarget.id}
+          handoverNumber={cancelTarget.handoverNumber}
+          serialNumber={cancelTarget.serialNumber}
+          ticketNumber={cancelTarget.ticketNumber}
+          onSuccess={() => {
+            setCancelTarget(null);
+            setDetail(null);
+            load();
+            fetchPendingCounts();
           }}
         />
       )}

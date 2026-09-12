@@ -157,6 +157,10 @@ export default function HelpdeskToWarehouseForm({ job, onSuccess, onCancel }: Pr
             radioCategory: job.radioCategory,
             damageDescription: job.damageDescription || "Scrap",
             handoverType: "HelpdeskToWarehouse",
+            isScrap: job.isScrap,
+            dateScrapped: job.dateScrapped,
+            scrapJobNumber: job.scrapJobNumber,
+            scrapRemarks: job.scrapRemarks,
             accessories: jobDetail?.primaryHandover?.accessories
               ?.filter((_, i) => selectedAccessories[i])
               ?.map(a => ({

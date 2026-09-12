@@ -26,6 +26,10 @@ export function toDamagedTagData(d: RadioHandoverDetail): DamagedEquipmentTagDat
     radioMasterRadioId: d.radioMasterRadioId,
     radioFleet: d.radioFleet,
     handoverType: d.handoverType,
+    isScrap: d.isScrap,
+    dateScrapped: d.dateScrapped,
+    scrapJobNumber: d.scrapJobNumber,
+    scrapRemarks: d.scrapRemarks,
   };
 }
 

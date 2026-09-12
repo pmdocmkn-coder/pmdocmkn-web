@@ -25,9 +25,9 @@ import ImageGalleryModal from "../common/ImageGalleryModal";
 import RadioScrapApprovalModal from "./RadioScrapApprovalModal";
 import RadioCompletionTagModal from "./RadioCompletionTagModal";
 import RadioWarrantyCheckModal from "./RadioWarrantyCheckModal";
-import TechnicianToHelpdeskScrapForm from "../RadioHandover/TechnicianToHelpdeskScrapForm";
 import HelpdeskToWarehouseForm from "../RadioHandover/HelpdeskToWarehouseForm";
 import ChangeReceiverModal from "../RadioHandover/ChangeReceiverModal";
+import CancelHandoverModal from "../RadioHandover/CancelHandoverModal";
 
 import { Button } from "../ui/button";
 import { Input } from "../ui/input";
@@ -77,7 +77,6 @@ export default function RadioRepairDashboardPage() {
   const [detail, setDetail] = useState<RadioRepairJobDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [whJob, setWhJob] = useState<RadioRepairJobDetail | null>(null);
-  const [hdScrapJob, setHdScrapJob] = useState<RadioRepairJobDetail | null>(null);
   const [hdToWhJob, setHdToWhJob] = useState<RadioRepairJobDetail | null>(null);
   const [showArchive, setShowArchive] = useState(false);
   const [showScrapApproval, setShowScrapApproval] = useState(false);
@@ -127,6 +126,12 @@ export default function RadioRepairDashboardPage() {
   const [changeReceiverId, setChangeReceiverId] = useState<number | null>(null);
   const [changeReceiverType, setChangeReceiverType] = useState<"Helpdesk" | "Warehouse" | "Teknisi">("Helpdesk");
   const [changeReceiverCurrentUserId, setChangeReceiverCurrentUserId] = useState<number | undefined>();
+  const [cancelHandoverTarget, setCancelHandoverTarget] = useState<{
+    id: number;
+    handoverNumber?: string;
+    serialNumber?: string;
+    ticketNumber?: string;
+  } | null>(null);
 
   const canSupervise = canApproveRepairMaterial();
   const canUpdate = canUpdateRepairJobStatus();
@@ -496,7 +501,7 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string; isPendingHelpdeskScrapFill?: boolean }) => {
+  const handleApproveScrap = async (payload: { dateScrapped: string; scrapJobNumber?: string; remarks?: string }) => {
     if (!detail) return;
     setPatchingStatus(true);
     try {
@@ -529,20 +534,14 @@ export default function RadioRepairDashboardPage() {
     }
   };
 
-  const handleCancelHandover = async (handoverId: number) => {
-    if (!window.confirm("Apakah Anda yakin ingin membatalkan serah terima ini?")) return;
-    setPatchingStatus(true);
-    try {
-      await radioHandoverApi.cancelPending(handoverId);
-      toast({ title: "Serah terima berhasil dibatalkan" });
-      const newDetail = await radioRepairApi.getById(detail!.id);
-      setDetail(newDetail);
-      load(true);
-    } catch (err: unknown) {
-      toast({ title: "Gagal membatalkan serah terima", description: apiMessage(err), variant: "destructive" });
-    } finally {
-      setPatchingStatus(false);
-    }
+  const handleCancelHandover = (handoverId: number) => {
+    const pendingH = detail?.handovers?.find((h) => h.id === handoverId);
+    setCancelHandoverTarget({
+      id: handoverId,
+      handoverNumber: pendingH?.handoverNumber,
+      serialNumber: detail?.radioSerialNumber,
+      ticketNumber: detail?.helpdeskTicketNumber,
+    });
   };
 
   const handleResetTestingData = async () => {
@@ -896,11 +895,7 @@ export default function RadioRepairDashboardPage() {
           // Fetch detail tanpa membuka modal detail
           try {
             const d = await radioRepairApi.getById(job.id, showArchive);
-            if (job.status === "Scrapped") {
-              setHdScrapJob(d);
-            } else {
-              setWhJob(d);
-            }
+            setWhJob(d);
           } catch (err: unknown) {
             toast({ title: "Gagal memuat detail", description: apiMessage(err), variant: "destructive" });
           }
@@ -966,11 +961,7 @@ export default function RadioRepairDashboardPage() {
               onPatchStatus={(s, cid) => patchStatus(detail.id, s, cid)}
               onApproveMaterial={approveMaterial}
               onOpenWh={() => { 
-                if (detail.status === "Scrapped") {
-                  setHdScrapJob(detail);
-                } else {
-                  setWhJob(detail);
-                }
+                setWhJob(detail);
                 setDetail(null); 
               }}
               onOpenWhHd={() => {
@@ -1037,24 +1028,7 @@ export default function RadioRepairDashboardPage() {
         )}
       </ResponsiveModal>
 
-      <ResponsiveModal
-        open={!!hdScrapJob}
-        onOpenChange={(open) => { if (!open) setHdScrapJob(null); }}
-        bottomSheetSize="xl"
-        desktopClassName="max-w-lg"
-        title="Teknisi → Helpdesk (Scrap)"
-      >
-        {hdScrapJob && (
-          <TechnicianToHelpdeskScrapForm
-            job={hdScrapJob}
-            onSuccess={() => {
-              setHdScrapJob(null);
-              load();
-            }}
-            onCancel={() => setHdScrapJob(null)}
-          />
-        )}
-      </ResponsiveModal>
+
 
       <ResponsiveModal
         open={!!hdToWhJob}
@@ -1091,6 +1065,31 @@ export default function RadioRepairDashboardPage() {
               openDetail(detail.id);
             }
             load();
+          }}
+        />
+      )}
+
+      {cancelHandoverTarget && (
+        <CancelHandoverModal
+          open={!!cancelHandoverTarget}
+          onOpenChange={(open) => {
+            if (!open) setCancelHandoverTarget(null);
+          }}
+          handoverId={cancelHandoverTarget.id}
+          handoverNumber={cancelHandoverTarget.handoverNumber}
+          serialNumber={cancelHandoverTarget.serialNumber}
+          ticketNumber={cancelHandoverTarget.ticketNumber}
+          onSuccess={async () => {
+            setCancelHandoverTarget(null);
+            if (detail) {
+              try {
+                const newDetail = await radioRepairApi.getById(detail.id);
+                setDetail(newDetail);
+              } catch {
+                setDetail(null);
+              }
+            }
+            load(true);
           }}
         />
       )}

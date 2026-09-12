@@ -20,9 +20,10 @@ type Props = {
   /** Jika diatur, status akan diganti menjadi Menunggu TTD sesuai tipe serah terima */
   pendingHandoverType?: string | null;
   isWarranty?: boolean;
+  repairDataDescription?: string | null;
 };
 
-export default function RadioRepairStatusBadge({ status, customStatusLabel, customStatusColor, pendingHandoverType, isWarranty }: Props) {
+export default function RadioRepairStatusBadge({ status, customStatusLabel, customStatusColor, pendingHandoverType, isWarranty, repairDataDescription }: Props) {
   const mainBadge = (() => {
     if (pendingHandoverType) {
       let label = "Menunggu TTD";
@@ -45,6 +46,18 @@ export default function RadioRepairStatusBadge({ status, customStatusLabel, cust
         </span>
       );
     }
+
+    if (status === "ReturnedToHelpdesk") {
+      const descLower = repairDataDescription?.toLowerCase() ?? "";
+      if (descLower.includes("di-install ke unit") || descLower.includes("langsung di-install") || descLower.includes("pasang ke unit")) {
+        return (
+          <span className="inline-flex px-2 py-0.5 rounded-full text-xs font-semibold bg-teal-100 text-teal-800 border border-teal-200" title="Radio selesai diperbaiki dan langsung di-install ke unit operasional">
+            Selesai (Di Unit)
+          </span>
+        );
+      }
+    }
+
     const c = STATUS_CONFIG[status] ?? { label: status, className: "bg-gray-100 text-gray-600" };
     return (
       <span className={`inline-flex px-2 py-0.5 rounded-full text-xs font-semibold ${c.className}`}>

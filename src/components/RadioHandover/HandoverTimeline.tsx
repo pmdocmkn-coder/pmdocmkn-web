@@ -43,18 +43,20 @@ type Props = {
 };
 
 export default function HandoverTimeline({ handovers, compact, isScrap }: Props) {
-  const STEPS = isScrap 
-    ? [
-        { type: "HelpdeskToTechnician", label: "Helpdesk → Teknisi", short: "HD → Tek" },
-        { type: "TechnicianToHelpdesk", label: "Teknisi → Helpdesk (Scrap)", short: "Tek → HD" },
-        { type: "HelpdeskToWarehouse", label: "Helpdesk → Warehouse (Scrap)", short: "HD → WH" },
-        { type: "WarehouseToHelpdesk", label: "Warehouse → Helpdesk (Scrap)", short: "WH → HD" },
-      ]
-    : [
-        { type: "HelpdeskToTechnician", label: "Helpdesk → Teknisi", short: "HD → Tek" },
-        { type: "TechnicianToWarehouse", label: "Teknisi → Warehouse", short: "Tek → WH" },
-        { type: "WarehouseToHelpdesk", label: "Warehouse → Helpdesk", short: "WH → HD" },
-      ];
+  // Tahapan lama hanya ditampilkan apabila memang ada dalam histori.
+  const legacy = handovers.some(h => h.handoverType === "TechnicianToHelpdesk" || h.handoverType === "HelpdeskToWarehouse");
+  const suffix = isScrap ? " (Scrap)" : "";
+  const STEPS = [
+    { type: "HelpdeskToTechnician", label: "Helpdesk → Teknisi" },
+    ...(legacy ? [
+      { type: "TechnicianToHelpdesk", label: "Teknisi → Helpdesk (Scrap — alur lama)" },
+      { type: "HelpdeskToWarehouse", label: "Helpdesk → Warehouse (Scrap — alur lama)" },
+    ] : []),
+    ...(!legacy || handovers.some(h => h.handoverType === "TechnicianToWarehouse") ? [
+      { type: "TechnicianToWarehouse", label: `Teknisi → Warehouse${suffix}` },
+    ] : []),
+    { type: "WarehouseToHelpdesk", label: `Warehouse → Helpdesk${suffix}` },
+  ];
   const handoversByType = handovers.reduce((acc, h) => {
     if (!acc[h.handoverType]) acc[h.handoverType] = [];
     acc[h.handoverType].push(h);

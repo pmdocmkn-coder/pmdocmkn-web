@@ -23,6 +23,10 @@ export type DamagedEquipmentTagData = {
   radioFleet?: string | null;
   radioCategory?: string | null;
   handoverType?: string;
+  isScrap?: boolean;
+  dateScrapped?: string | null;
+  scrapJobNumber?: string | null;
+  scrapRemarks?: string | null;
 };
 
 function flowLabel(type?: string) {
@@ -38,6 +42,20 @@ export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipme
   const alurValue = alurLabel.toLowerCase() === flowNames.toLowerCase() 
     ? alurLabel 
     : `${alurLabel} · ${flowNames}`;
+
+  const isScrap = Boolean(data.isScrap || data.dateScrapped || data.scrapJobNumber);
+
+  let formattedDateScrapped = "—";
+  if (data.dateScrapped) {
+    try {
+      const d = new Date(data.dateScrapped);
+      if (!isNaN(d.getTime())) {
+        formattedDateScrapped = format(d, "dd MMMM yyyy", { locale: localeId });
+      }
+    } catch {
+      formattedDateScrapped = data.dateScrapped;
+    }
+  }
 
   return (
     <div className="rounded-xl overflow-hidden border-2 border-yellow-400 shadow-md text-sm">
@@ -88,6 +106,18 @@ export default function DamagedEquipmentTagCard({ data }: { data: DamagedEquipme
         <TagField label="Departemen" value={data.ownerDepartment?.trim() || "—"} />
         {data.damageDescription && (
           <TagField label="Kerusakan" value={data.damageDescription} />
+        )}
+
+        {isScrap && (
+          <div className="pt-2 border-t-2 border-red-300 space-y-1.5">
+            <div className="flex items-center justify-between pb-1 border-b border-red-200">
+              <span className="text-xs font-bold text-red-700 uppercase tracking-wider">Data Radio Scrap</span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 border border-red-200">SCRAP</span>
+            </div>
+            <TagField label="Tanggal Scrap" value={formattedDateScrapped} />
+            <TagField label="No. Job Scrap" value={data.scrapJobNumber?.trim() || "—"} highlight />
+            <TagField label="Keterangan Scrap" value={data.scrapRemarks?.trim() || "—"} />
+          </div>
         )}
 
         {acc.length > 0 && (
