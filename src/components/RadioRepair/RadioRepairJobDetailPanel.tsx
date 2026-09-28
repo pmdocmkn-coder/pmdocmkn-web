@@ -546,7 +546,7 @@ export default function RadioRepairJobDetailPanel({
         </div>
       )}
 
-      {canHandoverWh && (job.status === "RepairCompleted" || job.status === "Scrapped") && !job.closedAt && job.pendingHandoverType !== "TechnicianToWarehouse" && job.pendingHandoverType !== "TechnicianToHelpdesk" && !job.isDeleted && (
+      {canHandoverWh && (job.status === "RepairCompleted" || job.status === "Scrapped") && (job.status === "Scrapped" || !job.closedAt) && job.pendingHandoverType !== "TechnicianToWarehouse" && job.pendingHandoverType !== "TechnicianToHelpdesk" && !job.isDeleted && (
         <button
           type="button"
           className={`px-4 py-2 text-white rounded-lg font-medium shadow-sm ${

@@ -10,6 +10,7 @@ import MultiPhotoUpload from "./MultiPhotoUpload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
 import { buildAccessoriesPayload, toHandoverAccessoryItems } from "../../utils/handoverFormUtils";
 import { workshopTechnicianApi, WorkshopTechnicianDto } from "../../services/workshopTechnicianApi";
+import RadioScrapVerificationModal from "./RadioScrapVerificationModal";
 
 type Props = {
   job: RadioRepairJobDetail;
@@ -35,6 +36,7 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
   const [sigTech, setSigTech] = useState<string | null>(null);
   const [sigWh, setSigWh] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [scrapModalOpen, setScrapModalOpen] = useState(false);
   const sigTechRef = useRef<SignaturePadHandle>(null);
   const sigWhRef = useRef<SignaturePadHandle>(null);
 
@@ -81,15 +83,17 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
     };
   }, [job]);
 
-  const submit = async () => {
-    // Export TTD dari canvas terlebih dahulu sebelum validasi
-    const techSig = (await sigTechRef.current?.exportNow()) ?? sigTech;
-    const whSig = (await sigWhRef.current?.exportNow()) ?? sigWh;
+  const selectedReceiver = receivers.find((r) => r.userId.toString() === whId);
 
-    if (!whId || !workshopTechId || photos.length === 0 || !techSig) {
-      toast({ title: "Lengkapi data teknisi, foto, TTD Penyerah", variant: "destructive" });
-      return;
-    }
+  const executeSubmit = async ({
+    receiverSig,
+    additionalPhotos = [],
+  }: {
+    receiverSig?: string;
+    additionalPhotos?: string[];
+  }) => {
+    const techSig = (await sigTechRef.current?.exportNow()) ?? sigTech;
+    const allPhotos = [...additionalPhotos, ...photos];
 
     const merged = [...inheritedAccessories, ...additionalAccessories.filter((a) => a.itemName.trim())];
     const { accessories: acc, batterySerialNumber } = buildAccessoriesPayload(merged);
@@ -104,10 +108,11 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
         batterySerialNumber: batterySerialNumber ?? job.batterySerialNumber ?? undefined,
         receivedByUserId: Number(whId),
         handedOverByWorkshopTechnicianId: Number(workshopTechId),
-        radioPhotos: photos,
-        handedOverSignatureBase64: techSig,
-        receiverSignatureBase64: whSig || undefined,
+        radioPhotos: allPhotos,
+        handedOverSignatureBase64: techSig!,
+        receiverSignatureBase64: receiverSig,
         accessories: acc,
+        remarks: job.isScrap ? "[Verifikasi Surat Scrap Disertakan]" : undefined,
       });
       toast({ title: "Serah terima ke warehouse berhasil" });
       onSuccess();
@@ -123,9 +128,59 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
     }
   };
 
+  const handleMainButtonClick = async () => {
+    const techSig = (await sigTechRef.current?.exportNow()) ?? sigTech;
+
+    if (!workshopTechId) {
+      toast({ title: "Pilih teknisi workshop penyerah", variant: "destructive" });
+      return;
+    }
+    if (!whId) {
+      toast({ title: "Pilih akun sistem penerima Warehouse", variant: "destructive" });
+      return;
+    }
+    if (photos.length === 0) {
+      toast({ title: "Lampirkan minimal 1 foto radio", variant: "destructive" });
+      return;
+    }
+    if (!techSig) {
+      toast({ title: "Tanda tangan penyerah (teknisi) wajib diisi", variant: "destructive" });
+      return;
+    }
+
+    if (job.isScrap) {
+      // Untuk radio scrap, otomatis tampilkan popup verifikasi surat scrap & TTD warehouse
+      setScrapModalOpen(true);
+      return;
+    }
+
+    // Untuk radio normal (non-scrap)
+    const whSig = (await sigWhRef.current?.exportNow()) ?? sigWh;
+    await executeSubmit({ receiverSig: whSig || undefined });
+  };
+
+  const handleScrapModalConfirm = async (data: {
+    isScrapLetterAttached: boolean;
+    proofPhotoBase64: string;
+    receiverSignatureBase64?: string;
+  }) => {
+    await executeSubmit({
+      receiverSig: data.receiverSignatureBase64,
+      additionalPhotos: [data.proofPhotoBase64],
+    });
+    setScrapModalOpen(false);
+  };
+
   return (
     <div className="space-y-4">
-      {job.isScrap && <div className="border border-red-200 bg-red-50 rounded-[10px] p-3 text-red-700 font-bold">RADIO SCRAP — Teknisi → Warehouse</div>}
+      {job.isScrap && (
+        <div className="border border-red-200 bg-red-50 rounded-[10px] p-3 text-red-700 font-bold flex items-center justify-between">
+          <span>RADIO SCRAP — Teknisi → Warehouse</span>
+          <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded font-normal">
+            Verifikasi Surat Scrap di Langkah Akhir
+          </span>
+        </div>
+      )}
       <p className="text-sm text-gray-600">
         Tiket <strong>{job.helpdeskTicketNumber}</strong> — SN {job.radioSerialNumber}
       </p>
@@ -175,21 +230,45 @@ export default function TechnicianToWarehouseForm({ job, onSuccess, onCancel }: 
       />
 
       <SignaturePadField ref={sigTechRef} label="TTD Penyerah *" required value={sigTech} onChange={setSigTech} />
-      <SignaturePadField ref={sigWhRef} label="TTD Penerima (opsional)" required={false} value={sigWh} onChange={setSigWh} />
 
+      {!job.isScrap && (
+        <SignaturePadField
+          ref={sigWhRef}
+          label="TTD Penerima (opsional)"
+          required={false}
+          value={sigWh}
+          onChange={setSigWh}
+        />
+      )}
+
+      {/* Hanya SATU tombol aksi utama di bagian bawah */}
       <div className="flex gap-2 justify-end pt-2">
         <button type="button" className="px-4 py-2 border rounded-lg" onClick={onCancel}>
           Batal
         </button>
         <button
           type="button"
-          className="px-4 py-2 bg-[#1B3A6B] text-white rounded-[10px] disabled:opacity-50 hover:bg-[#2B6CB0] transition-colors"
+          className="px-4 py-2 bg-[#1B3A6B] text-white rounded-[10px] disabled:opacity-50 hover:bg-[#2B6CB0] transition-colors font-semibold"
           disabled={submitting}
-          onClick={submit}
+          onClick={handleMainButtonClick}
         >
-          {submitting ? "Menyimpan..." : (job.isScrap ? "Serah Terima Scrap ke WHS" : "Serah Terima")}
+          {submitting
+            ? "Menyimpan..."
+            : job.isScrap
+            ? "Serah Terima Scrap ke WHS"
+            : "Serah Terima"}
         </button>
       </div>
+
+      <RadioScrapVerificationModal
+        open={scrapModalOpen}
+        onOpenChange={setScrapModalOpen}
+        ticketNumber={job.helpdeskTicketNumber}
+        serialNumber={job.radioSerialNumber}
+        receiverName={selectedReceiver?.fullName}
+        onConfirm={handleScrapModalConfirm}
+        submitting={submitting}
+      />
     </div>
   );
 }

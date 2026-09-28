@@ -16,7 +16,9 @@ import {
   ArrowLeft,
   Home,
   ListTodo,
-  Search
+  Search,
+  FileCheck,
+  Image as ImageIcon
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { radioHandoverApi } from "../../services/radioHandoverApi";
@@ -522,6 +524,13 @@ export default function RadioHandoverPage() {
 
   const [detail, setDetail] = useState<RadioHandoverDetail | null>(null);
   const [detailJob, setDetailJob] = useState<RadioRepairJobDetail | null>(null);
+  const [scrapRefPhoto, setScrapRefPhoto] = useState<{
+    photo: string;
+    handoverNumber: string;
+    handedOverByName: string;
+    receivedByName: string;
+    handoverAt: string;
+  } | null>(null);
   
   // State untuk ChangeReceiverModal
   const [changeReceiverId, setChangeReceiverId] = useState<number | null>(null);
@@ -631,14 +640,35 @@ export default function RadioHandoverPage() {
 
   const openDetail = async (id: number) => {
     setDetailLoading(true);
+    setScrapRefPhoto(null);
     try {
       const d = await radioHandoverApi.getById(id);
       setDetail(d);
       setDetailJob(null);
-      radioRepairApi
-        .getById(d.radioRepairJobId)
-        .then(setDetailJob)
-        .catch(() => setDetailJob(null));
+      const jobRes = await radioRepairApi.getById(d.radioRepairJobId).catch(() => null);
+      setDetailJob(jobRes);
+
+      // Jika serah terima ini adalah tahap lanjutan (Warehouse -> Helpdesk) untuk radio scrap:
+      if (d.isScrap && d.handoverType === "WarehouseToHelpdesk" && jobRes?.handovers) {
+        const techToWh = jobRes.handovers.find(h => h.handoverType === "TechnicianToWarehouse");
+        if (techToWh?.id) {
+          try {
+            const techHo = await radioHandoverApi.getById(techToWh.id);
+            const photos = resolveHandoverPhotos(techHo);
+            if (photos.length > 0) {
+              setScrapRefPhoto({
+                photo: photos[0],
+                handoverNumber: techHo.handoverNumber,
+                handedOverByName: techHo.handedOverByName,
+                receivedByName: techHo.receivedByName,
+                handoverAt: techHo.handoverAt,
+              });
+            }
+          } catch (e) {
+            console.error("Gagal load referensi foto scrap teknisi:", e);
+          }
+        }
+      }
     } catch (err: unknown) {
       const ax = err as { response?: { data?: { message?: string } } };
       toast({
@@ -1094,6 +1124,7 @@ export default function RadioHandoverPage() {
               <HandoverTimeline 
                 handovers={detailJob.handovers} 
                 isScrap={detailJob.isScrap || detailJob.status === "Scrapped" || detailJob.status === "ProcessScrap" || detailJob.handovers.some((h) => h.handoverType === "TechnicianToHelpdesk")} 
+                onSelectHandover={(hId) => openDetail(hId)}
               />
             )}
             <HandoverTagPreview detail={detail} />
@@ -1236,12 +1267,109 @@ export default function RadioHandoverPage() {
               </div>
             )}
 
+            {/* Referensi Bukti Surat Scrap dari Tahap Teknisi -> Warehouse (jika melihat serah terima Warehouse -> Helpdesk) */}
+            {scrapRefPhoto && (
+              <div className="border border-emerald-200 bg-emerald-50/40 rounded-lg p-3 space-y-2">
+                <div className="flex items-center justify-between border-b border-emerald-100 pb-1.5">
+                  <p className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                    <FileCheck className="w-4 h-4 text-emerald-600" />
+                    Bukti Surat Scrap & Radio (Tahap Teknisi → Warehouse)
+                  </p>
+                  <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                    Surat Scrap Terlampir
+                  </span>
+                </div>
+                <div className="flex items-start gap-3 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => openGalleryFromDetail([scrapRefPhoto.photo], 0)}
+                    className="relative w-20 h-20 rounded-lg border border-emerald-300 overflow-hidden hover:ring-2 ring-emerald-500/50 transition-all shadow-sm active:scale-95 shrink-0 bg-white"
+                  >
+                    <img src={scrapRefPhoto.photo} alt="Bukti Surat Scrap" className="w-full h-full object-cover" />
+                  </button>
+                  <div className="text-xs text-emerald-900 leading-relaxed">
+                    <p className="font-semibold text-emerald-950">Foto Radio & Surat Scrap dari Teknisi</p>
+                    <p className="text-[11px] text-emerald-700 mt-0.5">
+                      Diverifikasi saat serah terima <strong className="font-mono text-emerald-900">{scrapRefPhoto.handoverNumber}</strong> oleh <strong>{scrapRefPhoto.handedOverByName}</strong> ke <strong>{scrapRefPhoto.receivedByName}</strong>.
+                    </p>
+                    <p className="text-[10px] text-emerald-600 mt-1.5 font-medium">Klik foto untuk memperbesar.</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Foto radio & Bukti Surat Scrap */}
             {(() => {
               const imgs = resolveHandoverPhotos(detail);
               if (imgs.length === 0) return null;
+
+              const isScrapWithProof = detail.isScrap && imgs.length > 1;
+
+              if (isScrapWithProof) {
+                const scrapProofImg = imgs[0];
+                const physicalImgs = imgs.slice(1);
+
+                return (
+                  <div className="space-y-3">
+                    {/* Kartu Bukti Surat Scrap */}
+                    <div className="border border-emerald-200 bg-emerald-50/40 rounded-lg p-3 space-y-2">
+                      <div className="flex items-center justify-between border-b border-emerald-100 pb-1.5">
+                        <p className="text-xs font-bold text-emerald-950 uppercase tracking-wider flex items-center gap-1.5">
+                          <FileCheck className="w-4 h-4 text-emerald-600" />
+                          Bukti Surat Scrap & Radio
+                        </p>
+                        <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                          Surat Scrap Terlampir
+                        </span>
+                      </div>
+                      <div className="flex items-start gap-3 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => openGalleryFromDetail(imgs, 0)}
+                          className="relative w-20 h-20 rounded-lg border border-emerald-300 overflow-hidden hover:ring-2 ring-emerald-500/50 transition-all shadow-sm active:scale-95 shrink-0 bg-white"
+                        >
+                          <img src={scrapProofImg} alt="Bukti Surat Scrap" className="w-full h-full object-cover" />
+                        </button>
+                        <div className="text-xs text-emerald-900 leading-relaxed">
+                          <p className="font-semibold text-emerald-950">Foto Radio & Surat Scrap</p>
+                          <p className="text-[11px] text-emerald-700 mt-0.5">
+                            Foto unit radio berdampingan dengan surat scrap saat serah terima.
+                          </p>
+                          <p className="text-[10px] text-emerald-600 mt-1.5 font-medium">Klik foto untuk memperbesar.</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Foto Fisik Unit Radio & Aksesoris */}
+                    <div>
+                      <p className="font-medium text-gray-800 mb-1.5 flex items-center gap-1.5 text-xs uppercase tracking-wider">
+                        <ImageIcon className="w-3.5 h-3.5 text-blue-600" />
+                        Dokumentasi Foto Fisik Radio & Aksesoris ({physicalImgs.length})
+                      </p>
+                      <div className="flex flex-wrap gap-2">
+                        {physicalImgs.map((src, idx) => {
+                          const origIndex = idx + 1;
+                          return (
+                            <button
+                              key={origIndex}
+                              type="button"
+                              onClick={() => openGalleryFromDetail(imgs, origIndex)}
+                              className="relative w-20 h-20 rounded-lg border overflow-hidden hover:ring-2 ring-blue-400 transition-shadow"
+                            >
+                              <img src={src} alt={`Foto Fisik ${origIndex}`} className="w-full h-full object-cover" />
+                            </button>
+                          );
+                        })}
+                      </div>
+                      <p className="text-xs text-gray-400 mt-1">Klik foto untuk memperbesar</p>
+                    </div>
+                  </div>
+                );
+              }
+
               return (
                 <div>
-                  <p className="font-medium text-gray-800 mb-2">Foto radio</p>
+                  <p className="font-medium text-gray-800 mb-2">Foto radio ({imgs.length})</p>
                   <div className="flex flex-wrap gap-2">
                     {imgs.map((src, i) => (
                       <button

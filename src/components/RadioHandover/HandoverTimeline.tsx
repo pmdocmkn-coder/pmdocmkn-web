@@ -40,9 +40,10 @@ type Props = {
   handovers: HandoverTimelineItem[];
   compact?: boolean;
   isScrap?: boolean;
+  onSelectHandover?: (handoverId: number) => void;
 };
 
-export default function HandoverTimeline({ handovers, compact, isScrap }: Props) {
+export default function HandoverTimeline({ handovers, compact, isScrap, onSelectHandover }: Props) {
   // Tahapan lama hanya ditampilkan apabila memang ada dalam histori.
   const legacy = handovers.some(h => h.handoverType === "TechnicianToHelpdesk" || h.handoverType === "HelpdeskToWarehouse");
   const suffix = isScrap ? " (Scrap)" : "";
@@ -129,7 +130,17 @@ export default function HandoverTimeline({ handovers, compact, isScrap }: Props)
                           <div className="grid grid-cols-2 gap-2 p-2.5 bg-slate-50 rounded-lg border border-slate-100">
                             <div>
                               <span className="block text-slate-500 mb-0.5">No Referensi</span>
-                              <span className="font-mono font-bold text-[#2B6CB0] flex items-center gap-1.5">
+                              <span
+                                onClick={() => {
+                                  if (h.id && onSelectHandover) onSelectHandover(h.id);
+                                }}
+                                className={`font-mono font-bold text-[#2B6CB0] flex items-center gap-1.5 ${
+                                  onSelectHandover && h.id
+                                    ? "cursor-pointer hover:underline hover:text-blue-800"
+                                    : ""
+                                }`}
+                                title={onSelectHandover && h.id ? "Klik untuk melihat dokumen serah terima ini" : undefined}
+                              >
                                 {h.handoverNumber}
                                 {h.isPartial && (
                                   <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700">

@@ -26,6 +26,7 @@ interface BottomSheetProps {
   /** Hide the drag handle */
   noDragHandle?: boolean;
   contentClassName?: string;
+  preventOutsideClose?: boolean;
 }
 
 const sizeMap = {
@@ -42,6 +43,7 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
   size = "md",
   noDragHandle = false,
   contentClassName = "px-5 py-4",
+  preventOutsideClose = false,
 }) => {
   const sheetRef = useRef<HTMLDivElement>(null);
   const dragControls = useDragControls();
@@ -74,7 +76,9 @@ const BottomSheet: React.FC<BottomSheetProps> = ({
             transition={{ duration: 0.2 }}
             className="fixed inset-0 z-50 md:hidden"
             style={{ backgroundColor: "rgba(0,0,0,0.4)" }}
-            onClick={onClose}
+            onClick={() => {
+              if (!preventOutsideClose) onClose();
+            }}
           />
 
           {/* Sheet */}

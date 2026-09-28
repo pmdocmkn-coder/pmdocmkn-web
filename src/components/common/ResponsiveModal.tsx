@@ -17,6 +17,7 @@ interface ResponsiveModalProps {
   /** Hide the drag handle on mobile */
   noDragHandle?: boolean;
   contentClassName?: string;
+  preventOutsideClose?: boolean;
 }
 
 export function ResponsiveModal({
@@ -30,6 +31,7 @@ export function ResponsiveModal({
   desktopClassName = "max-w-md",
   noDragHandle = false,
   contentClassName = "p-6",
+  preventOutsideClose = false,
 }: ResponsiveModalProps) {
   const { isMobile } = useResponsive();
 
@@ -42,6 +44,7 @@ export function ResponsiveModal({
         size={bottomSheetSize}
         noDragHandle={noDragHandle}
         contentClassName={contentClassName}
+        preventOutsideClose={preventOutsideClose}
       >
         {description && <div className="text-[14px] text-[#718096] mb-4">{description}</div>}
         {children}
@@ -52,7 +55,15 @@ export function ResponsiveModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={`bg-white rounded-xl flex flex-col ${desktopClassName}`}>
+      <DialogContent
+        className={`bg-white rounded-xl flex flex-col ${desktopClassName}`}
+        onPointerDownOutside={(e) => {
+          if (preventOutsideClose) e.preventDefault();
+        }}
+        onInteractOutside={(e) => {
+          if (preventOutsideClose) e.preventDefault();
+        }}
+      >
         {(title || description) && (
           <DialogHeader className="px-6 py-4 border-b flex-shrink-0">
             {title && <DialogTitle className="text-xl font-bold text-[#1A202C]">{title}</DialogTitle>}

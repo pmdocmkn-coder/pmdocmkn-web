@@ -439,7 +439,7 @@ function MobileQuickActionDropdown({
   const canShowCustom = customStatuses.length > 0 && ["InProgress", "Received"].includes(job.status);
   const showBackToProgress = !!job.customStatusId;
   const canBorrow = job.status === "InProgress";
-  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || (job.status === "RepairCompleted" && !job.closedAt && canHandoverWh) || canBorrow;
+  const hasActions = nextList.length > 0 || showBackToProgress || canShowCustom || ((job.status === "RepairCompleted" || job.status === "Scrapped") && (job.status === "Scrapped" || !job.closedAt) && canHandoverWh) || canBorrow;
 
   if (!hasActions) return null;
 
@@ -508,7 +508,7 @@ function MobileQuickActionDropdown({
             </>
           )}
 
-          {(job.status === "RepairCompleted" || job.status === "Scrapped") && !job.closedAt && canHandoverWh && (
+          {(job.status === "RepairCompleted" || job.status === "Scrapped") && (job.status === "Scrapped" || !job.closedAt) && canHandoverWh && (
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -517,17 +517,8 @@ function MobileQuickActionDropdown({
               }}
               className="w-full text-left px-3 py-3 text-[14px] font-medium text-[#2B6CB0] hover:bg-[#EBF4FF] rounded-[10px] transition-colors flex items-center gap-2 border-t border-[#E2E8F0] mt-1 pt-3"
             >
-              {job.status === "Scrapped" ? (
-                <>
-                  <MonitorSmartphone className="w-4 h-4" />
-                  Serah ke HD
-                </>
-              ) : (
-                <>
-                  <Warehouse className="w-4 h-4" />
-                  Serah ke WH
-                </>
-              )}
+              <Warehouse className="w-4 h-4" />
+              {job.status === "Scrapped" ? "Serah ke WHS (Scrap)" : "Serah ke WH"}
             </button>
           )}
 
@@ -606,7 +597,7 @@ function RadioRepairRow({
   const nextStatuses = !locked && !showArchive
     ? allowedNextStatuses(j.status as RadioRepairJobStatus)
     : [];
-  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && !j.closedAt && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && !j.isDeleted && !showArchive;
+  const showWhShortcut = canHandoverWh && (j.status === "RepairCompleted" || j.status === "Scrapped") && (j.status === "Scrapped" || !j.closedAt) && j.pendingHandoverType !== "TechnicianToWarehouse" && j.pendingHandoverType !== "TechnicianToHelpdesk" && !j.isDeleted && !showArchive;
 
   return (
     <tr className={`border-t transition-colors ${j.isDeleted ? "opacity-60" : ""} ${j.isScrap ? "bg-red-50/30 hover:bg-red-100/50 border-red-100" : "bg-white hover:bg-violet-50/40 border-gray-100"}`}>

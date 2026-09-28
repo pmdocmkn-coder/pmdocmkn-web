@@ -32,7 +32,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> & { hideCloseButton?: boolean }
->(({ className, children, hideCloseButton, ...props }, ref) => (
+>(({ className, children, hideCloseButton, onPointerDownOutside, onInteractOutside, ...props }, ref) => (
   <DialogPortal>
     <DialogOverlay />
     <DialogPrimitive.Content
@@ -56,6 +56,26 @@ const DialogContent = React.forwardRef<
         "sm:data-[state=open]:slide-in-from-left-1/2 sm:data-[state=open]:slide-in-from-top-[48%]",
         className
       )}
+      onPointerDownOutside={(e) => {
+        if (
+          document.querySelector('[data-live-camera="true"]') ||
+          (e.target as HTMLElement | null)?.closest?.('[data-live-camera="true"]')
+        ) {
+          e.preventDefault();
+          return;
+        }
+        onPointerDownOutside?.(e);
+      }}
+      onInteractOutside={(e) => {
+        if (
+          document.querySelector('[data-live-camera="true"]') ||
+          (e.target as HTMLElement | null)?.closest?.('[data-live-camera="true"]')
+        ) {
+          e.preventDefault();
+          return;
+        }
+        onInteractOutside?.(e);
+      }}
       {...props}
     >
       {/* Mobile handle bar */}

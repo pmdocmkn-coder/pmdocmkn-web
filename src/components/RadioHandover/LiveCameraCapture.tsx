@@ -161,7 +161,7 @@ export default function LiveCameraCapture({ open, onClose, onCapture, remaining 
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] bg-black flex flex-col select-none">
+    <div data-live-camera="true" className="fixed inset-0 z-[9999] bg-black flex flex-col select-none">
 
       {/* ── Flash overlay ── */}
       <div
