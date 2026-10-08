@@ -584,12 +584,14 @@ export default function OperationalDocumentPage() {
   const handleToggleBhp = async (docId: number, year: number, currentIsPaid: boolean) => {
     setIsUpdatingBhp(prev => ({ ...prev, [year]: true }));
     try {
+      let updatedDoc: OperationalDocumentDto | null = null;
       if (currentIsPaid) {
         // Unmark
         const res = await operationalDocumentApi.unmarkBhpPayment(docId, year);
         toast({ title: "BHP Dibatalkan", description: res.data?.message });
         // Keluar dari mode edit jika sedang edit
         setEditingBhpYear(prev => ({ ...prev, [year]: false }));
+        updatedDoc = res.data?.data;
       } else {
         // Mark (requires invoice number)
         const inv = bhpInvoiceNumbers[year];
@@ -602,14 +604,24 @@ export default function OperationalDocumentPage() {
         toast({ title: "BHP Disimpan", description: res.data?.message });
         setBhpInvoiceNumbers(prev => ({ ...prev, [year]: "" }));
         setEditingBhpYear(prev => ({ ...prev, [year]: false }));
+        updatedDoc = res.data?.data;
       }
       
+      // Update local items state immediately so UI updates without waiting for network
+      if (updatedDoc) {
+        setItems(prev => prev.map(d => d.id === docId ? updatedDoc! : d));
+      }
+
       // Reload document detail if modal is open
       if (selectedDetailDoc && selectedDetailDoc.id === docId) {
-        const res = await operationalDocumentApi.getById(docId);
-        setSelectedDetailDoc(res.data.data);
+        if (updatedDoc) {
+          setSelectedDetailDoc(updatedDoc);
+        } else {
+          const res = await operationalDocumentApi.getById(docId);
+          setSelectedDetailDoc(res.data.data);
+        }
       }
-      loadData();
+      await loadData();
     } catch (e: any) {
       toast({ title: "Gagal", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
     } finally {
@@ -636,7 +648,13 @@ export default function OperationalDocumentPage() {
       toast({ title: "Invoice Diperbarui", description: res.data?.message });
       setEditingBhpYear(prev => ({ ...prev, [year]: false }));
       setBhpInvoiceNumbers(prev => ({ ...prev, [year]: "" }));
-      loadData();
+      if (res.data?.data) {
+        setItems(prev => prev.map(d => d.id === docId ? res.data.data : d));
+        if (selectedDetailDoc && selectedDetailDoc.id === docId) {
+          setSelectedDetailDoc(res.data.data);
+        }
+      }
+      await loadData();
     } catch (e: any) {
       toast({ title: "Gagal", description: e?.response?.data?.message ?? e.message, variant: "destructive" });
     } finally {
@@ -1353,7 +1371,7 @@ export default function OperationalDocumentPage() {
 
                             <div className="space-y-3">
                               {doc.bhpChecklist.map((chk, chkIdx) => (
-                                <div key={chk.id} className="relative flex items-start gap-4">
+                                <div key={chk.year} className="relative flex items-start gap-4">
                                   {/* Timeline dot */}
                                   <div className={`relative z-10 w-10 h-10 rounded-full border-2 flex items-center justify-center flex-shrink-0 transition-all duration-300 ${
                                     chk.isPaid
@@ -1605,7 +1623,7 @@ export default function OperationalDocumentPage() {
                   <div className="absolute left-[15px] top-5 bottom-5 w-0.5 bg-[#E2E8F0]" />
                   <div className="space-y-2">
                     {doc.bhpChecklist.map((chk, chkIdx) => (
-                      <div key={chk.id} className="relative flex items-start gap-3">
+                      <div key={chk.year} className="relative flex items-start gap-3">
                         {/* Dot */}
                         <div className={`relative z-10 w-8 h-8 rounded-full border-2 flex items-center justify-center flex-shrink-0 ${
                           chk.isPaid ? 'bg-[#059669] border-[#059669]' : 'bg-white border-[#E2E8F0]'
@@ -2285,7 +2303,7 @@ export default function OperationalDocumentPage() {
                 {selectedDetailDoc.bhpChecklist && selectedDetailDoc.bhpChecklist.length > 0 && (
                   <div className="flex flex-wrap gap-1.5 mt-3">
                     {selectedDetailDoc.bhpChecklist.map(chk => (
-                      <div key={chk.id} title={chk.isPaid ? `INV: ${chk.invoiceNumber}` : 'Belum dibayar'}
+                      <div key={chk.year} title={chk.isPaid ? `INV: ${chk.invoiceNumber}` : 'Belum dibayar'}
                         className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${chk.isPaid ? 'bg-emerald-100 border-emerald-300 text-[#059669]' : 'bg-white border-[#E2E8F0] text-[#718096]'}`}>
                         {chk.isPaid ? <CheckCircle className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
                         {chk.year}
