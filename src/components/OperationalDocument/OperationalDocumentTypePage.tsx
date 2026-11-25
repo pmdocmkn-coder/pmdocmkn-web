@@ -230,7 +230,7 @@ export default function OperationalDocumentTypePage() {
             </div>
 
             {/* Action Button Section */}
-            {hasPermission('operational-documents.create') && (
+            {hasPermission('operationaldocument.create') && (
                 <div className="flex px-4 py-4">
                     <button
                         onClick={() => setIsCreateDialogOpen(true)}
@@ -265,7 +265,7 @@ export default function OperationalDocumentTypePage() {
                                     )}
                                 </div>
                                 <div className="flex gap-1 ml-2 shrink-0">
-                                    {hasPermission('operational-documents.update') && (
+                                    {hasPermission('operationaldocument.update') && (
                                         <button
                                             onClick={() => openEditDialog(docType)}
                                             className="p-2 text-[#9311d4] hover:bg-purple-50 rounded-lg transition-colors"
@@ -273,7 +273,7 @@ export default function OperationalDocumentTypePage() {
                                             <Edit className="w-5 h-5" />
                                         </button>
                                     )}
-                                    {hasPermission('operational-documents.delete') && (
+                                    {hasPermission('operationaldocument.delete') && (
                                         <button
                                             onClick={() => handleDelete(docType.id)}
                                             className="p-2 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
