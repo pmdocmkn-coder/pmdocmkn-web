@@ -96,7 +96,7 @@ export default function WarehouseBorrowRequestPage() {
     : [];
 
   // Tampilkan step 2 secara otomatis jika akun yang dipilih punya ≥1 teknisi linked
-  const shouldShowTechPicker = borrowerName && linkedTechniciansForUser.length > 0;
+  const shouldShowTechPicker = Boolean(borrowerName && linkedTechniciansForUser.length > 0);
 
   // Load kedua data sekaligus
   useEffect(() => {
@@ -256,6 +256,16 @@ export default function WarehouseBorrowRequestPage() {
 
     if (validItems.some((item) => item.quantity <= 0)) {
       toast({ title: "Kuantitas harus diisi dengan angka lebih besar dari 0", variant: "destructive" });
+      return;
+    }
+
+    if (!borrowerName.trim()) {
+      toast({ title: "Nama peminjam wajib diisi", variant: "destructive" });
+      return;
+    }
+
+    if (shouldShowTechPicker && !workshopTechName.trim()) {
+      toast({ title: "Nama teknisi spesifik wajib dipilih", variant: "destructive" });
       return;
     }
 
@@ -608,9 +618,14 @@ export default function WarehouseBorrowRequestPage() {
                     placeholder="— Pilih nama teknisi —"
                     label="Pilih Nama Teknisi"
                     color="violet"
-                  />                  {workshopTechName && (
+                  />
+                  {workshopTechName ? (
                     <p className="text-xs text-emerald-600 flex items-center gap-1">
                       ✓ Peminjam: <strong>{workshopTechName}</strong>
+                    </p>
+                  ) : (
+                    <p className="text-[11px] text-amber-600 font-medium flex items-center gap-1">
+                      ⚠️ Wajib pilih nama teknisi spesifik untuk mengaktifkan tombol pengajuan.
                     </p>
                   )}
                 </div>
@@ -637,8 +652,13 @@ export default function WarehouseBorrowRequestPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={submitting || rows.every((r) => !r.partDescription.trim())}
-                className="h-11 px-8 bg-violet-600 hover:bg-violet-700 font-semibold shadow-md shadow-violet-200"
+                disabled={Boolean(
+                  submitting ||
+                  rows.every((r) => !r.partDescription.trim()) ||
+                  !borrowerName.trim() ||
+                  (shouldShowTechPicker && !workshopTechName.trim())
+                )}
+                className="h-11 px-8 bg-violet-600 hover:bg-violet-700 font-semibold shadow-md shadow-violet-200 disabled:opacity-50 disabled:cursor-not-allowed disabled:shadow-none"
               >
                 {submitting ? "Memproses..." : "Ajukan Peminjaman"}
               </Button>

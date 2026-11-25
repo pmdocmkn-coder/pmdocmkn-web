@@ -120,9 +120,9 @@ export default function WarehouseBorrowHistoryPage() {
     : [];
 
   // Tampilkan tech picker jika role Teknisi WSK ATAU user punya linked teknisi
-  const shouldShowReturnTechPicker = returnedByName && (
+  const shouldShowReturnTechPicker = Boolean(returnedByName && (
     selectedReturnerIsWorkshop || linkedTechniciansForReturner.length > 0
-  );
+  ));
 
   // Auto-detect user yang dipilih dari returnedByName (fallback jika FormMobileSelect tidak trigger onChange dengan object)
   useEffect(() => {
@@ -503,6 +503,10 @@ export default function WarehouseBorrowHistoryPage() {
     if (!activeItem) return;
     if (!returnIssuerSigned) {
       toast({ title: "Tanda Tangan Kosong", description: "Tanda tangan Penyerah (Peminjam) wajib diisi saat pengembalian.", variant: "destructive" });
+      return;
+    }
+    if (shouldShowReturnTechPicker && !workshopTechName.trim()) {
+      toast({ title: "Pilih Teknisi Spesifik", description: "Silakan pilih nama teknisi yang mengembalikan barang.", variant: "destructive" });
       return;
     }
     setSubmitting(true);
@@ -1462,9 +1466,9 @@ export default function WarehouseBorrowHistoryPage() {
           <>
             <Button variant="outline" onClick={closeDialog} className="flex-1 sm:flex-none">Batal</Button>
             <Button
-              className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white flex-1 sm:flex-none disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={handleReturn}
-              disabled={submitting}
+              disabled={Boolean(submitting || (shouldShowReturnTechPicker && !workshopTechName.trim()))}
             >
               {submitting ? "Memproses..." : (isWarehouse ? "Terima Pengembalian" : "Kembalikan Part")}
             </Button>
